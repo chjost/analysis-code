@@ -27,6 +27,7 @@
 ################################################################################
 
 import input_output
+import bootstrap
 
 def main():
     newfile="/hiskp2/correlators/A100.24_L24_T48_beta190_mul0100_musig150_mudel190_kappa1632550/ev120/liuming/pi_corr_p0.dat"
@@ -34,8 +35,12 @@ def main():
     corr, nbcfg, T = input_output.extract_corr_fct(newfile)
 
     #print(corr)
-    print(nbcfg)
-    print(T)
+    #print(nbcfg)
+    #print(T)
+
+    samples = bootstrap.sym_and_boot(corr, T, nbcfg, 100)
+
+    print(samples[:,1])
 
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':

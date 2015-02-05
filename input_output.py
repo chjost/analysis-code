@@ -27,8 +27,6 @@
 ################################################################################
 
 import os
-#import errno
-#import struct
 
 def extract_corr_fct(filename='', verbose=0):
     """Extracts correlation functions and resorts them.
