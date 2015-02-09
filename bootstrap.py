@@ -69,10 +69,11 @@ def sym_and_boot(source, T, nbcfg, nbsamples = 1000):
         nbsamples: Number of bootstrap samples created.
 
     Returns:
-        A numpy array containing the bootstrap samples. The time extent is
-        reduced to T/2+1 due to the symmetrization.
+        A two dimensional numpy array containing the bootstrap samples. The
+        first axis is the bootstrap number, the second axis is the time index.
+        The time extent is reduced to T/2+1 due to the symmetrization.
     """
-    # the first timslice is not averaged
+    # the first timslice is not symmetrized
     boot = bootstrap(source, nbsamples)
     for _t in range(1, int(T/2)):
         # symmetrize the correlation function
@@ -82,7 +83,7 @@ def sym_and_boot(source, T, nbcfg, nbsamples = 1000):
             _symm.append((_x + _y) / 2.)
         # bootstrap the timeslice
         boot = np.c_[boot, bootstrap(_symm, nbsamples)]
-    # the timeslice at t = T/2 is not averaged
+    # the timeslice at t = T/2 is not symmetrized
     boot = np.c_[boot, bootstrap(source[int(T/2) * nbcfg: (int(T/2)+1) * nbcfg],
                                  nbsamples)]
     return boot

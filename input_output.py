@@ -41,9 +41,11 @@ def extract_corr_fct(filename='', verbose=0):
         verbose: Changes the amount of information printed.
 
     Returns:
-        A list with complex entries containing the correlation functions.
+        A list with entries containing the correlation functions.
         The list is sorted with the time index as fast index and the
         configuration number as slower index.
+        The number of configurations.
+        The time extent of the lattice.
     """
     # corr contains the correlation functions
     corr = []
@@ -83,8 +85,6 @@ def extract_corr_fct(filename='', verbose=0):
     # return the correlation functions
     return corr, nbcfg, T
 
-
-    
 
 def extract_bin_corr_fct(name='', start_cfg=0, delta_cfg=0, nb_cfg=0, T=0,
                      verbose=0): 
