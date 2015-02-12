@@ -1,0 +1,106 @@
+\documentclass[12pt,a4paper]{scrartcl}
+\usepackage[english]{babel}
+\usepackage{feynmf}
+\usepackage{braket}
+\usepackage{amssymb,amsmath}
+\usepackage{dsfont}
+\usepackage{rotating}
+\usepackage{graphicx}
+%\usepackage{gensymb}
+\usepackage{epsfig}
+\usepackage{subfig}
+\usepackage{wrapfig}
+\usepackage{nicefrac}
+\usepackage{color}
+\usepackage{float}
+\usepackage{textcomp}
+\usepackage[utf8]{inputenc}
+\usepackage{amssymb,amsmath}
+\title{$\rho$admap to Analysis}
+\author{Christopher Helmes}
+\begin{document}
+\maketitle
+\section{Prerequisities}
+\subsection{Real World}
+In principal we want to analyse the mass $m_{\rho}$ and the decay width
+$\Gamma_{\rho}$ of the $\rho$-resonance. For this we utilize in a first approach
+a $2\times 2$ Correlation Matrix in the center of mass frame and two different
+moving frames. The entries of the correlation matrix involve the two different
+For each frame under consideration the analysis follows the same steps
+operators specified in the paper by Feng, Jansen and Renner: 
+\begin{align}
+  &\mathcal{O}_{\pi\pi}(t) =
+  \pi^+(\vec{P},t)\pi^-(0,t)-\pi^+(0,t)\pi^+(\vec{P},t) \\
+  &\mathcal{O}_{\rho}(t) = \rho^0(\vec{P},t)
+\end{align}
+
+For each frame under consideration the analysis follows the same steps. The
+scattering amplitude in inelastically interacting systems is given by the
+relativistic Breit-Wigner formula:
+\begin{displaymath}
+  a_l = \frac{-\sqrt(s)\Gamma_R(s)}{s-M_R^2+i\sqrt{s}} 
+\end{displaymath}
+with the CM energy $E_{CM}^2 = s$ and the mass of the resonance $M_R$. The
+relation between scattering amplitude and scattering phaseshift $\delta_l$
+yields:
+\begin{align}
+  \tan \delta_l = \frac{\sqrt{s}\Gamma_R(s)}{M_R^2-s}
+\end{align}
+Taking into account p-wave scattering ($l=1$), the effective coupling
+constant $g_{\rho\pi\pi}$, the $\rho$-mass, the $\pi$-mass $m_{\pi}$ and the
+center of mass energy give rise to the effective range formula
+\begin{displaymath}
+  \tan \delta_1 = \frac{g^2_{\rho\pi\pi}}{6\pi}
+  \frac{p^3}{E_{CM}(m^2_{\rho}-E^2_{CM})} \quad, \qquad p =
+  \sqrt{\frac{E^2_{CM}}{4}-m^2_{\pi}}
+\end{displaymath}
+
+\subsection{Lattice}
+\section{Analysis}
+Given the contractions have been made the resulting Correlation functions
+involving every combination of the operators $\mathcal{O}_{\pi\pi}$ and
+$\mathcal{O}_{\rho}$ are combined in a bootstrap analysis to extract the two
+energy-levels from the correlation matrix. In a first step the $N_C$
+configurations are bootstrapped according to the following pattern:
+View the (symmetrized) correlation functions as a 2d array in $n_c =
+1,\dots,N_C$ and $t = 1,\dots, \nicefrac{T}{2}$, where $T$ is the lattice time
+extent. One obtains $N_{BS}$ Bootstrapsamples of the $N_C$ correlation functions at
+every value for $t$ as a sum over $N_C$ arbitrarily chosen values of $C(t)$ the
+sample with $n_{BS} = 1$ is taken as the sum (average) of the original dataset.
+In the end there exists a 2d array of size $N_{BS}\times \nicefrac{T}{2}$ 
+A short illustration may clarify things.
+%\begin{bmatrix}
+%  
+%\end{bmatrix}
+
+On every bootstrap sample the correlation matrix $C_{ij}(t) =
+\braket{O_i(t)O^{\dag}_j(0)}$ can be built. Cast into a generalized eigenvalue
+problem this yields:
+
+\begin{align}
+  C(t)v_n(t,t_0) = \begin{pmatrix}
+    \braket{\mathcal{O}_{\pi\pi}\mathcal{O}^{\dag}_{\pi\pi}}(t) &
+    \braket{\mathcal{O}_{\pi\pi}\mathcal{O}^{\dag}_{\rho}}(t) \\
+    \braket{\mathcal{O}_{\rho}\mathcal{O}^{\dag}_{\pi\pi}}(t) &
+    \braket{\mathcal{O}_{\rho}\mathcal{O}^{\dag}_{\rho}}(t)
+  \end{pmatrix} \begin{pmatrix} v_{n,1}(t,t_0) \\ v_{n,2}(t,t_0) \end{pmatrix} =
+  \lambda_n(t,t_0) C(t_0) v_n(t,t_0)
+\end{align}
+The eigenvalues $\lambda_n$ are given by:
+\begin{align}
+  \lambda_n(t,t_0) = \exp[-E_n(t-t_0)]
+\end{align}
+corresponding to the energies of interest (in our case $n < 2$). To prevent
+contamination stemming from states with $n > 2$ we use the correlation matrix
+$R(t,t_R)$ composed of:
+\begin{align}
+  R(t,t_R)=C_{2\times 2}(t)C^{-1}_{2\times 2}(t_R)
+\end{align}
+In this approach the eigenvalues behave as
+\begin{align}
+  \tilde{\lambda}_n(t) = A_n \cosh\left[-E_n\left(t-\frac{T}{2}\right)\right]
+\end{align}
+
+
+\end{document}
+
