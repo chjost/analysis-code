@@ -77,8 +77,8 @@ def create_corr_matrix(nbsamples, filepath, filestring, filesuffix=".dat",
     _data1, _nbcfg1, _T1 = input_output.extract_corr_fct(_name, verbose)
     _boot1 = bootstrap.sym_and_boot(_data1, _T1, _nbcfg1, nbsamples)
     # create correlation function matrix
-    corr_mat = np.zeros((_nbops, _nbops, nbsamples, int(_T1/2)+1))
-    corr_mat[0,0] = _boot1
+    corr_mat = np.zeros((nbsamples, int(_T1/2)+1, _nbops, _nbops))
+    corr_mat[:,:,0,0] = _boot1
     # read in all other correlation functions, bootstrap them and write them to
     # the numpy array
     for _nb, _sub in enumerate(_filestringcopy):
@@ -94,16 +94,18 @@ def create_corr_matrix(nbsamples, filepath, filestring, filesuffix=".dat",
             print("\tnumber of configurations or time extent is wrong")
         else:
             _boot = bootstrap.sym_and_boot(_data, _T, _nbcfg, nbsamples)
-            corr_mat[int((_nb+1)/_nbops), int((_nb+1)%_nbops)] = _boot 
+            corr_mat[:, :, int((_nb+1)/_nbops), int((_nb+1)%_nbops)] = _boot 
 
-    corr_mat_symm = corr_mat.copy()
+    #corr_mat_symm = corr_mat.copy()
+    corr_mat_symm = np.zeros_like(corr_mat)
     for _s in range(0, nbsamples):
         for _t in range(0, int(_T1/2)+1):
-            for i in range(0, _nbops):
-                for j in range(0, _nbops):
-                    if i != j:
-                        corr_mat_symm[i][j][_s][_t] = (corr_mat[i][j][_s][_t] + corr_mat[j][i][_s][_t])/2.
-                        corr_mat_symm[j][i][_s][_t] = corr_mat_symm[i][j][_s][_t]
+            corr_mat_symm[_s, _t] = (corr_mat[_s, _t] + corr_mat[_s, _t].T) / 2.
+            #for i in range(0, _nbops):
+            #    for j in range(0, _nbops):
+            #        if i != j:
+            #            corr_mat_symm[i][j][_s][_t] = (corr_mat[i][j][_s][_t] + corr_mat[j][i][_s][_t])/2.
+            #            corr_mat_symm[j][i][_s][_t] = corr_mat_symm[i][j][_s][_t]
     return corr_mat_symm, int(_T1/2)+1
 
 def write_corr_matrix(data, filename, verbose=0):
