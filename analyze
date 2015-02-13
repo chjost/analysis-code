@@ -28,19 +28,41 @@
 
 import input_output
 import bootstrap
+import corr_matrix
 
 def main():
-    newfile="/hiskp2/correlators/A100.24_L24_T48_beta190_mul0100_musig150_mudel190_kappa1632550/ev120/liuming/pi_corr_p0.dat"
+    ## definition of some variables
+    nbsamples = 10
+    filepath="/hiskp2/correlators/A100.24_L24_T48_beta190_mul0100_musig150_mudel190_kappa1632550/ev120/liuming/pi_corr_p"
+    filestring = ["0", "1", "2", "3"]
 
-    corr, nbcfg, T = input_output.extract_corr_fct(newfile)
 
+    # testing the input
+    #newfile="/hiskp2/correlators/A100.24_L24_T48_beta190_mul0100_musig150_mudel190_kappa1632550/ev120/liuming/pi_corr_p0.dat"
+    #corr, nbcfg, T = input_output.extract_corr_fct(newfile)
     #print(corr)
     #print(nbcfg)
     #print(T)
 
-    samples = bootstrap.sym_and_boot(corr, T, nbcfg, 100)
+    # testing the bootstraping
+    #samples = bootstrap.sym_and_boot(corr, T, nbcfg, 100)
+    #print(samples[:,1])
+    #print(samples.shape)
 
-    print(samples[:,1])
+    # testing the creation of a correlation function matrix
+    corr_mat, T = corr_matrix.create_corr_matrix(10, filepath, filestring)
+    #print(corr_mat[:,0,0,0])
+    #print(corr_mat[0,:,0,0])
+    #print(corr_mat[0,0,:,0])
+    #print(corr_mat[0,0,0,:])
+    #print(T)
+    print(corr_mat.T.shape)
+    #for t in range(0, 25):
+    #    print("\tt = " + str(t))
+    #    for s in range(0, 10):
+    #        print("\ts = " + str(s))
+    #        print(corr_mat.T[t][s])
+
 
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':
