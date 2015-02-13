@@ -29,11 +29,14 @@
 import input_output
 import bootstrap
 import corr_matrix
+import gevp
+import pandas as pd
 
 def main():
     ## definition of some variables
     nbsamples = 10
-    filepath="/hiskp2/correlators/A100.24_L24_T48_beta190_mul0100_musig150_mudel190_kappa1632550/ev120/liuming/pi_corr_p"
+    #filepath="/hiskp2/correlators/A100.24_L24_T48_beta190_mul0100_musig150_mudel190_kappa1632550/ev120/liuming/pi_corr_p"
+    filepath="/home/chris/test/data/pi_corr_p"
     filestring = ["0", "1", "2", "3"]
 
 
@@ -56,12 +59,17 @@ def main():
     #print(corr_mat[0,0,:,0])
     #print(corr_mat[0,0,0,:])
     #print(T)
-    print(corr_mat.T.shape)
     #for t in range(0, 25):
     #    print("\tt = " + str(t))
     #    for s in range(0, 10):
     #        print("\ts = " + str(s))
     #        print(corr_mat.T[t][s])
+
+    # testing the GEVP
+
+    #print(corr_mat.T[:,0,:,:])
+    eigenvalues = gevp.calculate_gevp(corr_mat.T[:,0,:,:], 0)
+    print(eigenvalues)
 
 
 # make this script importable, according to the Google Python Style Guide
