@@ -101,6 +101,37 @@ In this approach the eigenvalues behave as
   \tilde{\lambda}_n(t) = A_n \cosh\left[-E_n\left(t-\frac{T}{2}\right)\right]
 \end{align}
 
+The derivative method used in the case of $\pi\pi$-scattering to cancel out
+contributions to the correlation matrix which are constant in $t$ is spoiled
+here by the time dependence of these contributions. A general correlation
+function can be written as:
+\begin{align}
+  \braket{\mathcal{O}_i \mathcal{O}^{\dag}_j}(t) &= \frac{1}{Z}
+ \text{tr} \left[ \exp[-\hat{H}(T-t)]\mathcal{O}_i(0)\exp[-\hat{H}t]\mathcal{O}^{\dag}_j(0)
+  \right] \\
+  &= \sum_{m,n} V_{imn}V^{\dag}_{jmn}\exp \left[ -(E_m+E_n)\nicefrac{T}{2} \right]
+  \cosh \left[ (E_m-E_n)(t-\nicefrac{T}{2}) \right] 
+\end{align}
+
+with the matrix elements $V_{imn}$
+\begin{align}
+  V_{imn} = \braket{m|\mathcal{O}_i(t)|n}
+\end{align}
+
+Taking $E_m > 0$ and $E_n > 0$ the thermally suppressed states also contribute
+with a time dependant factor of the $\cosh$ and therefore influence the
+Correlation functions. Because of the nonconstant contribution the derivative
+method fails.
+
+\subsection{Uncertainties}
+The uncertainties in the approach proposed above are divided into statistical
+and systematical ones. Statistical uncertainties can be assessed by the standard
+deviation of the mean value on each bootstrap sample. The difference between the
+sample means and the mean value obtained from the original data serves as an
+estimator for the bias.\\
+Systematic uncertainties can be inferred from a distribution of fit results
+where each fit result is obtained using a varying fit range. The median of the
+distribution of the values gives an estimate on the systematic error.
 
 \end{document}
 
