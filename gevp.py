@@ -29,13 +29,35 @@
 
 import numpy as np
 import pandas as pd
-from operator import itemgetter
 import scipy.linalg as spla
 
 def permutation_indices(data):
+    """Sorts the data according to their value.
+
+    This function is called by solve_gevp_gen to sort the eigenvalues according
+    to their absolut values. This works on the assumption that the eigenvalues
+    are real.
+
+    Args:
+        data: A list of values.
+
+    Returns:
+        An index list where the first entry corresponds to the index of largest
+        value, the last entry is corresponds to the index of the smallest value.
+    """
     return list(reversed(sorted(range(len(data)), key = data.__getitem__)))
 
 def reorder_by_ev(ev1, ev2, B):
+    """Creates an index list based on eigenvectors and the matrix B.
+
+    Args:
+        ev1, ev2: The eigenvectors to sort.
+        B: The matrix to sort by.
+
+    Returns:
+        An index list where the first entry corresponds to the index of 'largest'
+        value, the last entry is corresponds to the index of the 'smallest' value.
+    """
     # TODO: res seems to be broken here, investigate!
     ev1_b = np.dot(np.array(B), ev1)
 
@@ -51,9 +73,6 @@ def reorder_by_ev(ev1, ev2, B):
                 break
 
     return res
-
-def max_index(iterable):
-    return max(enumerate(iterable), key=itemgetter(1))
 
 def solve_gevp_gen(a, t_0, sort_by_vectors=15, **kwargs):
     """Generator that returns the eigenvalues for t_0 -> t where t is in
