@@ -74,7 +74,7 @@ def reorder_by_ev(ev1, ev2, B):
 
     return res
 
-def solve_gevp_gen(a, t_0, sort_by_vectors=15, **kwargs):
+def solve_gevp_gen(a, t_0, sort_by_vectors=True):
     """Generator that returns the eigenvalues for t_0 -> t where t is in
        (t_0, t_max].
        
@@ -86,60 +86,80 @@ def solve_gevp_gen(a, t_0, sort_by_vectors=15, **kwargs):
        Args:
            a: The matrix that is used.
            t_0: The timeslice of the inverted matrix.
-           sort_by_vectors:??
-           kwargs: For currying.
+           sort_by_vectors: Choose to sort the eigensystem by eigenvector or
+               eigenvalues. Standard is using the vectors.
 
        Returns:
-           A list of the eigenvalues.
+           A list of the eigenvalues and a list of the eigenvectors.
     """
+    # B is the matrix at t=t_0
     B = a[t_0]
-    # TODO(CJ): originally written to support multiple algorithms, not needed
-    # any more. Change to one hardcoded algorithm.
+    # define the eigensystem solver function as a lambda function
     try:
-        f = spla.eigh(b=B, **kwargs)
-    except TypeError:
-        # If the function doesn't do currying, implement that here
         f = lambda A: spla.eigh(b=B, a=A)
     except LinAlgError:
         return
 
+    # initialization
     eigenvectors = None
     count = 0
 
-    for j in range(t_0 + 1, len(a[:,0,0])):
+    # calculate the eigensystem for t in (t_0, T/2+1)
+    for j in range(t_0 + 1, a.shape[0]):
         try:
+            # calculate the eigensystems
             eigenvalues, new_eigenvectors = f(a[j])
-            
+            # initialize the new eigenvector array if not done already
             if eigenvectors is None:
                 eigenvectors = np.zeros_like(new_eigenvectors)
 
-            if j < sort_by_vectors:
-                # TODO Sortieren nach Eigenwert
+            # The eigensystem can be sorted by the value of the eigenvalues or
+            # by using the eigenvectors. 
+            # Here the reordered index lists are created.
+            if not sort_by_vectors:
                 perm = permutation_indices(eigenvalues)
             else:
                 perm = reorder_by_ev(new_eigenvectors, eigenvectors, B)
-
+            # permutation of the lists
             eigenvectors = new_eigenvectors[:,perm]
             eigenvalues = eigenvalues[perm]
                 
             count += 1
 
-            yield eigenvalues, eigenvectors
+            yield eigenvalues, eigenvectors, j
 
         except (spla.LinAlgError, TypeError) as e:
-            #import traceback
-            #traceback.print_exc()
             return
 
-def calculate_gevp(m, sort_by_vectors=99, max_t0=4, **kwargs):
-    res_values = {}
-    for i in range(max_t0 + 1):
-        ev = []
-        for eigenvalues, _eigenvectors in \
-                solve_gevp_gen(m, i, sort_by_vectors=sort_by_vectors, **kwargs):
-            ev.append(eigenvalues)
+def calculate_gevp(m, t0=4, sort_by_vectors=True):
+    """Solves the generalized eigenvalue problem of a correlation function
+    matrix.
 
-        if len(ev):
-            res_values[i] = pd.DataFrame(ev)
+    The function takes a bootstrapped correlation function matrix and calculates
+    the eigenvectors and eigenvalues of the matrix. The algorithm relies on the
+    matrix being symmetric or hermitian. The matrix m should have 4 axis, as
+    laid out in corr_matrix.py.
+    The eigenvectors are calculated but not stored.
 
-    return pd.concat(res_values)
+    Args:
+        m: The data in a numpy array.
+        t0: The timeslice used for the inversion.
+        sort_by_vectors: Choose to sort the eigensystem by eigenvector or
+               eigenvalues. Standard is using the vectors.
+
+    Returns:
+        A numpy array with three axis. The first axis is the bootstrap sample
+        number, the second axis is the time, the third axis is the eigenvalue
+        numbers. The time extend is the same as in original data, but the times
+        up to and including t0 are filled with zeros.
+    """
+    # Initialize the eigenvalue array
+    values_array = np.zeros((m.shape[0], m.shape[1], m.shape[2]))
+    # iterate over the bootstrap samples
+    for _samples in range(0, m.shape[0]):
+        # iterate over the eigensystems
+        for eigenvalues, _eigenvectors, _t in \
+            solve_gevp_gen(m[_samples], t0, sort_by_vectors=sort_by_vectors):
+            # save the eigenvalues to the array
+            values_array[_samples, _t] = eigenvalues
+    return values_array
