@@ -45,6 +45,8 @@ def extract_ascii_corr_fct(filebase='', start_cfg=0, delta_cfg=0, nb_cfg=0,
     Returns:
         A list with entries containing the correlation functions. Sorting takes
         place with time as the fastest and configuration as the slower index
+        In Addition to that a third dimension (e.g. different total momenta) is
+        taken into account
     """
     _corrs = [[] for n in range(nums)]
     print len(_corrs)
@@ -62,10 +64,10 @@ def extract_ascii_corr_fct(filebase='', start_cfg=0, delta_cfg=0, nb_cfg=0,
           _datum = _line.split()
           #print _datum[0], _datum[1], _datum[2]
           _comp = complex(float(_datum[1]),float(_datum[2]))
-          _corr_file.append(_comp)
+          _corr_file.append(float(_datum[1]))
       # Split correlation functions
       for n in range(0,nums):
-        _corrs[n].append(_corr_file[n*(T):(n+1)*(T)])
+        _corrs[n].extend(_corr_file[n*(T):(n+1)*(T)])
     return _corrs
 
 def extract_corr_fct(filename='', verbose=0):
