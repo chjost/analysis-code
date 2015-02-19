@@ -27,6 +27,46 @@
 ################################################################################
 
 import os
+def extract_ascii_corr_fct(filebase='', start_cfg=0, delta_cfg=0, nb_cfg=0,
+                           verbose=0, nums=0, T=0):
+    """Extract correlation function from ascii dump file.
+    Each file contains several correlation functions from the same configuration
+    Number of correlation functions needs to be given as well as time extent
+
+    Args:
+        filebase: The file's basename.
+        verbose: Toggle More or less information output
+        start_cfg: First configuration number.
+        delta_cfg: Increment for the configuration numbers.
+        nb_cfg: Number of configurations to process.
+        nums: Number of correlation functions
+        T: Temporal extent of the ensemble under investigation
+
+    Returns:
+        A list with entries containing the correlation functions. Sorting takes
+        place with time as the fastest and configuration as the slower index
+    """
+    _corrs = [[] for n in range(nums)]
+    print len(_corrs)
+    for x in range(start_cfg, start_cfg+delta_cfg*nb_cfg, delta_cfg):
+      # Each configuration gets nums correlation functions (e.g. different
+      # total momenta)
+      _corr_file = []
+      _filename = filebase + "%04d" % x
+      with open(_filename, 'rt') as _f:
+        if verbose:
+          print("reading from file: " + _f.name)
+        for _line in _f:
+          if _line.startswith('#'):
+            continue
+          _datum = _line.split()
+          #print _datum[0], _datum[1], _datum[2]
+          _comp = complex(float(_datum[1]),float(_datum[2]))
+          _corr_file.append(_comp)
+      # Split correlation functions
+      for n in range(0,nums):
+        _corrs[n].append(_corr_file[n*(T):(n+1)*(T)])
+    return _corrs
 
 def extract_corr_fct(filename='', verbose=0):
     """Extracts correlation functions and resorts them.

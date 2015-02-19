@@ -28,18 +28,20 @@
 
 import input_output
 import bootstrap
-import corr_matrix
+#import corr_matrix
 
 def main():
     ## definition of some variables
-    nbsamples = 10
-    filepath="/hiskp2/correlators/A100.24_L24_T48_beta190_mul0100_musig150_mudel190_kappa1632550/ev120/liuming/pi_corr_p"
-    filestring = ["0", "1", "2", "3"]
+    #nbsamples = 10
+    #filepath="/hiskp2/helmes/correlators/test/A40.24/"
+    filestring = []
+    for num in range(1870, 1931, 4):
+      filestring.append(num)
 
 
     # testing the input
-    #newfile="/hiskp2/correlators/A100.24_L24_T48_beta190_mul0100_musig150_mudel190_kappa1632550/ev120/liuming/pi_corr_p0.dat"
-    #corr, nbcfg, T = input_output.extract_corr_fct(newfile)
+    newfile="/hiskp2/helmes/correlators/test/A40.24/corrs.1870"
+    corr, nbcfg, T = input_output.extract_corr_fct(newfile)
     #print(corr)
     #print(nbcfg)
     #print(T)
@@ -50,13 +52,13 @@ def main():
     #print(samples.shape)
 
     # testing the creation of a correlation function matrix
-    corr_mat, T = corr_matrix.create_corr_matrix(10, filepath, filestring)
+    # corr_mat, T = corr_matrix.create_corr_matrix(10, filepath, filestring)
     #print(corr_mat[:,0,0,0])
     #print(corr_mat[0,:,0,0])
     #print(corr_mat[0,0,:,0])
     #print(corr_mat[0,0,0,:])
     #print(T)
-    print(corr_mat.T.shape)
+    #print(corr_mat.T.shape)
     #for t in range(0, 25):
     #    print("\tt = " + str(t))
     #    for s in range(0, 10):
