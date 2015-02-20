@@ -69,7 +69,8 @@ def main():
     # testing the GEVP
 
     eigenvalues = gevp.calculate_gevp(corr_mat)
-    print(eigenvalues)
+    #print(eigenvalues)
+    input_output.write_data(eigenvalues, "./test.dat")
 
 
 # make this script importable, according to the Google Python Style Guide

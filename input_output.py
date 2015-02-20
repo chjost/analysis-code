@@ -52,7 +52,8 @@ def extract_corr_fct(filename='', verbose=0):
 
     # check if file we want to read exists
     if not os.path.isfile(filename):
-        print(filename + " is not a file")
+        print("ERROR: " + filename + " is not a file")
+        return
     else:
         # open file and parse first line with information
         if verbose:
@@ -126,3 +127,31 @@ def extract_bin_corr_fct(name='', start_cfg=0, delta_cfg=0, nb_cfg=0, T=0,
         corr[(_t%T)*nb_cfg + _t/T] = complex(_x[0], _y[0])
         _t += 1
     return corr
+
+def write_data(data, filename):
+    """Write the data to file.
+
+    Expects numpy array with three axis.
+
+    Args:
+        data: The numpy array to write to the file.
+        filename: The filename of the file, including the path.
+
+    Returns:
+        Nothing.
+    """
+    # check whether file exists
+    if os.path.isfile(filename):
+        print(filename + " already exists, overwritting...")
+    # open file for writting
+    outfile = open(filename, "w")
+    # write the data shape
+    outfile.write(str(data.shape) + "\n")
+    # write the data points
+    for _i in range(data.shape[0]):
+        for _j in range(data.shape[1]):
+            outfile.write(str(_j) + " ")
+            for _k in range(data.shape[2]):
+                outfile.write(str(data[_i, _j, _k]) + " ")
+            outfile.write("\n")
+
