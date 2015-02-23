@@ -39,12 +39,12 @@ def main():
     # read in data
     # read in the first file to create all variables
     corrs, _nbcfg, _t = io.extract_corr_fct("".join((inputpath, inputlist[0],
-                                                     suffix)))
+                                                     suffix)), skipSorting=True)
     # loop over the remaining files and append to the first data set
     for _i in inputlist[1:]:
         # read in file
         _ctmp, _nbtmp, _ttmp = io.extract_corr_fct("".join((inputpath, _i,
-                                                            suffix)))
+                                                            suffix)), skipSorting=True)
         # check whether time extend is the same
         if _t != _ttmp:
             print("ERROR: the time extend of two files is not the same. Returning...")

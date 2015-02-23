@@ -54,10 +54,6 @@ def main():
     # testing the creation of a correlation function matrix
     corr_mat, T = corr_matrix.create_corr_matrix(10, filepath, filestring)
     #print(corr_mat[:,0,0,0])
-    #print(corr_mat[0,:,0,0])
-    #print(corr_mat[0,0,:,0])
-    #print(corr_mat[0,0,0,:])
-    #print(corr_mat[0,0,:,:])
     #print(T)
     #for s in range(0, nbsamples):
     #    print("\ts = " + str(s))
@@ -66,10 +62,9 @@ def main():
     #        print(corr_mat[s][t])
 
     # testing the GEVP
-
-    eigenvalues = gevp.calculate_gevp(corr_mat)
+    #eigenvalues = gevp.calculate_gevp(corr_mat)
     #print(eigenvalues)
-    input_output.write_data(eigenvalues, "./test.dat")
+    #input_output.write_data(eigenvalues, "./test.dat")
 
 
 # make this script importable, according to the Google Python Style Guide

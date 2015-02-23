@@ -29,7 +29,7 @@
 import os
 import numpy as np
 
-def extract_corr_fct(filename='', Im=False, verbose=0):
+def extract_corr_fct(filename='', Im=False, verbose=0, skipSorting=False):
     """Extracts correlation functions and resorts them.
 
     Reads correlation functions from the file filename. The first line of the
@@ -42,17 +42,16 @@ def extract_corr_fct(filename='', Im=False, verbose=0):
         Im: Flag whether to read the real or imaginary part of the correlation
             function.
         verbose: Changes the amount of information printed.
+        skipSorting: Skip the sorting step at the end. The fastest index
 
     Returns:
-        A list with entries containing the correlation functions.
-        The list is sorted with the time index as fast index and the
-        configuration number as slower index.
-        The number of configurations.
-        The time extent of the lattice.
+        A list with entries containing the correlation functions. The list is
+        sorted with the time index as slow index and the configuration number
+        as fast index. In case skipSorting is true, the fastest index is time
+        and the slowest is the configuration number.
+        The second returned variable is the number of configurations.
+        The third returned variable is the time extent of the lattice.
     """
-    # corr contains the correlation functions
-    #corr = []
-
     # check if file we want to read exists
     if not os.path.isfile(filename):
         print("ERROR: " + filename + " is not a file")
@@ -86,12 +85,15 @@ def extract_corr_fct(filename='', Im=False, verbose=0):
             print("ERROR: while reading " + filename + ". Returning...")
         # sort the correlation functions according so that the time index
         # is the fastest index
-        if verbose:
-            print("sort correlation function")
-        _t = 0
-        for x in _re:
-            corr[int(_t%T) * nbcfg + int(_t / T)] = x
-            _t += 1
+        if not skipSorting:
+            if verbose:
+                print("sort correlation function")
+            _t = 0
+            for x in _re:
+                corr[int(_t%T) * nbcfg + int(_t / T)] = x
+                _t += 1
+        else:
+            corr = _re
         # close file
         _f.close()
 
