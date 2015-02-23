@@ -28,7 +28,6 @@
 ################################################################################
 
 import numpy as np
-import pandas as pd
 import scipy.linalg as spla
 
 def permutation_indices(data):

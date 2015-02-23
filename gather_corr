@@ -1,0 +1,65 @@
+#!/usr/bin/python
+################################################################################
+#
+# Author: Christian Jost (jost@hiskp.uni-bonn.de)
+# Date:   Februar 2015
+#
+# Copyright (C) 2015 Christian Jost
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Function: At the moment this is a test program, this file will change a lot
+#
+# For informations on input parameters see the description of the function.
+#
+################################################################################
+
+import numpy as np
+import input_output as io
+
+def main():
+    # needed variables
+    inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/sum/pi_corr_p0.conf"
+    outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/pi_corr_p0"
+    suffix=".dat"
+    inputlist=["0004", "0012", "0020", "0028", "0036", "0044", "0052", "0060", "0068", "0076"]
+
+    # read in data
+    # read in the first file to create all variables
+    corrs, _nbcfg, _t = io.extract_corr_fct("".join((inputpath, inputlist[0],
+                                                     suffix)))
+    # loop over the remaining files and append to the first data set
+    for _i in inputlist[1:]:
+        # read in file
+        _ctmp, _nbtmp, _ttmp = io.extract_corr_fct("".join((inputpath, _i,
+                                                            suffix)))
+        # check whether time extend is the same
+        if _t != _ttmp:
+            print("ERROR: the time extend of two files is not the same. Returning...")
+            return
+        # append the correlation function
+        corrs = np.append(corrs, _ctmp)
+        # add number of configurations
+        _nbcfg += _nbtmp
+
+    # print to file
+    io.write_corr_fct(corrs, "".join((outputpath, suffix)), _t, _nbcfg)
+    #print(corrs)
+    print(corrs.shape)
+
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    main()
