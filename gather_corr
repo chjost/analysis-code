@@ -57,7 +57,7 @@ def main():
         _nbcfg += _nbtmp
 
     # print to file
-    io.write_corr_fct(corrs, "".join((outputpath, suffix)), _t, _nbcfg)
+    io.write_corr_fct(corrs, "".join((outputpath, suffix)), _t, _nbcfg, False)
     #print(corrs)
     print(corrs.shape)
 

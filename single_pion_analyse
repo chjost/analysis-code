@@ -40,15 +40,16 @@ def main():
     suffix="pi_corr_p0.dat"
     suffix1="pi_corr_average.dat"
     suffix2="pi_corr_mass.dat"
-    inputlist=["D15_new/", "D15_old/", "D15_combined/"]
+    inputlist=["D15_new/"]
+    #inputlist=["D15_new/", "D15_old/", "D15_combined/"]
 
     fitfunc = lambda p, x: p[0]
     for _i in inputlist:
         # read in data
         corrs, nbcfg, T = io.extract_corr_fct("".join((inputpath, inputlist[0],
                                                      suffix)))
-        average = af.average_corr_fct(corrs, nbcfg, T)
-        print(average)
+        #average = af.average_corr_fct(corrs, nbcfg, T)
+        print(corrs)
         tlist = np.linspace(0., float(np.floor(T/2)), float(np.floor(T/2)), endpoint=False)
         # create bootstrap samples
         bsamples = bootstrap.sym_and_boot(corrs, T, nbcfg, nbsamples)

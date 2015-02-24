@@ -100,21 +100,29 @@ def extract_corr_fct(filename='', Im=False, verbose=0, skipSorting=False):
     # return the correlation functions
     return corr, nbcfg, T
 
-def write_corr_fct(data, filename, T, nbcfg):
+def write_corr_fct(data, filename, T, nbcfg, timesorted=True):
     """Write the correlation function to file.
 
     Expects numpy array with one axis. A sanity check is done with T and
     nbcfg.
+    Can write correlation functions sorted with time as fastest index
+    (timesorted=False) and functions with configuration number as fastest index
+    (timesorted=True), see also extract_corr_fct.
 
     Args:
         data: The numpy array to write to the file.
         filename: The filename of the file, including the path.
         T: The time extend of the data.
         nbcfg: The number of configurations in the data.
+        timesorted: If time is the fastest index, this should be False.
 
     Returns:
         Nothing.
     """
+    # check whether enough data is in the array
+    if data.shape[0] != int(T * nbcfg):
+        print("ERROR: the length of data is not T*nbcfg")
+        return
     # check whether file exists
     if os.path.isfile(filename):
         print(filename + " already exists, overwritting...")
@@ -123,13 +131,18 @@ def write_corr_fct(data, filename, T, nbcfg):
     # write the data shape in L. Liu's format
     outfile.write(str(nbcfg) + " " + str(T) + " 0 " +
                   str(int(T/2)) + " 0\n")
-    # check whether enogh data is in the array
-    if data.shape[0] != int(T * nbcfg):
-        print("ERROR: the length of data is not T*nbcfg")
-        return
+    tmp=None
     # write the data points
-    for _i in range(data.shape[0]):
-        outfile.write(str(_i%T) + " " + str(data[_i]) + "\n")
+    if timesorted:
+        for _i in range(data.shape[0]):
+            tmp='%d %.14f\n' % ((_i%T), (data[(_i%T)*nbcfg + (_i/T)]))
+            outfile.write(tmp)
+            #outfile.write(str(_i%T) + " " + str(data[(_i%T)*nbcfg + (_i/T)]) + "\n")
+    else:
+        for _i in range(data.shape[0]):
+            tmp='%d %.14f\n' % ((_i%T), (data[_i]))
+            outfile.write(tmp)
+            #outfile.write(str(_i%T) + " " + str(data[_i]) + "\n")
 
 def extract_bin_corr_fct(name='', start_cfg=0, delta_cfg=0, nb_cfg=0, T=0,
                      verbose=0): 

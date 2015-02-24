@@ -27,7 +27,7 @@
 
 import os
 import numpy as np
-import input_output
+import input_output as io
 import bootstrap
 
 def create_corr_matrix(nbsamples, filepath, filestring, filesuffix=".dat",
@@ -36,9 +36,9 @@ def create_corr_matrix(nbsamples, filepath, filestring, filesuffix=".dat",
 
     Reads different correlation functions and inserts them into a matrix. The
     matrix is filled row majored, the correlation functions matrix is stored
-    column majored!
-    It is assumed that the matrix is symmetric, the off diagonal elements are
-    symmetrized.
+    column majored. It is assumed that the matrix is symmetric, the off
+    diagonal elements are symmetrized.
+    WARNING: Up to now a maximum matrix size of 20x20 operators is implemented.
 
     Args:
         nbsamples: Number of bootstrap samples created.
@@ -56,47 +56,45 @@ def create_corr_matrix(nbsamples, filepath, filestring, filesuffix=".dat",
         function matrix, that is (T/2)+1, where T is the length of the original
         correlation function in time.
     """
-    # calculate the matrix size based on the number of elements of filesting
+    # calculate the matrix size based on the number of elements of filestring
+    # at the moment up to 20x20 matrices are supported
     _nbops = 0
     for _i in range(1, 20):
         if len(filestring) == _i*_i:
             _nbops = _i
             break
+    # if the size could not be determined then return
     if _nbops == 0:
         print("ERROR: size of the correlation matrix could not be determined")
-        return None
-    # copy the list so we can change it
-    _filestringcopy = list(filestring)
+        return
     # Treat first element differently so we can create an array of the correct
     # size. This allows also to check whether the other files have the same
     # number of configurations and the same time extent.
-    _substring = _filestringcopy.pop(0)
-    _name = filepath + _substring + filesuffix
+    _name = filepath + filestring[0] + filesuffix
     if verbose:
         print("filename " + _name)
-    _data1, _nbcfg1, _T1 = input_output.extract_corr_fct(_name, verbose)
+    _data1, _nbcfg1, _T1 = io.extract_corr_fct(_name, verbose)
     _boot1 = bootstrap.sym_and_boot(_data1, _T1, _nbcfg1, nbsamples)
     # create correlation function matrix
     corr_mat = np.zeros((nbsamples, int(_T1/2)+1, _nbops, _nbops))
     corr_mat[:,:,0,0] = _boot1
     # read in all other correlation functions, bootstrap them and write them to
     # the numpy array
-    for _nb, _sub in enumerate(_filestringcopy):
+    for _nb, _sub in enumerate(filestring[1:], start=1):
         # generate filename
         _name = filepath + _sub + filesuffix
         if verbose:
             print("filename " + _name)
         # read in data
-        _data, _nbcfg, _T = input_output.extract_corr_fct(_name)
+        _data, _nbcfg, _T = io.extract_corr_fct(_name)
         # check if size is the same as the first operator
         if _nbcfg != _nbcfg1 or _T != _T1:
             print("ERROR while reading file " + _name)
             print("\tnumber of configurations or time extent is wrong")
         else:
             _boot = bootstrap.sym_and_boot(_data, _T, _nbcfg, nbsamples)
-            corr_mat[:, :, int((_nb+1)/_nbops), int((_nb+1)%_nbops)] = _boot 
+            corr_mat[:, :, int(_nb/_nbops), int(_nb%_nbops)] = _boot 
 
-    #corr_mat_symm = corr_mat.copy()
     corr_mat_symm = np.zeros_like(corr_mat)
     for _s in range(0, nbsamples):
         for _t in range(0, int(_T1/2)+1):

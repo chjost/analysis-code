@@ -60,7 +60,7 @@ def sym_and_boot(source, T, nbcfg, nbsamples = 1000):
     """Symmetrizes and boostraps correlation functions.
 
     Symmetrizes the correlation functions given in source and creates bootstrap
-    samples.
+    samples. Assumes that time is a slower index than the configuration number.
 
     Args:
         source: List with the correlation functions.
@@ -73,15 +73,15 @@ def sym_and_boot(source, T, nbcfg, nbsamples = 1000):
         first axis is the bootstrap number, the second axis is the time index.
         The time extent is reduced to T/2+1 due to the symmetrization.
     """
-    # the first timslice is not symmetrized
-    boot = bootstrap(source, nbsamples)
+    # the first timeslice is not symmetrized
+    boot = bootstrap(source[:nbcfg], nbsamples)
     for _t in range(1, int(T/2)):
         # symmetrize the correlation function
         _symm = []
         for _x, _y in zip(source[_t * nbcfg:(_t+1) * nbcfg],
                           source[(T-_t) * nbcfg:(T-_t+1) * nbcfg]):
             _symm.append((_x + _y) / 2.)
-        # bootstrap the timeslice
+        # bootstrap the timeslice and append to previous samples
         boot = np.c_[boot, bootstrap(_symm, nbsamples)]
     # the timeslice at t = T/2 is not symmetrized
     boot = np.c_[boot, bootstrap(source[int(T/2) * nbcfg: (int(T/2)+1) * nbcfg],

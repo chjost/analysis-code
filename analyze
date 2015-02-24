@@ -26,7 +26,7 @@
 #
 ################################################################################
 
-import input_output
+import input_output as io
 import bootstrap
 import corr_matrix
 import gevp
@@ -41,10 +41,11 @@ def main():
 
     # testing the input
     #newfile="/hiskp2/correlators/A100.24_L24_T48_beta190_mul0100_musig150_mudel190_kappa1632550/ev120/liuming/pi_corr_p0.dat"
-    #corr, nbcfg, T = input_output.extract_corr_fct(newfile)
+    #corr, nbcfg, T = io.extract_corr_fct(newfile)
     #print(corr)
     #print(nbcfg)
     #print(T)
+    #io.write_corr_fct(corr, "./corr_test.dat", T, nbcfg)
 
     # testing the bootstraping
     #samples = bootstrap.sym_and_boot(corr, T, nbcfg, 100)
@@ -64,7 +65,7 @@ def main():
     # testing the GEVP
     eigenvalues = gevp.calculate_gevp(corr_mat)
     #print(eigenvalues)
-    #input_output.write_data(eigenvalues, "./test.dat")
+    io.write_data(eigenvalues, "./test.dat")
 
 
 # make this script importable, according to the Google Python Style Guide
