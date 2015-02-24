@@ -20,51 +20,43 @@
 #
 ################################################################################
 #
-# Function: At the moment this is a test program, this file will change a lot
+# Function: A short analysis of the single pion.
 #
 # For informations on input parameters see the description of the function.
 #
 ################################################################################
 
-import input_output
+import input_output as io
+import analyze_fcts as af
+import fit
 import bootstrap
-import corr_matrix
-import gevp
+import numpy as np
 
 def main():
     ## definition of some variables
     nbsamples = 10
-    filepath="/hiskp2/correlators/A100.24_L24_T48_beta190_mul0100_musig150_mudel190_kappa1632550/ev120/liuming/pi_corr_p"
-    #filepath="/home/chris/test/data/pi_corr_p"
-    filestring = ["0", "1", "2", "3"]
+    inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/"
+    outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/"
+    suffix="pi_corr_p0.dat"
+    suffix1="pi_corr_average.dat"
+    suffix2="pi_corr_mass.dat"
+    inputlist=["D15_new/", "D15_old/", "D15_combined/"]
 
-
-    # testing the input
-    #newfile="/hiskp2/correlators/A100.24_L24_T48_beta190_mul0100_musig150_mudel190_kappa1632550/ev120/liuming/pi_corr_p0.dat"
-    #corr, nbcfg, T = input_output.extract_corr_fct(newfile)
-    #print(corr)
-    #print(nbcfg)
-    #print(T)
-
-    # testing the bootstraping
-    #samples = bootstrap.sym_and_boot(corr, T, nbcfg, 100)
-    #print(samples[:,1])
-    #print(samples.shape)
-
-    # testing the creation of a correlation function matrix
-    corr_mat, T = corr_matrix.create_corr_matrix(10, filepath, filestring)
-    #print(corr_mat[:,0,0,0])
-    #print(T)
-    #for s in range(0, nbsamples):
-    #    print("\ts = " + str(s))
-    #    for t in range(0, int(T/2)+1):
-    #        print("\tt = " + str(t))
-    #        print(corr_mat[s][t])
-
-    # testing the GEVP
-    eigenvalues = gevp.calculate_gevp(corr_mat)
-    #print(eigenvalues)
-    #input_output.write_data(eigenvalues, "./test.dat")
+    fitfunc = lambda p, x: p[0]
+    for _i in inputlist:
+        # read in data
+        corrs, nbcfg, T = io.extract_corr_fct("".join((inputpath, inputlist[0],
+                                                     suffix)))
+        average = af.average_corr_fct(corrs, nbcfg, T)
+        print(average)
+        tlist = np.linspace(0., float(np.floor(T/2)), float(np.floor(T/2)), endpoint=False)
+        # create bootstrap samples
+        bsamples = bootstrap.sym_and_boot(corrs, T, nbcfg, nbsamples)
+        print(bsamples.shape)
+        # choose fitrange
+        lo, up = (bsamples.shape[1]-10), bsamples.shape[1]
+        # fit the masses and print information
+        #res, chi2, pval = fit.fitting(fitfunc, tlist[lo:up], bsamples[:,lo:up], [0.15])
 
 
 # make this script importable, according to the Google Python Style Guide

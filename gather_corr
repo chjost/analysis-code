@@ -32,9 +32,11 @@ import input_output as io
 def main():
     # needed variables
     inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/sum/pi_corr_p0.conf"
-    outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/pi_corr_p0"
+    outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/pi_corr_p0_old"
     suffix=".dat"
-    inputlist=["0004", "0012", "0020", "0028", "0036", "0044", "0052", "0060", "0068", "0076"]
+#    inputlist=["0004", "0012", "0020", "0028", "0036", "0044", "0052", "0060", "0068", "0076"]#,
+#               "0040", "0048", "0056", "0064"]
+    inputlist=["0040", "0048", "0056", "0064"]
 
     # read in data
     # read in the first file to create all variables
