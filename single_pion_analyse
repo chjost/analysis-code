@@ -37,14 +37,16 @@ def main():
     nbsamples = 10
     inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/"
     outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/"
-    suffix="pi_corr_p0_new.dat"
+    suffix="pi_corr_p0.dat"
     suffix1="pi_corr_average.dat"
     suffix2="pi_corr_mass.dat"
-    inputlist=["D15_new/"]
-    #inputlist=["D15_new/", "D15_old/", "D15_combined/"]
+    #inputlist=["D15_new/"]
+    inputlist=["D15_new/", "D15_old/", "D15_combined/"]
 
-    fitfunc = lambda p, x: p[0]
+    # get mass from correlation function
+    fitfunc = lambda p,t: p[0]*np.cosh((T/2.0-t)*p[1])
     for _i in inputlist:
+        print("dir" + _i)
         # read in data
         corrs, nbcfg, T = io.extract_corr_fct("".join((inputpath, inputlist[0],
                                                      suffix)))
@@ -54,14 +56,17 @@ def main():
         tlist = np.linspace(0., float(np.floor(T/2)), float(np.floor(T/2)), endpoint=False)
         # create bootstrap samples
         bsamples = bootstrap.sym_and_boot(corrs, T, nbcfg, nbsamples)
-        for s in range(bsamples.shape[0]):
-            print(bsamples[s])
+        #print(bsamples.shape)
+        #for t in range(bsamples.shape[1]):
+        #    print(bsamples[:,t])
+        #for s in range(bsamples.shape[0]):
+        #    print(bsamples[s])
         #print(bsamples.shape)
         # choose fitrange
-        lo, up = (bsamples.shape[1]-10), bsamples.shape[1]
+        lo, up = (bsamples.shape[1]-11), (bsamples.shape[1]-1)
         # fit the masses and print information
-        #res, chi2, pval = fit.fitting(fitfunc, tlist[lo:up], bsamples[:,lo:up], [0.15])
-
+        res, chi2, pval = fit.fitting(fitfunc, tlist[lo:up], bsamples[:,lo:up],
+                                      [10., 0.15], correlated=False)
 
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':

@@ -25,19 +25,11 @@
 #
 ################################################################################
 
-from scipy.optimize import curve_fit
 from scipy.optimize import leastsq
 import scipy.stats
 import numpy as np
 
-import matplotlib
-matplotlib.use('QT4Agg') # must be called before the other imports 
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_pdf import PdfPages
-import matplotlib.mlab as mlab
-
-def fitting(fitfunc, X, Y, start_parm, correlated=True, tcut = 0.,
-            verbose = 1):
+def fitting(fitfunc, X, Y, start_parm, correlated=True, verbose = 1):
     """A function that fits a correlation function.
 
     This function fits the given function fitfunc to the data given in X and Y.
@@ -56,7 +48,7 @@ def fitting(fitfunc, X, Y, start_parm, correlated=True, tcut = 0.,
         The function returns the fitting parameters, the chi^2 and the p-value
         of the fit.
     """
-    errfunc = lambda p, x, y, error, tc: np.dot(error, (y-fitfunc(p,x,tc)).T)
+    errfunc = lambda p, x, y, error: np.dot(error, (y-fitfunc(p,x)).T)
     # compute inverse, cholesky decomposed covariance matrix
     if not correlated:
         if verbose:
@@ -66,7 +58,6 @@ def fitting(fitfunc, X, Y, start_parm, correlated=True, tcut = 0.,
         if verbose:
             print("Performing a correlated fit!")
         cov = np.cov(Y.T)
-    print(cov)
     cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
 
     # degrees of freedom
@@ -76,7 +67,7 @@ def fitting(fitfunc, X, Y, start_parm, correlated=True, tcut = 0.,
     chisquare = np.zeros(Y.shape[0])
     for b in range(0, Y.shape[0]):
         p,cov1,infodict,mesg,ier = leastsq(errfunc, start_parm,
-                                   args=(X, Y[b,:], cov, tcut), full_output=1)
+                                   args=(X, Y[b,:], cov), full_output=1)
         chisquare[b] = float(sum(infodict['fvec']**2.))
         res[b] = np.array(p)
     res_mean, res_std = np.mean(res, axis=0), np.std(res, axis=0)
@@ -87,7 +78,7 @@ def fitting(fitfunc, X, Y, start_parm, correlated=True, tcut = 0.,
     # The fit to the mean value
     y = np.mean(Y, axis=0)
     p,cov1,infodict,mesg,ier = leastsq(errfunc, start_parm, \
-                               args=(X, y, cov, tcut), full_output=1)
+                               args=(X, y, cov), full_output=1)
 
     # writing results to screen
     if verbose:
