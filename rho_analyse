@@ -132,7 +132,7 @@ def main():
 
     # solve the GEVP
     gevp_mat = gevp.calculate_gevp(corr_mat, tmin)
-    io.write_data(gevp_mat, "./raw_data/gevp_rho.dat")
+    #io.write_data(gevp_mat, "./raw_data/gevp_rho.dat")
     #print(gevp_mat.shape)
 
     # get energie from correlation function
@@ -142,7 +142,7 @@ def main():
     # fit the masses and print information
     for _l in range(gevp_mat.shape[2]):
         res, chi2, pval = fit.fitting(fitfunc, tlist[lo:], gevp_mat[:,lo:,_l],
-                                      [10., 0.15])
+                                      [0.005, -0.5])
 
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':
