@@ -29,7 +29,7 @@
 import os
 import numpy as np
 
-def extract_corr_fct(filename='', Im=False, verbose=0, skipSorting=False):
+def extract_corr_fct(filename='', column=1, verbose=0, skipSorting=False):
     """Extracts correlation functions and resorts them.
 
     Reads correlation functions from the file filename. The first line of the
@@ -39,10 +39,9 @@ def extract_corr_fct(filename='', Im=False, verbose=0, skipSorting=False):
 
     Args:
         filename: The file name.
-        Im: Flag whether to read the real or imaginary part of the correlation
-            function.
+        column: Which column to read.
         verbose: Changes the amount of information printed.
-        skipSorting: Skip the sorting step at the end. The fastest index
+        skipSorting: Skip the sorting step at the end.
 
     Returns:
         A list with entries containing the correlation functions. The list is
@@ -69,18 +68,12 @@ def extract_corr_fct(filename='', Im=False, verbose=0, skipSorting=False):
         nbcfg = int(_latticedata[0])
         T = int(_latticedata[1])
         corr = np.zeros((int(nbcfg*T)), dtype=float)
-        # Check whether to read the real or imaginary part of the correlation
-        # function. If the part that is read does not exist, the function
-        # returns.
-        _arg_corr=1
-        if Im:
-            _arg_corr=2
         # read in all correlation functions
         _re = []
         try:
             for _cfg in range(0,nbcfg):
                 for _t in range(0, T):
-                    _re.append(float(_f.readline().split()[_arg_corr]))
+                    _re.append(float(_f.readline().split()[column]))
         except:
             print("ERROR: while reading " + filename + ". Returning...")
         # sort the correlation functions according so that the time index

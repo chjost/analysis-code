@@ -31,7 +31,7 @@ import input_output as io
 import bootstrap
 
 def create_corr_matrix(nbsamples, filepath, filestring, filesuffix=".dat",
-                       verbose=0):
+                       column=1, verbose=0):
     """Creates a correlation function matrix.
 
     Reads different correlation functions and inserts them into a matrix. The
@@ -46,6 +46,8 @@ def create_corr_matrix(nbsamples, filepath, filestring, filesuffix=".dat",
         filestring: A list of the changing parts of the filenames. The length
                     of the list gives the size of the matrix.
         filesuffix: The suffix of the data files.
+        column: The column of the input file to be read. The same column is
+                read from every file!
         verbose: Changes the amount of information printed.
 
     Returns:
@@ -73,7 +75,7 @@ def create_corr_matrix(nbsamples, filepath, filestring, filesuffix=".dat",
     _name = filepath + filestring[0] + filesuffix
     if verbose:
         print("filename " + _name)
-    _data1, _nbcfg1, _T1 = io.extract_corr_fct(_name, verbose)
+    _data1, _nbcfg1, _T1 = io.extract_corr_fct(_name, column, verbose)
     _boot1 = bootstrap.sym_and_boot(_data1, _T1, _nbcfg1, nbsamples)
     # create correlation function matrix
     corr_mat = np.zeros((nbsamples, int(_T1/2)+1, _nbops, _nbops))
@@ -86,7 +88,7 @@ def create_corr_matrix(nbsamples, filepath, filestring, filesuffix=".dat",
         if verbose:
             print("filename " + _name)
         # read in data
-        _data, _nbcfg, _T = io.extract_corr_fct(_name)
+        _data, _nbcfg, _T = io.extract_corr_fct(_name, column)
         # check if size is the same as the first operator
         if _nbcfg != _nbcfg1 or _T != _T1:
             print("ERROR while reading file " + _name)
@@ -126,7 +128,7 @@ def write_corr_matrix(data, filename, verbose=0):
         os.mkdirs(_dir)
     if verbose:
         print("saving to file" + str(filename))
-    np.save(data, filename)
+    np.save(filename, data)
 
 
 def read_corr_matrix(filename, verbose=0):
@@ -149,5 +151,5 @@ def read_corr_matrix(filename, verbose=0):
         return None
     if verbose:
         print("reading from file " + str(filename))
-    data = np.save(filename)
-    return corr
+    data = np.load(filename)
+    return data

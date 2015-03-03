@@ -1,0 +1,137 @@
+#!/usr/bin/python
+################################################################################
+#
+# Author: Christian Jost (jost@hiskp.uni-bonn.de)
+# Date:   Februar 2015
+#
+# Copyright (C) 2015 Christian Jost
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Function: This is the start of the eta/eta' analysis program
+#
+# For informations on input parameters see the description of the function.
+#
+################################################################################
+
+import numpy as np
+
+import input_output as io
+import bootstrap
+import corr_matrix as cm
+import gevp
+
+def read_rho(nbsamples=1000):
+    # general path
+    path="/hiskp2/jost/data/rho_analyse/A40.24/"
+    # two point function
+    name="".join((path + "C2_rho_TP0.dat"))
+    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
+    pilist=2*pilist1
+    mat_pi22=bootstrap.sym_and_boot(pilist, T, nbcfg, nbsamples)
+    # three point functions
+    name="".join((path + "C3_Ad_TP0.dat"))
+    pilist1, nbcfg, T=io.extract_corr_fct(name)
+    name="".join((path + "C3_Au_TP0.dat"))
+    pilist2, nbcfg, T=io.extract_corr_fct(name)
+    name="".join((path + "C3_Bd_TP0.dat"))
+    pilist3, nbcfg, T=io.extract_corr_fct(name)
+    name="".join((path + "C3_Bu_TP0.dat"))
+    pilist4, nbcfg, T=io.extract_corr_fct(name)
+    pilist= -pilist1 + pilist2 - pilist3 + pilist4
+    mat_pi12=bootstrap.sym_and_boot(pilist, T, nbcfg, nbsamples)
+    # four point functions
+    # trace-trace
+    name="".join((path + "C4_1_TP0_diagonal.dat"))
+    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4_2_TP0_diagonal.dat"))
+    pilist2, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4_1_TP0_suppressed.dat"))
+    pilist3, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4_1_TP0_suppressed.dat"))
+    pilist4, nbcfg, T=io.extract_corr_fct(name, column=0)
+    pilist = (pilist1 + pilist2) - (pilist3 + pilist4)
+    # box
+    name="".join((path + "C4I10_Dd_11_TP0_diagonal.dat"))
+    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4I10_Du_11_TP0_diagonal.dat"))
+    pilist2, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4I10_Dd_12_TP0_diagonal.dat"))
+    pilist3, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4I10_Du_12_TP0_diagonal.dat"))
+    pilist4, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4I10_Dd_21_TP0_diagonal.dat"))
+    pilist5, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4I10_Du_21_TP0_diagonal.dat"))
+    pilist6, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4I10_Dd_22_TP0_diagonal.dat"))
+    pilist7, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4I10_Du_22_TP0_diagonal.dat"))
+    pilist8, nbcfg, T=io.extract_corr_fct(name, column=0)
+    pilist = pilist + 0.5*(pilist1 + pilist2 + pilist3 + pilist4 + pilist5 +
+                           pilist6 + pilist7 + pilist8)
+    name="".join((path + "C4I10_Dd_11_TP0_doubly_suppressed.dat"))
+    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4I10_Du_11_TP0_doubly_suppressed.dat"))
+    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4I10_Dd_12_TP0_doubly_suppressed.dat"))
+    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4I10_Du_12_TP0_doubly_suppressed.dat"))
+    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4I10_Dd_21_TP0_doubly_suppressed.dat"))
+    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4I10_Du_21_TP0_doubly_suppressed.dat"))
+    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4I10_Dd_22_TP0_doubly_suppressed.dat"))
+    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4I10_Du_22_TP0_doubly_suppressed.dat"))
+    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
+    pilist = pilist + 0.5*(pilist1 + pilist2 + pilist3 + pilist4 + pilist5 +
+                           pilist6 + pilist7 + pilist8)
+    mat_pi11=bootstrap.sym_and_boot(pilist, T, nbcfg, nbsamples)
+    # build correlation function matrix
+    corr_mat = np.zeros((nbsamples, int(T/2)+1, 2, 2))
+    corr_mat[:,:,0,0] = mat_pi11
+    corr_mat[:,:,0,1] = mat_pi12
+    corr_mat[:,:,1,0] = mat_pi12
+    corr_mat[:,:,1,1] = mat_pi22
+
+    return corr_mat, int(T/2)+1, nbcfg
+
+
+def main():
+    ## definition of some variables
+    nbsamples = 10
+
+    # read in data, bootstrap and create correlation function matrix
+    #corr_mat, T2, nbcfg = read_rho(nbsamples)
+    #cm.write_corr_matrix(corr_mat, "./raw_data/corr_mat_rho.npy")
+    #print(corr_mat.shape)
+    #print(corr_mat[0,:,0,0])
+
+    # read in raw data
+    corr_mat = cm.read_corr_matrix("./raw_data/corr_mat_rho.npy")
+    T2 = corr_mat.shape[1]
+    #print(corr_mat.shape)
+    #print(corr_mat[0,:,0,0])
+    
+
+    # solve the GEVP
+
+    # fit the masses and print information
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    main()
