@@ -27,12 +27,17 @@
 ################################################################################
 
 import numpy as np
+import matplotlib
+matplotlib.use('QT4Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
 
 import input_output as io
 import bootstrap
 import corr_matrix as cm
 import gevp
 import fit
+import plot
 
 def read_rho(nbsamples=1000):
     # general path
@@ -111,11 +116,87 @@ def read_rho(nbsamples=1000):
 
     return corr_mat, int(T/2)+1, nbcfg
 
+def read_original_data():
+    # general path
+    path="/hiskp2/jost/data/rho_analyse/A40.24/"
+    # two point function
+    name="".join((path + "C2_rho_TP0.dat"))
+    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
+    pilist=2*pilist1
+    mat_pi22=bootstrap.sym(pilist, T, nbcfg)
+    # three point functions
+    name="".join((path + "C3_Ad_TP0.dat"))
+    pilist1, nbcfg, T=io.extract_corr_fct(name)
+    name="".join((path + "C3_Au_TP0.dat"))
+    pilist2, nbcfg, T=io.extract_corr_fct(name)
+    name="".join((path + "C3_Bd_TP0.dat"))
+    pilist3, nbcfg, T=io.extract_corr_fct(name)
+    name="".join((path + "C3_Bu_TP0.dat"))
+    pilist4, nbcfg, T=io.extract_corr_fct(name)
+    pilist= -pilist1 + pilist2 - pilist3 + pilist4
+    mat_pi12=bootstrap.sym(pilist, T, nbcfg)
+    # four point functions
+    # trace-trace
+    name="".join((path + "C4_1_TP0_diagonal.dat"))
+    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4_2_TP0_diagonal.dat"))
+    pilist2, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4_1_TP0_suppressed.dat"))
+    pilist3, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4_1_TP0_suppressed.dat"))
+    pilist4, nbcfg, T=io.extract_corr_fct(name, column=0)
+    pilist = (pilist1 + pilist2) - (pilist3 + pilist4)
+    # box
+    name="".join((path + "C4I10_Dd_11_TP0_diagonal.dat"))
+    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4I10_Du_11_TP0_diagonal.dat"))
+    pilist2, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4I10_Dd_12_TP0_diagonal.dat"))
+    pilist3, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4I10_Du_12_TP0_diagonal.dat"))
+    pilist4, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4I10_Dd_21_TP0_diagonal.dat"))
+    pilist5, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4I10_Du_21_TP0_diagonal.dat"))
+    pilist6, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4I10_Dd_22_TP0_diagonal.dat"))
+    pilist7, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4I10_Du_22_TP0_diagonal.dat"))
+    pilist8, nbcfg, T=io.extract_corr_fct(name, column=0)
+    pilist = pilist + 0.5*(pilist1 + pilist2 + pilist3 + pilist4 + pilist5 +
+                           pilist6 + pilist7 + pilist8)
+    name="".join((path + "C4I10_Dd_11_TP0_doubly_suppressed.dat"))
+    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4I10_Du_11_TP0_doubly_suppressed.dat"))
+    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4I10_Dd_12_TP0_doubly_suppressed.dat"))
+    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4I10_Du_12_TP0_doubly_suppressed.dat"))
+    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4I10_Dd_21_TP0_doubly_suppressed.dat"))
+    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4I10_Du_21_TP0_doubly_suppressed.dat"))
+    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4I10_Dd_22_TP0_doubly_suppressed.dat"))
+    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
+    name="".join((path + "C4I10_Du_22_TP0_doubly_suppressed.dat"))
+    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
+    pilist = pilist + 0.5*(pilist1 + pilist2 + pilist3 + pilist4 + pilist5 +
+                           pilist6 + pilist7 + pilist8)
+    mat_pi11=bootstrap.sym(pilist, T, nbcfg)
+    # build correlation function matrix
+    corr_mat = np.zeros((nbcfg, int(T/2)+1, 2, 2))
+    corr_mat[:,:,0,0] = mat_pi11
+    corr_mat[:,:,0,1] = mat_pi12
+    corr_mat[:,:,1,0] = mat_pi12
+    corr_mat[:,:,1,1] = mat_pi22
+
+    return corr_mat, int(T/2)+1, nbcfg
 
 def main():
     ## definition of some variables
     nbsamples = 2500
-    tmin=5
+    tmin=1
     T=48
 
     # read in data, bootstrap and create correlation function matrix
@@ -124,25 +205,41 @@ def main():
     #print(corr_mat.shape)
     #print(corr_mat[0,:,0,0])
 
+    # read in original data and create correlation function matrix
+    corr_mat, T2, nbcfg = read_original_data()
+
     # read in raw data
-    corr_mat = cm.read_corr_matrix("./raw_data/corr_mat_rho.npy")
-    T2 = corr_mat.shape[1]
+    #corr_mat = cm.read_corr_matrix("./raw_data/corr_mat_rho.npy")
+    #T2 = corr_mat.shape[1]
     #print(corr_mat.shape)
     #print(corr_mat[0,:,0,0])
 
     # solve the GEVP
     gevp_mat = gevp.calculate_gevp(corr_mat, tmin)
-    #io.write_data(gevp_mat, "./raw_data/gevp_rho.dat")
+    io.write_data(gevp_mat, "./raw_data/gevp_rho.dat")
     #print(gevp_mat.shape)
 
     # get energie from correlation function
     fitfunc = lambda p,t: p[0]*np.cosh((T/2.0-t)*p[1])
     tlist = np.linspace(0., float(T2), float(T2), endpoint=False)
-    lo = tmin+1
-    # fit the masses and print information
+    lo, up = 10, 17
+    pfit = PdfPages("./plots/fit_gevp.pdf")
     for _l in range(gevp_mat.shape[2]):
-        res, chi2, pval = fit.fitting(fitfunc, tlist[lo:], gevp_mat[:,lo:,_l],
-                                      [0.005, -0.5])
+        # fit the energy and print information
+        #res, chi2, pval = fit.fitting(fitfunc, tlist[lo:up], gevp_mat[:,lo:up,_l],
+        #                              [0.005, -0.5])
+        # plot the datapoints and the fit
+        #pfit = PdfPages("".join(("./plots/fit_gevp_" + str(_l) + ".pdf")))
+        mgevp, dgevp = np.mean(gevp_mat[:,:,_l], axis=0), np.std(gevp_mat[:,:,_l], axis=0)
+        for i in range(mgevp.shape[0]):
+            print("%2d %.6e %.6e" % (i, mgevp[i], dgevp[i]))
+        res_mean = np.mean(res, axis=0)
+        #print(res_mean)
+        label = ["time", "C(t)", "data", "fit"]
+        #plot.corr_fct_with_fit(tlist, gevp_mat[0,:,_l], dgevp, fitfunc, res_mean,
+        #                       [tmin,T2], label, pfit, True)
+    pfit.close()
+
 
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':
