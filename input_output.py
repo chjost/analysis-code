@@ -205,4 +205,3 @@ def write_data(data, filename):
             for _k in range(data.shape[2]):
                 outfile.write(str(data[_i, _j, _k]) + " ")
             outfile.write("\n")
-

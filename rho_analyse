@@ -38,6 +38,7 @@ import corr_matrix as cm
 import gevp
 import fit
 import plot
+import analyze_fcts as af
 
 def read_rho(nbsamples=1000):
     # general path
@@ -198,15 +199,14 @@ def main():
     nbsamples = 2500
     tmin=1
     T=48
+    path="/hiskp2/jost/data/rho_analyse/A40.24/"
 
+    print("reading data")
     # read in data, bootstrap and create correlation function matrix
     #corr_mat, T2, nbcfg = read_rho(nbsamples)
     #cm.write_corr_matrix(corr_mat, "./raw_data/corr_mat_rho.npy")
     #print(corr_mat.shape)
     #print(corr_mat[0,:,0,0])
-
-    # read in original data and create correlation function matrix
-    corr_mat, T2, nbcfg = read_original_data()
 
     # read in raw data
     #corr_mat = cm.read_corr_matrix("./raw_data/corr_mat_rho.npy")
@@ -214,30 +214,56 @@ def main():
     #print(corr_mat.shape)
     #print(corr_mat[0,:,0,0])
 
+    # read in original data and create correlation function matrix
+    #corr_mat, T2, nbcfg = read_original_data()
+
+    # read in carsten's data
+    filelist = ["C2", "C3", "C3", "C4"]
+    #corr_mat, T2 = cm.create_corr_matrix(nbsamples, path, filelist)
+    #cm.write_corr_matrix(corr_mat, "./raw_data/corr_mat_rho.npy")
+    #corr_mat = cm.read_corr_matrix("./raw_data/corr_mat_rho.npy")
+    #T2 = corr_mat.shape[1]
+
     # solve the GEVP
-    gevp_mat = gevp.calculate_gevp(corr_mat, tmin)
-    io.write_data(gevp_mat, "./raw_data/gevp_rho.dat")
+    print("solving GEVP")
+    #gevp_mat = gevp.calculate_gevp(corr_mat, tmin)
+    #cm.write_corr_matrix(gevp_mat, "./raw_data/gevp_mat_rho.npy")
+    #io.write_data(gevp_mat, "./raw_data/gevp_rho.dat")
+    gevp_mat = cm.read_corr_matrix("./raw_data/gevp_mat_rho.npy")
+    T2 = gevp_mat.shape[1]
     #print(gevp_mat.shape)
 
+    #mgevp, dgevp = af.print_mean_corr(gevp_mat[:,:,0])
+    #for i in range(mgevp.shape[0]):
+    #    print("%2d %.6e %.6e" % (i, gevp_mat[0,i,0], dgevp[i]))
+    #return
+
+    print("fitting")
     # get energie from correlation function
-    fitfunc = lambda p,t: p[0]*np.cosh((T/2.0-t)*p[1])
+    #fitfunc = lambda p,t: p[0]*np.cosh((T/2.0-t)*p[1])
+    #start_params = [0.005, -0.5]
+    #fitfunc = lambda p,t: p[0]*np.exp(-p[1]*t)
+    #start_params = [1.0, 0.5]
+    #fitfunc = lambda p,t: np.exp(-p[0]*t)
+    #start_params = [0.5]
+    fitfunc = lambda p,t: 0.5*p[0]*p[0]*(np.exp(-p[1]*t) + np.exp(-p[1]*(T-t)))
+    start_params = [1, 0.5]
     tlist = np.linspace(0., float(T2), float(T2), endpoint=False)
-    lo, up = 10, 17
+    lo, up = 12, 21
     pfit = PdfPages("./plots/fit_gevp.pdf")
     for _l in range(gevp_mat.shape[2]):
         # fit the energy and print information
-        #res, chi2, pval = fit.fitting(fitfunc, tlist[lo:up], gevp_mat[:,lo:up,_l],
-        #                              [0.005, -0.5])
-        # plot the datapoints and the fit
-        #pfit = PdfPages("".join(("./plots/fit_gevp_" + str(_l) + ".pdf")))
-        mgevp, dgevp = np.mean(gevp_mat[:,:,_l], axis=0), np.std(gevp_mat[:,:,_l], axis=0)
-        for i in range(mgevp.shape[0]):
-            print("%2d %.6e %.6e" % (i, mgevp[i], dgevp[i]))
+        res, chi2, pval = fit.fitting(fitfunc, tlist[lo:up], gevp_mat[:,lo:up,_l],
+                                      start_params)
+        # set up the plot
+        mgevp, dgevp = af.return_mean_corr(gevp_mat[:,:,_l])
         res_mean = np.mean(res, axis=0)
-        #print(res_mean)
-        label = ["time", "C(t)", "data", "fit"]
-        #plot.corr_fct_with_fit(tlist, gevp_mat[0,:,_l], dgevp, fitfunc, res_mean,
-        #                       [tmin,T2], label, pfit, True)
+        fitlabel = "fit %d:%d" % (lo, up)
+        label = ["time", "C(t)", "data", fitlabel]
+        # plot the data and the fit
+        plot.corr_fct_with_fit(tlist, gevp_mat[0,:,_l], dgevp, fitfunc, res_mean,
+                               [tmin,T2], label, pfit, True)
+        #en, men, den = af.compute_energy(gevp_mat[:,:,_l])
     pfit.close()
 
 

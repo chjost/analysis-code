@@ -101,11 +101,6 @@ def create_corr_matrix(nbsamples, filepath, filestring, filesuffix=".dat",
     for _s in range(0, nbsamples):
         for _t in range(0, int(_T1/2)+1):
             corr_mat_symm[_s, _t] = (corr_mat[_s, _t] + corr_mat[_s, _t].T) / 2.
-            #for i in range(0, _nbops):
-            #    for j in range(0, _nbops):
-            #        if i != j:
-            #            corr_mat_symm[i][j][_s][_t] = (corr_mat[i][j][_s][_t] + corr_mat[j][i][_s][_t])/2.
-            #            corr_mat_symm[j][i][_s][_t] = corr_mat_symm[i][j][_s][_t]
     return corr_mat_symm, int(_T1/2)+1
 
 def write_corr_matrix(data, filename, verbose=0):

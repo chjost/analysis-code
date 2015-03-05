@@ -44,9 +44,9 @@ def bootstrap(source, nbsamples):
     # the seed is hardcoded to be able to recreate the samples
     np.random.seed(125013)
     # initialize the bootstrapsamples to 0.
-    boot = np.empty(nbsamples, dtype=float)
+    boot = np.zeros(nbsamples, dtype=float)
     # the first entry is the average over the original data
-    boot[0] = np.mean(source)
+    boot[0] = np.mean(source, dtype=np.float64)
     # create the rest of the bootstrap samples
     for _i in range(1, nbsamples):
         _rnd = np.random.randint(0, len(source)-1, size=len(source))

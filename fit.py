@@ -73,10 +73,12 @@ def fitting(fitfunc, X, Y, start_parm, correlated=True, verbose = 1):
     res_mean, res_std = np.mean(res, axis=0), np.std(res, axis=0)
     # p-value
     chi2 = np.median(chisquare)
-    pvalue = 1.-scipy.stats.chi2.cdf(chi2, dof)
+    pvalue = 1.-scipy.stats.chi2.cdf(chisquare[0], dof)
+    #pvalue = 1.-scipy.stats.chi2.cdf(chi2, dof)
 
     # The fit to the mean value
-    y = np.mean(Y, axis=0)
+    #y = np.mean(Y, axis=0)
+    y = Y[0]
     p,cov1,infodict,mesg,ier = leastsq(errfunc, start_parm, \
                                args=(X, y, cov), full_output=1)
 
@@ -86,6 +88,7 @@ def fitting(fitfunc, X, Y, start_parm, correlated=True, verbose = 1):
         print '\n\tFit results from bootstrap fit:'
         for rm, rs in zip(res_mean, res_std):
             print '\t%.6e +/- %.6e' % (rm, rs)
+        print '\tChi^2/dof: %.6e +/- %.6e' % (chisquare[0]/dof, np.std(chisquare)/dof)
         print '\tChi^2/dof: %.6e +/- %.6e' % (chi2/dof, np.std(chisquare)/dof)
         print '\tp-value: ', pvalue 
         print '\n\tFit parameter from mean value fit:'

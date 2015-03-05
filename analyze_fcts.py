@@ -164,7 +164,7 @@ def compute_energy(data):
         deviation.
     """
     # creating mass array from data array
-    mass = np.zero([data.shape[0], data.shape[1]-2], dtype=float)
+    mass = np.zeros([data.shape[0], data.shape[1]-2], dtype=float)
     # computing the energy via formula
     for b in range(0, data.shape[0]):
         row = data[b,:]
@@ -186,8 +186,8 @@ def return_mean_corr(data, axis=0):
         The mean and standard deviation of the data.
     """
     # calculate mean and standard deviation
-    mean = np.mean(boot, axis, dtype=np.float64)
-    err  = np.std(boot, axis, dtype=np.float64)
+    mean = np.mean(data, axis, dtype=np.float64)
+    err  = np.std(data, axis, dtype=np.float64)
     return mean, err
 
 def print_mean_corr(data, axis=0, msg=""):
@@ -208,5 +208,5 @@ def print_mean_corr(data, axis=0, msg=""):
     mean, err = return_mean_corr(data, axis)
     # print the mean and standard deviation
     for t, m, e in zip(range(0, len(mean)), mean, err):
-        print("% 2d %.6e %.6e" % (t, m, e))
+        print("%2d %.6e %.6e" % (t, m, e))
     return mean, err
