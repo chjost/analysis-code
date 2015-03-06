@@ -44,9 +44,9 @@ def bootstrap(source, nbsamples):
     # the seed is hardcoded to be able to recreate the samples
     np.random.seed(125013)
     # initialize the bootstrapsamples to 0.
-    boot = np.empty(nbsamples, dtype=float)
+    boot = np.zeros(nbsamples, dtype=float)
     # the first entry is the average over the original data
-    boot[0] = np.mean(source)
+    boot[0] = np.mean(source, dtype=np.float64)
     # create the rest of the bootstrap samples
     for _i in range(1, nbsamples):
         _rnd = np.random.randint(0, len(source)-1, size=len(source))
@@ -60,7 +60,7 @@ def sym_and_boot(source, T, nbcfg, nbsamples = 1000):
     """Symmetrizes and boostraps correlation functions.
 
     Symmetrizes the correlation functions given in source and creates bootstrap
-    samples.
+    samples. Assumes that time is a slower index than the configuration number.
 
     Args:
         source: List with the correlation functions.
@@ -73,17 +73,47 @@ def sym_and_boot(source, T, nbcfg, nbsamples = 1000):
         first axis is the bootstrap number, the second axis is the time index.
         The time extent is reduced to T/2+1 due to the symmetrization.
     """
-    # the first timslice is not symmetrized
-    boot = bootstrap(source, nbsamples)
+    # the first timeslice is not symmetrized
+    boot = bootstrap(source[:nbcfg], nbsamples)
     for _t in range(1, int(T/2)):
         # symmetrize the correlation function
         _symm = []
         for _x, _y in zip(source[_t * nbcfg:(_t+1) * nbcfg],
                           source[(T-_t) * nbcfg:(T-_t+1) * nbcfg]):
             _symm.append((_x + _y) / 2.)
-        # bootstrap the timeslice
+        # bootstrap the timeslice and append to previous samples
         boot = np.c_[boot, bootstrap(_symm, nbsamples)]
     # the timeslice at t = T/2 is not symmetrized
     boot = np.c_[boot, bootstrap(source[int(T/2) * nbcfg: (int(T/2)+1) * nbcfg],
                                  nbsamples)]
     return boot
+
+def sym(source, T, nbcfg):
+    """Symmetrizes correlation functions.
+
+    Symmetrizes the correlation functions given in source. Assumes that time is
+    a slower index than the configuration number.
+
+    Args:
+        source: List with the correlation functions.
+        T: time extent of the lattice.
+        nbcfg: number of configurations in source.
+
+    Returns:
+        A two dimensional numpy array containing the bootstrap samples. The
+        first axis is the configuration number, the second axis is the time index.
+        The time extent is reduced to T/2+1 due to the symmetrization.
+    """
+    # the first timeslice is not symmetrized
+    data = source[:nbcfg]
+    for _t in range(1, int(T/2)):
+        # symmetrize the correlation function
+        _symm = []
+        for _x, _y in zip(source[_t * nbcfg:(_t+1) * nbcfg],
+                          source[(T-_t) * nbcfg:(T-_t+1) * nbcfg]):
+            _symm.append((_x + _y) / 2.)
+        # bootstrap the timeslice and append to previous samples
+        data = np.c_[data, _symm]
+    # the timeslice at t = T/2 is not symmetrized
+    data = np.c_[data, source[int(T/2) * nbcfg:(int(T/2)+1) * nbcfg]]
+    return data

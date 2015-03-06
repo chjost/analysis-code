@@ -1,0 +1,73 @@
+#!/usr/bin/python
+################################################################################
+#
+# Author: Christian Jost (jost@hiskp.uni-bonn.de)
+# Date:   Februar 2015
+#
+# Copyright (C) 2015 Christian Jost
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Function: A short analysis of the single pion.
+#
+# For informations on input parameters see the description of the function.
+#
+################################################################################
+
+import input_output as io
+import analyze_fcts as af
+import fit
+import bootstrap
+import numpy as np
+
+def main():
+    ## definition of some variables
+    nbsamples = 10
+    inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/"
+    outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/"
+    suffix="pi_corr_p0.dat"
+    suffix1="pi_corr_average.dat"
+    suffix2="pi_corr_mass.dat"
+    #inputlist=["D15_new/"]
+    inputlist=["D15_new/", "D15_old/", "D15_combined/"]
+
+    # get mass from correlation function
+    fitfunc = lambda p,t: p[0]*np.cosh((T/2.0-t)*p[1])
+    for _i in inputlist:
+        print("dir" + _i)
+        # read in data
+        corrs, nbcfg, T = io.extract_corr_fct("".join((inputpath, inputlist[0],
+                                                     suffix)))
+        #average = af.average_corr_fct(corrs, nbcfg, T)
+        #for t in range(T):
+        #    print(corrs[t*nbcfg:(t+1)*nbcfg])
+        tlist = np.linspace(0., float(np.floor(T/2)), float(np.floor(T/2)), endpoint=False)
+        # create bootstrap samples
+        bsamples = bootstrap.sym_and_boot(corrs, T, nbcfg, nbsamples)
+        #print(bsamples.shape)
+        #for t in range(bsamples.shape[1]):
+        #    print(bsamples[:,t])
+        #for s in range(bsamples.shape[0]):
+        #    print(bsamples[s])
+        #print(bsamples.shape)
+        # choose fitrange
+        lo, up = (bsamples.shape[1]-11), (bsamples.shape[1]-1)
+        # fit the masses and print information
+        res, chi2, pval = fit.fitting(fitfunc, tlist[lo:up], bsamples[:,lo:up],
+                                      [10., 0.15], correlated=False)
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    main()

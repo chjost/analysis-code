@@ -27,8 +27,9 @@
 ################################################################################
 
 import os
+import numpy as np
 
-def extract_corr_fct(filename='', verbose=0):
+def extract_corr_fct(filename='', column=1, verbose=0, skipSorting=False):
     """Extracts correlation functions and resorts them.
 
     Reads correlation functions from the file filename. The first line of the
@@ -38,21 +39,22 @@ def extract_corr_fct(filename='', verbose=0):
 
     Args:
         filename: The file name.
+        column: Which column to read.
         verbose: Changes the amount of information printed.
+        skipSorting: Skip the sorting step at the end.
 
     Returns:
-        A list with entries containing the correlation functions.
-        The list is sorted with the time index as fast index and the
-        configuration number as slower index.
-        The number of configurations.
-        The time extent of the lattice.
+        A list with entries containing the correlation functions. The list is
+        sorted with the time index as slow index and the configuration number
+        as fast index. In case skipSorting is true, the fastest index is time
+        and the slowest is the configuration number.
+        The second returned variable is the number of configurations.
+        The third returned variable is the time extent of the lattice.
     """
-    # corr contains the correlation functions
-    corr = []
-
     # check if file we want to read exists
     if not os.path.isfile(filename):
-        print(filename + " is not a file")
+        print("ERROR: " + filename + " is not a file")
+        return
     else:
         # open file and parse first line with information
         if verbose:
@@ -65,26 +67,75 @@ def extract_corr_fct(filename='', verbose=0):
             print("time extent " + str(_latticedata[1]))
         nbcfg = int(_latticedata[0])
         T = int(_latticedata[1])
+        corr = np.zeros((int(nbcfg*T)), dtype=float)
         # read in all correlation functions
         _re = []
-        for cfg in range(0,nbcfg):
-            for t in range(0, T):
-                _re.append(float(_f.readline().split()[1]))
+        try:
+            for _cfg in range(0,nbcfg):
+                for _t in range(0, T):
+                    _re.append(float(_f.readline().split()[column]))
+        except:
+            print("ERROR: while reading " + filename + ". Returning...")
         # sort the correlation functions according so that the time index
         # is the fastest index
-        if verbose:
-            print("sort correlation function")
-        corr = [float(0.)] * nbcfg * T
-        _t = 0
-        for x in _re:
-            corr[int(_t%T) * nbcfg + int(_t / T)] = x
-            _t += 1
+        if not skipSorting:
+            if verbose:
+                print("sort correlation function")
+            _t = 0
+            for x in _re:
+                corr[int(_t%T) * nbcfg + int(_t / T)] = x
+                _t += 1
+        else:
+            corr = _re
         # close file
         _f.close()
 
     # return the correlation functions
     return corr, nbcfg, T
 
+def write_corr_fct(data, filename, T, nbcfg, timesorted=True):
+    """Write the correlation function to file.
+
+    Expects numpy array with one axis. A sanity check is done with T and
+    nbcfg.
+    Can write correlation functions sorted with time as fastest index
+    (timesorted=False) and functions with configuration number as fastest index
+    (timesorted=True), see also extract_corr_fct.
+
+    Args:
+        data: The numpy array to write to the file.
+        filename: The filename of the file, including the path.
+        T: The time extend of the data.
+        nbcfg: The number of configurations in the data.
+        timesorted: If time is the fastest index, this should be False.
+
+    Returns:
+        Nothing.
+    """
+    # check whether enough data is in the array
+    if data.shape[0] != int(T * nbcfg):
+        print("ERROR: the length of data is not T*nbcfg")
+        return
+    # check whether file exists
+    if os.path.isfile(filename):
+        print(filename + " already exists, overwritting...")
+    # open file for writting
+    outfile = open(filename, "w")
+    # write the data shape in L. Liu's format
+    outfile.write(str(nbcfg) + " " + str(T) + " 0 " +
+                  str(int(T/2)) + " 0\n")
+    tmp=None
+    # write the data points
+    if timesorted:
+        for _i in range(data.shape[0]):
+            tmp='%d %.14f\n' % ((_i%T), (data[(_i%T)*nbcfg + (_i/T)]))
+            outfile.write(tmp)
+            #outfile.write(str(_i%T) + " " + str(data[(_i%T)*nbcfg + (_i/T)]) + "\n")
+    else:
+        for _i in range(data.shape[0]):
+            tmp='%d %.14f\n' % ((_i%T), (data[_i]))
+            outfile.write(tmp)
+            #outfile.write(str(_i%T) + " " + str(data[_i]) + "\n")
 
 def extract_bin_corr_fct(name='', start_cfg=0, delta_cfg=0, nb_cfg=0, T=0,
                      verbose=0): 
@@ -126,3 +177,31 @@ def extract_bin_corr_fct(name='', start_cfg=0, delta_cfg=0, nb_cfg=0, T=0,
         corr[(_t%T)*nb_cfg + _t/T] = complex(_x[0], _y[0])
         _t += 1
     return corr
+
+def write_data(data, filename):
+    """Write the data to file.
+
+    Expects numpy array with three axis.
+
+    Args:
+        data: The numpy array to write to the file.
+        filename: The filename of the file, including the path.
+
+    Returns:
+        Nothing.
+    """
+    # check whether file exists
+    if os.path.isfile(filename):
+        print(filename + " already exists, overwritting...")
+    # open file for writting
+    outfile = open(filename, "w")
+    # write the data shape in L. Liu's format
+    outfile.write(str(data.shape[0]) + " " + str(data.shape[1]) + " 0 " +
+                  str(int(data.shape[1]/2)) + " 0\n")
+    # write the data points
+    for _i in range(data.shape[0]):
+        for _j in range(data.shape[1]):
+            outfile.write(str(_j) + " ")
+            for _k in range(data.shape[2]):
+                outfile.write(str(data[_i, _j, _k]) + " ")
+            outfile.write("\n")

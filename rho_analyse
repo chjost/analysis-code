@@ -1,0 +1,186 @@
+#!/usr/bin/python
+################################################################################
+#
+# Author: Christian Jost (jost@hiskp.uni-bonn.de)
+# Date:   Februar 2015
+#
+# Copyright (C) 2015 Christian Jost
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Function: This is the start of the eta/eta' analysis program
+#
+# For informations on input parameters see the description of the function.
+#
+################################################################################
+
+import numpy as np
+import matplotlib
+matplotlib.use('QT4Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+
+import input_output as io
+import bootstrap
+import corr_matrix as cm
+import gevp
+import fit
+import plot
+import analyze_fcts as af
+
+def main():
+    #######################################################
+    ## definition of main variables
+    nbsamples = 2500
+    tmin=1
+    T=48
+    L=24
+    mpi=0.14463 # from Carsten's pipi analysis
+    # CMF
+    #path="/hiskp2/jost/data/rho_analyse/A40.24/TP0/"
+    # MF1
+    path="/hiskp2/jost/data/rho_analyse/A40.24/TP1/"
+    filelist = ["C2", "C3", "C3", "C4"]
+    d = np.array([0., 0., 1.])
+    d2 = np.dot(d, d)
+    ## define the fit function and start parameters
+    #fitfunc = lambda p,t: p[0]*np.cosh((T/2.0-t)*p[1])
+    #start_params = [0.005, -0.5]
+    #fitfunc = lambda p,t: p[0]*np.exp(-p[1]*t)
+    #start_params = [1.0, 0.5]
+    #fitfunc = lambda p,t: np.exp(-p[0]*t)
+    #start_params = [0.5]
+    fitfunc = lambda p,t: 0.5*p[0]*p[0]*(np.exp(-p[1]*t) + np.exp(-p[1]*(T-t)))
+    start_params = [1, 0.5]
+    massfunc = lambda p, t: p
+    mass_sparams = [0.5]
+    ## fit ranges
+    #lolist = np.array((9,7)) # CMF
+    lolist = np.array((12,9)) # MF1
+    # python does not include the last value into the range!
+    #uplist = np.array((18,18)) # CMF
+    uplist = np.array((16,16)) # MF1
+    #######################################################
+
+    ## read in data
+    print("reading data")
+    #corr_mat, T2 = cm.create_corr_matrix(nbsamples, path, filelist)
+    #cm.write_corr_matrix(corr_mat, "./raw_data/corr_mat_rho_TP%d.npy" % (d2))
+    #corr_mat = cm.read_corr_matrix("./raw_data/corr_mat_rho_TP%d.npy" % (d2))
+    #T2 = corr_mat.shape[1]
+
+    ## solve the GEVP
+    print("solving GEVP")
+    #gevp_mat = gevp.calculate_gevp(corr_mat, tmin)
+    #cm.write_corr_matrix(gevp_mat, "./raw_data/gevp_mat_rho_TP%d.npy" % (d2))
+    #io.write_data(gevp_mat, "./raw_data/gevp_rho_TP%d.dat" % (d2))
+    gevp_mat = cm.read_corr_matrix("./raw_data/gevp_mat_rho_TP%d.npy" % (d2))
+    T2 = gevp_mat.shape[1]
+
+    ## debugging!
+    # print the principal correlators
+    #mgevp, dgevp = af.print_mean_corr(gevp_mat[:,:,0])
+    #for i in range(mgevp.shape[0]):
+    #    print("%2d %.6e %.6e" % (i, gevp_mat[0,i,0], dgevp[i]))
+    #return
+
+    # set fit x data
+    tlist = np.linspace(0., float(T2), float(T2), endpoint=False)
+    # outputfile for the plot
+    pfit = PdfPages("./plots/fit_gevp_TP%d.pdf" % (d2))
+    for _l in range(gevp_mat.shape[2]):
+        lo = lolist[_l]
+        up = uplist[_l]
+        print("\nprincipal correlator %d" % _l)
+
+        # fit the energy and print information
+        print("fitting correlation function")
+        res, chi2, pval = fit.fitting(fitfunc, tlist[lo:up], gevp_mat[:,lo:up,_l],
+                                      start_params, verbose=0)
+        print("p-value %.7lf" % (pval))
+
+        # check whether energy satiesfies 2mpi <= res < 4mpi
+        #for _b in range(res.shape[0]):
+        #    if not (2*mpi <= res[_b,1] < 4*mpi) and (_l == 0):
+        #        print("problem on sample %d" % _b)
+
+        # set up the plot
+        mgevp, dgevp = af.return_mean_corr(gevp_mat[:,:,_l])
+        mres, dres = af.return_mean_corr(res)
+        fitlabel = "fit %d:%d" % (lo, up-1)
+        label = ["time", "C(t)", "data", fitlabel]
+
+        # plot the data and the fit
+        print("plotting")
+        plot.corr_fct_with_fit(tlist, gevp_mat[0,:,_l], dgevp, fitfunc, mres,
+                               [tmin,T2], label, pfit, True)
+        
+        # calculate Ecm, q and delta
+        print("calculating")
+        gamma, Ecm = af.calculate_cm_energy(res[:,1], L, d)
+        mEcm, dEcm = af.return_mean_corr(Ecm)
+        q2 = af.calculate_q(Ecm, mpi, L)
+        mq2, dq2 = af.return_mean_corr(q2)
+        delta, tandelta = af.calculate_delta(q2)
+        mdelta, ddelta = af.return_mean_corr(delta)
+        mtandelta, dtandelta = af.return_mean_corr(tandelta)
+        
+        # print in form similar to Carsten's format
+        print("data  E dE  delta ddelta  tan dtan  sin2 dsin2")
+        print("orig %.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf" % (
+            Ecm[0], dEcm, delta[0], ddelta, tandelta[0], dtandelta,
+            np.sin(delta[0])**2, np.abs(np.sin(delta[0]*2.)*ddelta)))
+        print("mean %.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf" % (
+            mEcm, dEcm, mdelta, ddelta, mtandelta, dtandelta,
+            np.sin(mdelta)**2, np.abs(np.sin(mdelta*2.)*ddelta)))
+
+        # calculate mass
+        # shift in fit indices is necessary since the mass array is missing the
+        # first and last timeslice
+        print("fitting mass")
+        mass, mmass, dmass = af.compute_mass(gevp_mat[:,:,_l])
+        mmassres = mres[1]
+        #massres, masschi2, masspval = fit.fitting(massfunc, tlist[lo-1:up-1], 
+        #    mass[:,lo-1:up-1], mass_sparams, verbose=0)
+        #print("p-value %.7lf" % (masspval))
+        #mmassres, dmassres = af.return_mean_corr(massres)
+        print("plotting")
+        label[1] = "m_eff(t)"
+        plot.corr_fct_with_fit(tlist[1:-1], mass[0], dmass, massfunc, mmassres,
+                               [tmin-1,T2-1], label, pfit, False)
+
+        # calculate Ecm, q and delta
+        print("calculating")
+        #gamma, Ecm = af.calculate_cm_energy(massres[:,1], L, d)
+        #mEcm, dEcm = af.return_mean_corr(Ecm)
+        #q2 = af.calculate_q(Ecm, mpi, L)
+        #mq2, dq2 = af.return_mean_corr(q2)
+        #delta, tandelta = af.calculate_delta(q2)
+        #mdelta, ddelta = af.return_mean_corr(delta)
+        #mtandelta, dtandelta = af.return_mean_corr(tandelta)
+        ## print in form similar to Carsten's format
+        print("data  E dE  delta ddelta  tan dtan  sin2 dsin2")
+        #print("orig %.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf" % (
+        #    massres[0], dmassres, delta[0], ddelta, tandelta[0], dtandelta,
+        #    np.sin(delta[0])**2, np.abs(np.sin(delta[0]*2.)*ddelta)))
+        #print("mean %.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf" % (
+        #    mmassres, dmassres, mdelta, ddelta, mtandelta, dtandelta,
+        #    np.sin(mdelta)**2, np.abs(np.sin(mdelta*2.)*ddelta)))
+    pfit.close()
+
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    main()
