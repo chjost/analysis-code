@@ -25,7 +25,9 @@
 #
 ################################################################################
 
+import os
 import numpy as np
+import zeta
 
 def average_corr_fct(data, nbcfg, T):
     """Average over the set of correlation functions.
@@ -148,7 +150,7 @@ def compute_derivative(data):
     mean, err = print_mean_corr(derv, msg="\nderivative:\n-------------------\n")
     return derv, mean, err
 
-def compute_energy(data):
+def compute_mass(data):
     """Computes the energy of a correlation function.
 
     The data is assumed to a numpy array with bootstrap samples as first axis
@@ -172,8 +174,102 @@ def compute_energy(data):
             mass[b, t-1] = (row[t-1] + row[t+1])/(2.0*row[t])
     mass = np.arccosh(mass)
     # print energy
-    mean, err = print_mean_corr(mass, msg="\nenergy:\n-------------\n")
+    mean, err = return_mean_corr(mass)
     return mass, mean, err
+
+def calculate_cm_energy(E, L, d=np.array([0., 0., 1.])):
+    """Calculates the center of mass energy and the boost factor.
+
+    Calculates the Lorentz boost factor and the center of mass energy
+    for moving frames.
+
+    Args:
+        E: The energy of the moving frame.
+        d: The total momentum of the moving frame.
+
+    Returns:
+        The boost factor and the center of mass energies.
+    """
+    # if the data is from the cm system, return immediately
+    if not np.any(d):
+        gamma = np.ones(E.shape[0])
+        return gamma, E
+    # create the array for results
+    Ecm = np.zeros((E.shape[0]))
+    gamma = np.zeros((E.shape[0]))
+    # norm of the cm momentum
+    _p2 = np.dot(d, d) * (4 * np.pi**2 / float(L)**2)
+    for _i in range(E.shape[0]):
+        # calculate center of mass energy
+        Ecm[_i] = np.sqrt(E[_i]**2 - _p2)
+        gamma[_i] = Ecm[_i] / E[_i]
+    return gamma, Ecm
+
+def calculate_q(E, mpi, L):
+    """Calculates q.
+
+    Calculates the difference in momentum between interaction and non-
+    interacting systems. The energy must be the center of mass energy.
+
+    Args:
+        E: The energy values for the bootstrap samples.
+        mpi: The pion mass of the lattice.
+        L: The spatial extent of the lattice.
+
+    Returns:
+        An array of the q^2 values
+    """
+    # create array for results
+    q2 = np.zeros((E.shape[0]))
+    # continuum dispersion relation
+    # this does not change, calculate only once
+    _p = float(L) / (2. * np.pi)
+    for _i in range(E.shape[0]):
+        # calculate q
+        q2[_i] = (0.25*E[_i]**2 - mpi**2) * _p**2
+    # lattice dispersion relation
+    #for _i in range(E.shape[0]):
+    #    # calculate q
+    #    q2[_i] = 4*np.arcsin(np.sqrt((np.cosh(E[_i]/2.) - np.cosh(mpi))/2.))**2
+    return q2
+
+def calculate_delta(q2, gamma=None, l=0, m=0, d=np.array([0., 0., 0.]),
+                    prec=10e-6, verbose=0):
+    """Calculates the phase shift using Luescher's Zeta function.
+
+    Most arguments are for the Zeta function. For each q2 a gamma is needed.
+
+    Args:
+        q2: The momentum shift squared.
+        gamma: The Lorentz factor for moving frames.
+        l: The orbital quantum number.
+        m: The magnetic quantum number.
+        d: The total three momentum of the system.
+        prec: The precision of the Zeta function calculation.
+        verbose: The amount of information printed to screen.
+
+    Returns:
+        An array of the phase shift, its mean and standard deviation and
+        tan(delta).
+    """
+    # create array for results
+    delta=np.zeros(q2.shape[0])
+    tandelta=np.zeros(q2.shape[0])
+    _gamma = gamma
+    if _gamma == None:
+        _gamma = np.ones(q2.shape[0])
+    # read in momenta
+    # file name must not change!
+    pathmomenta = "./momenta.npy"
+    if not os.path.isfile(pathmomenta):
+        import create_momentum_array
+    _n = np.load(pathmomenta)
+    _pi3 = np.pi**3
+    for _i in range(q2.shape[0]):
+        _z = zeta.Z(q2[_i], _gamma[_i], l, m, d, 1., prec, verbose, _n)
+        tandelta[_i] = np.sqrt( _pi3 * q2[_i]) / _z.real
+        delta[_i] = np.arctan2(np.sqrt( _pi3 * q2[_i]), _z.real)
+    return delta, tandelta
 
 def return_mean_corr(data, axis=0):
     """Calculates the mean and standard deviation of the correlation function.

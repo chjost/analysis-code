@@ -40,206 +40,22 @@ import fit
 import plot
 import analyze_fcts as af
 
-def read_rho(nbsamples=1000):
-    # general path
-    path="/hiskp2/jost/data/rho_analyse/A40.24/"
-    # two point function
-    name="".join((path + "C2_rho_TP0.dat"))
-    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
-    pilist=2*pilist1
-    mat_pi22=bootstrap.sym_and_boot(pilist, T, nbcfg, nbsamples)
-    # three point functions
-    name="".join((path + "C3_Ad_TP0.dat"))
-    pilist1, nbcfg, T=io.extract_corr_fct(name)
-    name="".join((path + "C3_Au_TP0.dat"))
-    pilist2, nbcfg, T=io.extract_corr_fct(name)
-    name="".join((path + "C3_Bd_TP0.dat"))
-    pilist3, nbcfg, T=io.extract_corr_fct(name)
-    name="".join((path + "C3_Bu_TP0.dat"))
-    pilist4, nbcfg, T=io.extract_corr_fct(name)
-    pilist= -pilist1 + pilist2 - pilist3 + pilist4
-    mat_pi12=bootstrap.sym_and_boot(pilist, T, nbcfg, nbsamples)
-    # four point functions
-    # trace-trace
-    name="".join((path + "C4_1_TP0_diagonal.dat"))
-    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4_2_TP0_diagonal.dat"))
-    pilist2, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4_1_TP0_suppressed.dat"))
-    pilist3, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4_1_TP0_suppressed.dat"))
-    pilist4, nbcfg, T=io.extract_corr_fct(name, column=0)
-    pilist = (pilist1 + pilist2) - (pilist3 + pilist4)
-    # box
-    name="".join((path + "C4I10_Dd_11_TP0_diagonal.dat"))
-    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4I10_Du_11_TP0_diagonal.dat"))
-    pilist2, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4I10_Dd_12_TP0_diagonal.dat"))
-    pilist3, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4I10_Du_12_TP0_diagonal.dat"))
-    pilist4, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4I10_Dd_21_TP0_diagonal.dat"))
-    pilist5, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4I10_Du_21_TP0_diagonal.dat"))
-    pilist6, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4I10_Dd_22_TP0_diagonal.dat"))
-    pilist7, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4I10_Du_22_TP0_diagonal.dat"))
-    pilist8, nbcfg, T=io.extract_corr_fct(name, column=0)
-    pilist = pilist + 0.5*(pilist1 + pilist2 + pilist3 + pilist4 + pilist5 +
-                           pilist6 + pilist7 + pilist8)
-    name="".join((path + "C4I10_Dd_11_TP0_doubly_suppressed.dat"))
-    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4I10_Du_11_TP0_doubly_suppressed.dat"))
-    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4I10_Dd_12_TP0_doubly_suppressed.dat"))
-    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4I10_Du_12_TP0_doubly_suppressed.dat"))
-    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4I10_Dd_21_TP0_doubly_suppressed.dat"))
-    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4I10_Du_21_TP0_doubly_suppressed.dat"))
-    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4I10_Dd_22_TP0_doubly_suppressed.dat"))
-    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4I10_Du_22_TP0_doubly_suppressed.dat"))
-    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
-    pilist = pilist + 0.5*(pilist1 + pilist2 + pilist3 + pilist4 + pilist5 +
-                           pilist6 + pilist7 + pilist8)
-    mat_pi11=bootstrap.sym_and_boot(pilist, T, nbcfg, nbsamples)
-    # build correlation function matrix
-    corr_mat = np.zeros((nbsamples, int(T/2)+1, 2, 2))
-    corr_mat[:,:,0,0] = mat_pi11
-    corr_mat[:,:,0,1] = mat_pi12
-    corr_mat[:,:,1,0] = mat_pi12
-    corr_mat[:,:,1,1] = mat_pi22
-
-    return corr_mat, int(T/2)+1, nbcfg
-
-def read_original_data():
-    # general path
-    path="/hiskp2/jost/data/rho_analyse/A40.24/"
-    # two point function
-    name="".join((path + "C2_rho_TP0.dat"))
-    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
-    pilist=2*pilist1
-    mat_pi22=bootstrap.sym(pilist, T, nbcfg)
-    # three point functions
-    name="".join((path + "C3_Ad_TP0.dat"))
-    pilist1, nbcfg, T=io.extract_corr_fct(name)
-    name="".join((path + "C3_Au_TP0.dat"))
-    pilist2, nbcfg, T=io.extract_corr_fct(name)
-    name="".join((path + "C3_Bd_TP0.dat"))
-    pilist3, nbcfg, T=io.extract_corr_fct(name)
-    name="".join((path + "C3_Bu_TP0.dat"))
-    pilist4, nbcfg, T=io.extract_corr_fct(name)
-    pilist= -pilist1 + pilist2 - pilist3 + pilist4
-    mat_pi12=bootstrap.sym(pilist, T, nbcfg)
-    # four point functions
-    # trace-trace
-    name="".join((path + "C4_1_TP0_diagonal.dat"))
-    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4_2_TP0_diagonal.dat"))
-    pilist2, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4_1_TP0_suppressed.dat"))
-    pilist3, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4_1_TP0_suppressed.dat"))
-    pilist4, nbcfg, T=io.extract_corr_fct(name, column=0)
-    pilist = (pilist1 + pilist2) - (pilist3 + pilist4)
-    # box
-    name="".join((path + "C4I10_Dd_11_TP0_diagonal.dat"))
-    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4I10_Du_11_TP0_diagonal.dat"))
-    pilist2, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4I10_Dd_12_TP0_diagonal.dat"))
-    pilist3, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4I10_Du_12_TP0_diagonal.dat"))
-    pilist4, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4I10_Dd_21_TP0_diagonal.dat"))
-    pilist5, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4I10_Du_21_TP0_diagonal.dat"))
-    pilist6, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4I10_Dd_22_TP0_diagonal.dat"))
-    pilist7, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4I10_Du_22_TP0_diagonal.dat"))
-    pilist8, nbcfg, T=io.extract_corr_fct(name, column=0)
-    pilist = pilist + 0.5*(pilist1 + pilist2 + pilist3 + pilist4 + pilist5 +
-                           pilist6 + pilist7 + pilist8)
-    name="".join((path + "C4I10_Dd_11_TP0_doubly_suppressed.dat"))
-    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4I10_Du_11_TP0_doubly_suppressed.dat"))
-    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4I10_Dd_12_TP0_doubly_suppressed.dat"))
-    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4I10_Du_12_TP0_doubly_suppressed.dat"))
-    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4I10_Dd_21_TP0_doubly_suppressed.dat"))
-    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4I10_Du_21_TP0_doubly_suppressed.dat"))
-    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4I10_Dd_22_TP0_doubly_suppressed.dat"))
-    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
-    name="".join((path + "C4I10_Du_22_TP0_doubly_suppressed.dat"))
-    pilist1, nbcfg, T=io.extract_corr_fct(name, column=0)
-    pilist = pilist + 0.5*(pilist1 + pilist2 + pilist3 + pilist4 + pilist5 +
-                           pilist6 + pilist7 + pilist8)
-    mat_pi11=bootstrap.sym(pilist, T, nbcfg)
-    # build correlation function matrix
-    corr_mat = np.zeros((nbcfg, int(T/2)+1, 2, 2))
-    corr_mat[:,:,0,0] = mat_pi11
-    corr_mat[:,:,0,1] = mat_pi12
-    corr_mat[:,:,1,0] = mat_pi12
-    corr_mat[:,:,1,1] = mat_pi22
-
-    return corr_mat, int(T/2)+1, nbcfg
-
 def main():
-    ## definition of some variables
+    #######################################################
+    ## definition of main variables
     nbsamples = 2500
     tmin=1
     T=48
-    path="/hiskp2/jost/data/rho_analyse/A40.24/"
-
-    print("reading data")
-    # read in data, bootstrap and create correlation function matrix
-    #corr_mat, T2, nbcfg = read_rho(nbsamples)
-    #cm.write_corr_matrix(corr_mat, "./raw_data/corr_mat_rho.npy")
-    #print(corr_mat.shape)
-    #print(corr_mat[0,:,0,0])
-
-    # read in raw data
-    #corr_mat = cm.read_corr_matrix("./raw_data/corr_mat_rho.npy")
-    #T2 = corr_mat.shape[1]
-    #print(corr_mat.shape)
-    #print(corr_mat[0,:,0,0])
-
-    # read in original data and create correlation function matrix
-    #corr_mat, T2, nbcfg = read_original_data()
-
-    # read in carsten's data
+    L=24
+    mpi=0.14463 # from Carsten's pipi analysis
+    # CMF
+    #path="/hiskp2/jost/data/rho_analyse/A40.24/TP0/"
+    # MF1
+    path="/hiskp2/jost/data/rho_analyse/A40.24/TP1/"
     filelist = ["C2", "C3", "C3", "C4"]
-    #corr_mat, T2 = cm.create_corr_matrix(nbsamples, path, filelist)
-    #cm.write_corr_matrix(corr_mat, "./raw_data/corr_mat_rho.npy")
-    #corr_mat = cm.read_corr_matrix("./raw_data/corr_mat_rho.npy")
-    #T2 = corr_mat.shape[1]
-
-    # solve the GEVP
-    print("solving GEVP")
-    #gevp_mat = gevp.calculate_gevp(corr_mat, tmin)
-    #cm.write_corr_matrix(gevp_mat, "./raw_data/gevp_mat_rho.npy")
-    #io.write_data(gevp_mat, "./raw_data/gevp_rho.dat")
-    gevp_mat = cm.read_corr_matrix("./raw_data/gevp_mat_rho.npy")
-    T2 = gevp_mat.shape[1]
-    #print(gevp_mat.shape)
-
-    #mgevp, dgevp = af.print_mean_corr(gevp_mat[:,:,0])
-    #for i in range(mgevp.shape[0]):
-    #    print("%2d %.6e %.6e" % (i, gevp_mat[0,i,0], dgevp[i]))
-    #return
-
-    print("fitting")
-    # get energie from correlation function
+    d = np.array([0., 0., 1.])
+    d2 = np.dot(d, d)
+    ## define the fit function and start parameters
     #fitfunc = lambda p,t: p[0]*np.cosh((T/2.0-t)*p[1])
     #start_params = [0.005, -0.5]
     #fitfunc = lambda p,t: p[0]*np.exp(-p[1]*t)
@@ -248,22 +64,120 @@ def main():
     #start_params = [0.5]
     fitfunc = lambda p,t: 0.5*p[0]*p[0]*(np.exp(-p[1]*t) + np.exp(-p[1]*(T-t)))
     start_params = [1, 0.5]
+    massfunc = lambda p, t: p
+    mass_sparams = [0.5]
+    ## fit ranges
+    #lolist = np.array((9,7)) # CMF
+    lolist = np.array((12,9)) # MF1
+    # python does not include the last value into the range!
+    #uplist = np.array((18,18)) # CMF
+    uplist = np.array((16,16)) # MF1
+    #######################################################
+
+    ## read in data
+    print("reading data")
+    #corr_mat, T2 = cm.create_corr_matrix(nbsamples, path, filelist)
+    #cm.write_corr_matrix(corr_mat, "./raw_data/corr_mat_rho_TP%d.npy" % (d2))
+    #corr_mat = cm.read_corr_matrix("./raw_data/corr_mat_rho_TP%d.npy" % (d2))
+    #T2 = corr_mat.shape[1]
+
+    ## solve the GEVP
+    print("solving GEVP")
+    #gevp_mat = gevp.calculate_gevp(corr_mat, tmin)
+    #cm.write_corr_matrix(gevp_mat, "./raw_data/gevp_mat_rho_TP%d.npy" % (d2))
+    #io.write_data(gevp_mat, "./raw_data/gevp_rho_TP%d.dat" % (d2))
+    gevp_mat = cm.read_corr_matrix("./raw_data/gevp_mat_rho_TP%d.npy" % (d2))
+    T2 = gevp_mat.shape[1]
+
+    ## debugging!
+    # print the principal correlators
+    #mgevp, dgevp = af.print_mean_corr(gevp_mat[:,:,0])
+    #for i in range(mgevp.shape[0]):
+    #    print("%2d %.6e %.6e" % (i, gevp_mat[0,i,0], dgevp[i]))
+    #return
+
+    # set fit x data
     tlist = np.linspace(0., float(T2), float(T2), endpoint=False)
-    lo, up = 12, 21
-    pfit = PdfPages("./plots/fit_gevp.pdf")
+    # outputfile for the plot
+    pfit = PdfPages("./plots/fit_gevp_TP%d.pdf" % (d2))
     for _l in range(gevp_mat.shape[2]):
+        lo = lolist[_l]
+        up = uplist[_l]
+        print("\nprincipal correlator %d" % _l)
+
         # fit the energy and print information
+        print("fitting correlation function")
         res, chi2, pval = fit.fitting(fitfunc, tlist[lo:up], gevp_mat[:,lo:up,_l],
-                                      start_params)
+                                      start_params, verbose=0)
+        print("p-value %.7lf" % (pval))
+
+        # check whether energy satiesfies 2mpi <= res < 4mpi
+        #for _b in range(res.shape[0]):
+        #    if not (2*mpi <= res[_b,1] < 4*mpi) and (_l == 0):
+        #        print("problem on sample %d" % _b)
+
         # set up the plot
         mgevp, dgevp = af.return_mean_corr(gevp_mat[:,:,_l])
-        res_mean = np.mean(res, axis=0)
-        fitlabel = "fit %d:%d" % (lo, up)
+        mres, dres = af.return_mean_corr(res)
+        fitlabel = "fit %d:%d" % (lo, up-1)
         label = ["time", "C(t)", "data", fitlabel]
+
         # plot the data and the fit
-        plot.corr_fct_with_fit(tlist, gevp_mat[0,:,_l], dgevp, fitfunc, res_mean,
+        print("plotting")
+        plot.corr_fct_with_fit(tlist, gevp_mat[0,:,_l], dgevp, fitfunc, mres,
                                [tmin,T2], label, pfit, True)
-        #en, men, den = af.compute_energy(gevp_mat[:,:,_l])
+        
+        # calculate Ecm, q and delta
+        print("calculating")
+        gamma, Ecm = af.calculate_cm_energy(res[:,1], L, d)
+        mEcm, dEcm = af.return_mean_corr(Ecm)
+        q2 = af.calculate_q(Ecm, mpi, L)
+        mq2, dq2 = af.return_mean_corr(q2)
+        delta, tandelta = af.calculate_delta(q2)
+        mdelta, ddelta = af.return_mean_corr(delta)
+        mtandelta, dtandelta = af.return_mean_corr(tandelta)
+        
+        # print in form similar to Carsten's format
+        print("data  E dE  delta ddelta  tan dtan  sin2 dsin2")
+        print("orig %.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf" % (
+            Ecm[0], dEcm, delta[0], ddelta, tandelta[0], dtandelta,
+            np.sin(delta[0])**2, np.abs(np.sin(delta[0]*2.)*ddelta)))
+        print("mean %.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf" % (
+            mEcm, dEcm, mdelta, ddelta, mtandelta, dtandelta,
+            np.sin(mdelta)**2, np.abs(np.sin(mdelta*2.)*ddelta)))
+
+        # calculate mass
+        # shift in fit indices is necessary since the mass array is missing the
+        # first and last timeslice
+        print("fitting mass")
+        mass, mmass, dmass = af.compute_mass(gevp_mat[:,:,_l])
+        mmassres = mres[1]
+        #massres, masschi2, masspval = fit.fitting(massfunc, tlist[lo-1:up-1], 
+        #    mass[:,lo-1:up-1], mass_sparams, verbose=0)
+        #print("p-value %.7lf" % (masspval))
+        #mmassres, dmassres = af.return_mean_corr(massres)
+        print("plotting")
+        label[1] = "m_eff(t)"
+        plot.corr_fct_with_fit(tlist[1:-1], mass[0], dmass, massfunc, mmassres,
+                               [tmin-1,T2-1], label, pfit, False)
+
+        # calculate Ecm, q and delta
+        print("calculating")
+        #gamma, Ecm = af.calculate_cm_energy(massres[:,1], L, d)
+        #mEcm, dEcm = af.return_mean_corr(Ecm)
+        #q2 = af.calculate_q(Ecm, mpi, L)
+        #mq2, dq2 = af.return_mean_corr(q2)
+        #delta, tandelta = af.calculate_delta(q2)
+        #mdelta, ddelta = af.return_mean_corr(delta)
+        #mtandelta, dtandelta = af.return_mean_corr(tandelta)
+        ## print in form similar to Carsten's format
+        print("data  E dE  delta ddelta  tan dtan  sin2 dsin2")
+        #print("orig %.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf" % (
+        #    massres[0], dmassres, delta[0], ddelta, tandelta[0], dtandelta,
+        #    np.sin(delta[0])**2, np.abs(np.sin(delta[0]*2.)*ddelta)))
+        #print("mean %.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf" % (
+        #    mmassres, dmassres, mdelta, ddelta, mtandelta, dtandelta,
+        #    np.sin(mdelta)**2, np.abs(np.sin(mdelta*2.)*ddelta)))
     pfit.close()
 
 

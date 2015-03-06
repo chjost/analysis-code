@@ -145,7 +145,7 @@ def solve_gevp_gen(a, t_0):
         except (spla.LinAlgError, TypeError) as e:
             return
 
-def calculate_gevp(m, t0=4):
+def calculate_gevp(m, t0=1):
     """Solves the generalized eigenvalue problem of a correlation function
     matrix.
 
@@ -163,7 +163,7 @@ def calculate_gevp(m, t0=4):
         A numpy array with three axis. The first axis is the bootstrap sample
         number, the second axis is the time, the third axis is the eigenvalue
         numbers. The time extend is the same as in original data, but the times
-        up to and including t0 are filled with zeros.
+        up to t0 are filled with zeros.
     """
     # Initialize the eigenvalue array
     values_array = np.zeros((m.shape[0], m.shape[1], m.shape[2]))
@@ -173,4 +173,6 @@ def calculate_gevp(m, t0=4):
         for eigenvalues, _eigenvectors, _t in solve_gevp_gen(m[_samples], t0):
             # save the eigenvalues to the array
             values_array[_samples, _t] = eigenvalues
+    # set the eigenvalues for t=t0 to 1.0
+    values_array[:,t0] = 1.0
     return values_array
