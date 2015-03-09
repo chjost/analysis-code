@@ -191,7 +191,7 @@ def calculate_cm_energy(E, L, d=np.array([0., 0., 1.])):
         The boost factor and the center of mass energies.
     """
     # if the data is from the cm system, return immediately
-    if not np.any(d):
+    if np.array_equal(d, np.array([0., 0., 0.])):
         gamma = np.ones(E.shape[0])
         return gamma, E
     # create the array for results
@@ -202,7 +202,7 @@ def calculate_cm_energy(E, L, d=np.array([0., 0., 1.])):
     for _i in range(E.shape[0]):
         # calculate center of mass energy
         Ecm[_i] = np.sqrt(E[_i]**2 - _p2)
-        gamma[_i] = Ecm[_i] / E[_i]
+        gamma[_i] = E[_i] / Ecm[_i]
     return gamma, Ecm
 
 def calculate_q(E, mpi, L):
@@ -233,8 +233,8 @@ def calculate_q(E, mpi, L):
     #    q2[_i] = 4*np.arcsin(np.sqrt((np.cosh(E[_i]/2.) - np.cosh(mpi))/2.))**2
     return q2
 
-def calculate_delta(q2, gamma=None, l=0, m=0, d=np.array([0., 0., 0.]),
-                    prec=10e-6, verbose=0):
+def calculate_delta(q2, gamma=None, d=np.array([0., 0., 0.]), prec=10e-6,
+                    verbose=0):
     """Calculates the phase shift using Luescher's Zeta function.
 
     Most arguments are for the Zeta function. For each q2 a gamma is needed.
@@ -242,15 +242,12 @@ def calculate_delta(q2, gamma=None, l=0, m=0, d=np.array([0., 0., 0.]),
     Args:
         q2: The momentum shift squared.
         gamma: The Lorentz factor for moving frames.
-        l: The orbital quantum number.
-        m: The magnetic quantum number.
         d: The total three momentum of the system.
         prec: The precision of the Zeta function calculation.
         verbose: The amount of information printed to screen.
 
     Returns:
-        An array of the phase shift, its mean and standard deviation and
-        tan(delta).
+        An array of the phase shift and tan(delta).
     """
     # create array for results
     delta=np.zeros(q2.shape[0])
@@ -264,11 +261,34 @@ def calculate_delta(q2, gamma=None, l=0, m=0, d=np.array([0., 0., 0.]),
     if not os.path.isfile(pathmomenta):
         import create_momentum_array
     _n = np.load(pathmomenta)
+    # init calculation
     _pi3 = np.pi**3
-    for _i in range(q2.shape[0]):
-        _z = zeta.Z(q2[_i], _gamma[_i], l, m, d, 1., prec, verbose, _n)
-        tandelta[_i] = np.sqrt( _pi3 * q2[_i]) / _z.real
-        delta[_i] = np.arctan2(np.sqrt( _pi3 * q2[_i]), _z.real)
+    #CMF
+    if np.array_equal(d, np.array([0., 0., 0.])):
+        for _i in range(q2.shape[0]):
+            _z = zeta.Z(q2[_i], _gamma[_i], 0, 0, d, 1., prec, verbose, _n)
+            tandelta[_i] = np.sqrt( _pi3 * q2[_i]) / _z.real
+            delta[_i] = np.arctan2(np.sqrt( _pi3 * q2[_i]), _z.real)
+    # MF1
+    elif np.array_equal(d, np.array([0., 0., 1.])):
+        for _i in range(q2.shape[0]):
+            _z1 = zeta.Z(q2[_i], _gamma[_i], 0, 0, d, 1., prec, verbose, _n)
+            _z2 = zeta.Z(q2[_i], _gamma[_i], 2, 0, d, 1., prec, verbose, _n)
+            _num = _gamma[_i] * np.sqrt(_pi3 * q2[_i])
+            _den = (_z1 + (2. / np.sqrt(5) / q2[_i]) * _z2).real
+            tandelta[_i] = _num / _den
+            delta[_i] = np.arctan2( _num, _den)
+    # MF2
+    elif np.array_equal(d, np.array([0., 1., 1.])):
+            _z1 = zeta.Z(q2[_i], _gamma[_i], 0, 0, d, 1., prec, verbose, _n)
+            _z2 = zeta.Z(q2[_i], _gamma[_i], 2, 0, d, 1., prec, verbose, _n)
+            _z3 = zeta.Z(q2[_i], _gamma[_i], 2, 2, d, 1., prec, verbose, _n)
+            _z4 = zeta.Z(q2[_i], _gamma[_i], 2, -2, d, 1., prec, verbose, _n)
+            _num = _gamma[_i] * np.sqrt(_pi3 * q2[_i])
+            _den = (_z1 + (1. / np.sqrt(5) / q2[_i]) * _z2 + \
+                    np.j * ( np.sqrt(0.3) / q2[_i]) * (_z3 - _z4) ).real
+            tandelta[_i] = _num / _den
+            delta[_i] = np.arctan2( _num, _den)
     return delta, tandelta
 
 def return_mean_corr(data, axis=0):

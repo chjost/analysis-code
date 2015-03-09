@@ -40,6 +40,13 @@ import fit
 import plot
 import analyze_fcts as af
 
+def print_results(data, error):
+    for _i in range(data.shape[0]):
+        print("E dE  delta ddelta  tan dtan  sin2 dsin2")
+        print("%.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf" % (
+              data[_i,0], error[_i,0], data[_i,1], error[_i,1],
+              data[_i,2], error[_i,2], data[_i,3], error[_i,3]))
+
 def main():
     #######################################################
     ## definition of main variables
@@ -49,9 +56,9 @@ def main():
     L=24
     mpi=0.14463 # from Carsten's pipi analysis
     # CMF
-    #path="/hiskp2/jost/data/rho_analyse/A40.24/TP0/"
+    path="/hiskp2/jost/data/rho_analyse/A40.24/TP0/"
     # MF1
-    path="/hiskp2/jost/data/rho_analyse/A40.24/TP1/"
+    #path="/hiskp2/jost/data/rho_analyse/A40.24/TP1/"
     filelist = ["C2", "C3", "C3", "C4"]
     d = np.array([0., 0., 1.])
     d2 = np.dot(d, d)
@@ -96,7 +103,12 @@ def main():
     #    print("%2d %.6e %.6e" % (i, gevp_mat[0,i,0], dgevp[i]))
     #return
 
-    # set fit x data
+    # prepare storage for results
+    odata = np.zeros((gevp_mat.shape[2], 4))
+    mdata = np.zeros_like(odata)
+    ddata = np.zeros_like(odata)
+
+    # set fit data
     tlist = np.linspace(0., float(T2), float(T2), endpoint=False)
     # outputfile for the plot
     pfit = PdfPages("./plots/fit_gevp_TP%d.pdf" % (d2))
@@ -107,7 +119,7 @@ def main():
 
         # fit the energy and print information
         print("fitting correlation function")
-        res, chi2, pval = fit.fitting(fitfunc, tlist[lo:up], gevp_mat[:,lo:up,_l],
+        res, chi2, pval=fit.fitting(fitfunc, tlist[lo:up], gevp_mat[:,lo:up,_l],
                                       start_params, verbose=0)
         print("p-value %.7lf" % (pval))
 
@@ -130,54 +142,35 @@ def main():
         # calculate Ecm, q and delta
         print("calculating")
         gamma, Ecm = af.calculate_cm_energy(res[:,1], L, d)
-        mEcm, dEcm = af.return_mean_corr(Ecm)
         q2 = af.calculate_q(Ecm, mpi, L)
-        mq2, dq2 = af.return_mean_corr(q2)
-        delta, tandelta = af.calculate_delta(q2)
-        mdelta, ddelta = af.return_mean_corr(delta)
-        mtandelta, dtandelta = af.return_mean_corr(tandelta)
-        
-        # print in form similar to Carsten's format
-        print("data  E dE  delta ddelta  tan dtan  sin2 dsin2")
-        print("orig %.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf" % (
-            Ecm[0], dEcm, delta[0], ddelta, tandelta[0], dtandelta,
-            np.sin(delta[0])**2, np.abs(np.sin(delta[0]*2.)*ddelta)))
-        print("mean %.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf" % (
-            mEcm, dEcm, mdelta, ddelta, mtandelta, dtandelta,
-            np.sin(mdelta)**2, np.abs(np.sin(mdelta*2.)*ddelta)))
+        delta, tandelta = af.calculate_delta(q2, gamma, d)
 
-        # calculate mass
-        # shift in fit indices is necessary since the mass array is missing the
-        # first and last timeslice
+        # save data
+        mdata[_l,0], ddata[_l,0] = af.return_mean_corr(Ecm)
+        mdata[_l,1], ddata[_l,1] = af.return_mean_corr(delta)
+        mdata[_l,2], ddata[_l,2] = af.return_mean_corr(tandelta)
+        mdata[_l,1] = np.sin(mdata[_l,1])**2
+        ddata[_l,1] = np.abs(np.sin(mdata[_l,1]*2.)*ddata[_l,1])
+        odata[_l,0] = Ecm[0]
+        odata[_l,1] = delta[0]
+        odata[_l,2] = tandelta[0]
+        odata[_l,1] = np.sin(delta[0])**2
+        # print data
+        print_results(odata[_l], ddata)
+        #print_results(mdata[_l], ddata)
+        
+        # calculate mass and plot
+        # not used to extract an energy
         print("fitting mass")
         mass, mmass, dmass = af.compute_mass(gevp_mat[:,:,_l])
         mmassres = mres[1]
-        #massres, masschi2, masspval = fit.fitting(massfunc, tlist[lo-1:up-1], 
-        #    mass[:,lo-1:up-1], mass_sparams, verbose=0)
-        #print("p-value %.7lf" % (masspval))
-        #mmassres, dmassres = af.return_mean_corr(massres)
         print("plotting")
         label[1] = "m_eff(t)"
         plot.corr_fct_with_fit(tlist[1:-1], mass[0], dmass, massfunc, mmassres,
                                [tmin-1,T2-1], label, pfit, False)
-
-        # calculate Ecm, q and delta
-        print("calculating")
-        #gamma, Ecm = af.calculate_cm_energy(massres[:,1], L, d)
-        #mEcm, dEcm = af.return_mean_corr(Ecm)
-        #q2 = af.calculate_q(Ecm, mpi, L)
-        #mq2, dq2 = af.return_mean_corr(q2)
-        #delta, tandelta = af.calculate_delta(q2)
-        #mdelta, ddelta = af.return_mean_corr(delta)
-        #mtandelta, dtandelta = af.return_mean_corr(tandelta)
-        ## print in form similar to Carsten's format
-        print("data  E dE  delta ddelta  tan dtan  sin2 dsin2")
-        #print("orig %.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf" % (
-        #    massres[0], dmassres, delta[0], ddelta, tandelta[0], dtandelta,
-        #    np.sin(delta[0])**2, np.abs(np.sin(delta[0]*2.)*ddelta)))
-        #print("mean %.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf" % (
-        #    mmassres, dmassres, mdelta, ddelta, mtandelta, dtandelta,
-        #    np.sin(mdelta)**2, np.abs(np.sin(mdelta*2.)*ddelta)))
+    # print data
+    print_results(odata, ddata)
+    #print_results(mdata, ddata)
     pfit.close()
 
 

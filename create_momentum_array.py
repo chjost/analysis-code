@@ -60,5 +60,6 @@ def main():
   ensure_dir("./momenta")
   np.save("./momenta", r)
 
-main()
-
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+  main()

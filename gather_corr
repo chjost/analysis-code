@@ -34,10 +34,17 @@ def main():
     inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/sum/pi_corr_p0.conf"
     outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/pi_corr_p0_old"
     suffix=".dat"
-#    inputlist=["0004", "0012", "0020", "0028", "0036", "0044", "0052", "0060", "0068", "0076"
-#               , "0040", "0048", "0056", "0064", "0088", "0312"
-#               ]
-    inputlist=["0040", "0048", "0056", "0088", "0312"]
+    inputlist = []
+    #for i in range(4, 93, 8):
+    #    inputlist.append("%04d" % i)
+    #for i in range(124, 133, 8):
+    #    inputlist.append("%04d" % i)
+
+    for i in (40, 48, 56, 88, 312):
+        inputlist.append("%04d" % i)
+
+    #print(inputlist)
+    #return
 
     # read in data
     # read in the first file to create all variables
