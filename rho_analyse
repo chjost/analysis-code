@@ -41,8 +41,8 @@ import plot
 import analyze_fcts as af
 
 def print_results(data, error):
+    print("E dE  delta ddelta  tan dtan  sin2 dsin2")
     for _i in range(data.shape[0]):
-        print("E dE  delta ddelta  tan dtan  sin2 dsin2")
         print("%.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf" % (
               data[_i,0], error[_i,0], data[_i,1], error[_i,1],
               data[_i,2], error[_i,2], data[_i,3], error[_i,3]))
@@ -54,14 +54,18 @@ def main():
     tmin=1
     T=48
     L=24
-    mpi=0.14463 # from Carsten's pipi analysis
-    # CMF
-    path="/hiskp2/jost/data/rho_analyse/A40.24/TP0/"
-    # MF1
-    #path="/hiskp2/jost/data/rho_analyse/A40.24/TP1/"
-    filelist = ["C2", "C3", "C3", "C4"]
+    # from Carsten's pipi analysis
+    #mpi=0.1239 # A30.32
+    #mpi=0.1474 # A40.20
+    #mpi=0.14463 # A40.24
+    #mpi=0.14151 # A40.32
+    mpi=0.1993 # A80.24
+    #mpi=0.2224 # A100.24
+    lattice="A80.24"
+    #filelist = ["C2", "C3", "C3", "C4"]
+    filelist = ["rho_corr_TP1_00", "rho_corr_TP1_01", "rho_corr_TP1_01",\
+                "rho_corr_TP1_11"]
     d = np.array([0., 0., 1.])
-    d2 = np.dot(d, d)
     ## define the fit function and start parameters
     #fitfunc = lambda p,t: p[0]*np.cosh((T/2.0-t)*p[1])
     #start_params = [0.005, -0.5]
@@ -76,32 +80,30 @@ def main():
     ## fit ranges
     #lolist = np.array((9,7)) # CMF
     lolist = np.array((12,9)) # MF1
+    #lolist = np.array((9,9)) # MF2
     # python does not include the last value into the range!
     #uplist = np.array((18,18)) # CMF
     uplist = np.array((16,16)) # MF1
+    #uplist = np.array((15,15)) # MF2
     #######################################################
+    ## setting variables
+    d2 = np.dot(d, d)
+    path="".join(("/hiskp2/jost/data/rho_analyse/" + lattice + "/TP%d/" % d2))
 
     ## read in data
     print("reading data")
-    #corr_mat, T2 = cm.create_corr_matrix(nbsamples, path, filelist)
-    #cm.write_corr_matrix(corr_mat, "./raw_data/corr_mat_rho_TP%d.npy" % (d2))
-    #corr_mat = cm.read_corr_matrix("./raw_data/corr_mat_rho_TP%d.npy" % (d2))
+    corr_mat, T2 = cm.create_corr_matrix(nbsamples, path, filelist)
+    cm.write_corr_matrix(corr_mat, "./raw_data/corr_mat_rho_%s_TP%d.npy" % (lattice, d2))
+    #corr_mat = cm.read_corr_matrix("./raw_data/corr_mat_rho_%s_TP%d.npy" % (lattice, d2))
     #T2 = corr_mat.shape[1]
 
     ## solve the GEVP
     print("solving GEVP")
-    #gevp_mat = gevp.calculate_gevp(corr_mat, tmin)
-    #cm.write_corr_matrix(gevp_mat, "./raw_data/gevp_mat_rho_TP%d.npy" % (d2))
-    #io.write_data(gevp_mat, "./raw_data/gevp_rho_TP%d.dat" % (d2))
-    gevp_mat = cm.read_corr_matrix("./raw_data/gevp_mat_rho_TP%d.npy" % (d2))
-    T2 = gevp_mat.shape[1]
-
-    ## debugging!
-    # print the principal correlators
-    #mgevp, dgevp = af.print_mean_corr(gevp_mat[:,:,0])
-    #for i in range(mgevp.shape[0]):
-    #    print("%2d %.6e %.6e" % (i, gevp_mat[0,i,0], dgevp[i]))
-    #return
+    gevp_mat = gevp.calculate_gevp(corr_mat, tmin)
+    cm.write_corr_matrix(gevp_mat, "./raw_data/gevp_mat_rho_%s_TP%d.npy" % (lattice, d2))
+    #io.write_data(gevp_mat, "./raw_data/gevp_rho_%s_TP%d.dat" % (lattice, d2))
+    #gevp_mat = cm.read_corr_matrix("./raw_data/gevp_mat_rho_%s_TP%d.npy" % (lattice, d2))
+    #T2 = gevp_mat.shape[1]
 
     # prepare storage for results
     odata = np.zeros((gevp_mat.shape[2], 4))
@@ -111,7 +113,7 @@ def main():
     # set fit data
     tlist = np.linspace(0., float(T2), float(T2), endpoint=False)
     # outputfile for the plot
-    pfit = PdfPages("./plots/fit_gevp_TP%d.pdf" % (d2))
+    pfit = PdfPages("./plots/fit_gevp_%s_TP%d.pdf" % (lattice,d2))
     for _l in range(gevp_mat.shape[2]):
         lo = lolist[_l]
         up = uplist[_l]
@@ -146,18 +148,16 @@ def main():
         delta, tandelta = af.calculate_delta(q2, gamma, d)
 
         # save data
+        print("saving")
         mdata[_l,0], ddata[_l,0] = af.return_mean_corr(Ecm)
         mdata[_l,1], ddata[_l,1] = af.return_mean_corr(delta)
         mdata[_l,2], ddata[_l,2] = af.return_mean_corr(tandelta)
-        mdata[_l,1] = np.sin(mdata[_l,1])**2
-        ddata[_l,1] = np.abs(np.sin(mdata[_l,1]*2.)*ddata[_l,1])
+        mdata[_l,3] = np.sin(mdata[_l,1])**2
+        ddata[_l,3] = np.abs(np.sin(mdata[_l,1]*2.)*ddata[_l,1])
         odata[_l,0] = Ecm[0]
         odata[_l,1] = delta[0]
         odata[_l,2] = tandelta[0]
-        odata[_l,1] = np.sin(delta[0])**2
-        # print data
-        print_results(odata[_l], ddata)
-        #print_results(mdata[_l], ddata)
+        odata[_l,3] = np.sin(delta[0])**2
         
         # calculate mass and plot
         # not used to extract an energy
@@ -170,7 +170,7 @@ def main():
                                [tmin-1,T2-1], label, pfit, False)
     # print data
     print_results(odata, ddata)
-    #print_results(mdata, ddata)
+    print_results(mdata, ddata)
     pfit.close()
 
 

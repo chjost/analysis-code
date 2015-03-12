@@ -1,0 +1,124 @@
+#!/usr/bin/python
+################################################################################
+#
+# Author: Christian Jost (jost@hiskp.uni-bonn.de)
+# Date:   Februar 2015
+#
+# Copyright (C) 2015 Christian Jost
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Function: A program that computes the phaseshift for the data from the paper
+#           by Feng, Jansen and Renner (arxiv:1011.5288).
+#
+# For informations on input parameters see the description of the function.
+#
+################################################################################
+
+import numpy as np
+import analyze_fcts as af
+
+def print_results(data, Ecm, p, delta):
+    for _l in range(data.shape[0]):
+        da = np.ravel(data[_l])
+        ec = np.ravel(Ecm[_l])
+        pp = np.ravel(p[_l])
+        de = np.ravel(delta[_l])
+        for _d, _e, _p, _f in zip(da, ec, pp, de):
+            print("%.4f %.4f %.4f %.4f" % (_d, _e, _p, _f))
+        print("")
+
+def main():
+    #######################################################
+    ## definition of main variables
+    tmin=1
+    T=48
+    L1=24
+    L2=32
+    L=[24, 24, 32, 32]
+    mpi=[0.1922, 0.1681, 0.1321, 0.1161] 
+    d1 = np.array([0., 0., 0.])
+    d2 = np.array([0., 0., 1.])
+    d3 = np.array([1., 1., 0.])
+    #######################################################
+    data = np.zeros((4,3,2))
+    data[0,0,0] = 0.4559
+    data[0,0,1] = 0.6584
+    data[0,1,0] = 0.4869
+    data[0,1,1] = 0.5563
+    data[0,2,0] = 0.5660
+    data[0,2,1] = 0.642
+    data[1,0,0] = 0.4301
+    data[1,0,1] = 0.637
+    data[1,1,0] = 0.4537
+    data[1,1,1] = 0.527
+    data[1,2,0] = 0.5343
+    data[1,2,1] = 0.612
+    data[2,0,0] = 0.4037
+    data[2,0,1] = 0.4931
+    data[2,1,0] = 0.3638
+    data[2,1,1] = 0.474
+    data[2,2,0] = 0.4330
+    data[2,2,1] = 0.518
+    data[3,0,0] = 0.3844
+    data[3,0,1] = 0.4591
+    data[3,1,0] = 0.3363
+    data[3,1,1] = 0.440
+    data[3,2,0] = 0.4035
+    data[3,2,1] = 0.4909
+
+    # init arrays
+    Ecm = np.zeros_like(data)
+    gamma = np.zeros_like(data)
+    q2 = np.zeros_like(data)
+    p = np.zeros_like(data)
+    delta = np.zeros_like(data)
+    tandelta = np.zeros_like(data)
+
+    # calculate Ecm
+    Ecm[:,0,:] = data[:,0,:]
+    gamma[:,0,:] = 1.0
+    for _i in range(data.shape[2]):
+        gamma[:2,1,_i], Ecm[:2,1,_i] = af.calculate_cm_energy(data[:2,1,_i], L1, d2)
+        gamma[2:,1,_i], Ecm[2:,1,_i] = af.calculate_cm_energy(data[2:,1,_i], L2, d2)
+        gamma[:2,2,_i], Ecm[:2,2,_i] = af.calculate_cm_energy(data[:2,2,_i], L1, d3)
+        gamma[2:,2,_i], Ecm[2:,2,_i] = af.calculate_cm_energy(data[2:,2,_i], L2, d3)
+    #print(Ecm)
+    #print(gamma)
+    #return
+
+    # calculate q2
+    for _l in range(data.shape[0]):
+        for _i in range(data.shape[2]):
+            q2[_l,:,_i] = af.calculate_q(Ecm[_l,:,_i], mpi[_l], L[_l])
+            p[_l,:,_i] = np.sqrt(q2[_l,:,_i])*2*np.pi/float(L[_l])
+    #print(p)
+    #return
+
+    # check MF1
+    #q2[0,1,0] = 0.07754
+    #q2[0,1,1] = 0.3474
+
+    # calculate delta
+    for _l in range(data.shape[0]):
+        delta[_l,0,:], tandelta[_l,0,:] = af.calculate_delta(q2[_l,0,:], gamma[_l,0,:], d1)
+        delta[_l,1,:], tandelta[_l,1,:] = af.calculate_delta(q2[_l,1,:], gamma[_l,1,:], d2)
+        delta[_l,2,:], tandelta[_l,2,:] = af.calculate_delta(q2[_l,2,:], gamma[_l,2,:], d3)
+    #print(delta*180./np.pi)
+    print_results(data, Ecm, p, delta*180./np.pi)
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    main()

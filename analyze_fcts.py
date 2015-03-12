@@ -197,12 +197,12 @@ def calculate_cm_energy(E, L, d=np.array([0., 0., 1.])):
     # create the array for results
     Ecm = np.zeros((E.shape[0]))
     gamma = np.zeros((E.shape[0]))
-    # norm of the cm momentum
+    # continuum relation
     _p2 = np.dot(d, d) * (4 * np.pi**2 / float(L)**2)
-    for _i in range(E.shape[0]):
-        # calculate center of mass energy
-        Ecm[_i] = np.sqrt(E[_i]**2 - _p2)
-        gamma[_i] = E[_i] / Ecm[_i]
+    Ecm = np.sqrt(E**2 - _p2)
+    # lattice version, see arxiv:1011.5288
+    #Ecm = np.arccosh(np.cosh(E) - 2*np.sum(np.sin(d * np.pi / float(L))**2))
+    gamma = E / Ecm
     return gamma, Ecm
 
 def calculate_q(E, mpi, L):
@@ -222,15 +222,9 @@ def calculate_q(E, mpi, L):
     # create array for results
     q2 = np.zeros((E.shape[0]))
     # continuum dispersion relation
-    # this does not change, calculate only once
-    _p = float(L) / (2. * np.pi)
-    for _i in range(E.shape[0]):
-        # calculate q
-        q2[_i] = (0.25*E[_i]**2 - mpi**2) * _p**2
-    # lattice dispersion relation
-    #for _i in range(E.shape[0]):
-    #    # calculate q
-    #    q2[_i] = 4*np.arcsin(np.sqrt((np.cosh(E[_i]/2.) - np.cosh(mpi))/2.))**2
+    q2 = (0.25*E**2 - mpi**2) * (float(L) / (2. * np.pi))**2
+    # lattice dispersion relation, see arxiv:1011.5288
+    #q2 = (np.arcsin( np.sqrt((np.cosh(E/2.)-np.cosh(mpi))/2.))*float(L)/np.pi)**2
     return q2
 
 def calculate_delta(q2, gamma=None, d=np.array([0., 0., 0.]), prec=10e-6,
@@ -238,6 +232,9 @@ def calculate_delta(q2, gamma=None, d=np.array([0., 0., 0.]), prec=10e-6,
     """Calculates the phase shift using Luescher's Zeta function.
 
     Most arguments are for the Zeta function. For each q2 a gamma is needed.
+    WARNING: The momentum vectors d are compared to hardcoded momentum vectors
+    because of the zeta function calculation, which was derived for exactly
+    these momentum vectors. Make sure to use the right ones.
 
     Args:
         q2: The momentum shift squared.
@@ -259,36 +256,54 @@ def calculate_delta(q2, gamma=None, d=np.array([0., 0., 0.]), prec=10e-6,
     # file name must not change!
     pathmomenta = "./momenta.npy"
     if not os.path.isfile(pathmomenta):
-        import create_momentum_array
+        import create_momentum_array as cma
+        cma.main()
     _n = np.load(pathmomenta)
     # init calculation
     _pi3 = np.pi**3
     #CMF
     if np.array_equal(d, np.array([0., 0., 0.])):
-        for _i in range(q2.shape[0]):
-            _z = zeta.Z(q2[_i], _gamma[_i], 0, 0, d, 1., prec, verbose, _n)
-            tandelta[_i] = np.sqrt( _pi3 * q2[_i]) / _z.real
-            delta[_i] = np.arctan2(np.sqrt( _pi3 * q2[_i]), _z.real)
+        _z1 = zeta.Zp(q2, _gamma, 0, 0, d, 1., prec, verbose, _n).real
+        #_z1 = np.zeros(q2.shape[0])
+        #for _i in range(q2.shape[0]):
+        #    _z1[_i] = zeta.Z(q2[_i], _gamma[_i], 0, 0, d, 1., prec, verbose, _n).real
+        tandelta = np.sqrt( _pi3 * q2) / _z1.real
+        delta = np.arctan2(np.sqrt( _pi3 * q2), _z1.real)
     # MF1
     elif np.array_equal(d, np.array([0., 0., 1.])):
-        for _i in range(q2.shape[0]):
-            _z1 = zeta.Z(q2[_i], _gamma[_i], 0, 0, d, 1., prec, verbose, _n)
-            _z2 = zeta.Z(q2[_i], _gamma[_i], 2, 0, d, 1., prec, verbose, _n)
-            _num = _gamma[_i] * np.sqrt(_pi3 * q2[_i])
-            _den = (_z1 + (2. / np.sqrt(5) / q2[_i]) * _z2).real
-            tandelta[_i] = _num / _den
-            delta[_i] = np.arctan2( _num, _den)
+        _z1 = zeta.Zp(q2, _gamma, 0, 0, d, 1., prec, verbose, _n).real
+        _z2 = zeta.Zp(q2, _gamma, 2, 0, d, 1., prec, verbose, _n).real
+        #_z1 = np.zeros(q2.shape[0])
+        #_z2 = np.zeros(q2.shape[0])
+        #for _i in range(q2.shape[0]):
+        #    _z1[_i] = zeta.Z(q2[_i], _gamma[_i], 0, 0, d, 1., prec, verbose, _n).real
+        #    _z2[_i] = zeta.Z(q2[_i], _gamma[_i], 2, 0, d, 1., prec, verbose, _n).real
+        _num = _gamma * np.sqrt(_pi3 * q2)
+        _den = (_z1 + (2. / (np.sqrt(5) * q2)) * _z2).real
+        tandelta = _num / _den
+        delta = np.arctan2( _num, _den)
     # MF2
-    elif np.array_equal(d, np.array([0., 1., 1.])):
-            _z1 = zeta.Z(q2[_i], _gamma[_i], 0, 0, d, 1., prec, verbose, _n)
-            _z2 = zeta.Z(q2[_i], _gamma[_i], 2, 0, d, 1., prec, verbose, _n)
-            _z3 = zeta.Z(q2[_i], _gamma[_i], 2, 2, d, 1., prec, verbose, _n)
-            _z4 = zeta.Z(q2[_i], _gamma[_i], 2, -2, d, 1., prec, verbose, _n)
-            _num = _gamma[_i] * np.sqrt(_pi3 * q2[_i])
-            _den = (_z1 + (1. / np.sqrt(5) / q2[_i]) * _z2 + \
-                    np.j * ( np.sqrt(0.3) / q2[_i]) * (_z3 - _z4) ).real
-            tandelta[_i] = _num / _den
-            delta[_i] = np.arctan2( _num, _den)
+    elif np.array_equal(d, np.array([1., 1., 0.])):
+        _z1 = zeta.Zp(q2, _gamma, 0, 0, d, 1., prec, verbose, _n).real
+        _z2 = zeta.Zp(q2, _gamma, 2, 0, d, 1., prec, verbose, _n).real
+        _z3 = zeta.Zp(q2, _gamma, 2, 2, d, 1., prec, verbose, _n).imag
+        _z4 = zeta.Zp(q2, _gamma, 2, -2, d, 1., prec, verbose, _n).imag
+        #_z1 = np.zeros(q2.shape[0])
+        #_z2 = np.zeros(q2.shape[0])
+        #_z3 = np.zeros(q2.shape[0])
+        #_z4 = np.zeros(q2.shape[0])
+        #for _i in range(q2.shape[0]):
+        #    _z1 = zeta.Z(q2[_i], _gamma[_i], 0, 0, d, 1., prec, verbose, _n).real
+        #    _z2 = zeta.Z(q2[_i], _gamma[_i], 2, 0, d, 1., prec, verbose, _n).real
+        #    _z3 = zeta.Z(q2[_i], _gamma[_i], 2, 2, d, 1., prec, verbose, _n).imag
+        #    _z4 = zeta.Z(q2[_i], _gamma[_i], 2, -2, d, 1., prec, verbose, _n).imag
+        _num = _gamma * np.sqrt(_pi3 * q2)
+        _den = (_z1 - (1. / (np.sqrt(5) * q2)) * _z2 + ( np.sqrt(0.3) /
+                q2) * (_z3 - _z4) ).real
+        tandelta = _num / _den
+        delta = np.arctan2( _num, _den)
+    else:
+        print("for the current vector d delta is not implemented")
     return delta, tandelta
 
 def return_mean_corr(data, axis=0):
