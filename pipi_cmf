@@ -1,0 +1,73 @@
+#!/usr/bin/python
+################################################################################
+#
+# Author: Christopher Helmes (helmes@hiskp.uni-bonn.de)
+# Date:   Februar 2015
+#
+# Copyright (C) 2015 Christopher Helmes
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Function: Pi-Pi-scattering analysis in the center of mass frame 
+#
+# For informations on input parameters see the description of the function.
+#
+################################################################################
+
+# system imports
+import numpy as np
+import matplotlib
+matplotlib.use('QT4Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+
+# Christian's packages
+import input_output as io
+import bootstrap
+import corr_matrix as cm
+import gevp
+import fit
+import plot
+import analyze_fcts as af
+
+def main():
+    # number of bootstrap samples
+    nbsamples = 500
+    # temporal lattice extent
+    tmin = 1
+    T = 96
+    L = 48
+    # get mpi from single_corr_analysis
+    path = "/home/christopher/studium/PROMO/data/correlators/scattering/I2_pipi/B35.48/pipi_pipi_A1_corr_TP0"
+    tmp_out = "/home/christopher/studium/PROMO/data/correlators/scattering/I2_pipi/B35.48/scratch/"
+ 
+    # start with usual analysis (thermal states contamination expected)
+    fitfunc = lambda p,t: p[0]*p[0]*(np.exp(-p[1]*t) + np.exp(-p[1]*(T-t)))
+    start_params = [1, 0.5]
+    massfunc = lambda p, t: p
+    # define fit ranges
+    lobound = np.array((12,9))
+    upbound = np.array((30,40))
+    entries = ["_00", "_01", "_10", "_11" ]
+    print("create correlation matrix")
+    corr_mat, T2 = cm.create_corr_matrix(nbsamples, path, entries, verbose=1 )
+    corr_save = "".join((tmp_out, "corr_tmp.dat"))
+     #cm.write_corr_matrix(corr_mat,corr_save) 
+    solution = gevp.calculate_gevp(corr_mat)
+    
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    main()
