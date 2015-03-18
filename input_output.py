@@ -27,50 +27,10 @@
 ################################################################################
 
 import os
-def extract_ascii_corr_fct(filebase='', start_cfg=0, delta_cfg=0, nb_cfg=0,
-                           verbose=0, nums=0, T=0):
-    """Extract correlation function from ascii dump file.
-    Each file contains several correlation functions from the same configuration
-    Number of correlation functions needs to be given as well as time extent
+import struct
+import numpy as np
 
-    Args:
-        filebase: The file's basename.
-        verbose: Toggle More or less information output
-        start_cfg: First configuration number.
-        delta_cfg: Increment for the configuration numbers.
-        nb_cfg: Number of configurations to process.
-        nums: Number of correlation functions
-        T: Temporal extent of the ensemble under investigation
-
-    Returns:
-        A list with entries containing the correlation functions. Sorting takes
-        place with time as the fastest and configuration as the slower index
-        In Addition to that a third dimension (e.g. different total momenta) is
-        taken into account
-    """
-    _corrs = [[] for n in range(nums)]
-    print len(_corrs)
-    for x in range(start_cfg, start_cfg+delta_cfg*nb_cfg, delta_cfg):
-      # Each configuration gets nums correlation functions (e.g. different
-      # total momenta)
-      _corr_file = []
-      _filename = filebase + "%04d" % x
-      with open(_filename, 'rt') as _f:
-        if verbose:
-          print("reading from file: " + _f.name)
-        for _line in _f:
-          if _line.startswith('#'):
-            continue
-          _datum = _line.split()
-          #print _datum[0], _datum[1], _datum[2]
-          _comp = complex(float(_datum[1]),float(_datum[2]))
-          _corr_file.append(float(_datum[1]))
-      # Split correlation functions
-      for n in range(0,nums):
-        _corrs[n].extend(_corr_file[n*(T):(n+1)*(T)])
-    return _corrs
-
-def extract_corr_fct(filename='', verbose=0):
+def extract_corr_fct(filename='', column=1, verbose=0, skipSorting=False):
     """Extracts correlation functions and resorts them.
 
     Reads correlation functions from the file filename. The first line of the
@@ -80,21 +40,22 @@ def extract_corr_fct(filename='', verbose=0):
 
     Args:
         filename: The file name.
+        column: Which column to read.
         verbose: Changes the amount of information printed.
+        skipSorting: Skip the sorting step at the end.
 
     Returns:
-        A list with entries containing the correlation functions.
-        The list is sorted with the time index as fast index and the
-        configuration number as slower index.
-        The number of configurations.
-        The time extent of the lattice.
+        A list with entries containing the correlation functions. The list is
+        sorted with the time index as slow index and the configuration number
+        as fast index. In case skipSorting is true, the fastest index is time
+        and the slowest is the configuration number.
+        The second returned variable is the number of configurations.
+        The third returned variable is the time extent of the lattice.
     """
-    # corr contains the correlation functions
-    corr = []
-
     # check if file we want to read exists
     if not os.path.isfile(filename):
-        print(filename + " is not a file")
+        print("ERROR: " + filename + " is not a file")
+        return
     else:
         # open file and parse first line with information
         if verbose:
@@ -107,26 +68,75 @@ def extract_corr_fct(filename='', verbose=0):
             print("time extent " + str(_latticedata[1]))
         nbcfg = int(_latticedata[0])
         T = int(_latticedata[1])
+        corr = np.zeros((int(nbcfg*T)), dtype=float)
         # read in all correlation functions
         _re = []
-        for cfg in range(0,nbcfg):
-            for t in range(0, T):
-                _re.append(float(_f.readline().split()[1]))
+        try:
+            for _cfg in range(0,nbcfg):
+                for _t in range(0, T):
+                    _re.append(float(_f.readline().split()[column]))
+        except:
+            print("ERROR: while reading " + filename + ". Returning...")
         # sort the correlation functions according so that the time index
         # is the fastest index
-        if verbose:
-            print("sort correlation function")
-        corr = [float(0.)] * nbcfg * T
-        _t = 0
-        for x in _re:
-            corr[int(_t%T) * nbcfg + int(_t / T)] = x
-            _t += 1
+        if not skipSorting:
+            if verbose:
+                print("sort correlation function")
+            _t = 0
+            for x in _re:
+                corr[int(_t%T) * nbcfg + int(_t / T)] = x
+                _t += 1
+        else:
+            corr = _re
         # close file
         _f.close()
 
     # return the correlation functions
     return corr, nbcfg, T
 
+def write_corr_fct(data, filename, T, nbcfg, timesorted=True):
+    """Write the correlation function to file.
+
+    Expects numpy array with one axis. A sanity check is done with T and
+    nbcfg.
+    Can write correlation functions sorted with time as fastest index
+    (timesorted=False) and functions with configuration number as fastest index
+    (timesorted=True), see also extract_corr_fct.
+
+    Args:
+        data: The numpy array to write to the file.
+        filename: The filename of the file, including the path.
+        T: The time extend of the data.
+        nbcfg: The number of configurations in the data.
+        timesorted: If time is the fastest index, this should be False.
+
+    Returns:
+        Nothing.
+    """
+    # check whether enough data is in the array
+    if data.shape[0] != int(T * nbcfg):
+        print("ERROR: the length of data is not T*nbcfg")
+        return
+    # check whether file exists
+    if os.path.isfile(filename):
+        print(filename + " already exists, overwritting...")
+    # open file for writting
+    outfile = open(filename, "w")
+    # write the data shape in L. Liu's format
+    outfile.write(str(nbcfg) + " " + str(T) + " 0 " +
+                  str(int(T/2)) + " 0\n")
+    tmp=None
+    # write the data points
+    if timesorted:
+        for _i in range(data.shape[0]):
+            tmp='%d %.14f\n' % ((_i%T), (data[(_i%T)*nbcfg + (_i/T)]))
+            outfile.write(tmp)
+            #outfile.write(str(_i%T) + " " + str(data[(_i%T)*nbcfg + (_i/T)]) + "\n")
+    else:
+        for _i in range(data.shape[0]):
+            tmp='%d %.14f\n' % ((_i%T), (data[_i]))
+            outfile.write(tmp)
+            #outfile.write(str(_i%T) + " " + str(data[_i]) + "\n")
 
 def extract_bin_corr_fct(name='', start_cfg=0, delta_cfg=0, nb_cfg=0, T=0,
                      verbose=0): 
@@ -153,10 +163,10 @@ def extract_bin_corr_fct(name='', start_cfg=0, delta_cfg=0, nb_cfg=0, T=0,
     _im = []
     for x in range(start_cfg, start_cfg+delta_cfg*nb_cfg, delta_cfg):
         _filename = name + "%04d" % x + '.dat'
-        _f = open(filename, "rb") # Open a file
+        _f = open(_filename, "rb") # Open a file
         if verbose:
             print("reading from file: " + _f.name)
-        _f.seek(2*8*T*gamma)
+        _f.seek(2*8*T*0)
         for _t in range(0, T):
             _re.insert(_t, struct.unpack('d', _f.read(8))) # returns a tuple -> convers.
             _im.insert(_t, struct.unpack('d', _f.read(8))) # returns a tuple -> convers.
@@ -168,3 +178,31 @@ def extract_bin_corr_fct(name='', start_cfg=0, delta_cfg=0, nb_cfg=0, T=0,
         corr[(_t%T)*nb_cfg + _t/T] = complex(_x[0], _y[0])
         _t += 1
     return corr
+
+def write_data(data, filename):
+    """Write the data to file.
+
+    Expects numpy array with three axis.
+
+    Args:
+        data: The numpy array to write to the file.
+        filename: The filename of the file, including the path.
+
+    Returns:
+        Nothing.
+    """
+    # check whether file exists
+    if os.path.isfile(filename):
+        print(filename + " already exists, overwritting...")
+    # open file for writting
+    outfile = open(filename, "w")
+    # write the data shape in L. Liu's format
+    outfile.write(str(data.shape[0]) + " " + str(data.shape[1]) + " 0 " +
+                  str(int(data.shape[1]/2)) + " 0\n")
+    # write the data points
+    for _i in range(data.shape[0]):
+        for _j in range(data.shape[1]):
+            outfile.write(str(_j) + " ")
+            for _k in range(data.shape[2]):
+                outfile.write(str(data[_i, _j, _k]) + " ")
+            outfile.write("\n")
