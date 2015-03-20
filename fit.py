@@ -88,19 +88,19 @@ def fitting(fitfunc, X, Y, start_parm, correlated=True, verbose = 1):
         
         print("bootstrap fit:")
         for rm, rs in zip(res_mean, res_std):
-            print("  %.6e +/- %.6e") % (rm, rs)
+            print("  %.6e +/- %.6e" % (rm, rs))
         print("Chi^2/dof: %.6e +/- %.6e\n" % (chi2/dof,
               np.std(chisquare)/dof))
 
         print("mean value fit:")
         for rm, rs in zip(p, res_std):
-            print("  %.6e +/- %.6e") % (rm, rs)
+            print("  %.6e +/- %.6e" % (rm, rs))
         print("Chi^2/dof: %.6e +/- %.6e\n" % (float(sum(infodict['fvec']**2.) /
               dof), np.std(chisquare)/dof))
 
         print("original data fit:")
         for rm, rs in zip(res[0], res_std):
-            print("  %.6e +/- %.6e") % (rm, rs)
+            print("  %.6e +/- %.6e" % (rm, rs))
         print("Chi^2/dof: %.6e +/- %.6e" % (chisquare[0]/dof, np.std(chisquare)
               /dof))
         print("p-value: %lf" % pvalue) 

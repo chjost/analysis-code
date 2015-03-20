@@ -222,9 +222,9 @@ def calculate_q(E, mpi, L):
     # create array for results
     q2 = np.zeros((E.shape[0]))
     # continuum dispersion relation
-    q2 = (0.25*E**2 - mpi**2) * (float(L) / (2. * np.pi))**2
+    #q2 = (0.25*E**2 - mpi**2) * (float(L) / (2. * np.pi))**2
     # lattice dispersion relation, see arxiv:1011.5288
-    #q2 = (np.arcsin( np.sqrt((np.cosh(E/2.)-np.cosh(mpi))/2.))*float(L)/np.pi)**2
+    q2 = (np.arcsin( np.sqrt((np.cosh(E/2.)-np.cosh(mpi))/2.))*float(L)/np.pi)**2
     return q2
 
 def calculate_delta(q2, gamma=None, d=np.array([0., 0., 0.]), prec=10e-6,

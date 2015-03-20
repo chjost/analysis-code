@@ -35,13 +35,13 @@ import numpy as np
 def main():
     ## definition of some variables
     nbsamples = 10
-    inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/"
-    outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/"
+    inputpath="/home/christopher/studium/PROMO/data/correlators/scattering/I2_pipi/"
+    outputpath="/home/christopher/studium/PROMO/data/correlators/scattering/I2_pipi/B35.48/result/"
     suffix="pi_corr_p0.dat"
     suffix1="pi_corr_average.dat"
     suffix2="pi_corr_mass.dat"
     #inputlist=["D15_new/"]
-    inputlist=["D15_new/", "D15_old/", "D15_combined/"]
+    inputlist=["B35.48/"]
 
     # get mass from correlation function
     fitfunc = lambda p,t: p[0]*np.cosh((T/2.0-t)*p[1])

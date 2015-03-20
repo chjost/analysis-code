@@ -113,6 +113,7 @@ def main():
     # set fit data
     tlist = np.linspace(0., float(T2), float(T2), endpoint=False)
     # outputfile for the plot
+    print(d2)
     pfit = PdfPages("./plots/fit_gevp_%s_TP%d.pdf" % (lattice,d2))
     for _l in range(gevp_mat.shape[2]):
         lo = lolist[_l]
