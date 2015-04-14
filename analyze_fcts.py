@@ -150,7 +150,7 @@ def compute_derivative(data):
     mean, err = print_mean_corr(derv, msg="\nderivative:\n-------------------\n")
     return derv, mean, err
 
-def compute_mass(data):
+def compute_mass(data, usecosh=True):
     """Computes the energy of a correlation function.
 
     The data is assumed to a numpy array with bootstrap samples as first axis
@@ -166,18 +166,24 @@ def compute_mass(data):
         deviation.
     """
     # creating mass array from data array
-    mass = np.zeros([data.shape[0], data.shape[1]-2], dtype=float)
-    # computing the energy via formula
-    for b in range(0, data.shape[0]):
-        row = data[b,:]
-        for t in range(1, len(row)-1):
-            mass[b, t-1] = (row[t-1] + row[t+1])/(2.0*row[t])
-    mass = np.arccosh(mass)
+    mass = np.zeros_like(data[:,1:-1])
+    # computing the energy
+    if usecosh:
+       for b in range(0, data.shape[0]):
+           row = data[b,:]
+           for t in range(1, len(row)-1):
+               mass[b, t-1] = (row[t-1] + row[t+1])/(2.0*row[t])
+       mass = np.arccosh(mass)
+    else:
+       for b in range(0, data.shape[0]):
+           row = data[b,:]
+           for t in range(1, len(row)-1):
+               mass[b, t-1] = np.log(row[t]/row[t+1])
     # print energy
     mean, err = return_mean_corr(mass)
     return mass, mean, err
 
-def calculate_cm_energy(E, L, d=np.array([0., 0., 1.])):
+def calculate_cm_energy(E, L, d=np.array([0., 0., 1.]), lattice=False):
     """Calculates the center of mass energy and the boost factor.
 
     Calculates the Lorentz boost factor and the center of mass energy
@@ -186,26 +192,29 @@ def calculate_cm_energy(E, L, d=np.array([0., 0., 1.])):
     Args:
         E: The energy of the moving frame.
         d: The total momentum of the moving frame.
+        lattice: Use the lattice relation, see arxiv:1011.5288.
 
     Returns:
         The boost factor and the center of mass energies.
     """
     # if the data is from the cm system, return immediately
     if np.array_equal(d, np.array([0., 0., 0.])):
-        gamma = np.ones(E.shape[0])
+        gamma = np.ones(E.shape)
         return gamma, E
     # create the array for results
-    Ecm = np.zeros((E.shape[0]))
-    gamma = np.zeros((E.shape[0]))
-    # continuum relation
-    _p2 = np.dot(d, d) * (4 * np.pi**2 / float(L)**2)
-    Ecm = np.sqrt(E**2 - _p2)
+    Ecm = np.zeros((E.shape))
+    gamma = np.zeros((E.shape))
     # lattice version, see arxiv:1011.5288
-    #Ecm = np.arccosh(np.cosh(E) - 2*np.sum(np.sin(d * np.pi / float(L))**2))
+    if lattice:
+        Ecm = np.arccosh(np.cosh(E) - 2*np.sum(np.sin(d * np.pi / float(L))**2))
+    # continuum relation
+    else:
+        _p2 = np.dot(d, d) * (4 * np.pi**2 / float(L)**2)
+        Ecm = np.sqrt(E**2 - _p2)
     gamma = E / Ecm
     return gamma, Ecm
 
-def calculate_q(E, mpi, L):
+def calculate_q(E, mpi, L, lattice=False):
     """Calculates q.
 
     Calculates the difference in momentum between interaction and non-
@@ -215,16 +224,20 @@ def calculate_q(E, mpi, L):
         E: The energy values for the bootstrap samples.
         mpi: The pion mass of the lattice.
         L: The spatial extent of the lattice.
+        lattice: Use the lattice relation, see arxiv:1011.5288.
 
     Returns:
         An array of the q^2 values
     """
     # create array for results
-    q2 = np.zeros((E.shape[0]))
-    # continuum dispersion relation
-    q2 = (0.25*E**2 - mpi**2) * (float(L) / (2. * np.pi))**2
+    q2 = np.zeros((E.shape))
     # lattice dispersion relation, see arxiv:1011.5288
-    #q2 = (np.arcsin( np.sqrt((np.cosh(E/2.)-np.cosh(mpi))/2.))*float(L)/np.pi)**2
+    if lattice:
+        q2 = (np.arcsin( np.sqrt((np.cosh(E/2.)-np.cosh(mpi))/2.))*float(L)/
+              np.pi)**2
+    # continuum dispersion relation
+    else:
+        q2 = (0.25*E**2 - mpi**2) * (float(L) / (2. * np.pi))**2
     return q2
 
 def calculate_delta(q2, gamma=None, d=np.array([0., 0., 0.]), prec=10e-6,
@@ -247,11 +260,11 @@ def calculate_delta(q2, gamma=None, d=np.array([0., 0., 0.]), prec=10e-6,
         An array of the phase shift and tan(delta).
     """
     # create array for results
-    delta=np.zeros(q2.shape[0])
-    tandelta=np.zeros(q2.shape[0])
+    delta=np.zeros(q2.shape)
+    tandelta=np.zeros(q2.shape)
     _gamma = gamma
     if _gamma == None:
-        _gamma = np.ones(q2.shape[0])
+        _gamma = np.ones(q2.shape)
     # read in momenta
     # file name must not change!
     pathmomenta = "./momenta.npy"

@@ -33,7 +33,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
 def corr_fct_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
-                      logscale=False):
+                      logscale=False, setLimits=False):
     """A function that fits a correlation function.
 
     This function plots the given data points and the fit to the data. The plot
@@ -48,7 +48,7 @@ def corr_fct_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
         args: The parameters of the fit function from the fit.
         plotrange: A list with two entries, the lower and upper range of the
                    plot.
-        label: A list with labels for x axis, y axis, data and fit.
+        label: A list with labels for title, x axis, y axis, data and fit.
         pdfplot: A PdfPages object in which to save the plot.
         logscale: Make the y-scale a logscale.
 
@@ -65,14 +65,18 @@ def corr_fct_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
     for i in x1:
         y1.append(fitfunc(args,i))
     y1 = np.asarray(y1)
-    p2, = plt.plot(x1, y1, 'r', label = label[2])
+    p2, = plt.plot(x1, y1, 'r', label = label[4])
     # adjusting the plot style
     plt.grid(True)
-    plt.xlabel(label[0])
-    plt.ylabel(label[1])
-    plt.legend((p1, p2), (label[2], label[3]))
+    plt.xlabel(label[1])
+    plt.ylabel(label[2])
+    plt.title(label[0])
+    plt.legend()
     if logscale:
         plt.yscale('log')
+    # set the yaxis range
+    if setLimits:
+        plt.ylim(0.25, 1.)
     # save pdf
     pdfplot.savefig()
     plt.clf()

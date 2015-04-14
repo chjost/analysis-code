@@ -160,9 +160,11 @@ def extract_bin_corr_fct(name='', start_cfg=0, delta_cfg=0, nb_cfg=0, T=0,
     """
     _re = []
     _im = []
+    # TODO(CJ): treat gamma
+    gamma = 0
     for x in range(start_cfg, start_cfg+delta_cfg*nb_cfg, delta_cfg):
         _filename = name + "%04d" % x + '.dat'
-        _f = open(filename, "rb") # Open a file
+        _f = open(_filename, "rb") # Open a file
         if verbose:
             print("reading from file: " + _f.name)
         _f.seek(2*8*T*gamma)
