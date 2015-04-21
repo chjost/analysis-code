@@ -26,22 +26,23 @@
 #
 ################################################################################
 
+import os
 import numpy as np
 import input_output as io
 
 def main():
     # needed variables
     inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/sum/pi_corr_p0.conf"
-    outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/pi_corr_p0_old"
+    outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/pi_corr_p0_new"
     suffix=".dat"
     inputlist = []
-    #for i in range(4, 93, 8):
-    #    inputlist.append("%04d" % i)
-    #for i in range(124, 133, 8):
-    #    inputlist.append("%04d" % i)
-
-    for i in (40, 48, 56, 88, 312):
+    for i in range(4, 501, 8):
+        if i == 436:
+            continue
         inputlist.append("%04d" % i)
+
+    #for i in (40, 48, 56, 64, 88, 312):
+    #    inputlist.append("%04d" % i)
 
     #print(inputlist)
     #return

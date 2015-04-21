@@ -26,15 +26,20 @@
 #
 ################################################################################
 
+import matplotlib
+matplotlib.use('QT4Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
 import input_output as io
 import analyze_fcts as af
 import fit
+import plot
 import bootstrap
 import numpy as np
 
 def main():
     ## definition of some variables
-    nbsamples = 10
+    nbsamples = 750
     inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/"
     outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/"
     suffix="pi_corr_p0.dat"
@@ -44,18 +49,22 @@ def main():
     inputlist=["D15_new/", "D15_old/", "D15_combined/"]
 
     # get mass from correlation function
-    fitfunc = lambda p,t: p[0]*np.cosh((T/2.0-t)*p[1])
+    #fitfunc = lambda p,t: p[0]*np.cosh((T/2.0-t)*p[1])
+    fitfunc = lambda p,t: 10e6 if p[1] < 0.0 else 0.5*p[0]*p[0]*(np.exp(-p[1]*t) + np.exp(-p[1]*(T-t)))
     for _i in inputlist:
-        print("dir" + _i)
+        pfit = PdfPages("./plots/%s_plot.pdf" % (_i[:-1]))
+        print("dir " + _i)
         # read in data
         corrs, nbcfg, T = io.extract_corr_fct("".join((inputpath, inputlist[0],
                                                      suffix)))
+        T2=int(T/2)+1
         #average = af.average_corr_fct(corrs, nbcfg, T)
         #for t in range(T):
         #    print(corrs[t*nbcfg:(t+1)*nbcfg])
-        tlist = np.linspace(0., float(np.floor(T/2)), float(np.floor(T/2)), endpoint=False)
+        tlist = np.linspace(0., float(T2), float(T2), endpoint=False)
         # create bootstrap samples
         bsamples = bootstrap.sym_and_boot(corrs, T, nbcfg, nbsamples)
+        mdata, ddata = af.return_mean_corr(bsamples)
         #print(bsamples.shape)
         #for t in range(bsamples.shape[1]):
         #    print(bsamples[:,t])
@@ -63,10 +72,16 @@ def main():
         #    print(bsamples[s])
         #print(bsamples.shape)
         # choose fitrange
-        lo, up = (bsamples.shape[1]-11), (bsamples.shape[1]-1)
-        # fit the masses and print information
-        res, chi2, pval = fit.fitting(fitfunc, tlist[lo:up], bsamples[:,lo:up],
-                                      [10., 0.15], correlated=False)
+        label = ["single pion, D15", "time", "C(t)", "data", ""]
+        for lo in range(8, bsamples.shape[1]-5):
+            for up in range(lo+3, bsamples.shape[1]-1):
+                res, chi2, pval = fit.fitting(fitfunc, tlist[lo:up], bsamples[:,lo:up], [1., 0.07], verbose=0)
+                print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, E %.7lf" % (lo, up, pval[0], chi2[0]/(len(tlist[lo:up])-2), res[0,1]))
+                fitlabel = "fit %d:%d" % (lo, up-1)
+                label[3] = fitlabel
+                plot.corr_fct_with_fit(tlist, bsamples[0], ddata, fitfunc, res[0],
+                                       [1,T2], label, pfit, True)
+        pfit.close()
 
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':
