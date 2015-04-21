@@ -19,8 +19,8 @@
 #
 ################################################################################
 #
-# Function: read in correlation functions from files. Two formats are
-#           implemented at the moment.
+# Function: Read and write correlation functions from files. Different formats
+# are implemented.
 #
 # For informations on input parameters see the description of the function.
 #
@@ -101,6 +101,7 @@ def write_corr_fct(data, filename, T, nbcfg, timesorted=True):
     Can write correlation functions sorted with time as fastest index
     (timesorted=False) and functions with configuration number as fastest index
     (timesorted=True), see also extract_corr_fct.
+    This function implements the format used by L. Liu's code.
 
     Args:
         data: The numpy array to write to the file.
@@ -180,10 +181,11 @@ def extract_bin_corr_fct(name='', start_cfg=0, delta_cfg=0, nb_cfg=0, T=0,
         _t += 1
     return corr
 
-def write_data(data, filename):
-    """Write the data to file.
+def write_npy_data_ascii(data, filename):
+    """Write the data to an ascii file.
 
     Expects numpy array with three axis.
+    This function implements the format used by L. Liu's code.
 
     Args:
         data: The numpy array to write to the file.
@@ -207,3 +209,39 @@ def write_data(data, filename):
             for _k in range(data.shape[2]):
                 outfile.write(str(data[_i, _j, _k]) + " ")
             outfile.write("\n")
+
+def write_npy_data(data, filename, verbose=False):
+    """Writes numpy data to disk.
+
+    Args:
+        data: The data dumped to disk.
+        filename: The name of the file into which the data is dumped.
+        verbose: Changes the amount of information written.
+    """
+    # get path
+    _dir = os.path.dirname(filename)
+    # check if path exists, if not then create it
+    if not os.path.exists(_dir):
+        os.mkdirs(_dir)
+    if verbose:
+        print("saving to file" + str(filename))
+    np.save(filename, data)
+
+
+def read_npy_data(filename, verbose=False):
+    """Reads numpy data from disk.
+
+    Args:
+        filename: The name of the file from which the data is read
+        verbose: Changes the amount of information written.
+    """
+    # get path
+    _dir = os.path.dirname(filename)
+    # check if path exists, if not raise an error
+    if not os.path.exists(_dir):
+        print("ERROR: could not read data from file, path not existant")
+        return None
+    if verbose:
+        print("reading from file " + str(filename))
+    data = np.load(filename)
+    return data

@@ -28,17 +28,11 @@
 
 import os
 import numpy as np
-import matplotlib
-matplotlib.use('QT4Agg') # has to be imported before the next lines
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_pdf import PdfPages
 
 import input_output as io
 import bootstrap
 import corr_matrix as cm
-import gevp
 import fit
-import plot
 import analyze_fcts as af
 
 def print_results(data, error):
@@ -70,104 +64,17 @@ def read_new_data(nbsamples, path, filelist, tmin, lattice, d2, verbose=False):
     # read in data for GEVP
     if verbose:
         print("reading data")
-    corr_mat, T2 = cm.create_corr_matrix(nbsamples, path, filelist)
-    cm.write_corr_matrix(corr_mat, "./raw_data/corr_mat_rho_%s_TP%d.npy" %
+    corr_mat = cm.create_corr_matrix(nbsamples, path, filelist)
+    io.write_npy_data(corr_mat, "./raw_data/corr_mat_rho_%s_TP%d.npy" %
                          (lattice, d2))
     # solve the GEVP
     if verbose:
         print("solving GEVP")
-    gevp_mat = gevp.calculate_gevp(corr_mat, tmin)
-    cm.write_corr_matrix(gevp_mat, "./raw_data/gevp_mat_rho_%s_TP%d.npy" % (lattice, d2))
+    gevp_mat = cm.calculate_gevp(corr_mat, tmin)
+    io.write_npy_data(gevp_mat, "./raw_data/gevp_mat_rho_%s_TP%d.npy" % (lattice, d2))
     # write in ASCII
     #io.write_data(gevp_mat, "./raw_data/gevp_rho_%s_TP%d.dat" % (lattice, d2))
-    return gevp_mat, T2
-
-def read_disk_data(lattice, d2):
-    """Reads the solved GEVP from disk.
-    """
-    gevp_mat = cm.read_corr_matrix("./raw_data/gevp_mat_rho_%s_TP%d.npy" % (lattice, d2))
-    T2 = gevp_mat.shape[1]
-    return gevp_mat, T2
-
-def genfit(data, lolist, uplist, fitfunc, start_params, tmin, lattice, d, label,
-            path=".plots/", plotlabel="corr", verbose=True):
-    """Fit and plot the correlation function.
-    
-    Args:
-        data: The correlation functions.
-        lolist: List of the lower bounds for the fit, for the different
-                correlation functions.
-        uplist: List of the upper bounds for the fit, for the different
-                correlation functions.
-        fitfunc: The function to fit to the data.
-        start_params: The starting parameters for the fit function.
-        tmin: Lower bound of the plot.
-        lattice: The name of the lattice, used for the output file.
-        d: The total momentum of the reaction.
-        label: Labels for the title and the axis.
-        path: Path to the saving place of the plot.
-        plotlabel: Label for the plot file.
-        verbose: Amount of information printed to screen.
-
-    Returns:
-        res: Result of the fit to each bootstrap sample.
-        chi2: Chi^2 for every fit
-        pval: p-value for every fit.
-    """
-    # init variables
-    nboot = data.shape[0]
-    T2 = data.shape[1]
-    ncorr = data.shape[2]
-    npar = len(start_params)
-    d2 = np.dot(d,d)
-    # initialize empty arrays
-    res = np.zeros((nboot, npar, ncorr))
-    chi2 = np.zeros((nboot, ncorr))
-    pval = np.zeros((nboot, ncorr))
-    # set fit data
-    tlist = np.linspace(0., float(T2), float(T2), endpoint=False)
-    # outputfile for the plot
-    corrplot = PdfPages("%s/fit_%s_%s_TP%d.pdf" % (path,plotlabel,lattice,d2))
-    # check the labels
-    if len(label) < 3:
-        print("not enough labels, using standard labels.")
-        label = ["fit", "time", "C(t)", "", ""]
-    if len(label) < 4:
-        label.append("data")
-        label.append("")
-    if len(label) < 5:
-        label.append("")
-    for _l in range(ncorr):
-        # setup
-        mdata, ddata = af.return_mean_corr(data[:,:,_l])
-        lo = lolist[_l]
-        up = uplist[_l]
-        if verbose:
-            print("correlator %d" % _l)
-
-        # fit the energy and print information
-        if verbose:
-            print("fitting correlation function")
-        res[:,:,_l], chi2[:,_l], pval[:,_l]=fit.fitting(fitfunc, tlist[lo:up],
-            data[:,lo:up,_l], start_params, verbose=True)
-        if verbose:
-            print("p-value %.7lf" % (pval[0,_l]))
-
-        mres, dres = af.return_mean_corr(res[:,:,_l])
-
-        # set up the plot labels
-        fitlabel = "fit %d:%d" % (lo, up-1)
-        title="%s, %s, TP %d, pc %d" % (label[0], lattice, d2, _l)
-        label[0] = title
-        label[4] = fitlabel
-
-        # plot the data and the fit
-        if verbose:
-            print("plotting")
-        plot.corr_fct_with_fit(tlist, data[0,:,_l], ddata, fitfunc, mres,
-                               [tmin,T2], label, corrplot, True)
-    corrplot.close()
-    return res, chi2, pval
+    return gevp_mat
 
 def fit_corr(data, lolist, uplist, fitfunc, start_params, tmin, lattice, d,
              verbose=True):
@@ -177,7 +84,7 @@ def fit_corr(data, lolist, uplist, fitfunc, start_params, tmin, lattice, d,
     path="./plots/"
     plotlabel="corr"
     d2 = np.dot(d, d)
-    res, chi2, pval = genfit(data, lolist, uplist, fitfunc, start_params, tmin,
+    res, chi2, pval = fit.genfit(data, lolist, uplist, fitfunc, start_params, tmin,
         lattice, d, label, path, plotlabel, verbose)
     cm.write_corr_matrix(res, "./raw_data/corr_fit_res_rho_%s_TP%d.npy" % (
                          lattice, d2))
@@ -197,7 +104,7 @@ def fit_mass(data, lolist, uplist, fitfunc, start_params, tmin, lattice, d,
     plotlabel="mass"
     d2 = np.dot(d, d)
     mass, mmass, dmass = af.compute_mass(data, False)
-    res, chi2, pval = genfit(mass, lolist, uplist, fitfunc, start_params, tmin,
+    res, chi2, pval = fit.genfit(mass, lolist, uplist, fitfunc, start_params, tmin,
         lattice, d, label, path, plotlabel, verbose)
     cm.write_corr_matrix(res, "./raw_data/mass_fit_res_rho_%s_TP%d.npy" % (
                          lattice, d2))
@@ -212,11 +119,11 @@ def read_fit_corr(lattice, d):
     """
     print("reading correlation fit data")
     d2 = np.dot(d, d)
-    res = cm.read_corr_matrix("./raw_data/corr_fit_res_rho_%s_TP%d.npy" % (
+    res = io.read_npy_data("./raw_data/corr_fit_res_rho_%s_TP%d.npy" % (
                          lattice, d2))
-    chi2 = cm.read_corr_matrix("./raw_data/corr_fit_chi2_rho_%s_TP%d.npy" % (
+    chi2 = io.read_npy_data("./raw_data/corr_fit_chi2_rho_%s_TP%d.npy" % (
                          lattice, d2))
-    pval = cm.read_corr_matrix("./raw_data/corr_fit_pval_rho_%s_TP%d.npy" % (
+    pval = io.read_npy_data("./raw_data/corr_fit_pval_rho_%s_TP%d.npy" % (
                          lattice, d2))
     return res, chi2, pval
 
@@ -225,11 +132,11 @@ def read_fit_mass(lattice, d):
     """
     print("reading mass fit data")
     d2 = np.dot(d, d)
-    res = cm.read_corr_matrix("./raw_data/mass_fit_res_rho_%s_TP%d.npy" % (
+    res = io.read_npy_data("./raw_data/mass_fit_res_rho_%s_TP%d.npy" % (
                          lattice, d2))
-    chi2 = cm.read_corr_matrix("./raw_data/mass_fit_chi2_rho_%s_TP%d.npy" % (
+    chi2 = io.read_npy_data("./raw_data/mass_fit_chi2_rho_%s_TP%d.npy" % (
                          lattice, d2))
-    pval = cm.read_corr_matrix("./raw_data/mass_fit_pval_rho_%s_TP%d.npy" % (
+    pval = io.read_npy_data("./raw_data/mass_fit_pval_rho_%s_TP%d.npy" % (
                          lattice, d2))
     return res, chi2, pval
 
@@ -335,6 +242,9 @@ def setup_lattice(lattice, d):
         elif np.array_equal(d, np.array([1., 1., 0.])):
             lolist=np.array((11, 9))
             uplist=np.array((15, 17))
+        elif np.array_equal(d, np.array([1., 1., 1.])):
+            lolist=np.array((8, 6))
+            uplist=np.array((15, 14))
     elif lattice == "A40.32": #################################################
         mpi=0.14151
         L=32
@@ -343,7 +253,6 @@ def setup_lattice(lattice, d):
             lolist=np.array((9, 11))
             uplist=np.array((18, 18))
         elif np.array_equal(d, np.array([0., 0., 1.])):
-            print("not yet looked at")
             lolist=np.array((12, 7))
             uplist=np.array((16, 17))
         elif np.array_equal(d, np.array([1., 1., 0.])):
@@ -422,28 +331,9 @@ def analyse(lattice="A40.24", d=np.array([0., 0., 0.]), verbose=True):
     massfunc = lambda p, t: p
     mass_sparams = [0.5]
     #######################################################
-    # old reference for A40.24
-    #lolist = np.array((9,7)) # CMF
-    #lolist = np.array((12,9)) # MF1
-    #lolist = np.array((9,9)) # MF2
-    #uplist = np.array((18,18)) # CMF
-    #uplist = np.array((16,16)) # MF1
-    #uplist = np.array((15,15)) # MF2
-    #######################################################
-    # old configuration code
-    #filelist = ["C2", "C3", "C3", "C4"]
-    #filelist = ["rho_corr_TP0_00", "rho_corr_TP0_01", "rho_corr_TP0_01",\
-    #            "rho_corr_TP0_11"]
-    #fitfunc = lambda p,t: p[0]*np.cosh((T/2.0-t)*p[1])
-    #start_params = [0.005, -0.5]
-    #fitfunc = lambda p,t: p[0]*np.exp(-p[1]*t)
-    #start_params = [1.0, 0.5]
-    #fitfunc = lambda p,t: np.exp(-p[0]*t)
-    #start_params = [0.5]
-    #######################################################
     ## setting variables
     d2 = np.dot(d, d)
-    path="".join(("/hiskp2/jost/data/rho_analyse/" + lattice + "/TP%d/" % d2))
+    path="".join(("/hiskp2/jost/data/rho_analyse/" + lattice + "/"))
     filelist = ["rho_corr_TP%d_00" % d2, "rho_corr_TP%d_01" % d2,\
                 "rho_corr_TP%d_01" %d2, "rho_corr_TP%d_11" % d2]
     mpi, L, T, lolist, uplist = setup_lattice(lattice, d)
@@ -451,14 +341,15 @@ def analyse(lattice="A40.24", d=np.array([0., 0., 0.]), verbose=True):
     print("lattice %s, TP %d" % (lattice, d2))
 
     ## read in new data
-    #gevp_mat, T2 = read_new_data(nbsamples, path, filelist, tmin, lattice, d2)
+    #gevp_mat = read_new_data(nbsamples, path, filelist, tmin, lattice, d2)
+
     ## read in solution of GEVP
-    gevp_mat, T2 = read_disk_data(lattice, d2)
+    #gevp_mat = io.read_npy_data("./raw_data/gevp_mat_rho_%s_TP%d.npy" % (lattice, d2))
 
     ## fit correlation function
-    res, chi2, pvals = fit_corr(gevp_mat, lolist, uplist, fitfunc, start_params,
-        tmin, lattice, d)
-    #res, chi2, pvals = read_fit_corr(lattice, d)
+    #res, chi2, pvals = fit_corr(gevp_mat, lolist, uplist, fitfunc, start_params,
+    #    tmin, lattice, d)
+    res, chi2, pvals = read_fit_corr(lattice, d)
     #return
 
     ## fit mass function NOT YET TESTED
@@ -475,6 +366,7 @@ def main():
     d0 = np.array([0., 0., 0.]) # total momemtum of the system
     d1 = np.array([0., 0., 1.]) # total momemtum of the system
     d2 = np.array([1., 1., 0.]) # total momemtum of the system
+    d3 = np.array([1., 1., 1.]) # total momemtum of the system
     lattices=["A30.32", "A40.20", "A40.24", "A40.32", "A60.24",\
               "A80.24", "A100.24"]
     #analyse(lattices[0], d0)
@@ -485,10 +377,12 @@ def main():
     analyse(lattices[2], d0)
     #analyse(lattices[2], d1)
     #analyse(lattices[2], d2)
+    #analyse(lattices[2], d3)
     #analyse(lattices[3], d0)
+    #analyse(lattices[3], d1) # not complete
     #analyse(lattices[3], d2)
     #analyse(lattices[5], d1)
-    #analyse(lattices[6], d0) # did not converge
+    #analyse(lattices[6], d0)
     #analyse(lattices[6], d1) 
 
 # make this script importable, according to the Google Python Style Guide
