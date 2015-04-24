@@ -32,7 +32,7 @@ import input_output as io
 import bootstrap
 
 def create_corr_matrix(nbsamples, filepath, filestring, filesuffix=".dat",
-                       column=1, verbose=0):
+                       column=(1,), verbose=0):
     """Creates a correlation function matrix.
 
     Reads different correlation functions and inserts them into a matrix. The
@@ -69,33 +69,37 @@ def create_corr_matrix(nbsamples, filepath, filestring, filesuffix=".dat",
     # if the size could not be determined then return
     if _nbops == 0:
         print("ERROR: size of the correlation matrix could not be determined")
-        return
+        os.sys.exit(-4)
     # Treat first element differently so we can create an array of the correct
     # size. This allows also to check whether the other files have the same
     # number of configurations and the same time extent.
-    _name = filepath + filestring[0] + filesuffix
+    _name = "".join((filepath, filestring[0], filesuffix))
     if verbose:
         print("filename " + _name)
-    _data1, _nbcfg1, _T1 = io.extract_corr_fct(_name, column, verbose)
-    _boot1 = bootstrap.sym_and_boot(_data1, _T1, _nbcfg1, nbsamples)
+    _data1 = io.read_data_ascii(_name, column, verbose)
+    _nbcfg = _data1.shape[0]
+    _T = _data1.shape[1]
+    _boot1 = bootstrap.sym_and_boot(_data1, nbsamples)
     # create correlation function matrix
-    corr_mat = np.zeros((nbsamples, int(_T1/2)+1, _nbops, _nbops))
+    corr_mat = np.zeros(_boot1.shape[0:2] + (_nbops,) * 2)
     corr_mat[:,:,0,0] = _boot1
     # read in all other correlation functions, bootstrap them and write them to
     # the numpy array
     for _nb, _sub in enumerate(filestring[1:], start=1):
         # generate filename
-        _name = filepath + _sub + filesuffix
+        _name = "".join((filepath, _sub, filesuffix))
         if verbose:
             print("filename " + _name)
         # read in data
-        _data, _nbcfg, _T = io.extract_corr_fct(_name, column)
+        _data = io.read_data_ascii(_name, column)
+        _nbcfg1 = _data.shape[0]
+        _T1 = _data.shape[1]
         # check if size is the same as the first operator
         if _nbcfg != _nbcfg1 or _T != _T1:
             print("ERROR while reading file " + _name)
             print("\tnumber of configurations or time extent is wrong")
         else:
-            _boot = bootstrap.sym_and_boot(_data, _T, _nbcfg, nbsamples)
+            _boot = bootstrap.sym_and_boot(_data, nbsamples)
             corr_mat[:, :, int(_nb/_nbops), int(_nb%_nbops)] = _boot 
 
     corr_mat_symm = np.zeros_like(corr_mat)

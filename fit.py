@@ -143,7 +143,7 @@ def fitting_range(fitfunc, X, Y, start_parm, correlated=True, verbose=True):
         for up in range(lo+5, x.shape[1]):
             # fit the data
             res, chi2, pval=fitting(fitfunc, X[lo:up], Y[:,lo:up], start_params,
-                                    correlated=correlated, verbose=verbose)
+                                    correlated=correlated, verbose=False)
             # calculate the weight
             weight = ((1. - np.abs(pval - 0.5)) * (1.0))**2
             # calculate weighted median
@@ -245,8 +245,8 @@ def genfit(data, lolist, uplist, fitfunc, start_params, tmin, lattice, d, label,
         # fit the energy and print information
         if verbose:
             print("fitting correlation function")
-        res[:,:,_l], chi2[:,_l], pval[:,_l]=fit.fitting(fitfunc, tlist[lo:up],
-            data[:,lo:up,_l], start_params, verbose=False)
+        res[:,:,_l], chi2[:,_l], pval[:,_l]=fitting(fitfunc, tlist[lo:up],
+            data[:,lo:up,_l], start_params, verbose=verbose)
         if verbose:
             print("p-value %.7lf\nChi^2/dof %.7lf" % (pval[0,_l], chi2[0,_l]/(
                   (up - lo) - len(start_params))))
@@ -262,7 +262,7 @@ def genfit(data, lolist, uplist, fitfunc, start_params, tmin, lattice, d, label,
         # plot the data and the fit
         if verbose:
             print("plotting")
-        plot.corr_fct_with_fit(tlist, data[0,:,_l], ddata, fitfunc, mres,
+        corr_fct_with_fit(tlist, data[0,:,_l], ddata, fitfunc, mres,
                                [tmin,T2], label, corrplot, True)
     corrplot.close()
     return res, chi2, pval

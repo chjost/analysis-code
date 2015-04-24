@@ -41,14 +41,19 @@ def load_n():
 def w_lm(q2, gamma, l, m, d, _n):
     """Calculates the Zeta function including the prefactor sqrt(2*l+1)*q^-l.
     The precision is hardcoded to be 1e-6.
+
+    Args:
+        q2: The squared momentum transfer.
+        gamma: The Lorentz boost factor.
+        l, m: The quantum numbers.
+        d: The total momentum vector of the system.
+        _n: The precalculated momentum array for the zeta function, see load_n().
     """
     if( (l%2) == 0):
         factor = np.sqrt(2*l+1)*q2**(int(l/2))
     else:
         factor = np.sqrt( (2*l+1) * q2) * q2**(int((l-1)/2))
     return zeta.Zp(q2, gamma, l, m, d, 1., 10e-6, False, _n) / factor
-
-
 
 def average_corr_fct(data, nbcfg, T):
     """Average over the set of correlation functions.
@@ -355,24 +360,3 @@ def return_mean_corr(data, axis=0):
     mean = np.mean(data, axis, dtype=np.float64)
     err  = np.std(data, axis, dtype=np.float64)
     return mean, err
-
-#def print_mean_corr(data, axis=0, msg=""):
-#    """Prints the mean and standard deviation of the correlation function.
-#
-#    Args:
-#        data: The data on which the mean is calculated.
-#        axis: Along which axis the mean is calculated.
-#        msg: Message printed before data is written to screen.
-#
-#    Returns:
-#        The mean and standard deviation of the data.
-#    """
-#    if msg != "":
-#        print("\nmean correlator:\n----------------\n")
-#    else:
-#        print(str(msg))
-#    mean, err = return_mean_corr(data, axis)
-#    # print the mean and standard deviation
-#    for t, m, e in zip(range(0, len(mean)), mean, err):
-#        print("%2d %.6e %.6e" % (t, m, e))
-#    return mean, err

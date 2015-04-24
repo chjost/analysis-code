@@ -25,6 +25,7 @@
 #
 ################################################################################
 
+import os
 import math
 import numpy as np
 
@@ -49,23 +50,22 @@ def bootstrap(source, nbsamples):
     boot[0] = np.mean(source, dtype=np.float64)
     # create the rest of the bootstrap samples
     for _i in range(1, nbsamples):
-        _rnd = np.random.randint(0, len(source)-1, size=len(source))
+        _rnd = np.random.randint(0, len(source), size=len(source))
         _sum = 0.
         for _r in range(0, len(source)):
             _sum += source[_rnd[_r]]
         boot[_i] = _sum / float(len(source))
     return boot
 
-def sym_and_boot(source, T, nbcfg, nbsamples = 1000):
+def sym_and_boot(source, nbsamples = 1000):
     """Symmetrizes and boostraps correlation functions.
 
     Symmetrizes the correlation functions given in source and creates bootstrap
-    samples. Assumes that time is a slower index than the configuration number.
+    samples. The data is assumed to be a numpy array with two dimensions. The
+    first axis is the sample number and the second axis is time.
 
     Args:
-        source: List with the correlation functions.
-        T: time extent of the lattice.
-        nbcfg: number of configurations in source.
+        source: A numpy array with correlation functions
         nbsamples: Number of bootstrap samples created.
 
     Returns:
@@ -73,26 +73,30 @@ def sym_and_boot(source, T, nbcfg, nbsamples = 1000):
         first axis is the bootstrap number, the second axis is the time index.
         The time extent is reduced to T/2+1 due to the symmetrization.
     """
+    # check for consistency
+    if len(source.shape) != 2:
+        print("\"sym_and_boot\" expects 2D arrays! Aborting...")
+        os.sys.exit(-3)
+    _nbcorr = source.shape[0]
+    _T = source.shape[1]
+
     # the first timeslice is not symmetrized
-    boot = bootstrap(source[:nbcfg], nbsamples)
-    for _t in range(1, int(T/2)):
+    boot = bootstrap(source[:,0], nbsamples)
+    for _t in range(1, int(_T/2)):
         # symmetrize the correlation function
-        _symm = []
-        for _x, _y in zip(source[_t * nbcfg:(_t+1) * nbcfg],
-                          source[(T-_t) * nbcfg:(T-_t+1) * nbcfg]):
-            _symm.append((_x + _y) / 2.)
+        _symm = (source[:,_t] + source[:,(_T - _t)]) / 2.
         # bootstrap the timeslice and append to previous samples
         boot = np.c_[boot, bootstrap(_symm, nbsamples)]
     # the timeslice at t = T/2 is not symmetrized
-    boot = np.c_[boot, bootstrap(source[int(T/2) * nbcfg: (int(T/2)+1) * nbcfg],
-                                 nbsamples)]
+    boot = np.c_[boot, bootstrap(source[:,int(_T/2)], nbsamples)]
     return boot
 
-def sym(source, T, nbcfg):
+def sym(source):
     """Symmetrizes correlation functions.
 
-    Symmetrizes the correlation functions given in source. Assumes that time is
-    a slower index than the configuration number.
+    Symmetrizes the correlation functions given in source. The data is assumed
+    to be a numpy array with two dimensions. The first axis is the sample
+    number and the second axis is time.
 
     Args:
         source: List with the correlation functions.
@@ -104,16 +108,19 @@ def sym(source, T, nbcfg):
         first axis is the configuration number, the second axis is the time index.
         The time extent is reduced to T/2+1 due to the symmetrization.
     """
+    # check for consistency
+    if len(source.shape) != 2:
+        print("\"sym_and_boot\" expects 2D arrays! Aborting...")
+        os.sys.exit(-3)
+    _T = source.shape[1]
+
     # the first timeslice is not symmetrized
-    data = source[:nbcfg]
+    data = source[:,0]
     for _t in range(1, int(T/2)):
         # symmetrize the correlation function
-        _symm = []
-        for _x, _y in zip(source[_t * nbcfg:(_t+1) * nbcfg],
-                          source[(T-_t) * nbcfg:(T-_t+1) * nbcfg]):
-            _symm.append((_x + _y) / 2.)
-        # bootstrap the timeslice and append to previous samples
+        _symm = (source[:,_t] + source[:,(_T - _t)]) / 2.
+        # append to previous data
         data = np.c_[data, _symm]
     # the timeslice at t = T/2 is not symmetrized
-    data = np.c_[data, source[int(T/2) * nbcfg:(int(T/2)+1) * nbcfg]]
+    data = np.c_[data, source[:, int(_T/2)]]
     return data

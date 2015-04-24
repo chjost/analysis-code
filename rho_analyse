@@ -65,15 +65,14 @@ def read_new_data(nbsamples, path, filelist, tmin, lattice, d2, verbose=False):
     if verbose:
         print("reading data")
     corr_mat = cm.create_corr_matrix(nbsamples, path, filelist)
-    io.write_npy_data(corr_mat, "./raw_data/corr_mat_rho_%s_TP%d.npy" %
-                         (lattice, d2))
+    io.write_data(corr_mat, "./raw_data/corr_mat_rho_%s_TP%d.npy"%(lattice,d2))
     # solve the GEVP
     if verbose:
         print("solving GEVP")
     gevp_mat = cm.calculate_gevp(corr_mat, tmin)
-    io.write_npy_data(gevp_mat, "./raw_data/gevp_mat_rho_%s_TP%d.npy" % (lattice, d2))
+    io.write_data(gevp_mat, "./raw_data/gevp_mat_rho_%s_TP%d.npy"%(lattice,d2))
     # write in ASCII
-    #io.write_data(gevp_mat, "./raw_data/gevp_rho_%s_TP%d.dat" % (lattice, d2))
+    io.write_data_ascii(gevp_mat,"./raw_data/gevp_rho_%s_TP%d.dat"%(lattice,d2))
     return gevp_mat
 
 def fit_corr(data, lolist, uplist, fitfunc, start_params, tmin, lattice, d,
@@ -84,14 +83,11 @@ def fit_corr(data, lolist, uplist, fitfunc, start_params, tmin, lattice, d,
     path="./plots/"
     plotlabel="corr"
     d2 = np.dot(d, d)
-    res, chi2, pval = fit.genfit(data, lolist, uplist, fitfunc, start_params, tmin,
-        lattice, d, label, path, plotlabel, verbose)
-    cm.write_corr_matrix(res, "./raw_data/corr_fit_res_rho_%s_TP%d.npy" % (
-                         lattice, d2))
-    cm.write_corr_matrix(chi2, "./raw_data/corr_fit_chi2_rho_%s_TP%d.npy" % (
-                         lattice, d2))
-    cm.write_corr_matrix(pval, "./raw_data/corr_fit_pval_rho_%s_TP%d.npy" % (
-                         lattice, d2))
+    res, chi2, pval = fit.genfit(data, lolist, uplist, fitfunc, start_params,
+        tmin, lattice, d, label, path, plotlabel, verbose)
+    io.write_data(res, "./raw_data/corr_fit_res_rho_%s_TP%d.npy"%(lattice,d2))
+    io.write_data(chi2, "./raw_data/corr_fit_chi2_rho_%s_TP%d.npy"%(lattice,d2))
+    io.write_data(pval, "./raw_data/corr_fit_pval_rho_%s_TP%d.npy"%(lattice,d2))
     return res, chi2, pval
 
 
@@ -104,14 +100,11 @@ def fit_mass(data, lolist, uplist, fitfunc, start_params, tmin, lattice, d,
     plotlabel="mass"
     d2 = np.dot(d, d)
     mass, mmass, dmass = af.compute_mass(data, False)
-    res, chi2, pval = fit.genfit(mass, lolist, uplist, fitfunc, start_params, tmin,
-        lattice, d, label, path, plotlabel, verbose)
-    cm.write_corr_matrix(res, "./raw_data/mass_fit_res_rho_%s_TP%d.npy" % (
-                         lattice, d2))
-    cm.write_corr_matrix(chi2, "./raw_data/mass_fit_chi2_rho_%s_TP%d.npy" % (
-                         lattice, d2))
-    cm.write_corr_matrix(pval, "./raw_data/mass_fit_pval_rho_%s_TP%d.npy" % (
-                         lattice, d2))
+    res, chi2, pval = fit.genfit(mass, lolist, uplist, fitfunc, start_params,
+        tmin, lattice, d, label, path, plotlabel, verbose)
+    io.write_data(res, "./raw_data/mass_fit_res_rho_%s_TP%d.npy"%(lattice,d2))
+    io.write_data(chi2, "./raw_data/mass_fit_chi2_rho_%s_TP%d.npy"%(lattice,d2))
+    io.write_data(pval, "./raw_data/mass_fit_pval_rho_%s_TP%d.npy"%(lattice,d2))
     return res, chi2, pval
 
 def read_fit_corr(lattice, d):
@@ -119,12 +112,9 @@ def read_fit_corr(lattice, d):
     """
     print("reading correlation fit data")
     d2 = np.dot(d, d)
-    res = io.read_npy_data("./raw_data/corr_fit_res_rho_%s_TP%d.npy" % (
-                         lattice, d2))
-    chi2 = io.read_npy_data("./raw_data/corr_fit_chi2_rho_%s_TP%d.npy" % (
-                         lattice, d2))
-    pval = io.read_npy_data("./raw_data/corr_fit_pval_rho_%s_TP%d.npy" % (
-                         lattice, d2))
+    res = io.read_data("./raw_data/corr_fit_res_rho_%s_TP%d.npy"%(lattice,d2))
+    chi2 = io.read_data("./raw_data/corr_fit_chi2_rho_%s_TP%d.npy"%(lattice,d2))
+    pval = io.read_data("./raw_data/corr_fit_pval_rho_%s_TP%d.npy"%(lattice,d2))
     return res, chi2, pval
 
 def read_fit_mass(lattice, d):
@@ -132,12 +122,9 @@ def read_fit_mass(lattice, d):
     """
     print("reading mass fit data")
     d2 = np.dot(d, d)
-    res = io.read_npy_data("./raw_data/mass_fit_res_rho_%s_TP%d.npy" % (
-                         lattice, d2))
-    chi2 = io.read_npy_data("./raw_data/mass_fit_chi2_rho_%s_TP%d.npy" % (
-                         lattice, d2))
-    pval = io.read_npy_data("./raw_data/mass_fit_pval_rho_%s_TP%d.npy" % (
-                         lattice, d2))
+    res = io.read_data("./raw_data/mass_fit_res_rho_%s_TP%d.npy"%(lattice,d2))
+    chi2 = io.read_data("./raw_data/mass_fit_chi2_rho_%s_TP%d.npy"%(lattice,d2))
+    pval = io.read_data("./raw_data/mass_fit_pval_rho_%s_TP%d.npy"%(lattice,d2))
     return res, chi2, pval
 
 def calc_phaseshift(data, L, d, lattice, mpi, verbose=True):
@@ -333,7 +320,7 @@ def analyse(lattice="A40.24", d=np.array([0., 0., 0.]), verbose=True):
     #######################################################
     ## setting variables
     d2 = np.dot(d, d)
-    path="".join(("/hiskp2/jost/data/rho_analyse/" + lattice + "/"))
+    path="".join(("/hiskp2/jost/data/rho_analyse/", lattice, "/"))
     filelist = ["rho_corr_TP%d_00" % d2, "rho_corr_TP%d_01" % d2,\
                 "rho_corr_TP%d_01" %d2, "rho_corr_TP%d_11" % d2]
     mpi, L, T, lolist, uplist = setup_lattice(lattice, d)
@@ -344,12 +331,12 @@ def analyse(lattice="A40.24", d=np.array([0., 0., 0.]), verbose=True):
     #gevp_mat = read_new_data(nbsamples, path, filelist, tmin, lattice, d2)
 
     ## read in solution of GEVP
-    #gevp_mat = io.read_npy_data("./raw_data/gevp_mat_rho_%s_TP%d.npy" % (lattice, d2))
+    gevp_mat = io.read_data("./raw_data/gevp_mat_rho_%s_TP%d.npy" % (lattice, d2))
 
     ## fit correlation function
-    #res, chi2, pvals = fit_corr(gevp_mat, lolist, uplist, fitfunc, start_params,
-    #    tmin, lattice, d)
-    res, chi2, pvals = read_fit_corr(lattice, d)
+    res, chi2, pvals = fit_corr(gevp_mat, lolist, uplist, fitfunc, start_params,
+        tmin, lattice, d)
+    #res, chi2, pvals = read_fit_corr(lattice, d)
     #return
 
     ## fit mass function NOT YET TESTED
@@ -359,7 +346,7 @@ def analyse(lattice="A40.24", d=np.array([0., 0., 0.]), verbose=True):
     #print(np.array_equal(massres, massres1))
 
     ## calculate phaseshift
-    odata, mdata, ddata = calc_phaseshift(res[:,1], L, d, lattice, mpi)
+    #odata, mdata, ddata = calc_phaseshift(res[:,1], L, d, lattice, mpi)
     return
 
 def main():
@@ -369,21 +356,24 @@ def main():
     d3 = np.array([1., 1., 1.]) # total momemtum of the system
     lattices=["A30.32", "A40.20", "A40.24", "A40.32", "A60.24",\
               "A80.24", "A100.24"]
-    #analyse(lattices[0], d0)
-    #analyse(lattices[0], d1)
-    #analyse(lattices[1], d0) 
-    #analyse(lattices[1], d1) # not complete
-    #analyse(lattices[1], d2) # did not converge
-    analyse(lattices[2], d0)
-    #analyse(lattices[2], d1)
-    #analyse(lattices[2], d2)
-    #analyse(lattices[2], d3)
-    #analyse(lattices[3], d0)
-    #analyse(lattices[3], d1) # not complete
-    #analyse(lattices[3], d2)
-    #analyse(lattices[5], d1)
-    #analyse(lattices[6], d0)
-    #analyse(lattices[6], d1) 
+    try:
+        #analyse(lattices[0], d0)
+        #analyse(lattices[0], d1)
+        #analyse(lattices[1], d0) 
+        #analyse(lattices[1], d1) # not complete
+        #analyse(lattices[1], d2) # did not converge
+        analyse(lattices[2], d0)
+        #analyse(lattices[2], d1)
+        #analyse(lattices[2], d2)
+        #analyse(lattices[2], d3)
+        #analyse(lattices[3], d0)
+        #analyse(lattices[3], d1) # not complete
+        #analyse(lattices[3], d2)
+        #analyse(lattices[5], d1)
+        #analyse(lattices[6], d0)
+        #analyse(lattices[6], d1) 
+    except KeyboardInterrupt:
+        print("\nKeyboard Interrupt, exiting...")
 
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':
