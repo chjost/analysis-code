@@ -69,8 +69,8 @@ def main():
     start_params = [1, 0.5]
     massfunc = lambda p, t: p
     # define fit ranges
-    lolist = np.array((12,10))
-    uplist = np.array((30,32))
+    lolist = np.array((12,10,9))
+    uplist = np.array((30,32,34))
     entries = ["_00", "_01", "_02", "_10", "_11", "_12", "_20", "_21", "_22"]
     print("create correlation matrix")
     corr_mat, T2 = cm.create_corr_matrix(nbsamples, path, entries, verbose=1 )

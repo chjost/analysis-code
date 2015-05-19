@@ -93,10 +93,11 @@ def Z(q2, gamma = 1.0, l = 0, m = 0, d = np.array([0., 0., 0.]), \
 def Zp(q2, gamma = None, l = 0, m = 0, d = np.array([0., 0., 0.]), \
       m_split = 1, precision = 10e-6, verbose = 0, n=None):
   if gamma == None:
-    gamma = np.zeros(q2.shape[0])
-  res = np.zeros(q2.shape[0], dtype=np.complex)
-  for _q, _g, _i in zip(q2, gamma, range(q2.shape[0])):
-    res[_i] = Z(_q, _g, l, m, d, m_split, precision, verbose, n)
+    gamma = np.zeros(q2.shape)
+  res = np.zeros(q2.shape, dtype=np.complex)
+  for _i in range(q2.size):
+    res.flat[_i] = Z(q2.flat[_i], gamma.flat[_i], l, m, d, m_split, precision,
+                     verbose, n)
   return res
 
 ################################################################################

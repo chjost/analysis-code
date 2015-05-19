@@ -26,6 +26,10 @@
 #
 ################################################################################
 
+import matplotlib
+matplotlib.use('QT4Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
 import input_output as io
 import analyze_fcts as af
 import fit
@@ -34,28 +38,32 @@ import numpy as np
 
 def main():
     ## definition of some variables
-    nbsamples = 10
-    inputpath="/home/christopher/studium/PROMO/data/correlators/scattering/I2_pipi/"
-    outputpath="/home/christopher/studium/PROMO/data/correlators/scattering/I2_pipi/B35.48/result/"
-    suffix="pi_corr_p0.dat"
-    suffix1="pi_corr_average.dat"
-    suffix2="pi_corr_mass.dat"
-    #inputlist=["D15_new/"]
-    inputlist=["B35.48/"]
+    nbsamples = 1500
+    inputpath="/hiskp2/helmes/contractions/A40.24/kaon/strange_225/merged/"
+    outputpath="/hiskp2/helmes/contractions/A40.24/kaon/strange_225/merged/scratch/"
+    suffix="k_corr_p0.dat"
+    suffix1="k_p0_average.dat"
+    suffix2="k_p0_mass.dat"
+    inputlist=[""]
+    #inputlist=["D15_new/", "D15_old/", "D15_combined/"]
 
     # get mass from correlation function
-    fitfunc = lambda p,t: p[0]*np.cosh((T/2.0-t)*p[1])
+    #fitfunc = lambda p,t: p[0]*np.cosh((T/2.0-t)*p[1])
+    fitfunc = lambda p,t: 10e6 if p[1] < 0.0 else 0.5*p[0]*p[0]*(np.exp(-p[1]*t) + np.exp(-p[1]*(T-t)))
+    massfunc = lambda p,t: p
     for _i in inputlist:
-        print("dir" + _i)
+        pfit = PdfPages("%sm_eff_plot.pdf" % outputpath)
         # read in data
         corrs, nbcfg, T = io.extract_corr_fct("".join((inputpath, inputlist[0],
                                                      suffix)))
+        T2=int(T/2)+1
         #average = af.average_corr_fct(corrs, nbcfg, T)
         #for t in range(T):
         #    print(corrs[t*nbcfg:(t+1)*nbcfg])
-        tlist = np.linspace(0., float(np.floor(T/2)), float(np.floor(T/2)), endpoint=False)
+        tlist = np.linspace(0., float(T2), float(T2), endpoint=False)
         # create bootstrap samples
         bsamples = bootstrap.sym_and_boot(corrs, T, nbcfg, nbsamples)
+        mdata, ddata = af.return_mean_corr(bsamples)
         #print(bsamples.shape)
         #for t in range(bsamples.shape[1]):
         #    print(bsamples[:,t])
@@ -63,10 +71,20 @@ def main():
         #    print(bsamples[s])
         #print(bsamples.shape)
         # choose fitrange
-        lo, up = (bsamples.shape[1]-11), (bsamples.shape[1]-1)
-        # fit the masses and print information
-        res, chi2, pval = fit.fitting(fitfunc, tlist[lo:up], bsamples[:,lo:up],
-                                      [10., 0.15], correlated=False)
+        label = ["single kaon, A40.24", "time", "C(t)", "data", ""]
+        up=T2-1
+        for lo in range(12, bsamples.shape[1]-11):
+            #for up in range(lo+5, bsamples.shape[1]):
+            res, chi2, pval = fit.fitting(fitfunc, tlist[lo:up], bsamples[:,lo:up], [1., 1.], verbose=1)
+            print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, E %.7lf" % (lo, up, pval[0], chi2[0]/(len(tlist[lo:up])-2), res[0,1]))
+            fitlabel = "fit %d:%d" % (lo, up-1)
+            label[3] = fitlabel
+            fit.corr_fct_with_fit(tlist, bsamples[0], ddata, fitfunc, res[0],
+                                       [1,T2-2], label, pfit, True, True, [lo,up])
+        mass, mmass, dmass = af.compute_mass(bsamples, True)
+        fit.corr_fct_with_fit(tlist[:-2], mmass, dmass, massfunc, res[0,1],
+                              [1,T2], label, pfit, False, False)
+        pfit.close()
 
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':

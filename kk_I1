@@ -1,0 +1,105 @@
+#!/usr/bin/python
+################################################################################
+#
+# Author: Christopher Helmes (helmes@hiskp.uni-bonn.de)
+# Date:   Februar 2015
+#
+# Copyright (C) 2015 Christopher Helmes
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Function: Pi-Pi-scattering analysis in the center of mass frame 
+#
+# For informations on input parameters see the description of the function.
+#
+################################################################################
+
+# system imports
+import numpy as np
+import matplotlib
+matplotlib.use('QT4Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+
+# Christian's packages
+import input_output as io
+import bootstrap
+import corr_matrix as cm
+import gevp
+import fit
+import plot
+import analyze_fcts as af
+
+def main():
+    # number of bootstrap samples
+    nbsamples = 1500
+    #define the ratiofunction
+    ratio = lambda p, t : p[0]*(np.cosh(p[1]*(t-T/2))+np.sinh(p[1]*(t-T/2))/(np.tanh(2*0.2564047*(t-T/2))))
+    # temporal lattice extent
+    tmin = 1
+    T = 48
+    L = 20
+    # get m_k from single_corr_analysis
+    #path = "/hiskp2/helmes/contractions/A40.24/kaon/merged/"
+    path = "/hiskp2/helmes/contractions/A40.24/kaon/strange_225/merged/"
+    tmp_out = "/hiskp2/helmes/contractions/A40.24/kaon/strange_225/merged/scratch/"
+    pfit = PdfPages("%s%skk_plot.pdf" % (tmp_out,"ratio_")) 
+    inputlist = ['k_corr_p0.dat','kk_A1_TP0_00.dat']
+    # start with usual analysis (thermal states contamination expected)
+    fitfunc = lambda p,t: p[0]*p[0]*(np.exp(-p[1]*t) + np.exp(-p[1]*(T-t)))
+    start_params = [1, 0.5]
+    massfunc = lambda p, t: p
+    
+    # read in data
+    corrs_k, nbcfg, T = io.extract_corr_fct("".join((path, inputlist[0])))
+    corrs_kk, nbcfg, T = io.extract_corr_fct("".join((path, inputlist[1])))
+
+
+    # Create symmetrized bootstrap samples of 2pt and 4pt Corr-function
+    T2=int(T/2)+1
+    tlist = np.linspace(0.5, float(T2-0.5), float(T2-1), endpoint=False)
+    bsamples_k = bootstrap.sym_and_boot(corrs_k, T, nbcfg, nbsamples)
+    bsamples_kk = bootstrap.sym_and_boot(corrs_kk, T, nbcfg, nbsamples)
+
+    # Check mean correlators
+    corr_k_data, d_k_data = af.return_mean_corr(bsamples_k)
+    corr_kk_data, d_kk_data = af.return_mean_corr(bsamples_kk)
+    # get m_k from bsamples_k
+    # compute Ratio of finite differences of C_kk and C_k^2
+    R_boot, R_mean, R_stdev, = af.simple_ratio_subtract(bsamples_kk, bsamples_k, bsamples_k)
+    # initial p (A, deltaE, E_k)
+    label = ["Ratio kaon, A40.20", "time", "R(t)", "data", ""]
+    # define fit ranges
+    lobound = 12
+    upbound = 22
+    # initial values
+    p = [1., 0.5]
+    p2 = [1., 0.2, 0.5]
+    for lo in range(lobound, bsamples_k.shape[1]-5):
+      for up in range(lo+10, bsamples_k.shape[1]):
+        res, chi2, pvals = fit.fitting(ratio, tlist[14:], R_boot[:,14:], p)
+        print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, E %.7lf" % (lo, up, pvals[0], chi2[0]/(len(tlist[lo:up])-2), res[0,1]))
+        fitlabel = "fit %d:%d" % (lo, up-1)
+        label[3] = fitlabel
+        fit.corr_fct_with_fit(tlist, R_mean, R_stdev, ratio, res[0], [1,T2],
+             label, pfit, False, False, [lo,up]) 
+
+    pfit.close()
+
+
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    main()
