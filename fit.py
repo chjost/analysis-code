@@ -268,7 +268,7 @@ def genfit(data, lolist, uplist, fitfunc, start_params, tmin, lattice, d, label,
     return res, chi2, pval
 
 def corr_fct_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
-                      logscale=False, setLimits=False):
+                      logscale=False, setLimits=False, fitrange=None):
     """A function that fits a correlation function.
 
     This function plots the given data points and the fit to the data. The plot
@@ -283,6 +283,8 @@ def corr_fct_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
         args: The parameters of the fit function from the fit.
         plotrange: A list with two entries, the lower and upper range of the
                    plot.
+        fitrange: A list with two entries, lower and upper bounds of range of
+                  function plot
         label: A list with labels for title, x axis, y axis, data and fit.
         pdfplot: A PdfPages object in which to save the plot.
         logscale: Make the y-scale a logscale.
@@ -294,8 +296,14 @@ def corr_fct_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
     l = int(plotrange[0])
     u = int(plotrange[1])
     p1 = plt.errorbar(X[l:u], Y[l:u], dY[l:u], fmt='x' + 'b', label = label[3])
-    # plotting the fit function
-    x1 = np.linspace(l, u, 1000)
+    # plotting the fit function, check for separate range
+    if fitrange is None:
+        lfunc = l
+        ufunc = u
+    else:
+        lfunc = int(fitrange[0])
+        ufunc = int(fitrange[1])
+    x1 = np.linspace(lfunc, ufunc, 1000)
     y1 = []
     for i in x1:
         y1.append(fitfunc(args,i))

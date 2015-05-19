@@ -65,6 +65,8 @@ def average_corr_fct(data, nbcfg, T):
     for _t in range(T):
         average[int(_t)] = np.average(data[_t*nbcfg:(_t+1)*nbcfg])
     return average
+def square(sample):
+  return map(lambda x: x**2, sample)
 
 def simple_ratio(d1, d2, d3):
     """Calculates a simple ratio of three data sets.

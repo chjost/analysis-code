@@ -38,13 +38,13 @@ import numpy as np
 
 def main():
     ## definition of some variables
-    nbsamples = 750
-    inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/"
-    outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/"
-    suffix="pi_corr_p0.dat"
-    suffix1="pi_corr_average.dat"
-    suffix2="pi_corr_mass.dat"
-    inputlist=["D15_new/"]
+    nbsamples = 1500
+    inputpath="/hiskp2/helmes/contractions/A40.24/kaon/strange_225/merged/"
+    outputpath="/hiskp2/helmes/contractions/A40.24/kaon/strange_225/merged/scratch/"
+    suffix="k_corr_p0.dat"
+    suffix1="k_p0_average.dat"
+    suffix2="k_p0_mass.dat"
+    inputlist=[""]
     #inputlist=["D15_new/", "D15_old/", "D15_combined/"]
 
     # get mass from correlation function
@@ -52,8 +52,7 @@ def main():
     fitfunc = lambda p,t: 10e6 if p[1] < 0.0 else 0.5*p[0]*p[0]*(np.exp(-p[1]*t) + np.exp(-p[1]*(T-t)))
     massfunc = lambda p,t: p
     for _i in inputlist:
-        pfit = PdfPages("./plots/%s_plot.pdf" % (_i[:-1]))
-        print("dir " + _i)
+        pfit = PdfPages("%sm_eff_plot.pdf" % outputpath)
         # read in data
         corrs, nbcfg, T = io.extract_corr_fct("".join((inputpath, inputlist[0],
                                                      suffix)))
@@ -72,18 +71,19 @@ def main():
         #    print(bsamples[s])
         #print(bsamples.shape)
         # choose fitrange
-        label = ["single pion, D15", "time", "C(t)", "data", ""]
-        for lo in range(14, bsamples.shape[1]-5):
-            for up in range(lo+3, bsamples.shape[1]-1):
-                res, chi2, pval = fit.fitting(fitfunc, tlist[lo:up], bsamples[:,lo:up], [1., 0.07], verbose=0)
-                print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, E %.7lf" % (lo, up, pval[0], chi2[0]/(len(tlist[lo:up])-2), res[0,1]))
-                fitlabel = "fit %d:%d" % (lo, up-1)
-                label[3] = fitlabel
-                fit.corr_fct_with_fit(tlist, bsamples[0], ddata, fitfunc, res[0],
-                                       [1,T2], label, pfit, True)
+        label = ["single kaon, A40.24", "time", "C(t)", "data", ""]
+        up=T2-1
+        for lo in range(12, bsamples.shape[1]-11):
+            #for up in range(lo+5, bsamples.shape[1]):
+            res, chi2, pval = fit.fitting(fitfunc, tlist[lo:up], bsamples[:,lo:up], [1., 1.], verbose=1)
+            print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, E %.7lf" % (lo, up, pval[0], chi2[0]/(len(tlist[lo:up])-2), res[0,1]))
+            fitlabel = "fit %d:%d" % (lo, up-1)
+            label[3] = fitlabel
+            fit.corr_fct_with_fit(tlist, bsamples[0], ddata, fitfunc, res[0],
+                                       [1,T2-2], label, pfit, True, True, [lo,up])
         mass, mmass, dmass = af.compute_mass(bsamples, True)
         fit.corr_fct_with_fit(tlist[:-2], mmass, dmass, massfunc, res[0,1],
-                              [1,T2-2], label, pfit, False)
+                              [1,T2], label, pfit, False, False)
         pfit.close()
 
 # make this script importable, according to the Google Python Style Guide
