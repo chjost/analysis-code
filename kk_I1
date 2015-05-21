@@ -37,67 +37,107 @@ from matplotlib.backends.backend_pdf import PdfPages
 import input_output as io
 import bootstrap
 import corr_matrix as cm
-import gevp
+#import gevp
 import fit
-import plot
 import analyze_fcts as af
 
 def main():
     # number of bootstrap samples
     nbsamples = 1500
-    #define the ratiofunction
-    ratio = lambda p, t : p[0]*(np.cosh(p[1]*(t-T/2))+np.sinh(p[1]*(t-T/2))/(np.tanh(2*0.2564047*(t-T/2))))
     # temporal lattice extent
     tmin = 1
     T = 48
-    L = 20
+    L = 24
     # get m_k from single_corr_analysis
     #path = "/hiskp2/helmes/contractions/A40.24/kaon/merged/"
-    path = "/hiskp2/helmes/contractions/A40.24/kaon/strange_225/merged/"
-    tmp_out = "/hiskp2/helmes/contractions/A40.24/kaon/strange_225/merged/scratch/"
-    pfit = PdfPages("%s%skk_plot.pdf" % (tmp_out,"ratio_")) 
-    inputlist = ['k_corr_p0.dat','kk_A1_TP0_00.dat']
-    # start with usual analysis (thermal states contamination expected)
-    fitfunc = lambda p,t: p[0]*p[0]*(np.exp(-p[1]*t) + np.exp(-p[1]*(T-t)))
-    start_params = [1, 0.5]
-    massfunc = lambda p, t: p
-    
-    # read in data
-    corrs_k, nbcfg, T = io.extract_corr_fct("".join((path, inputlist[0])))
-    corrs_kk, nbcfg, T = io.extract_corr_fct("".join((path, inputlist[1])))
+    pathroot = "/home/christopher/studium/PROMO/data/correlators/scattering/k-k/A40.24/mu_s_"
+    tmp_outroot = "/home/christopher/studium/PROMO/results/correlators/scattering/k-k/A40.24/mu_s_"
+    inputlist = ["185", "225", "2464"]
+    for s in inputlist:
+        path = pathroot+s+"/"
+        tmp_out = tmp_outroot+s+"/"
+        pfit = PdfPages("%s%sk_plot.pdf" % (tmp_out,"corr_")) 
+        prat = PdfPages("%s%skk_plot.pdf" % (tmp_out,"ratio_")) 
+        inputlist = ['k_corr_p0.dat','kk_A1_TP0_00.dat']
+        # start with usual analysis (thermal states contamination expected)
+        fitfunc = lambda p,t: 10e6 if p[1] < 0.0 else 0.5*p[0]*p[0]*(np.exp(-p[1]*t) + np.exp(-p[1]*(T-t)))
+        par_mass = [0.26]
+        par_ratio = [2.,0.03]
+        massfunc = lambda p, t: p
+        
+        # read in data
+        corrs_k, nbcfg, T = io.extract_corr_fct("".join((path, inputlist[0])))
+        corrs_kk, nbcfg, T = io.extract_corr_fct("".join((path, inputlist[1])))
 
 
-    # Create symmetrized bootstrap samples of 2pt and 4pt Corr-function
-    T2=int(T/2)+1
-    tlist = np.linspace(0.5, float(T2-0.5), float(T2-1), endpoint=False)
-    bsamples_k = bootstrap.sym_and_boot(corrs_k, T, nbcfg, nbsamples)
-    bsamples_kk = bootstrap.sym_and_boot(corrs_kk, T, nbcfg, nbsamples)
+        # Create symmetrized bootstrap samples of 2pt and 4pt Corr-function
+        T2=int(T/2)+1
+        tlist_corr = np.linspace(0., float(T2), float(T2), endpoint=False)
+        tlist_ratio = np.linspace(0.5, float(T2-0.5), float(T2-1), endpoint=False)
+        bsamples_k = bootstrap.sym_and_boot(corrs_k, T, nbcfg, nbsamples)
+        bsamples_kk = bootstrap.sym_and_boot(corrs_kk, T, nbcfg, nbsamples)
 
-    # Check mean correlators
-    corr_k_data, d_k_data = af.return_mean_corr(bsamples_k)
-    corr_kk_data, d_kk_data = af.return_mean_corr(bsamples_kk)
-    # get m_k from bsamples_k
-    # compute Ratio of finite differences of C_kk and C_k^2
-    R_boot, R_mean, R_stdev, = af.simple_ratio_subtract(bsamples_kk, bsamples_k, bsamples_k)
-    # initial p (A, deltaE, E_k)
-    label = ["Ratio kaon, A40.20", "time", "R(t)", "data", ""]
-    # define fit ranges
-    lobound = 12
-    upbound = 22
-    # initial values
-    p = [1., 0.5]
-    p2 = [1., 0.2, 0.5]
-    for lo in range(lobound, bsamples_k.shape[1]-5):
-      for up in range(lo+10, bsamples_k.shape[1]):
-        res, chi2, pvals = fit.fitting(ratio, tlist[14:], R_boot[:,14:], p)
-        print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, E %.7lf" % (lo, up, pvals[0], chi2[0]/(len(tlist[lo:up])-2), res[0,1]))
-        fitlabel = "fit %d:%d" % (lo, up-1)
-        label[3] = fitlabel
-        fit.corr_fct_with_fit(tlist, R_mean, R_stdev, ratio, res[0], [1,T2],
-             label, pfit, False, False, [lo,up]) 
+        # Check mean correlators
+        corr_k_data, d_k_data = af.return_mean_corr(bsamples_k)
+        corr_kk_data, d_kk_data = af.return_mean_corr(bsamples_kk)
 
-    pfit.close()
+        # get m_k from bsamples_k
+        label = ["single kaon, A40.24", "time", "C(t)", "data", ""]
+        up=T2-1
+        # due to small variance changes can fit single correlators to the end
+        #for lo in range(12, bsamples_k.shape[1]-11):
+        #   res, chi2, pval = fit.fitting(fitfunc, tlist_corr[lo:up], bsamples_k[:,lo:up], par_mass, verbose=1)
+        #   print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, E %.7lf" % (lo, up,
+        #       pval[0], chi2[0]/(len(tlist_corr[lo:up])-2), res[0,1]))
+        #   fitlabel = "fit %d:%d" % (lo, up-1)
+        #   label[3] = fitlabel
+        #   fit.corr_fct_with_fit(tlist_corr, bsamples_k[0], d_k_data, fitfunc, res[0],
+        #                              [1,T2-2], label, pfit, True, False, [lo,up])
+        mass, mmass, dmass = af.compute_mass(bsamples_k, True)
+        #fit.scan_fit_range(massfunc, tlist_corr,mass, par_mass)
+        res, chi2, pval = fit.fitting(massfunc,tlist_corr[10:up], mass[:,10:up],
+                par_mass,verbose=0)
+        #fit.corr_fct_with_fit(tlist_corr[:-2], mmass, dmass, massfunc, res[0],
+        #                      [1,T2], label, pfit, False, False)
+        #print("m_k = %e +/- %e" %(np.median(res),np.std(res)))
+        pfit.close()
+        E_k = res[0]
 
+        # compute Ratio of finite differences of C_kk and C_k^2
+        #--------------------------------------------------------------------------
+        R_boot, R_mean, R_stdev, = af.simple_ratio_subtract(bsamples_kk, bsamples_k, bsamples_k)
+        # initial p (A, deltaE, E_k)
+        label = ["Ratio kaon, A40.20", "time", "R(t)", "data", ""]
+        #define the ratiofunction
+        ratio = lambda p, t, e : p[0]*(np.cosh(p[1]*(t-T/2))+np.sinh(p[1]*(t-T/2))/(np.tanh(2*e*(t-T/2))))
+        # define fit ranges
+        lobound = 12
+        upbound = 22
+        #print(R_boot.shape)
+        #print(len(res))
+        #for lo in range(lobound, bsamples_k.shape[1]-5):
+        #  for up in range(lo+11, bsamples_k.shape[1]):
+        res_R, chi2_R, pvals_R = fit.fitting(ratio, tlist_ratio[14:],
+              R_boot[:,14:], par_ratio, res, verbose=0)
+        #print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, delta E %.7lf" % (lobound,
+        #    upbound,
+        #     pvals_R[0], chi2_R[0]/(len(tlist_ratio[lobound:upbound])-2), res_R[0,1]))
+              #print(res_R)
+        #fitlabel = "fit %d:%d" % (lo, up-1)
+        #label[3] = fitlabel
+        #fit.corr_fct_with_fit(tlist_ratio, R_mean, R_stdev, ratio, res[0], [1,T2],
+        #         label, prat, False, False, [lo,up]) 
+
+        #prat.close()
+        a = []
+        for i in range(0,len(res)):
+            dE_k = res_R[i,1]
+            E_k = res[i]
+            a.append(np.real(af.calculate_scat_length(dE_k, E_k, L)[::-1])[0])
+        a0_m_k = np.multiply(res, a)
+        mu_s = float(s)*1e-4
+        print( mu_s, np.median(res), np.std(res), np.median(a), np.std(a),
+                np.median(a0_m_k), np.std(a0_m_k))
 
 
 # make this script importable, according to the Google Python Style Guide

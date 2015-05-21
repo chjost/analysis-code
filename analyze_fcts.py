@@ -236,6 +236,25 @@ def calculate_cm_energy(E, L, d=np.array([0., 0., 1.]), lattice=False):
         Ecm = np.sqrt(E**2 - _p2)
     gamma = E / Ecm
     return gamma, Ecm
+def calculate_scat_length(dE, E, L):
+    """Finds root of the Energyshift function up to order L^{-6} only applicable
+    in 0 momentum case, effective range not included!
+
+       Args:
+           dE: the energy shift of the system due to interaction
+           E: the single particle energy
+           L: The spatial lattice extent
+       Returns:
+           a: roots of the function
+    """
+    # coefficients according to Luescher
+    c=[-2.837297, 6.375183, -8.311951]
+    # Prefactor common to every order
+    comm=-4.*np.pi/(E*L*L)
+    # build up coefficient array
+    p=[comm*c[1]/(L*L*L),comm*c[0]/(L*L),comm/L, -1*dE]
+    a = np.roots(p)
+    return a;
 
 def calculate_q(E, mpi, L, lattice=False):
     """Calculates q.

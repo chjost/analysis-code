@@ -34,7 +34,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 import analyze_fcts as af
 
-def fitting(fitfunc, X, Y, start_parm, correlated=True, verbose=True):
+def fitting(fitfunc, X, Y, start_parm, E_single=None, correlated=True, verbose=True):
     """A function that fits a correlation function.
 
     This function fits the given function fitfunc to the data given in X and Y.
@@ -46,6 +46,7 @@ def fitting(fitfunc, X, Y, start_parm, correlated=True, verbose=True):
         X: The time slices.
         Y: The bootstrap samples of the data.
         start_parm: The starting parameters for the fit.
+        E_single: single particle energies entering the ratio R
         correlated: Flag to use a correlated or uncorrelated fit.
         verbose: Controls the amount of information written to the screen.
 
@@ -53,7 +54,10 @@ def fitting(fitfunc, X, Y, start_parm, correlated=True, verbose=True):
         The function returns the fitting parameters, the chi^2 and the p-value
         for every bootstrap sample.
     """
-    errfunc = lambda p, x, y, error: np.dot(error, (y-fitfunc(p,x)).T)
+    if E_single is None:
+        errfunc = lambda p, x, y, error: np.dot(error, (y-fitfunc(p,x)).T)
+    else:
+        errfunc = lambda p, x, y, e, error: np.dot(error, (y-fitfunc(p,x,e)).T)
     # compute inverse, cholesky decomposed covariance matrix
     if not correlated:
         cov = np.diag(np.diagonal(np.cov(Y.T)))
@@ -67,11 +71,18 @@ def fitting(fitfunc, X, Y, start_parm, correlated=True, verbose=True):
     res = np.zeros((Y.shape[0], len(start_parm)))
     chisquare = np.zeros(Y.shape[0])
     # The FIT to the boostrap samples
-    for b in range(0, Y.shape[0]):
-        p,cov1,infodict,mesg,ier = leastsq(errfunc, start_parm,
-                                   args=(X, Y[b,:], cov), full_output=1)
-        chisquare[b] = float(sum(infodict['fvec']**2.))
-        res[b] = np.array(p)
+    if E_single is None:
+        for b in range(0, Y.shape[0]):
+            p,cov1,infodict,mesg,ier = leastsq(errfunc, start_parm,
+                                       args=(X, Y[b,:], cov), full_output=1)
+            chisquare[b] = float(sum(infodict['fvec']**2.))
+            res[b] = np.array(p)
+    else:
+        for b in range(0, Y.shape[0]):
+            p,cov1,infodict,mesg,ier = leastsq(errfunc, start_parm,
+                                       args=(X, Y[b,:],E_single[b], cov ), full_output=1)
+            chisquare[b] = float(sum(infodict['fvec']**2.))
+            res[b] = np.array(p)
     # calculate mean and standard deviation
     res_mean, res_std = np.mean(res, axis=0), np.std(res, axis=0)
     chi2 = np.median(chisquare)
@@ -80,9 +91,13 @@ def fitting(fitfunc, X, Y, start_parm, correlated=True, verbose=True):
 
     # The fit to the mean value
     y = np.mean(Y, axis=0)
-    p,cov1,infodict,mesg,ier = leastsq(errfunc, start_parm, \
-                               args=(X, y, cov), full_output=1)
-
+    if E_single is None:
+        p,cov1,infodict,mesg,ier = leastsq(errfunc, start_parm, \
+                                   args=(X, y, cov), full_output=1)
+    else:
+        e_single = np.mean(E_single)
+        p,cov1,infodict,mesg,ier = leastsq(errfunc, start_parm, \
+                                   args=(X, y, e_single, cov), full_output=1)
     # writing results to screen
     if verbose:
         if correlated:
@@ -178,7 +193,7 @@ def scan_fit_range(fitfunc, X, Y, start_params, correlated=True, verbose=False):
     # vary the lower end of the fit range
     for lo in range(7, 13):
         # vary the upper end of the fit range
-        for up in range(15, 19):
+        for up in range(15, 25):
             # fir the data
             res, chi2, pval=fitting(fitfunc, X[lo:up], Y[:,lo:up], start_params,
                                     correlated=correlated, verbose=verbose)
@@ -266,6 +281,40 @@ def genfit(data, lolist, uplist, fitfunc, start_params, tmin, lattice, d, label,
                                [tmin,T2], label, corrplot, True)
     corrplot.close()
     return res, chi2, pval
+#def fit_ratio_samples(X, Y, start_parm, E_single, correlated=True, verbose=True):
+#    """Fit the ratio to every bootstrap sample using the sample specific single
+#    particle energy
+#
+#    Args: 
+#        X: The time slices.
+#        Y: The bootstrap samples of the data.
+#        start_parm: The starting parameters for the fit.
+#        E_single: The single particle energies to be replaced in the fit
+#                  function
+#        correlated: Flag to use a correlated or uncorrelated fit.
+#        verbose: Controls the amount of information written to the screen.
+#    Returns:
+#        The function returns the fitting parameters, the chi^2 and the p-value
+#        for every bootstrap sample.
+#    """
+#    # Set up globla stuff
+#    T = Y.shape[1]
+#    res = []
+#    chi2 = []
+#    pval = []
+#    # Fit the correlation function sample by sample with a modified fitfunction
+#    if Y.shape[0] != len(E_single):
+#        print("Bootstrap Samples do not match single Energy results")
+#        return
+#    else:
+#        for i in range(0,len(E_single)):
+#            ratio = lambda p, t : p[0]*(np.cosh(p[1]*(t-T/2))+np.sinh(p[1]*(t-T/2))/(np.tanh(2*E_single[i]*(t-T/2))))
+#            res_tmp, chi2_tmp, pval_tmp = fitting(ratio, X, Y[i], start_parm,
+#                    correlated, verbose)
+#            append(res, res_tmp[1])
+#            append(chi2, chi2_tmp)
+#            append(pval, pval_tmp)
+#    return res, chi2, pval
 
 def corr_fct_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
                       logscale=False, setLimits=False, fitrange=None):
