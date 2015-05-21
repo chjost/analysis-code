@@ -103,7 +103,7 @@ def write_data_ascii(data, filename, verbose=False):
     # write data to file
     savetxt(filename, _fdata, header=head, comments='', fmt=fmt)
 
-def read_data_ascii(filename, column=(1,), verbose=False):
+def read_data_ascii(filename, column=(1,), noheader=False, verbose=False):
     """Reads in data from an ascii file.
 
     The file is assumed to have L. Liu's data format so that the first line
@@ -113,6 +113,7 @@ def read_data_ascii(filename, column=(1,), verbose=False):
     Args:
         filename: The filename of the file.
         column: Which column is read.
+        noheader: Skips reading of the header.
         verbose: The amount of info shown.
 
     Returns:
@@ -132,17 +133,24 @@ def read_data_ascii(filename, column=(1,), verbose=False):
         os.sys.exit(-1)
 
     # open the file to read first line
-    var = read_header(filename)
-    # read in data from file, skipping first row (header) and only using the
-    # second column as the first contains the time
-    data = np.genfromtxt(filename, skip_header=1, usecols=column)
+    if not noheader:
+        var = read_header(filename)
+    # read in data from file, skipping the header if needed
+    if noheader:
+        data = np.genfromtxt(filename, skip_header=0, usecols=column)
+    else:
+        data = np.genfromtxt(filename, skip_header=1, usecols=column)
     # casting the array into the right shape, sample number as first index,
     # time index as second index
     # if more than one column is read, the third axis reflects this
-    if nbcol is 1:
-        data.shape = (var[0],var[1])
+    if noheader:
+        if nbcol > 1:
+            data.shape = (-1, nbcol)
     else:
-        data.shape = (var[0],var[1], nbcol)
+        if nbcol is 1:
+            data.shape = (var[0],var[1])
+        else:
+            data.shape = (var[0],var[1], nbcol)
     return data
 
 def write_data_w_err_ascii(data, error, filename, verbose=False):

@@ -37,7 +37,7 @@ def print_results(data, Ecm, p, delta):
         pp = np.ravel(p[_l])
         de = np.ravel(delta[_l])
         for _d, _e, _p, _f in zip(da, ec, pp, de):
-            print("%.4f %.4f %.4f %.4f" % (_d, _e, _p, _f))
+            print("%.4f %.4f %.4f %6.2f" % (_d, _e, _p, _f))
         print("")
 
 def main():
@@ -91,10 +91,14 @@ def main():
     Ecm[:,0,:] = data[:,0,:]
     gamma[:,0,:] = 1.0
     for _i in range(data.shape[2]):
-        gamma[:2,1,_i], Ecm[:2,1,_i] = af.calculate_cm_energy(data[:2,1,_i], L1, d2)
-        gamma[2:,1,_i], Ecm[2:,1,_i] = af.calculate_cm_energy(data[2:,1,_i], L2, d2)
-        gamma[:2,2,_i], Ecm[:2,2,_i] = af.calculate_cm_energy(data[:2,2,_i], L1, d3)
-        gamma[2:,2,_i], Ecm[2:,2,_i] = af.calculate_cm_energy(data[2:,2,_i], L2, d3)
+        gamma[:2,1,_i], Ecm[:2,1,_i] = af.calculate_cm_energy(data[:2,1,_i],
+                                          L1, d2, True)
+        gamma[2:,1,_i], Ecm[2:,1,_i] = af.calculate_cm_energy(data[2:,1,_i],
+                                          L2, d2, True)
+        gamma[:2,2,_i], Ecm[:2,2,_i] = af.calculate_cm_energy(data[:2,2,_i],
+                                          L1, d3, True)
+        gamma[2:,2,_i], Ecm[2:,2,_i] = af.calculate_cm_energy(data[2:,2,_i],
+                                          L2, d3, True)
     #print(Ecm)
     #print(gamma)
     #return
@@ -102,8 +106,9 @@ def main():
     # calculate q2
     for _l in range(data.shape[0]):
         for _i in range(data.shape[2]):
-            q2[_l,:,_i] = af.calculate_q(Ecm[_l,:,_i], mpi[_l], L[_l])
+            q2[_l,:,_i] = af.calculate_q(Ecm[_l,:,_i], mpi[_l], L[_l], True)
             p[_l,:,_i] = np.sqrt(q2[_l,:,_i])*2*np.pi/float(L[_l])
+    #print(q2)
     #print(p)
     #return
 

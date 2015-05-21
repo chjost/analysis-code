@@ -29,31 +29,22 @@ import os
 import numpy as np
 import zeta
 
-def load_n():
-    """Needed for the zeta function. At the moment this must be hardcoded.
-    """
-    pathmomenta = "./momenta.npy"
-    if not os.path.isfile(pathmomenta):
-        import create_momentum_array as cma
-        cma.main()
-    return np.load(pathmomenta)
-
-def w_lm(q2, gamma, l, m, d, _n):
+def w_lm(q2, gamma=None, l=0, m=0, d=np.array([0., 0., 0.]), m_split=1,
+         prec=10e-6, verbose=False):
     """Calculates the Zeta function including the prefactor sqrt(2*l+1)*q^-l.
-    The precision is hardcoded to be 1e-6.
 
     Args:
         q2: The squared momentum transfer.
         gamma: The Lorentz boost factor.
         l, m: The quantum numbers.
         d: The total momentum vector of the system.
-        _n: The precalculated momentum array for the zeta function, see load_n().
+        m_split: The mass difference between the particles.
+        prec: The calculation precision.
+        verbose: The amount of info printed.
     """
-    if( (l%2) == 0):
-        factor = np.sqrt(2*l+1)*q2**(int(l/2))
-    else:
-        factor = np.sqrt( (2*l+1) * q2) * q2**(int((l-1)/2))
-    return zeta.Zp(q2, gamma, l, m, d, 1., 10e-6, False, _n) / factor
+    factor = gamma * np.power(np.sqrt(q2), l+1) * np.power(np.pi, 1.5) * np.sqrt(2*l+1)
+    var =  zeta.Zp(q2, gamma, l, m, d, m_split, prec, verbose)
+    return var / factor
 
 def average_corr_fct(data, nbcfg, T):
     """Average over the set of correlation functions.
@@ -259,11 +250,11 @@ def calculate_q(E, mpi, L, lattice=False):
     q2 = np.zeros((E.shape))
     # lattice dispersion relation, see arxiv:1011.5288
     if lattice:
-        q2 = (np.arcsin( np.sqrt((np.cosh(E/2.)-np.cosh(mpi))/2.))*float(L)/
+        q2 = (np.arcsin(np.sqrt((np.cosh(E*0.5)-np.cosh(mpi))*0.5))*float(L)/
               np.pi)**2
     # continuum dispersion relation
     else:
-        q2 = (0.25*E**2 - mpi**2) * (float(L) / (2. * np.pi))**2
+        q2 = (0.25*E*E - mpi*mpi) * (float(L) / (2. * np.pi))**2
     return q2
 
 def calculate_delta(q2, gamma=None, d=np.array([0., 0., 0.]), prec=10e-6,
@@ -294,52 +285,51 @@ def calculate_delta(q2, gamma=None, d=np.array([0., 0., 0.]), prec=10e-6,
     if _gamma == None:
         _gamma = np.ones(q2.shape)
     # init calculation
-    _n = load_n()
     _pi3 = np.pi**3
     _num = _gamma * np.sqrt(_pi3 * q2)
     #CMF
     if np.array_equal(d, np.array([0., 0., 0.])):
         # Irrep. T_1
-        #_z1 = zeta.Zp(q2, _gamma, 0, 0, d, 1., prec, verbose, _n).real
+        #_z1 = zeta.Zp(q2, _gamma, 0, 0, d, 1., prec, verbose).real
         #tandelta = np.sqrt( _pi3 * q2) / _z1.real
         #delta = np.arctan2(np.sqrt( _pi3 * q2), _z1.real)
-        _den = w_lm(q2, _gamma, 0, 0, d, _n).real
+        _den = w_lm(q2, _gamma, 0, 0, d).real
         tandelta = _num / _den
         delta = np.arctan2( _num, _den)
     # MF1
     elif np.array_equal(d, np.array([0., 0., 1.])):
         # Irrep. A_1
-        #_z1 = zeta.Zp(q2, _gamma, 0, 0, d, 1., prec, verbose, _n).real
-        #_z2 = zeta.Zp(q2, _gamma, 2, 0, d, 1., prec, verbose, _n).real
+        #_z1 = zeta.Zp(q2, _gamma, 0, 0, d, 1., prec, verbose).real
+        #_z2 = zeta.Zp(q2, _gamma, 2, 0, d, 1., prec, verbose).real
         #_num = _gamma * np.sqrt(_pi3 * q2)
         #_den = (_z1 + (2. / (np.sqrt(5) * q2)) * _z2).real
-        _den = w_lm(q2, _gamma, 0, 0, d, _n).real + \
-               2 * w_lm(q2, _gamma, 2, 0, d, _n).real
+        _den = w_lm(q2, _gamma, 0, 0, d).real + \
+               2 * w_lm(q2, _gamma, 2, 0, d).real
         tandelta = _num / _den
         delta = np.arctan2( _num, _den)
     # MF2
     elif np.array_equal(d, np.array([1., 1., 0.])):
         # Irrep. A_1
-        #_z1 = zeta.Zp(q2, _gamma, 0, 0, d, 1., prec, verbose, _n).real
-        #_z2 = zeta.Zp(q2, _gamma, 2, 0, d, 1., prec, verbose, _n).real
-        #_z3 = zeta.Zp(q2, _gamma, 2, 2, d, 1., prec, verbose, _n).imag
+        #_z1 = zeta.Zp(q2, _gamma, 0, 0, d, 1., prec, verbose).real
+        #_z2 = zeta.Zp(q2, _gamma, 2, 0, d, 1., prec, verbose).real
+        #_z3 = zeta.Zp(q2, _gamma, 2, 2, d, 1., prec, verbose).imag
         #_num = _gamma * np.sqrt(_pi3 * q2)
         #_den = (_z1 - (1. / (np.sqrt(5) * q2)) * _z2 + ( np.sqrt(6./5.) /
         #        q2) * _z3 ).real
-        _den = w_lm(q2, _gamma, 0, 0, d, _n).real -\
-               w_lm(q2, _gamma, 2, 0, d, _n).real +\
-               np.sqrt(6) * w_lm(q2, _gamma, 2, 2, d, _n).imag
+        _den = w_lm(q2, _gamma, 0, 0, d).real -\
+               w_lm(q2, _gamma, 2, 0, d).real +\
+               np.sqrt(6) * w_lm(q2, _gamma, 2, 2, d).imag
         tandelta = _num / _den
         delta = np.arctan2( _num, _den)
     # MF3
     elif np.array_equal(d, np.array([1., 1., 1.])):
         # Irrep. A_1
-        #_z1 = zeta.Zp(q2, _gamma, 0, 0, d, 1., prec, verbose, _n).real
-        #_z2 = zeta.Zp(q2, _gamma, 2, 2, d, 1., prec, verbose, _n).imag
+        #_z1 = zeta.Zp(q2, _gamma, 0, 0, d, 1., prec, verbose).real
+        #_z2 = zeta.Zp(q2, _gamma, 2, 2, d, 1., prec, verbose).imag
         #_num = _gamma * np.sqrt(_pi3 * q2)
         #_den = (_z1 - ( 2. * np.sqrt(6./5.) / q2) * _z2 ).real
-        _den = w_lm(q2, _gamma, 0, 0, d, _n).real -\
-               2 * np.sqrt(6) * w_lm(q2, _gamma, 2, 2, d, _n).imag
+        _den = w_lm(q2, _gamma, 0, 0, d).real -\
+               2 * np.sqrt(6) * w_lm(q2, _gamma, 2, 2, d).imag
         tandelta = _num / _den
         delta = np.arctan2( _num, _den)
     else:
@@ -357,6 +347,6 @@ def return_mean_corr(data, axis=0):
         The mean and standard deviation of the data.
     """
     # calculate mean and standard deviation
-    mean = np.mean(data, axis, dtype=np.float64)
-    err  = np.std(data, axis, dtype=np.float64)
+    mean = np.mean(data, axis)
+    err  = np.std(data, axis)
     return mean, err

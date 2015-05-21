@@ -38,11 +38,37 @@
 #
 ################################################################################
 
+import os
 import math
 import cmath
 import numpy as np
 import scipy.special
 import scipy.integrate
+
+
+def zeta_n(function):
+    path = "./momenta.npy"
+    if not os.path.isfile(path):
+        import create_momentum_array as cma
+        cma.main()
+    try:
+        _mem = np.load(path)
+        #print("reading n in wrapper")
+    except (IOError, UnicodeDecodeError):
+        import create_momentum_array as cma
+        cma.main()
+        _mem = np.load(path)
+        #print("error and reading n in wrapper")
+
+    def zeta_wrapper(*args, **kwargs):
+        if 'n' in kwargs:
+            kwargs.pop('n')
+        return function(*args, n=_mem, **kwargs)
+
+    zeta_wrapper._zeta_n_mem = _mem
+    zeta_wrapper._zeta_n_origfunc = function
+    zeta_wrapper._zeta_n_func_name = function.func_name
+    return zeta_wrapper
 
 ################################################################################
 #
@@ -64,6 +90,7 @@ import scipy.integrate
 #        precision: precision of the calculation
 #        verbose  : 0, no output on screen; 1, detailed output with convergence
 #                   informations 
+#        n        : Do not use, used for wrapping the function.
 #
 # return: The value of Luescher's Zeta function as a COMPLEX number.
 #
@@ -71,6 +98,7 @@ import scipy.integrate
 #                equation (5) in arXiv:1107.5023v2.
 #
 ################################################################################
+@zeta_n
 def Z(q2, gamma = 1.0, l = 0, m = 0, d = np.array([0., 0., 0.]), \
       m_split = 1, precision = 10e-6, verbose = 0, n=None):
   # some small checks
@@ -79,25 +107,30 @@ def Z(q2, gamma = 1.0, l = 0, m = 0, d = np.array([0., 0., 0.]), \
     exit(0)
   if n==None:
       # reading the three momenta for summation from file
+      print("loading n zeta")
       _n = np.load("./momenta.npy")
   else:
       _n = n
   # the computation
-  res = A(q2, gamma, l, m, d, precision, verbose, m_split, _n) + \
-        B(q2, gamma, l, precision, verbose) + \
-        C(q2, gamma, l, m, d, precision, verbose, m_split, _n)
+  _a = A(q2, gamma, l, m, d, precision, verbose, m_split, _n)
+  _b = B(q2, gamma, l, precision, verbose)
+  _c = C(q2, gamma, l, m, d, precision, verbose, m_split, _n)
+  #print("firstPart  = %.24f + %+.24fI" % (_a.real, _a.imag))
+  #print("secondPart = %.24f + %+.24fI" % (_b.real, _b.imag))
+  #print("thirdPart  = %.24f + %+.24fI" % (_c.real, _c.imag))
+  res = _a + _b + _c
   if verbose:
     print 'Luescher Zeta function:', res
   return res
 ################################################################################
 def Zp(q2, gamma = None, l = 0, m = 0, d = np.array([0., 0., 0.]), \
-      m_split = 1, precision = 10e-6, verbose = 0, n=None):
+      m_split = 1, precision = 10e-6, verbose = 0):
   if gamma == None:
     gamma = np.zeros(q2.shape)
   res = np.zeros(q2.shape, dtype=np.complex)
   for _i in range(q2.size):
     res.flat[_i] = Z(q2.flat[_i], gamma.flat[_i], l, m, d, m_split, precision,
-                     verbose, n)
+                     verbose)
   return res
 
 ################################################################################
@@ -153,7 +186,7 @@ def sph_harm(m = 0, l = 0, phi = 0, theta = 0):
   elif l is 2 and m is  2:
     return 0.38627420202318957*np.sin(theta)*np.sin(theta) * np.exp(2.*1.j*phi)
   else:
-    return scipy.special.sph_harm(m, l, theta, phi)
+    return scipy.special.sph_harm(m, l, phi, theta)
 
 # returns the part of the momentum array for a given momentum squared
 ################################################################################
@@ -204,10 +237,14 @@ def A(q, gamma, l, m, d, precision, verbose, m_split, n):
     r, i = return_momentum_array(i, n)
     r_sph = compute_r_in_spherical_coordinates(r, d, gamma, m_split)
     result_h = compute_summands_A(r_sph, q, l, m)
-    eps = abs(result_h/result)
+    if result != 0.0:
+      eps = abs(result_h/result)
     result += result_h
     if verbose:
       print '\t', i-1, result, eps
+    # if result is still zero after 4 iterations it is assumed to stay zero
+    if result == 0.0 and i > 4:
+      break
   if verbose:
     print 'Term A:', result
   return result
@@ -294,10 +331,14 @@ def C(q, gamma, l, m, d, precision, verbose, m_split, n):
     w, i = return_momentum_array(i, n)
     w_sph = compute_gamma_w_in_spherical_coordinates(w, d, gamma)
     result_h = compute_summands_C(w_sph, w, q, gamma, l, m, d, m_split, precision)
-    eps = abs(result_h/result)
+    if result != 0.0:
+      eps = abs(result_h/result)
     result += result_h
     if verbose:
       print '\t', i-1, result, eps
+    # if result is still zero after 4 iterations it is assumed to stay zero
+    if result == 0.0 and i > 4:
+      break
   if verbose:
     print 'Term C:', result
   return result
@@ -354,3 +395,5 @@ def test():
     delta = 180+delta
   print 'delta:', delta, 'delta should be: 127.9930'
 
+if __name__ == '__main__':
+  test()
