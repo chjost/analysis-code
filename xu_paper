@@ -28,7 +28,7 @@
 ################################################################################
 
 import numpy as np
-import analyze_fcts as af
+import analysis as ana
 
 def print_results(data, Ecm, p, delta):
     for _l in range(data.shape[0]):
@@ -91,14 +91,10 @@ def main():
     Ecm[:,0,:] = data[:,0,:]
     gamma[:,0,:] = 1.0
     for _i in range(data.shape[2]):
-        gamma[:2,1,_i], Ecm[:2,1,_i] = af.calculate_cm_energy(data[:2,1,_i],
-                                          L1, d2, True)
-        gamma[2:,1,_i], Ecm[2:,1,_i] = af.calculate_cm_energy(data[2:,1,_i],
-                                          L2, d2, True)
-        gamma[:2,2,_i], Ecm[:2,2,_i] = af.calculate_cm_energy(data[:2,2,_i],
-                                          L1, d3, True)
-        gamma[2:,2,_i], Ecm[2:,2,_i] = af.calculate_cm_energy(data[2:,2,_i],
-                                          L2, d3, True)
+        gamma[:2,1,_i], Ecm[:2,1,_i] = ana.calc_Ecm(data[:2,1,_i], L1, d2, True)
+        gamma[2:,1,_i], Ecm[2:,1,_i] = ana.calc_Ecm(data[2:,1,_i], L2, d2, True)
+        gamma[:2,2,_i], Ecm[:2,2,_i] = ana.calc_Ecm(data[:2,2,_i], L1, d3, True)
+        gamma[2:,2,_i], Ecm[2:,2,_i] = ana.calc_Ecm(data[2:,2,_i], L2, d3, True)
     #print(Ecm)
     #print(gamma)
     #return
@@ -106,7 +102,7 @@ def main():
     # calculate q2
     for _l in range(data.shape[0]):
         for _i in range(data.shape[2]):
-            q2[_l,:,_i] = af.calculate_q(Ecm[_l,:,_i], mpi[_l], L[_l], True)
+            q2[_l,:,_i] = ana.calculate_q(Ecm[_l,:,_i], mpi[_l], L[_l], True)
             p[_l,:,_i] = np.sqrt(q2[_l,:,_i])*2*np.pi/float(L[_l])
     #print(q2)
     #print(p)
@@ -118,9 +114,9 @@ def main():
 
     # calculate delta
     for _l in range(data.shape[0]):
-        delta[_l,0,:], tandelta[_l,0,:] = af.calculate_delta(q2[_l,0,:], gamma[_l,0,:], d1)
-        delta[_l,1,:], tandelta[_l,1,:] = af.calculate_delta(q2[_l,1,:], gamma[_l,1,:], d2)
-        delta[_l,2,:], tandelta[_l,2,:] = af.calculate_delta(q2[_l,2,:], gamma[_l,2,:], d3)
+        delta[_l,0,:], tandelta[_l,0,:] = ana.calculate_delta(q2[_l,0,:], gamma[_l,0,:], d1)
+        delta[_l,1,:], tandelta[_l,1,:] = ana.calculate_delta(q2[_l,1,:], gamma[_l,1,:], d2)
+        delta[_l,2,:], tandelta[_l,2,:] = ana.calculate_delta(q2[_l,2,:], gamma[_l,2,:], d3)
     #print(delta*180./np.pi)
     print_results(data, Ecm, p, delta*180./np.pi)
 

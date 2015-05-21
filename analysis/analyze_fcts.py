@@ -27,24 +27,8 @@
 
 import os
 import numpy as np
-import zeta
 
-def w_lm(q2, gamma=None, l=0, m=0, d=np.array([0., 0., 0.]), m_split=1,
-         prec=10e-6, verbose=False):
-    """Calculates the Zeta function including the prefactor sqrt(2*l+1)*q^-l.
-
-    Args:
-        q2: The squared momentum transfer.
-        gamma: The Lorentz boost factor.
-        l, m: The quantum numbers.
-        d: The total momentum vector of the system.
-        m_split: The mass difference between the particles.
-        prec: The calculation precision.
-        verbose: The amount of info printed.
-    """
-    factor = gamma * np.power(np.sqrt(q2), l+1) * np.power(np.pi, 1.5) * np.sqrt(2*l+1)
-    var =  zeta.Zp(q2, gamma, l, m, d, m_split, prec, verbose)
-    return var / factor
+from ._omega import omega
 
 def average_corr_fct(data, nbcfg, T):
     """Average over the set of correlation functions.
@@ -200,37 +184,6 @@ def compute_mass(data, usecosh=True):
     mean, err = return_mean_corr(mass)
     return mass, mean, err
 
-def calculate_cm_energy(E, L, d=np.array([0., 0., 1.]), lattice=False):
-    """Calculates the center of mass energy and the boost factor.
-
-    Calculates the Lorentz boost factor and the center of mass energy
-    for moving frames.
-
-    Args:
-        E: The energy of the moving frame.
-        d: The total momentum of the moving frame.
-        lattice: Use the lattice relation, see arxiv:1011.5288.
-
-    Returns:
-        The boost factor and the center of mass energies.
-    """
-    # if the data is from the cm system, return immediately
-    if np.array_equal(d, np.array([0., 0., 0.])):
-        gamma = np.ones(E.shape)
-        return gamma, E
-    # create the array for results
-    Ecm = np.zeros((E.shape))
-    gamma = np.zeros((E.shape))
-    # lattice version, see arxiv:1011.5288
-    if lattice:
-        Ecm = np.arccosh(np.cosh(E) - 2*np.sum(np.sin(d * np.pi / float(L))**2))
-    # continuum relation
-    else:
-        _p2 = np.dot(d, d) * (4 * np.pi**2 / float(L)**2)
-        Ecm = np.sqrt(E**2 - _p2)
-    gamma = E / Ecm
-    return gamma, Ecm
-
 def calculate_q(E, mpi, L, lattice=False):
     """Calculates q.
 
@@ -293,7 +246,7 @@ def calculate_delta(q2, gamma=None, d=np.array([0., 0., 0.]), prec=10e-6,
         #_z1 = zeta.Zp(q2, _gamma, 0, 0, d, 1., prec, verbose).real
         #tandelta = np.sqrt( _pi3 * q2) / _z1.real
         #delta = np.arctan2(np.sqrt( _pi3 * q2), _z1.real)
-        _den = w_lm(q2, _gamma, 0, 0, d).real
+        _den = omega(q2, _gamma, 0, 0, d, exFac=True).real
         tandelta = _num / _den
         delta = np.arctan2( _num, _den)
     # MF1
@@ -303,8 +256,8 @@ def calculate_delta(q2, gamma=None, d=np.array([0., 0., 0.]), prec=10e-6,
         #_z2 = zeta.Zp(q2, _gamma, 2, 0, d, 1., prec, verbose).real
         #_num = _gamma * np.sqrt(_pi3 * q2)
         #_den = (_z1 + (2. / (np.sqrt(5) * q2)) * _z2).real
-        _den = w_lm(q2, _gamma, 0, 0, d).real + \
-               2 * w_lm(q2, _gamma, 2, 0, d).real
+        _den = omega(q2, _gamma, 0, 0, d, exFac=True).real + \
+               2 * omega(q2, _gamma, 2, 0, d, exFac=True).real
         tandelta = _num / _den
         delta = np.arctan2( _num, _den)
     # MF2
@@ -316,9 +269,9 @@ def calculate_delta(q2, gamma=None, d=np.array([0., 0., 0.]), prec=10e-6,
         #_num = _gamma * np.sqrt(_pi3 * q2)
         #_den = (_z1 - (1. / (np.sqrt(5) * q2)) * _z2 + ( np.sqrt(6./5.) /
         #        q2) * _z3 ).real
-        _den = w_lm(q2, _gamma, 0, 0, d).real -\
-               w_lm(q2, _gamma, 2, 0, d).real +\
-               np.sqrt(6) * w_lm(q2, _gamma, 2, 2, d).imag
+        _den = omega(q2, _gamma, 0, 0, d, exFac=True).real -\
+               omega(q2, _gamma, 2, 0, d, exFac=True).real +\
+               np.sqrt(6) * omega(q2, _gamma, 2, 2, d, exFac=True).imag
         tandelta = _num / _den
         delta = np.arctan2( _num, _den)
     # MF3
@@ -328,8 +281,8 @@ def calculate_delta(q2, gamma=None, d=np.array([0., 0., 0.]), prec=10e-6,
         #_z2 = zeta.Zp(q2, _gamma, 2, 2, d, 1., prec, verbose).imag
         #_num = _gamma * np.sqrt(_pi3 * q2)
         #_den = (_z1 - ( 2. * np.sqrt(6./5.) / q2) * _z2 ).real
-        _den = w_lm(q2, _gamma, 0, 0, d).real -\
-               2 * np.sqrt(6) * w_lm(q2, _gamma, 2, 2, d).imag
+        _den = omega(q2, _gamma, 0, 0, d, exFac=True).real -\
+               2 * np.sqrt(6) * omega(q2, _gamma, 2, 2, d, exFac=True).imag
         tandelta = _num / _den
         delta = np.arctan2( _num, _den)
     else:

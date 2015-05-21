@@ -38,13 +38,14 @@
 #
 ################################################################################
 
+__all__ = ["Z"]
+
 import os
 import math
 import cmath
 import numpy as np
 import scipy.special
 import scipy.integrate
-
 
 def zeta_n(function):
     path = "./momenta.npy"
@@ -121,16 +122,6 @@ def Z(q2, gamma = 1.0, l = 0, m = 0, d = np.array([0., 0., 0.]), \
   res = _a + _b + _c
   if verbose:
     print 'Luescher Zeta function:', res
-  return res
-################################################################################
-def Zp(q2, gamma = None, l = 0, m = 0, d = np.array([0., 0., 0.]), \
-      m_split = 1, precision = 10e-6, verbose = 0):
-  if gamma == None:
-    gamma = np.zeros(q2.shape)
-  res = np.zeros(q2.shape, dtype=np.complex)
-  for _i in range(q2.size):
-    res.flat[_i] = Z(q2.flat[_i], gamma.flat[_i], l, m, d, m_split, precision,
-                     verbose)
   return res
 
 ################################################################################

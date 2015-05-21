@@ -26,6 +26,10 @@
 #
 ################################################################################
 
+__all__ = ["write_data", "read_data", "write_data_ascii", "read_data_ascii",
+           "write_data_w_err_ascii", "read_data_w_err_ascii",
+           "extract_bin_corr_fct"]
+
 import os
 import numpy as np
 
