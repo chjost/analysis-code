@@ -50,15 +50,17 @@ def main():
     L = 24
     # get m_k from single_corr_analysis
     #path = "/hiskp2/helmes/contractions/A40.24/kaon/merged/"
-    pathroot = "/home/christopher/studium/PROMO/data/correlators/scattering/k-k/A40.24/mu_s_"
-    tmp_outroot = "/home/christopher/studium/PROMO/results/correlators/scattering/k-k/A40.24/mu_s_"
+    #pathroot = "/home/christopher/studium/PROMO/data/correlators/scattering/k-k/A40.24/mu_s_"
+    #tmp_outroot = "/home/christopher/studium/PROMO/results/correlators/scattering/k-k/A40.24/mu_s_"
+    pathroot = "/hiskp2/correlators/A40.24_L24_T48_beta190_mul0040_musig150_mudel190_kappa1632700/ev120/k-k/mu_s_"
+    tmp_outroot = "./mu_s_"
     inputlist = ["185", "225", "2464"]
     for s in inputlist:
         path = pathroot+s+"/"
         tmp_out = tmp_outroot+s+"/"
         pfit = PdfPages("%s%sk_plot.pdf" % (tmp_out,"corr_")) 
         prat = PdfPages("%s%skk_plot.pdf" % (tmp_out,"ratio_")) 
-        inputlist = ['k_corr_p0.dat','kk_A1_TP0_00.dat']
+        filelist = ['k_corr_p0.dat','kk_A1_TP0_00.dat']
         # start with usual analysis (thermal states contamination expected)
         fitfunc = lambda p,t: 10e6 if p[1] < 0.0 else 0.5*p[0]*p[0]*(np.exp(-p[1]*t) + np.exp(-p[1]*(T-t)))
         par_mass = [0.26]
@@ -66,8 +68,8 @@ def main():
         massfunc = lambda p, t: p
         
         # read in data
-        corrs_k, nbcfg, T = io.extract_corr_fct("".join((path, inputlist[0])))
-        corrs_kk, nbcfg, T = io.extract_corr_fct("".join((path, inputlist[1])))
+        corrs_k, nbcfg, T = io.extract_corr_fct("".join((path, filelist[0])))
+        corrs_kk, nbcfg, T = io.extract_corr_fct("".join((path, filelist[1])))
 
 
         # Create symmetrized bootstrap samples of 2pt and 4pt Corr-function
