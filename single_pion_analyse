@@ -30,11 +30,9 @@ import matplotlib
 matplotlib.use('QT4Agg') # has to be imported before the next lines
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-import input_output as io
-import analyze_fcts as af
-import fit
-import bootstrap
 import numpy as np
+
+import analysis as ana
 
 def main():
     ## definition of some variables
@@ -55,16 +53,18 @@ def main():
         pfit = PdfPages("./plots/%s_plot.pdf" % (_i[:-1]))
         print("dir " + _i)
         # read in data
-        corrs, nbcfg, T = io.extract_corr_fct("".join((inputpath, inputlist[0],
-                                                     suffix)))
+        print("".join((inputpath, inputlist[0], suffix)))
+        corrs = ana.read_data_ascii("".join((inputpath, inputlist[0], suffix)))
+        T = corrs.shape[1]
+        nbcfg = corrs.shape[0]
         T2=int(T/2)+1
         #average = af.average_corr_fct(corrs, nbcfg, T)
         #for t in range(T):
         #    print(corrs[t*nbcfg:(t+1)*nbcfg])
         tlist = np.linspace(0., float(T2), float(T2), endpoint=False)
         # create bootstrap samples
-        bsamples = bootstrap.sym_and_boot(corrs, T, nbcfg, nbsamples)
-        mdata, ddata = af.return_mean_corr(bsamples)
+        bsamples = ana.sym_and_boot(corrs, nbsamples)
+        mdata, ddata = ana.return_mean_corr(bsamples)
         #print(bsamples.shape)
         #for t in range(bsamples.shape[1]):
         #    print(bsamples[:,t])
@@ -75,14 +75,14 @@ def main():
         label = ["single pion, D15", "time", "C(t)", "data", ""]
         for lo in range(14, bsamples.shape[1]-5):
             for up in range(lo+3, bsamples.shape[1]-1):
-                res, chi2, pval = fit.fitting(fitfunc, tlist[lo:up], bsamples[:,lo:up], [1., 0.07], verbose=0)
+                res, chi2, pval = ana.fitting(fitfunc, tlist[lo:up], bsamples[:,lo:up], [1., 0.07], verbose=0)
                 print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, E %.7lf" % (lo, up, pval[0], chi2[0]/(len(tlist[lo:up])-2), res[0,1]))
                 fitlabel = "fit %d:%d" % (lo, up-1)
                 label[3] = fitlabel
-                fit.corr_fct_with_fit(tlist, bsamples[0], ddata, fitfunc, res[0],
+                ana.corr_fct_with_fit(tlist, bsamples[0], ddata, fitfunc, res[0],
                                        [1,T2], label, pfit, True)
-        mass, mmass, dmass = af.compute_mass(bsamples, True)
-        fit.corr_fct_with_fit(tlist[:-2], mmass, dmass, massfunc, res[0,1],
+        mass, mmass, dmass = ana.compute_mass(bsamples, True)
+        ana.corr_fct_with_fit(tlist[:-2], mmass, dmass, massfunc, res[0,1],
                               [1,T2-2], label, pfit, False)
         pfit.close()
 

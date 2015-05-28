@@ -88,7 +88,6 @@ def EfromMpi_lat(mpi, q, L):
     """
     return 2. * np.arccosh(np.cosh(mpi) + 2. * np.sin(q * np.pi / float(L))**2)
 
-@memoize(50)
 def calc_gamma(q2, mpi, L, d):
     """Calculates the Lorentz boost factor for the given energy and momentum.
 
@@ -133,3 +132,51 @@ def calc_Ecm(E, L, d=np.array([0., 0., 1.]), lattice=False):
         Ecm = EfromW(E, d, L)
     gamma = E / Ecm
     return gamma, Ecm
+
+def q2fromE_mpi(E, mpi, L):
+    """Caclulates the q2 from the energy and pion mass.
+
+    Args:
+        E: The CM energy.
+        mpi: The pion mass.
+        L: The lattice size.
+
+    Returns:
+        q2: The CM momentum squared.
+    """
+    return (0.25*E*E - mpi*mpi) * (float(L) / (2. * np.pi))**2
+
+def q2fromE_mpi_latt(E, mpi, L):
+    """Caclulates the q2 from the energy and pion mass, lattice version.
+
+    Args:
+        E: The CM energy.
+        mpi: The pion mass.
+        L: The lattice size.
+
+    Returns:
+        q2: The CM momentum squared.
+    """
+    return (np.arcsin(np.sqrt((np.cosh(E*0.5)-np.cosh(mpi))*0.5))*\
+            float(L)/ np.pi)**2
+
+def calc_q2(E, mpi, L, lattice=False):
+    """Calculates the momentum squared.
+
+    Calculates the difference in momentum between interaction and non-
+    interacting systems. The energy must be the center of mass energy.
+
+    Args:
+        E: The energy values for the bootstrap samples.
+        mpi: The pion mass of the lattice.
+        L: The spatial extent of the lattice.
+        lattice: Use the lattice relation, see arxiv:1011.5288.
+
+    Returns:
+        An array of the q^2 values
+    """
+    if lattice:
+        q2 = q2fromE_mpi_latt(E, mpi, L)
+    else:
+        q2 = q2fromE_mpi(E, mpi, L)
+    return q2

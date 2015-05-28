@@ -146,14 +146,14 @@ def calc_phaseshift(data, L, d, lattice, mpi, verbose=True):
     gamma, Ecm = ana.calc_Ecm(data, L, d)
     if verbose:
         print("calculating q^2")
-    q2 = ana.calculate_q(Ecm, mpi, L)
+    q2 = ana.calc_q2(Ecm, mpi, L)
     if verbose:
         print("calculating delta")
     delta, tandelta = ana.calculate_delta(q2, gamma, d)
 
-    mdata[:,0], ddata[:,0] = ana.return_mean_corr(Ecm)
-    mdata[:,1], ddata[:,1] = ana.return_mean_corr(delta)
-    mdata[:,2], ddata[:,2] = ana.return_mean_corr(tandelta)
+    mdata[:,0], ddata[:,0] = ana.calc_error(Ecm)
+    mdata[:,1], ddata[:,1] = ana.calc_error(delta)
+    mdata[:,2], ddata[:,2] = ana.calc_error(tandelta)
     mdata[:,3] = np.sin(mdata[:,1])**2
     ddata[:,3] = np.abs(np.sin(mdata[:,1]*2.)*ddata[:,1])
     odata[:,0] = Ecm[0]

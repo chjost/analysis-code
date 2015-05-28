@@ -7,9 +7,11 @@ from .corr_matrix import *
 from .bootstrap import *
 from .analyze_fcts import *
 from .fit import *
+from .plot import *
 from .solver import *
 from .zeta_func import *
-from ._calc_energies import calc_Ecm, calc_gamma
+from .phaseshift import *
+from ._calc_energies import calc_Ecm, calc_gamma, calc_q2
 
 __all__ = [t for t in dir() if not t.startswith('_')]
 

@@ -28,11 +28,8 @@
 from scipy.optimize import leastsq
 import scipy.stats
 import numpy as np
-import matplotlib
-matplotlib.use('QT4Agg') # has to be imported before the next lines
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_pdf import PdfPages
 import analyze_fcts as af
+from .plot import *
 
 def fitting(fitfunc, X, Y, start_parm, correlated=True, verbose=True):
     """A function that fits a correlation function.
@@ -73,7 +70,7 @@ def fitting(fitfunc, X, Y, start_parm, correlated=True, verbose=True):
         chisquare[b] = float(sum(infodict['fvec']**2.))
         res[b] = np.array(p)
     # calculate mean and standard deviation
-    res_mean, res_std = np.mean(res, axis=0), np.std(res, axis=0)
+    res_mean, res_std = af.calc_error(res)
     chi2 = np.median(chisquare)
     # p-value calculated
     pvals = 1. - scipy.stats.chi2.cdf(chisquare, dof)
@@ -152,9 +149,6 @@ def fitting_range(fitfunc, X, Y, start_parm, correlated=True, verbose=True):
             # print some result on screen
             print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, E %.7lf" % (lo, up,
                   pval[0], chi2[0]/(len(X[lo:up])-len(start_params)),median))
-
-
-
 
 def scan_fit_range(fitfunc, X, Y, start_params, correlated=True, verbose=False):
     """Fits the fitfunction to the data for different fit ranges and prints the
@@ -236,7 +230,7 @@ def genfit(data, lolist, uplist, fitfunc, start_params, tmin, lattice, d, label,
         label.append("")
     for _l in range(ncorr):
         # setup
-        mdata, ddata = af.return_mean_corr(data[:,:,_l])
+        mdata, ddata = af.calc_error(data[:,:,_l])
         lo = lolist[_l]
         up = uplist[_l]
         if verbose:
@@ -249,9 +243,9 @@ def genfit(data, lolist, uplist, fitfunc, start_params, tmin, lattice, d, label,
             data[:,lo:up,_l], start_params, verbose=verbose)
         if verbose:
             print("p-value %.7lf\nChi^2/dof %.7lf" % (pval[0,_l], chi2[0,_l]/(
-                  (up - lo) - len(start_params))))
+                  (up - lo) - npar)))
 
-        mres, dres = af.return_mean_corr(res[:,:,_l])
+        mres, dres = af.calc_error(res[:,:,_l])
 
         # set up the plot labels
         fitlabel = "fit %d:%d" % (lo, up-1)
@@ -266,64 +260,3 @@ def genfit(data, lolist, uplist, fitfunc, start_params, tmin, lattice, d, label,
                                [tmin,T2], label, corrplot, True)
     corrplot.close()
     return res, chi2, pval
-
-def corr_fct_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
-                      logscale=False, setLimits=False):
-    """A function that fits a correlation function.
-
-    This function plots the given data points and the fit to the data. The plot
-    is saved to pdfplot. It is assumed that pdfplot is a pdf backend to
-    matplotlib so that multiple plots can be saved to the object.
-
-    Args:
-        X: The data for the x axis.
-        Y: The data for the y axis.
-        dY: The error on the y axis data.
-        fitfunc: The function to fit to the data.
-        args: The parameters of the fit function from the fit.
-        plotrange: A list with two entries, the lower and upper range of the
-                   plot.
-        label: A list with labels for title, x axis, y axis, data and fit.
-        pdfplot: A PdfPages object in which to save the plot.
-        logscale: Make the y-scale a logscale.
-
-    Returns:
-        Nothing.
-    """
-    # plotting the data
-    l = int(plotrange[0])
-    u = int(plotrange[1])
-    p1 = plt.errorbar(X[l:u], Y[l:u], dY[l:u], fmt='x' + 'b', label = label[3])
-    # plotting the fit function
-    x1 = np.linspace(l, u, 1000)
-    y1 = []
-    for i in x1:
-        y1.append(fitfunc(args,i))
-    y1 = np.asarray(y1)
-    p2, = plt.plot(x1, y1, 'r', label = label[4])
-    # adjusting the plot style
-    plt.grid(True)
-    plt.xlabel(label[1])
-    plt.ylabel(label[2])
-    plt.title(label[0])
-    plt.legend()
-    if logscale:
-        plt.yscale('log')
-    # set the yaxis range
-    if setLimits:
-        plt.ylim(0.25, 1.)
-    # save pdf
-    pdfplot.savefig()
-    plt.clf()
-
-# this can be used to plot the chisquare distribution of the fits
-#  x = np.linspace(scipy.stats.chi2.ppf(1e-6, dof), scipy.stats.chi2.ppf(1.-1e-6, dof), 1000)
-#  hist, bins = np.histogram(chisquare, 50, density=True)
-#  width = 0.7 * (bins[1] - bins[0])
-#  center = (bins[:-1] + bins[1:]) / 2
-#  plt.xlabel('x')
-#  plt.ylabel('chi^2(x)')
-#  plt.grid(True)
-#  plt.plot(x, scipy.stats.chi2.pdf(x, dof), 'r-', lw=2, alpha=1, label='chi2 pdf')
-#  plt.bar(center, hist, align='center', width=width)
-#  plt.show()
