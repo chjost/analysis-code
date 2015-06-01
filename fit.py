@@ -350,8 +350,8 @@ def corr_fct_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
         lfunc = l
         ufunc = u
     else:
-        lfunc = int(fitrange[0])
-        ufunc = int(fitrange[1])
+        lfunc = fitrange[0]
+        ufunc = fitrange[1]
     x1 = np.linspace(lfunc, ufunc, 1000)
     y1 = []
     for i in x1:
