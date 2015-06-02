@@ -36,12 +36,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
 # Christian's packages
-import input_output as io
-import bootstrap
-import corr_matrix as cm
-#import gevp
-import fit
-import analyze_fcts as af
+import analysis as ana
 
 def main():
     # number of bootstrap samples
@@ -55,8 +50,8 @@ def main():
     #pathroot = "/home/christopher/studium/PROMO/data/correlators/scattering/k-k/A40.24/mu_s_"
     #tmp_outroot = "/home/christopher/studium/PROMO/results/correlators/scattering/k-k/A40.24/mu_s_"
     pathroot = "/hiskp2/correlators/A40.24_L24_T48_beta190_mul0040_musig150_mudel190_kappa1632700/ev120/k-k/mu_s_"
-    tmp_outroot = "/hiskp2/helmes/correlators/A40.24/kaon/mu_s_"
-    #tmp_outroot = "./mu_s_"
+    #tmp_outroot = "/hiskp2/helmes/correlators/A40.24/kaon/mu_s_"
+    tmp_outroot = "./mu_s_"
     amu_s = [0.0185,0.0225,0.02464]
     #Numpy array to hold all data at end
     scat_dat = np.zeros((len(amu_s),7))
@@ -73,20 +68,21 @@ def main():
         massfunc = lambda p, t: p
         
         # read in data
-        corrs_k, nbcfg, T = io.extract_corr_fct("".join((path, filelist[0])))
-        corrs_kk, nbcfg, T = io.extract_corr_fct("".join((path, filelist[1])))
-
+        corrs_k = ana.read_data_ascii("".join((path, filelist[0])))
+        corrs_kk = ana.read_data_ascii("".join((path, filelist[1])))
+        nbcfg = corrs_k.shape[0]
+        T = corrs_k.shape[1]
 
         # Create symmetrized bootstrap samples of 2pt and 4pt Corr-function
         T2=int(T/2)+1
         tlist_corr = np.linspace(0., float(T2), float(T2), endpoint=False)
         tlist_ratio = np.linspace(0.5, float(T2-0.5), float(T2-1), endpoint=False)
-        bsamples_k = bootstrap.sym_and_boot(corrs_k, T, nbcfg, nbsamples)
-        bsamples_kk = bootstrap.sym_and_boot(corrs_kk, T, nbcfg, nbsamples)
+        bsamples_k = ana.sym_and_boot(corrs_k, nbsamples)
+        bsamples_kk = ana.sym_and_boot(corrs_kk, nbsamples)
 
         # Check mean correlators
-        corr_k_data, d_k_data = af.return_mean_corr(bsamples_k)
-        corr_kk_data, d_kk_data = af.return_mean_corr(bsamples_kk)
+        corr_k_data, d_k_data = ana.calc_error(bsamples_k)
+        corr_kk_data, d_kk_data = ana.calc_error(bsamples_kk)
 
         # get m_k from bsamples_k
         label = ["single kaon, A40.24", "time", "C(t)", "data", ""]
@@ -100,9 +96,9 @@ def main():
         #   label[3] = fitlabel
         #   fit.corr_fct_with_fit(tlist_corr, bsamples_k[0], d_k_data, fitfunc, res[0],
         #                              [1,T2-2], label, pfit, True, False, [lo,up])
-        mass, mmass, dmass = af.compute_mass(bsamples_k, True)
+        mass, mmass, dmass = ana.compute_mass(bsamples_k, True)
         #fit.scan_fit_range(massfunc, tlist_corr,mass, par_mass)
-        res, chi2, pval = fit.fitting(massfunc,tlist_corr[10:up], mass[:,10:up],
+        res, chi2, pval = ana.fitting(massfunc,tlist_corr[10:up], mass[:,10:up],
                 par_mass,verbose=0)
         #fit.corr_fct_with_fit(tlist_corr[:-2], mmass, dmass, massfunc, res[0],
         #                      [1,T2], label, pfit, False, False)
@@ -112,7 +108,7 @@ def main():
 
         # compute Ratio of finite differences of C_kk and C_k^2
         #--------------------------------------------------------------------------
-        R_boot, R_mean, R_stdev, = af.simple_ratio_subtract(bsamples_kk, bsamples_k, bsamples_k)
+        R_boot, R_mean, R_stdev, = ana.simple_ratio_subtract(bsamples_kk, bsamples_k, bsamples_k)
         # initial p (A, deltaE, E_k)
         label = ["Ratio kaon, A40.20", "time", "R(t)", "data", ""]
         #define the ratiofunction
@@ -124,7 +120,7 @@ def main():
         #print(len(res))
         #for lo in range(lobound, bsamples_k.shape[1]-5):
         #  for up in range(lo+11, bsamples_k.shape[1]):
-        res_R, chi2_R, pvals_R = fit.fitting(ratio, tlist_ratio[14:],
+        res_R, chi2_R, pvals_R = ana.fitting(ratio, tlist_ratio[14:],
               R_boot[:,14:], par_ratio, res, verbose=0)
         #print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, delta E %.7lf" % (lobound,
         #    upbound,
@@ -140,7 +136,7 @@ def main():
         for i in range(0,len(res)):
             dE_k = res_R[i,1]
             E_k = res[i]
-            a.append(np.real(af.calculate_scat_length(dE_k, E_k, L)[::-1])[0])
+            a.append((ana.calc_scat_length(dE_k, E_k, L)[::-1]).real[0])
         a0_m_k = np.multiply(res, a)
         res_tmp = [amu_s[s], np.median(res), np.std(res), np.median(a), np.std(a),np.median(a0_m_k), np.std(a0_m_k)]
         print(res_tmp)
@@ -156,9 +152,14 @@ def main():
     #plot data with linear regression
     m_k_sq = ["Kaon scatt. length",  "a_mu_s", "m_K^2","A40.24", "data", ""]
     
-    fit.corr_fct_with_fit(scat_dat[:,0],scat_dat[:,1]**2,scat_dat[:,2]**2,m_k2,
+    ana.corr_fct_with_fit(scat_dat[:,0],scat_dat[:,1]**2,scat_dat[:,2]**2,m_k2,
         coef[::-1], [0,2],m_k_sq, pscat, False, False, [0.0185,0.02464])
     pscat.close()
+
+
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Keyboard Interrupt")

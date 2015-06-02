@@ -31,45 +31,48 @@ import numpy as np
 import input_output as io
 
 def main():
-    # needed variables
-    inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/sum/pi_corr_p0.conf"
-    outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/pi_corr_p0_new"
-    suffix=".dat"
-    inputlist = []
-    for i in range(4, 501, 8):
-        if i == 436:
-            continue
-        inputlist.append("%04d" % i)
+    try:
+        # needed variables
+        inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/sum/pi_corr_p0.conf"
+        outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/pi_corr_p0"
+        suffix=".dat"
+        inputlist = []
+        for i in range(4, 640, 8):
+            inputlist.append("%04d" % i)
 
-    #for i in (40, 48, 56, 64, 88, 312):
-    #    inputlist.append("%04d" % i)
+        for i in (40, 48, 56, 64, 88, 312):
+            inputlist.append("%04d" % i)
 
-    #print(inputlist)
-    #return
+        #print(inputlist)
+        #return
 
-    # read in data
-    # read in the first file to create all variables
-    corrs, _nbcfg, _t = io.extract_corr_fct("".join((inputpath, inputlist[0],
-                                                     suffix)), skipSorting=True)
-    # loop over the remaining files and append to the first data set
-    for _i in inputlist[1:]:
-        # read in file
-        _ctmp, _nbtmp, _ttmp = io.extract_corr_fct("".join((inputpath, _i,
-                                                            suffix)), skipSorting=True)
-        # check whether time extend is the same
-        if _t != _ttmp:
-            print("ERROR: the time extend of two files is not the same. Returning...")
-            return
-        # append the correlation function
-        corrs = np.append(corrs, _ctmp)
-        # add number of configurations
-        _nbcfg += _nbtmp
+        # read in data
+        # read in the first file to create all variables
+        corrs = io.read_data_ascii( "".join((inputpath, inputlist[0], suffix)) )
+        _nbcfg = corrs.shape[0]
+        _t = corrs.shape[1]
+        # loop over the remaining files and append to the first data set
+        for _i in inputlist[1:]:
+            # read in file
+            _ctmp = io.read_data_ascii("".join((inputpath, _i, suffix)))
+            _nbtmp = _ctmp.shape[0]
+            _ttmp = _ctmp.shape[1]
+            # check whether time extend is the same
+            if _t != _ttmp:
+                print("ERROR: the time extend of two files is not the same. Returning...")
+                return
+            # append the correlation function
+            #corrs = np.append(corrs, _ctmp)
+            corrs = np.concatenate((corrs, _ctmp))
+            # add number of configurations
+            _nbcfg += _nbtmp
 
-    # print to file
-    io.write_corr_fct(corrs, "".join((outputpath, suffix)), _t, _nbcfg, False)
-    #print(corrs)
-    print(corrs.shape)
-
+        # print to file
+        io.write_data_ascii(corrs, "".join((outputpath, suffix)), verbose=False)
+        #print(corrs)
+        print(corrs.shape)
+    except KeyboardInterrupt:
+        print("\nKeyboard Interrupt, exiting...")
 
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':

@@ -26,46 +26,60 @@
 #
 ################################################################################
 
+import numpy as np
 import input_output as io
 import bootstrap
-import corr_matrix
-import gevp
+import corr_matrix as cm
 
 def main():
     ## definition of some variables
-    nbsamples = 10
+    nbsamples = 100
     filepath="/hiskp2/correlators/A100.24_L24_T48_beta190_mul0100_musig150_mudel190_kappa1632550/ev120/liuming/pi_corr_p"
     #filepath="/home/chris/test/data/pi_corr_p"
     filestring = ["0", "1", "2", "3"]
+    path1="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/pi_corr_p0_new.dat"
 
+    try:
+        ## testing of input and output
+        # write in ascii test
+        data = io.read_data_ascii(path1, (1,), verbose=True)
+        io.write_data_ascii(data[0], "./mytest.dat", verbose=True)
 
-    # testing the input
-    #newfile="/hiskp2/correlators/A100.24_L24_T48_beta190_mul0100_musig150_mudel190_kappa1632550/ev120/liuming/pi_corr_p0.dat"
-    #corr, nbcfg, T = io.extract_corr_fct(newfile)
-    #print(corr)
-    #print(nbcfg)
-    #print(T)
-    #io.write_corr_fct(corr, "./corr_test.dat", T, nbcfg)
+        ## write data with error test
+        io.write_data_w_err_ascii(data[0], data[2], "./mytest1.dat", verbose=True)
+        io.write_data_w_err_ascii(data[0:2], data[2:4], "./mytest2.dat", verbose=True)
 
-    # testing the bootstraping
-    #samples = bootstrap.sym_and_boot(corr, T, nbcfg, 100)
-    #print(samples[:,1])
-    #print(samples.shape)
+        ## read data with error test
+        _data, _error = io.read_data_w_err_ascii("./mytest1.dat", (1,), (2,), verbose=True)
+        print(np.array_equiv(_data[0,:,0], data[0]))
+        print(np.array_equiv(_error[0,:,0], data[2]))
+        _data1, _error1 = io.read_data_w_err_ascii("./mytest2.dat", (1,), (2,), verbose=True)
+        print(np.array_equiv(_data1[:,:,0], data[0:2]))
+        print(np.array_equiv(_error1[:,:,0], data[2:4]))
 
-    # testing the creation of a correlation function matrix
-    corr_mat, T = corr_matrix.create_corr_matrix(10, filepath, filestring)
-    #print(corr_mat[:,0,0,0])
-    #print(T)
-    #for s in range(0, nbsamples):
-    #    print("\ts = " + str(s))
-    #    for t in range(0, int(T/2)+1):
-    #        print("\tt = " + str(t))
-    #        print(corr_mat[s][t])
+        # testing the bootstraping
+        samples = bootstrap.sym_and_boot(data, nbsamples)
+        print(samples[:,1])
+        print(samples.shape)
 
-    # testing the GEVP
-    eigenvalues = gevp.calculate_gevp(corr_mat)
-    #print(eigenvalues)
-    io.write_data(eigenvalues, "./test.dat")
+        # testing the creation of a correlation function matrix
+        corr_mat = cm.create_corr_matrix(nbsamples, filepath, filestring)
+        T = corr_mat.shape[1]
+        print(corr_mat.shape)
+        print(corr_mat[:,0,0,0])
+        print(T)
+        for s in range(nbsamples):
+            print("\ts = " + str(s))
+            for t in range(int(T)):
+                print("\tt = " + str(t))
+                print(corr_mat[s,t])
+
+        # testing the GEVP
+        eigenvalues = cm.calculate_gevp(corr_mat)
+        #print(eigenvalues)
+        io.write_data(eigenvalues, "./test.dat")
+    except KeyboardInterrupt:
+        print("\nKeyboard Interrupt, exiting...")
 
 
 # make this script importable, according to the Google Python Style Guide
