@@ -27,7 +27,9 @@
 ################################################################################
 
 # system imports
+from scipy import stats
 import numpy as np
+from numpy.polynomial import polynomial as P
 import matplotlib
 matplotlib.use('QT4Agg') # has to be imported before the next lines
 import matplotlib.pyplot as plt
@@ -38,7 +40,7 @@ import analysis as ana
 
 def main():
     # number of bootstrap samples
-    nbsamples = 1500
+    nbsamples = 100
     # temporal lattice extent
     tmin = 1
     T = 48
@@ -48,11 +50,14 @@ def main():
     #pathroot = "/home/christopher/studium/PROMO/data/correlators/scattering/k-k/A40.24/mu_s_"
     #tmp_outroot = "/home/christopher/studium/PROMO/results/correlators/scattering/k-k/A40.24/mu_s_"
     pathroot = "/hiskp2/correlators/A40.24_L24_T48_beta190_mul0040_musig150_mudel190_kappa1632700/ev120/k-k/mu_s_"
+    #tmp_outroot = "/hiskp2/helmes/correlators/A40.24/kaon/mu_s_"
     tmp_outroot = "./mu_s_"
-    inputlist = ["185", "225", "2464"]
-    for s in inputlist:
-        path = pathroot+s+"/"
-        tmp_out = tmp_outroot+s+"/"
+    amu_s = [0.0185,0.0225,0.02464]
+    #Numpy array to hold all data at end
+    scat_dat = np.zeros((len(amu_s),7))
+    for s in range(0,len(amu_s)):
+        path = pathroot+str(amu_s[s])[3:]+"/"
+        tmp_out = tmp_outroot+str(amu_s[s])[3:]+"/"
         pfit = PdfPages("%s%sk_plot.pdf" % (tmp_out,"corr_")) 
         prat = PdfPages("%s%skk_plot.pdf" % (tmp_out,"ratio_")) 
         filelist = ['k_corr_p0.dat','kk_A1_TP0_00.dat']
@@ -132,12 +137,29 @@ def main():
             dE_k = res_R[i,1]
             E_k = res[i]
             a.append((ana.calc_scat_length(dE_k, E_k, L)[::-1]).real[0])
-        a0_m_k = res * a
-        mu_s = float(s)*1e-4
-        print( mu_s, np.median(res), np.std(res), np.median(a), np.std(a),
-                np.median(a0_m_k), np.std(a0_m_k))
+        a0_m_k = np.multiply(res, a)
+        res_tmp = [amu_s[s], np.median(res), np.std(res), np.median(a), np.std(a),np.median(a0_m_k), np.std(a0_m_k)]
+        print(res_tmp)
+        scat_dat[s]=res_tmp
+    print(scat_dat[:,0], scat_dat[:,1])
+    #plot data
+    pscat = PdfPages("%s%skk_.pdf" % (tmp_out,"a_"))
+    #fit linear functions
+    coef,stats = P.polyfit(scat_dat[:,0], scat_dat[:,1]**2,1,None,True,scat_dat[:,2]**2)
+    print(coef, stats)
+    #linear fitfunction
+    m_k2 = lambda p, mu : p[0]*mu+p[1]
+    #plot data with linear regression
+    m_k_sq = ["Kaon scatt. length",  "a_mu_s", "m_K^2","A40.24", "data", ""]
+    
+    ana.corr_fct_with_fit(scat_dat[:,0],scat_dat[:,1]**2,scat_dat[:,2]**2,m_k2,
+        coef[::-1], [0,2],m_k_sq, pscat, False, False, [0.0185,0.02464])
+    pscat.close()
 
 
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Keyboard Interrupt")
