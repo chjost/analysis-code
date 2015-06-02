@@ -49,7 +49,7 @@ def compute_derivative(data):
         row = data[b]
         for t in range(0, len(row)-1):
             derv[b, t] = row[t+1] - row[t]
-    mean, err = return_mean_corr(derv)
+    mean, err = calc_error(derv)
     return derv, mean, err
 
 def compute_mass(data, usecosh=True):
@@ -82,7 +82,7 @@ def compute_mass(data, usecosh=True):
            for t in range(1, len(row)-1):
                mass[b, t-1] = np.log(row[t]/row[t+1])
     # print energy
-    mean, err = return_mean_corr(mass)
+    mean, err = calc_error(mass)
     return mass, mean, err
 
 def calc_error(data, axis=0):
@@ -99,3 +99,25 @@ def calc_error(data, axis=0):
     mean = np.mean(data, axis)
     err  = np.std(data, axis)
     return mean, err
+
+def square(sample):
+  return map(lambda x: x**2, sample)
+
+def calc_scat_length(dE, E, L):
+    """Finds root of the Energyshift function up to order L^{-6} only applicable
+    in 0 momentum case, effective range not included!
+       Args:
+           dE: the energy shift of the system due to interaction
+           E: the single particle energy
+           L: The spatial lattice extent
+       Returns:
+           a: roots of the function
+    """
+    # coefficients according to Luescher
+    c=[-2.837297, 6.375183, -8.311951]
+    # Prefactor common to every order
+    comm=-4.*np.pi/(E*L*L)
+    # build up coefficient array
+    p=[comm*c[1]/(L*L*L),comm*c[0]/(L*L),comm/L, -1*dE]
+    a = np.roots(p)
+    return a

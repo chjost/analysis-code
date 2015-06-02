@@ -46,7 +46,7 @@ def create_momentum_array(p):
       out.append(np.ndarray.tolist(rr))
   out = np.asarray(out, dtype=float)
   if p > 302:
-    print 'cannot converge, see zeta.py - create_momentum_array'
+    print('cannot converge, see zeta.py - create_momentum_array')
     exit(0)
   return out, p
 
@@ -55,7 +55,7 @@ def create_momentum_array(p):
 ################################################################################
 def main():
   r = create_momentum_array(0)
-  for i in range(1, 302):
+  for i in xrange(1, 302):
     r = np.vstack((r, create_momentum_array(i)))
   ensure_dir("./momenta")
   np.save("./momenta", r)

@@ -104,7 +104,7 @@ def Z(q2, gamma = 1.0, l = 0, m = 0, d = np.array([0., 0., 0.]), \
       m_split = 1, precision = 10e-6, verbose = 0, n=None):
   # some small checks
   if gamma < 1.0:
-    print 'Gamma must be larger or equal to 1.0'
+    print( 'Gamma must be larger or equal to 1.0')
     exit(0)
   if n==None:
       # reading the three momenta for summation from file
@@ -121,7 +121,7 @@ def Z(q2, gamma = 1.0, l = 0, m = 0, d = np.array([0., 0., 0.]), \
   #print("thirdPart  = %.24f + %+.24fI" % (_c.real, _c.imag))
   res = _a + _b + _c
   if verbose:
-    print 'Luescher Zeta function:', res
+    print( 'Luescher Zeta function:', res)
   return res
 
 ################################################################################
@@ -149,11 +149,11 @@ def appendSpherical_np(xyz):
 def compute_r_in_spherical_coordinates(a, d, gamma, m_split):
   out = np.zeros(a.shape)
   if (np.linalg.norm(d) == 0.0):
-    for r, i in zip(a, range(0,a.shape[0])):
+    for r, i in zip(a, xrange(0,a.shape[0])):
       out[i,:] = r/gamma
   # splitting every vector in a in parallel and orthogonal part w.r.t. d
   else:
-    for r, i in zip(a, range(0,a.shape[0])):
+    for r, i in zip(a, xrange(0,a.shape[0])):
       r_p = np.dot(r, d)/np.dot(d,d)*d 
       r_o = r-r_p
       out[i,:] = (r_p-0.5*m_split*d)/gamma + r_o
@@ -196,7 +196,7 @@ def compute_summands_A(a_sph, q, l, m):
   for r in a_sph:
     breaker = 0
     if counter > 0: # one way to avoid double computation
-      for i in range(0, counter):
+      for i in xrange(0, counter):
         if abs(float(r[0]) - float(a_sph[i, 0])) < 1e-8:
           inter.append(inter[i])
           breaker = 1
@@ -220,8 +220,8 @@ def A(q, gamma, l, m, d, precision, verbose, m_split, n):
   r_sph = compute_r_in_spherical_coordinates(r, d, gamma, m_split)
   result = compute_summands_A(r_sph, q, l, m)
   if verbose:
-    print 'convergence in term A:'
-    print '\t', i-1, result
+    print('convergence in term A:')
+    print('\t', i-1, result)
   # computing new sums until precision is reached
   eps = 1
   while (eps > precision):
@@ -232,12 +232,13 @@ def A(q, gamma, l, m, d, precision, verbose, m_split, n):
       eps = abs(result_h/result)
     result += result_h
     if verbose:
-      print '\t', i-1, result, eps
+      print('\t', i-1, result, eps)
     # if result is still zero after 4 iterations it is assumed to stay zero
     if result == 0.0 and i > 4:
       break
+      print('\t', i-1, result, eps)
   if verbose:
-    print 'Term A:', result
+    print('Term A:', result)
   return result
 
 # Computation of term B
@@ -255,7 +256,7 @@ def B(q, gamma, l, precision, verbose):
     b = q * 2.*np.exp(q)*dawson/cmath.sqrt(q)
     c = math.exp(q)
     if verbose:
-      print 'Term B:', a*(b-c)
+      print('Term B:', a*(b-c))
     return a*(b-c)
 
 # Computes the term gamma*w and returns the result in spherical coordinates
@@ -263,11 +264,11 @@ def B(q, gamma, l, precision, verbose):
 def compute_gamma_w_in_spherical_coordinates(a, d, gamma):
   out = np.zeros(a.shape)
   if (np.linalg.norm(d) == 0.0):
-    for r, i in zip(a, range(0,a.shape[0])):
+    for r, i in zip(a, xrange(0,a.shape[0])):
       out[i,:] = r*gamma
   # splitting every vector in a in parallel and orthogonal part w.r.t. d
   else:
-    for r, i in zip(a, range(0,a.shape[0])):
+    for r, i in zip(a, xrange(0,a.shape[0])):
       r_p = np.dot(r, d)/np.dot(d,d)*d 
       r_o = r-r_p
       out[i,:] = r_p*gamma + r_o
@@ -289,7 +290,7 @@ def compute_summands_C(w_sph, w, q, gamma, l, m, d, m_split, precision):
   for ww in w_sph:
     breaker = 0
     if counter > 0: # one way to avoid double computation
-      for i in range(0, counter):
+      for i in xrange(0, counter):
         if abs(float(ww[0]) - float(w_sph[i, 0])) < 1e-8:
           part2.append(part2[i])
           breaker = 1
@@ -314,8 +315,8 @@ def C(q, gamma, l, m, d, precision, verbose, m_split, n):
   w_sph = compute_gamma_w_in_spherical_coordinates(w, d, gamma)
   result = compute_summands_C(w_sph, w, q, gamma, l, m, d, m_split, precision)
   if verbose:
-    print 'convergence in term C:'
-    print '\t', i-1, result
+    print('convergence in term C:')
+    print('\t', i-1, result)
   # computing new sums until precision is reached
   eps = 1
   while (eps > precision):
@@ -326,30 +327,30 @@ def C(q, gamma, l, m, d, precision, verbose, m_split, n):
       eps = abs(result_h/result)
     result += result_h
     if verbose:
-      print '\t', i-1, result, eps
+      print('\t', i-1, result, eps)
     # if result is still zero after 4 iterations it is assumed to stay zero
     if result == 0.0 and i > 4:
       break
   if verbose:
-    print 'Term C:', result
+    print('Term C:', result)
   return result
 
 
 def test(): 
   # cms ##########################
-  print '\nTest in cms:'
+  print('\nTest in cms:')
   Pcm = np.array([0., 0., 0.])
   q = 0.1207*24/(2.*math.pi)
   gamma = 1.0
   zeta = Z(q*q, gamma, d = Pcm).real
-  print 'q, gamma:', q, gamma
+  print('q, gamma:', q, gamma)
   delta = np.arctan(math.pi**(3./2.)*q/zeta)*180./math.pi
   if delta < 0:
     delta = 180+delta
-  print 'delta:', delta, 'delta should be: 136.6527'
+  print('delta:', delta, 'delta should be: 136.6527')
   
   # mv1 ##########################
-  print '\nTest in mv1:'
+  print('\nTest in mv1:')
   Pcm = np.array([0., 0., 1.])
   L = 32
   q = 0.161*L/(2.*math.pi)
@@ -358,16 +359,16 @@ def test():
   gamma = E/Ecm
   Z00 = Z(q*q, gamma, d = Pcm).real
   Z20 = Z(q*q, gamma, d = Pcm, l = 2).real
-  print 'q, gamma:', q, gamma
+  print('q, gamma:', q, gamma)
   delta = np.arctan(gamma*math.pi**(3./2.) * q / \
           (Z00 + (2./(q*q*math.sqrt(5)))*Z20))*180./math.pi
   if delta < 0:
     delta = 180+delta
-  print 'delta:', delta, 'delta should be: 115.7653'
+  print('delta:', delta, 'delta should be: 115.7653')
   
   
   # mv2 ##########################
-  print '\nTest in mv2:'
+  print('\nTest in mv2:')
   Pcm = np.array([1., 1., 0.])
   L = 32
   q = 0.167*L/(2.*math.pi)
@@ -378,13 +379,13 @@ def test():
   Z20 = Z(q*q, gamma, d = Pcm, l = 2).real
   Z22  = Z(q*q, gamma, d = Pcm, l = 2, m = 2).imag
   Z2_2 = Z(q*q, gamma, d = Pcm, l = 2, m = -2).imag
-  print 'q, gamma:', q, gamma
+  print('q, gamma:', q, gamma)
   delta = np.arctan(gamma*math.pi**(3./2.) * q / \
           (Z00 - (1./(q*q*math.sqrt(5)))*Z20 \
           + ((math.sqrt(3./10.)/(q*q))*(Z22-Z2_2))))*180./math.pi
   if delta < 0:
     delta = 180+delta
-  print 'delta:', delta, 'delta should be: 127.9930'
+  print('delta:', delta, 'delta should be: 127.9930')
 
 if __name__ == '__main__':
   test()

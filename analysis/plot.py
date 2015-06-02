@@ -6,7 +6,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 
 def corr_fct_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
-                      logscale=False, setLimits=False):
+                      logscale=False, setLimits=False, fitrange=None):
     """A function that plots a correlation function.
 
     This function plots the given data points and the fit to the data. The plot
@@ -24,6 +24,8 @@ def corr_fct_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
         label: A list with labels for title, x axis, y axis, data and fit.
         pdfplot: A PdfPages object in which to save the plot.
         logscale: Make the y-scale a logscale.
+        setLimits: Set limits to the y range of the plot.
+        fitrange: A list with two entries, bounds of the fitted function.
 
     Returns:
         Nothing.
@@ -32,8 +34,14 @@ def corr_fct_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
     l = int(plotrange[0])
     u = int(plotrange[1])
     p1 = plt.errorbar(X[l:u], Y[l:u], dY[l:u], fmt='x' + 'b', label = label[3])
-    # plotting the fit function
-    x1 = np.linspace(l, u, 1000)
+    # plotting the fit function, check for seperate range
+    if fitrange:
+        lfunc = fitrange[0]
+        ufunc = fitrange[1]
+    else:
+        lfunc = l
+        ufunc = u
+    x1 = np.linspace(lfunc, ufunc, 1000)
     y1 = []
     for i in x1:
         y1.append(fitfunc(args,i))

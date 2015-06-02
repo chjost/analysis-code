@@ -1,0 +1,143 @@
+#!/usr/bin/python
+################################################################################
+#
+# Author: Christopher Helmes (helmes@hiskp.uni-bonn.de)
+# Date:   Februar 2015
+#
+# Copyright (C) 2015 Christopher Helmes
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Function: Pi-Pi-scattering analysis in the center of mass frame 
+#
+# For informations on input parameters see the description of the function.
+#
+################################################################################
+
+# system imports
+import numpy as np
+import matplotlib
+matplotlib.use('QT4Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+
+# Christian's packages
+import analysis as ana
+
+def main():
+    # number of bootstrap samples
+    nbsamples = 1500
+    # temporal lattice extent
+    tmin = 1
+    T = 48
+    L = 24
+    # get m_k from single_corr_analysis
+    #path = "/hiskp2/helmes/contractions/A40.24/kaon/merged/"
+    #pathroot = "/home/christopher/studium/PROMO/data/correlators/scattering/k-k/A40.24/mu_s_"
+    #tmp_outroot = "/home/christopher/studium/PROMO/results/correlators/scattering/k-k/A40.24/mu_s_"
+    pathroot = "/hiskp2/correlators/A40.24_L24_T48_beta190_mul0040_musig150_mudel190_kappa1632700/ev120/k-k/mu_s_"
+    tmp_outroot = "./mu_s_"
+    inputlist = ["185", "225", "2464"]
+    for s in inputlist:
+        path = pathroot+s+"/"
+        tmp_out = tmp_outroot+s+"/"
+        pfit = PdfPages("%s%sk_plot.pdf" % (tmp_out,"corr_")) 
+        prat = PdfPages("%s%skk_plot.pdf" % (tmp_out,"ratio_")) 
+        filelist = ['k_corr_p0.dat','kk_A1_TP0_00.dat']
+        # start with usual analysis (thermal states contamination expected)
+        fitfunc = lambda p,t: 10e6 if p[1] < 0.0 else 0.5*p[0]*p[0]*(np.exp(-p[1]*t) + np.exp(-p[1]*(T-t)))
+        par_mass = [0.26]
+        par_ratio = [2.,0.03]
+        massfunc = lambda p, t: p
+        
+        # read in data
+        corrs_k = ana.read_data_ascii("".join((path, filelist[0])))
+        corrs_kk = ana.read_data_ascii("".join((path, filelist[1])))
+        nbcfg = corrs_k.shape[0]
+        T = corrs_k.shape[1]
+
+        # Create symmetrized bootstrap samples of 2pt and 4pt Corr-function
+        T2=int(T/2)+1
+        tlist_corr = np.linspace(0., float(T2), float(T2), endpoint=False)
+        tlist_ratio = np.linspace(0.5, float(T2-0.5), float(T2-1), endpoint=False)
+        bsamples_k = ana.sym_and_boot(corrs_k, nbsamples)
+        bsamples_kk = ana.sym_and_boot(corrs_kk, nbsamples)
+
+        # Check mean correlators
+        corr_k_data, d_k_data = ana.calc_error(bsamples_k)
+        corr_kk_data, d_kk_data = ana.calc_error(bsamples_kk)
+
+        # get m_k from bsamples_k
+        label = ["single kaon, A40.24", "time", "C(t)", "data", ""]
+        up=T2-1
+        # due to small variance changes can fit single correlators to the end
+        #for lo in range(12, bsamples_k.shape[1]-11):
+        #   res, chi2, pval = fit.fitting(fitfunc, tlist_corr[lo:up], bsamples_k[:,lo:up], par_mass, verbose=1)
+        #   print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, E %.7lf" % (lo, up,
+        #       pval[0], chi2[0]/(len(tlist_corr[lo:up])-2), res[0,1]))
+        #   fitlabel = "fit %d:%d" % (lo, up-1)
+        #   label[3] = fitlabel
+        #   fit.corr_fct_with_fit(tlist_corr, bsamples_k[0], d_k_data, fitfunc, res[0],
+        #                              [1,T2-2], label, pfit, True, False, [lo,up])
+        mass, mmass, dmass = ana.compute_mass(bsamples_k, True)
+        #fit.scan_fit_range(massfunc, tlist_corr,mass, par_mass)
+        res, chi2, pval = ana.fitting(massfunc,tlist_corr[10:up], mass[:,10:up],
+                par_mass,verbose=0)
+        #fit.corr_fct_with_fit(tlist_corr[:-2], mmass, dmass, massfunc, res[0],
+        #                      [1,T2], label, pfit, False, False)
+        #print("m_k = %e +/- %e" %(np.median(res),np.std(res)))
+        pfit.close()
+        E_k = res[0]
+
+        # compute Ratio of finite differences of C_kk and C_k^2
+        #--------------------------------------------------------------------------
+        R_boot, R_mean, R_stdev, = ana.simple_ratio_subtract(bsamples_kk, bsamples_k, bsamples_k)
+        # initial p (A, deltaE, E_k)
+        label = ["Ratio kaon, A40.20", "time", "R(t)", "data", ""]
+        #define the ratiofunction
+        ratio = lambda p, t, e : p[0]*(np.cosh(p[1]*(t-T/2))+np.sinh(p[1]*(t-T/2))/(np.tanh(2*e*(t-T/2))))
+        # define fit ranges
+        lobound = 12
+        upbound = 22
+        #print(R_boot.shape)
+        #print(len(res))
+        #for lo in range(lobound, bsamples_k.shape[1]-5):
+        #  for up in range(lo+11, bsamples_k.shape[1]):
+        res_R, chi2_R, pvals_R = ana.fitting(ratio, tlist_ratio[14:],
+              R_boot[:,14:], par_ratio, res, verbose=0)
+        #print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, delta E %.7lf" % (lobound,
+        #    upbound,
+        #     pvals_R[0], chi2_R[0]/(len(tlist_ratio[lobound:upbound])-2), res_R[0,1]))
+              #print(res_R)
+        #fitlabel = "fit %d:%d" % (lo, up-1)
+        #label[3] = fitlabel
+        #fit.corr_fct_with_fit(tlist_ratio, R_mean, R_stdev, ratio, res[0], [1,T2],
+        #         label, prat, False, False, [lo,up]) 
+
+        #prat.close()
+        a = []
+        for i in range(0,len(res)):
+            dE_k = res_R[i,1]
+            E_k = res[i]
+            a.append((ana.calc_scat_length(dE_k, E_k, L)[::-1]).real[0])
+        a0_m_k = res * a
+        mu_s = float(s)*1e-4
+        print( mu_s, np.median(res), np.std(res), np.median(a), np.std(a),
+                np.median(a0_m_k), np.std(a0_m_k))
+
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    main()

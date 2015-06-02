@@ -1,3 +1,7 @@
+
+import numpy as np
+from .analyze_fcts import calc_error
+
 def simple_ratio(d1, d2, d3):
     """Calculates a simple ratio of three data sets.
 
@@ -20,7 +24,7 @@ def simple_ratio(d1, d2, d3):
     # TODO(CJ): test if the following give the same result
     # ratio = d1/(d2*d3)
     # get mean and standard deviation
-    mean, err = return_mean_corr(ratio)
+    mean, err = calc_error(ratio)
     return ratio, mean, err
 
 def simple_ratio_subtract(d1, d2, d3):
@@ -45,7 +49,7 @@ def simple_ratio_subtract(d1, d2, d3):
             ratio[_s,_t] = (d1[_s,_t] - d1[_s,_t+1]) / ((d2[_s,_t]*d3[_s,_t]) -
                             (d2[_s,_t+1]*d3[_s,_t+1]))
     # get mean and standard deviation
-    mean, err = return_mean_corr(ratio)
+    mean, err = calc_error(ratio)
     return ratio, mean, err
 
 def ratio(d1, d2, d3, dE):
@@ -75,6 +79,6 @@ def ratio(d1, d2, d3, dE):
             # calculate ratio
             ratio[_s,_t] = num/den
     # get mean and standard deviation
-    mean, err = return_mean_corr(ratio)
+    mean, err = calc_error(ratio)
     return ratio, mean, err
 
