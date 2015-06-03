@@ -45,7 +45,7 @@ def main():
     tmin = 1
     T = 48
     L = 24
-    # Mass parameters, strange quark masses and unitary kaon mass
+    # Strange quark masses and unitary kaon mass
     mk_unit = 0.25884
     dmk_unit = 0.00043
     amu_s = [0.0185,0.0225,0.02464]
@@ -140,18 +140,24 @@ def main():
 
         #prat.close()
         a_k_dat[s] = res_R[:,1]
+    
+    # End data acquisition
+    #---------------------------------------------------------------------------
+
+    # Start analysis
+    #---------------------------------------------------------------------------
 
     # reshape data by switching axes
     a_k_fin = a_k_dat.T
     m_k_fin = m_k_dat.T
-    # print(m_k_fin.shape)
+
+    # Unitary mass matching of amu_s
     # fit samples to straight line
     #linear fitfunction
     par_match = [0.1,2.]
     m_k2 = lambda p, mu : p[0]*mu+p[1]
     res_m2, chi2_m2, pvals_m2 = ana.fitting(m_k2,
-        np.asarray(amu_s)[1:], m_k_fin[:,1:]**2, par_match, None, True, True)
-    print(np.median(res_m2[:,0]))
+        np.asarray(amu_s)[1:], m_k_fin[:,1:]**2, par_match, None, False, False)
 
     # Create parametrized bootstrap samples for unitary mass
     mk_u = np.random.normal(mk_unit, dmk_unit, len(corrs_k[0]))
@@ -159,7 +165,17 @@ def main():
     # extract nb_samples amu_s values
     amu_s_fin = (m_k_unit**2-res_m2[:,1])/res_m2[:,0] 
     # print out mean and standard deviation
-    print np.median(amu_s_fin), np.std(amu_s_fin)
+    print("amu_s from unitary Kaon matching:")
+    print("amu_s^unit: %f +/- %f\n" % (np.median(amu_s_fin), np.std(amu_s_fin)))
+    
+    # Extract a_kk*am_k
+    par_match = [0.5,-2]
+    res_makk, chi2_makk, pvals_makk = ana.fitting(m_k2,
+        np.asarray(amu_s)[1:], a_k_fin[:,1:]*m_k_fin[:,1:], par_match, None,
+        False, False)
+    akk_mk = res_makk[:,1]+res_makk[:,0]*amu_s_fin
+    print("Extracted m_k*a_kk:")
+    print("m_k*akk: %f +/- %f\n" % (np.median(akk_mk), np.std(akk_mk)))
     ##plot data
     #pscat = PdfPages("%s%skk_.pdf" % (tmp_out,"a_"))
     ##fit linear functions
