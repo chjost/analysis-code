@@ -40,21 +40,28 @@ import analysis as ana
 
 def main():
     # number of bootstrap samples
-    nbsamples = 100
+    nbsamples = 1500
     # temporal lattice extent
     tmin = 1
     T = 48
     L = 24
+    # Strange quark masses and unitary kaon mass
+    mk_unit = 0.25884
+    dmk_unit = 0.00043
+    amu_s = [0.0185,0.0225,0.02464]
     # get m_k from single_corr_analysis
     #path = "/hiskp2/helmes/contractions/A40.24/kaon/merged/"
     #pathroot = "/home/christopher/studium/PROMO/data/correlators/scattering/k-k/A40.24/mu_s_"
     #tmp_outroot = "/home/christopher/studium/PROMO/results/correlators/scattering/k-k/A40.24/mu_s_"
     pathroot = "/hiskp2/correlators/A40.24_L24_T48_beta190_mul0040_musig150_mudel190_kappa1632700/ev120/k-k/mu_s_"
-    #tmp_outroot = "/hiskp2/helmes/correlators/A40.24/kaon/mu_s_"
-    tmp_outroot = "./mu_s_"
-    amu_s = [0.0185,0.0225,0.02464]
+    tmp_outroot = "/hiskp2/helmes/correlators/A40.24/kaon/mu_s_"
+    #tmp_outroot = "./mu_s_"
+
     #Numpy array to hold all data at end
-    scat_dat = np.zeros((len(amu_s),7))
+    m_k_dat = np.zeros((len(amu_s), nbsamples))
+    a_k_dat = np.zeros((len(amu_s), nbsamples))
+    m_k_unit = np.zeros(nbsamples)
+
     for s in range(0,len(amu_s)):
         path = pathroot+str(amu_s[s])[3:]+"/"
         tmp_out = tmp_outroot+str(amu_s[s])[3:]+"/"
@@ -72,7 +79,7 @@ def main():
         corrs_kk = ana.read_data_ascii("".join((path, filelist[1])))
         nbcfg = corrs_k.shape[0]
         T = corrs_k.shape[1]
-
+        
         # Create symmetrized bootstrap samples of 2pt and 4pt Corr-function
         T2=int(T/2)+1
         tlist_corr = np.linspace(0., float(T2), float(T2), endpoint=False)
@@ -87,6 +94,7 @@ def main():
         # get m_k from bsamples_k
         label = ["single kaon, A40.24", "time", "C(t)", "data", ""]
         up=T2-1
+
         # due to small variance changes can fit single correlators to the end
         #for lo in range(12, bsamples_k.shape[1]-11):
         #   res, chi2, pval = fit.fitting(fitfunc, tlist_corr[lo:up], bsamples_k[:,lo:up], par_mass, verbose=1)
@@ -103,8 +111,9 @@ def main():
         #fit.corr_fct_with_fit(tlist_corr[:-2], mmass, dmass, massfunc, res[0],
         #                      [1,T2], label, pfit, False, False)
         #print("m_k = %e +/- %e" %(np.median(res),np.std(res)))
+
         pfit.close()
-        E_k = res[0]
+        m_k_dat[s] = res[:,0]
 
         # compute Ratio of finite differences of C_kk and C_k^2
         #--------------------------------------------------------------------------
@@ -116,8 +125,6 @@ def main():
         # define fit ranges
         lobound = 12
         upbound = 22
-        #print(R_boot.shape)
-        #print(len(res))
         #for lo in range(lobound, bsamples_k.shape[1]-5):
         #  for up in range(lo+11, bsamples_k.shape[1]):
         res_R, chi2_R, pvals_R = ana.fitting(ratio, tlist_ratio[14:],
@@ -132,29 +139,56 @@ def main():
         #         label, prat, False, False, [lo,up]) 
 
         #prat.close()
-        a = []
-        for i in range(0,len(res)):
-            dE_k = res_R[i,1]
-            E_k = res[i]
-            a.append((ana.calc_scat_length(dE_k, E_k, L)[::-1]).real[0])
-        a0_m_k = np.multiply(res, a)
-        res_tmp = [amu_s[s], np.median(res), np.std(res), np.median(a), np.std(a),np.median(a0_m_k), np.std(a0_m_k)]
-        print(res_tmp)
-        scat_dat[s]=res_tmp
-    print(scat_dat[:,0], scat_dat[:,1])
-    #plot data
-    pscat = PdfPages("%s%skk_.pdf" % (tmp_out,"a_"))
-    #fit linear functions
-    coef,stats = P.polyfit(scat_dat[:,0], scat_dat[:,1]**2,1,None,True,scat_dat[:,2]**2)
-    print(coef, stats)
-    #linear fitfunction
-    m_k2 = lambda p, mu : p[0]*mu+p[1]
-    #plot data with linear regression
-    m_k_sq = ["Kaon scatt. length",  "a_mu_s", "m_K^2","A40.24", "data", ""]
+        a_k_dat[s] = res_R[:,1]
     
-    ana.corr_fct_with_fit(scat_dat[:,0],scat_dat[:,1]**2,scat_dat[:,2]**2,m_k2,
-        coef[::-1], [0,2],m_k_sq, pscat, False, False, [0.0185,0.02464])
-    pscat.close()
+    # End data acquisition
+    #---------------------------------------------------------------------------
+
+    # Start analysis
+    #---------------------------------------------------------------------------
+
+    # reshape data by switching axes
+    a_k_fin = a_k_dat.T
+    m_k_fin = m_k_dat.T
+
+    # Unitary mass matching of amu_s
+    # fit samples to straight line
+    #linear fitfunction
+    par_match = [0.1,2.]
+    m_k2 = lambda p, mu : p[0]*mu+p[1]
+    res_m2, chi2_m2, pvals_m2 = ana.fitting(m_k2,
+        np.asarray(amu_s)[1:], m_k_fin[:,1:]**2, par_match, None, False, False)
+
+    # Create parametrized bootstrap samples for unitary mass
+    mk_u = np.random.normal(mk_unit, dmk_unit, len(corrs_k[0]))
+    m_k_unit = ana.bootstrap(mk_u, nbsamples)
+    # extract nb_samples amu_s values
+    amu_s_fin = (m_k_unit**2-res_m2[:,1])/res_m2[:,0] 
+    # print out mean and standard deviation
+    print("amu_s from unitary Kaon matching:")
+    print("amu_s^unit: %f +/- %f\n" % (np.median(amu_s_fin), np.std(amu_s_fin)))
+    
+    # Extract a_kk*am_k
+    par_match = [0.5,-2]
+    res_makk, chi2_makk, pvals_makk = ana.fitting(m_k2,
+        np.asarray(amu_s)[1:], a_k_fin[:,1:]*m_k_fin[:,1:], par_match, None,
+        False, False)
+    akk_mk = res_makk[:,1]+res_makk[:,0]*amu_s_fin
+    print("Extracted m_k*a_kk:")
+    print("m_k*akk: %f +/- %f\n" % (np.median(akk_mk), np.std(akk_mk)))
+    ##plot data
+    #pscat = PdfPages("%s%skk_.pdf" % (tmp_out,"a_"))
+    ##fit linear functions
+    #coef,stats = P.polyfit(scat_dat[:,0], scat_dat[:,1]**2,1,None,True,scat_dat[:,2]**2)
+    #print(coef, stats)
+    ##linear fitfunction
+    #m_k2 = lambda p, mu : p[0]*mu+p[1]
+    ##plot data with linear regression
+    #m_k_sq = ["Kaon scatt. length",  "a_mu_s", "m_K^2","A40.24", "data", ""]
+    #
+    #ana.corr_fct_with_fit(scat_dat[:,0],scat_dat[:,1]**2,scat_dat[:,2]**2,m_k2,
+    #    coef[::-1], [0,2],m_k_sq, pscat, False, False, [0.0185,0.02464])
+    #pscat.close()
 
 
 # make this script importable, according to the Google Python Style Guide
