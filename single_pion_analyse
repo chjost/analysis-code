@@ -33,7 +33,6 @@ from matplotlib.backends.backend_pdf import PdfPages
 import input_output as io
 import analyze_fcts as af
 import fit
-import plot
 import bootstrap
 import numpy as np
 
@@ -45,12 +44,13 @@ def main():
     suffix="pi_corr_p0.dat"
     suffix1="pi_corr_average.dat"
     suffix2="pi_corr_mass.dat"
-    #inputlist=["D15_new/"]
-    inputlist=["D15_new/", "D15_old/", "D15_combined/"]
+    inputlist=["D15_new/"]
+    #inputlist=["D15_new/", "D15_old/", "D15_combined/"]
 
     # get mass from correlation function
     #fitfunc = lambda p,t: p[0]*np.cosh((T/2.0-t)*p[1])
     fitfunc = lambda p,t: 10e6 if p[1] < 0.0 else 0.5*p[0]*p[0]*(np.exp(-p[1]*t) + np.exp(-p[1]*(T-t)))
+    massfunc = lambda p,t: p
     for _i in inputlist:
         pfit = PdfPages("./plots/%s_plot.pdf" % (_i[:-1]))
         print("dir " + _i)
@@ -73,14 +73,17 @@ def main():
         #print(bsamples.shape)
         # choose fitrange
         label = ["single pion, D15", "time", "C(t)", "data", ""]
-        for lo in range(8, bsamples.shape[1]-5):
+        for lo in range(14, bsamples.shape[1]-5):
             for up in range(lo+3, bsamples.shape[1]-1):
                 res, chi2, pval = fit.fitting(fitfunc, tlist[lo:up], bsamples[:,lo:up], [1., 0.07], verbose=0)
                 print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, E %.7lf" % (lo, up, pval[0], chi2[0]/(len(tlist[lo:up])-2), res[0,1]))
                 fitlabel = "fit %d:%d" % (lo, up-1)
                 label[3] = fitlabel
-                plot.corr_fct_with_fit(tlist, bsamples[0], ddata, fitfunc, res[0],
+                fit.corr_fct_with_fit(tlist, bsamples[0], ddata, fitfunc, res[0],
                                        [1,T2], label, pfit, True)
+        mass, mmass, dmass = af.compute_mass(bsamples, True)
+        fit.corr_fct_with_fit(tlist[:-2], mmass, dmass, massfunc, res[0,1],
+                              [1,T2-2], label, pfit, False)
         pfit.close()
 
 # make this script importable, according to the Google Python Style Guide

@@ -222,7 +222,7 @@ def write_npy_data(data, filename, verbose=False):
     _dir = os.path.dirname(filename)
     # check if path exists, if not then create it
     if not os.path.exists(_dir):
-        os.mkdirs(_dir)
+        os.mkdir(_dir)
     if verbose:
         print("saving to file" + str(filename))
     np.save(filename, data)
