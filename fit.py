@@ -189,6 +189,21 @@ def scan_fit_range(fitfunc, X, Y, start_params, correlated=True, verbose=False):
     return
 
 def set_fit_intervall(data, lolist, uplist, intervallsize):
+    """Initialize intervalls to fit in with borders given for every principal
+    correlator
+
+    Args: 
+        data: The lattice results to fit to. Necessary to obtain the number of
+              gevp-eigenvalues.
+        lolist: List of lower interval borders for every gevp-eigenvalue.
+        uplist: List of upper interval borders for every gevp-eigenvalue.
+        intervallsize: Minimal number of points to be contained in the 
+                intervall
+
+    Returns:
+        fit_intervals: list of pairs [lo, up] for every gevp-eigenvalue.
+    """
+
     ncorr = data.shape[2]
     fit_intervalls = []
     for _l in range(ncorr):
@@ -371,6 +386,17 @@ def compute_weight(corr, params):
 # compute the weighted quantile
 ################################################################################
 def weighted_quantile(data, weights, quantile):
+    """Compute the weighted quantile, where a fixed percentage of the sum of
+    all weights lie below.
+
+    Args:
+        data: A numpy-array of the data points the quantile is taken from.
+        weights: A numpy-array containing the weights for each point in data. 
+              Must be of same shape and have same order as data.
+        quantile: The percentage of weights to be below the quantile. 
+              0.5 is the weighted median
+    """
+
     ind_sorted = np.argsort(data)
     sorted_data = data[ind_sorted]
     sorted_weights = weights[ind_sorted]
@@ -379,19 +405,37 @@ def weighted_quantile(data, weights, quantile):
     Pn = (Sn-0.5*sorted_weights)/np.sum(sorted_weights)
     # Get the value of the weighted median
     interpolated_quant = np.interp(quantile, Pn, sorted_data)
+
     return interpolated_quant
 
-def plot_histogram(data, res_weight, pvals, lattice, d, label, path=".plots/", plotlabel="hist", 
+def plot_histogram(data, data_weight, lattice, d, label, path=".plots/", plotlabel="hist", 
                    verbose=True):
 
+    """plot a weighted histogramm
+
+    Args:
+        data: Numpy-array of fit values for mulitple fit intervalls. Will be 
+              depicted on x-axis.
+        data_weight: The weights corresponding to data. Must have same shape
+              and order as data. Their sum per bin is the bin height.
+        lattice: The name of the lattice, used for the output file.
+        d:    The total momentum of the reaction.
+        label: Labels for the title and the axis.
+        path: Path to the saving place of the plot.
+        plotlabel: Label for the plot file.
+        verbose: Amount of information printed to screen.
+
+    Returns:
+    """
+
     d2 = np.dot(d,d)
-    ninter = pvals.shape[0]
+    ninter = data.shape[0]
 
     histplot = PdfPages("%s/fit_%s_%s_TP%d.pdf" % (path,plotlabel,lattice,d2))
     # The histogram
 
     hist, bins = np.histogram(data, 20, \
-                              weights=res_weight, \
+                              weights=data_weight, \
                               density=True)
     width = 0.7 * (bins[1] - bins[0])
     center = (bins[:-1] + bins[1:]) / 2
@@ -411,19 +455,4 @@ def plot_histogram(data, res_weight, pvals, lattice, d, label, path=".plots/", p
 
     histplot.close()
 
-#    hist, bins = np.histogram(a_pipi[pos_derv:pos_ratio,0], 20, \
-#                              weights=np.asarray(delE_derv_weight), \
-#                              density=True)
-#    width = 0.7 * (bins[1] - bins[0])
-#    center = (bins[:-1] + bins[1:]) / 2
-#    plt.ylabel('weighted distribution of a_pipi')
-#    plt.title('fit methods individually with a p-value between 0.01 and 0.99')
-#    plt.grid(True)
-#    x = np.linspace(center[0], center[-1], 1000)
-#
-#    plt.plot(x, scipy.stats.norm.pdf(x, loc=a_pipi_median_derv[0], \
-#             scale=a_pipi_std_derv), 'r-', lw=3, alpha=1, \
-#             label='median + stat. error')
-#    plt.bar(center, hist, align='center', width=width, color='r', alpha=0.5, \
-#            label='derivative')
 

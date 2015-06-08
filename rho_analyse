@@ -240,7 +240,7 @@ def calc_error(data, pvals, d, lattice):
         # draw original data as histogram
         plotlabel = 'hist_%d"' % _j
         label = ["", "", "principal correlator"]
-        fit.plot_histogram(data[0,_j], data_weight, pvals[0, _j], lattice, d2, 
+        fit.plot_histogram(data[0,_j], data_weight, lattice, d2, 
                            label, path, plotlabel)
 
         # using the weights, calculate the median over all fit intervalls for
@@ -257,25 +257,6 @@ def calc_error(data, pvals, d, lattice):
 
 #    print('res 1 %lf +- %lf (stat) + %lf - %lf (syst)' % (res[0][0], 
 #          res_std, res[0][0] - res_16[0], res_84[0] - res[0][0]))
-
-
-#    data_std = np.empty([data.shape[3]], dtype=float)
-#    data_weight = np.empty([data.shape[3]], dtype=float)
-#    for _i in range(0, data.shape[3]):
-#        data_std[_i] = np.std(data[:, 1, 1, _i])
-#    for _i in range(0, data.shape[3]):
-#        data_weight[_i] = (1 - 2 * np.fabs(pvals[0, 1, _i] - 0.5) * 
-#                          np.amin(data_std)/data_std[_i])**2
-
-#    plotlabel="hist_2"
-#    label=["", "", "second pc"]
-#    fit.plot_histogram(data[0,1,1], data_weight, pvals[0, 1], lattice, d2, label, path, plotlabel)
-#
-#    for _i in range(0, data.shape[0]):
-#        res[_i][1] = fit.weighted_quantile(data[_i,1,1], data_weight, 0.5)
-#    res_std = np.std(res[:,1])
-#    res_16[1] = fit.weighted_quantile(data[0,1,1], data_weight, 0.16)
-#    res_84[1] = fit.weighted_quantile(data[0,1,1], data_weight, 0.84)
 
     # only median on original data is of interest later
     return res[0], res_std, res_syst
