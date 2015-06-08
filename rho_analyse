@@ -35,16 +35,18 @@ import corr_matrix as cm
 import fit
 import analyze_fcts as af
 
-def print_results(data, error):
+def print_results(data, staterror, systerror):
     """Prints the results to screen
     """
-    print("E dE  delta ddelta  tan dtan  sin2 dsin2")
+    print("E dE - +  delta ddelta - +  tan dtan - +  sin2 dsin2 - +")
     for _i in range(data.shape[0]):
-        print("%.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf" % (
-              data[_i,0], error[_i,0], data[_i,1], error[_i,1],
-              data[_i,2], error[_i,2], data[_i,3], error[_i,3]))
+        print("%.7lf %.7lf %.7lf %.7lf %.7lf %.7lf %.7lf %.7lf %.7lf %.7lf %.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf" % (
+              data[_i,0], staterror[_i,0], systerror[0,_i,0], systerror[1,_i,0],
+              data[_i,1], staterror[_i,1], systerror[0,_i,1], systerror[1,_i,1],
+              data[_i,2], staterror[_i,2], systerror[0,_i,2], systerror[1,_i,2],
+              data[_i,3], staterror[_i,3], systerror[0,_i,3], systerror[1,_i,3]))
 
-def write_results(data, error, filename):
+def write_results(data, staterror, systerror, filename):
     """Writes the results to file.
     """
     # check whether file exists
@@ -52,11 +54,13 @@ def write_results(data, error, filename):
         print(filename + " already exists, overwritting...")
     # open file for writting
     outfile = open(filename, "w")
-    outfile.write("E dE  delta ddelta  tan dtan  sin2 dsin2\n")
+    outfile.write("E dE - +  delta ddelta - +  tan dtan - +  sin2 dsin2 - +\n")
     for _i in range(data.shape[0]):
-        outfile.write("%.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf\n" % (
-              data[_i,0], error[_i,0], data[_i,1], error[_i,1],
-              data[_i,2], error[_i,2], data[_i,3], error[_i,3]))
+        outfile.write("%.7lf %.7lf %.7lf %.7lf %.7lf %.7lf %.7lf %.7lf %.7lf %.7lf %.7lf %.7lf  %.7lf %.7lf  %.7lf %.7lf\n" % (
+              data[_i,0], staterror[_i,0], systerror[0,_i,0], systerror[1,_i,0],
+              data[_i,1], staterror[_i,1], systerror[0,_i,1], systerror[1,_i,1],
+              data[_i,2], staterror[_i,2], systerror[0,_i,2], systerror[1,_i,2],
+              data[_i,3], staterror[_i,3], systerror[0,_i,3], systerror[1,_i,3]))
 
 def read_new_data(nbsamples, path, filelist, tmin, lattice, d2, verbose=False):
     """Read in data for a new configuration.
@@ -76,6 +80,53 @@ def read_new_data(nbsamples, path, filelist, tmin, lattice, d2, verbose=False):
     #io.write_data(gevp_mat, "./raw_data/gevp_rho_%s_TP%d.dat" % (lattice, d2))
     return gevp_mat
 
+def fit_corr_ranges(data, loborder, upborder, intervallsize, fitfunc, 
+                    start_params, tmin, lattice, d, verbose=True):
+    """Fits a correlation funktion for all intervalls in a specified range.
+    The function takes a bootstrapped matrix of principal correlators (solution 
+    of the GEVP). It fits the correlation function on every intervall in the 
+    range between low and up.
+
+    Args:
+        data: A numpy array with three axis. The first axis is the bootstrap 
+              sample number, the second axis is the time, the third axis is 
+              the eigenvalue numbers. 
+        loborder: The lower border for the intervalls.
+        upborder: The upper border for the intervalls.
+        intervallsize: Minimal number of points fitted to.
+        fitfunc: Pretty self-explanatory...
+        start_params: The starting parameters for the fit function.
+        tmin: Lower bound of the plot.
+        lattice: The name of the lattice, used for the output file.
+        d:    The total momentum of the reaction.
+
+    Returns:
+        res:  The fitted parameters on every bootstrapsample.
+        chi2: The chi^2 (without dividing by d.o.f) on every bootstrapsample.
+        pval: The p value indicating the quality of the fit.
+    """
+
+    label=["corr. fct. fit", "time", "C(t)"]
+    path="./plots/"
+    plotlabel="corr"
+    d2 = np.dot(d, d)
+    # construct all intervalls between loborder and upborder and call genfit
+    # with the interval as parameter. The intervalls are duplicated, as genfit
+    # expects a intervall for each principal correlator
+    # TODO: change res to list of np-array with an array for every principal 
+    # correlator
+    fit_intervalls = fit.set_fit_intervall(data, loborder, upborder, intervallsize)
+    res, chi2, pval = fit.genfit(data, fit_intervalls, fitfunc, start_params, 
+                                 tmin, lattice, d, label, path, plotlabel, 
+                                 verbose)
+#    cm.write_corr_matrix(res, "./raw_data/corr_fit_res_rho_%s_TP%d.npy" % (
+#                   lattice, d2))
+#    cm.write_corr_matrix(chi2, "./raw_data/corr_fit_chi2_rho_%s_TP%d.npy" % (
+#                   lattice, d2))
+#    cm.write_corr_matrix(pval, "./raw_data/corr_fit_pval_rho_%s_TP%d.npy" % (
+#                         lattice, d2))
+    return res, chi2, pval
+
 def fit_corr(data, lolist, uplist, fitfunc, start_params, tmin, lattice, d,
              verbose=True):
     """Fit a correlation function.
@@ -86,12 +137,12 @@ def fit_corr(data, lolist, uplist, fitfunc, start_params, tmin, lattice, d,
     d2 = np.dot(d, d)
     res, chi2, pval = fit.genfit(data, lolist, uplist, fitfunc, start_params, tmin,
         lattice, d, label, path, plotlabel, verbose)
-    cm.write_corr_matrix(res, "./raw_data/corr_fit_res_rho_%s_TP%d.npy" % (
-                         lattice, d2))
-    cm.write_corr_matrix(chi2, "./raw_data/corr_fit_chi2_rho_%s_TP%d.npy" % (
-                         lattice, d2))
-    cm.write_corr_matrix(pval, "./raw_data/corr_fit_pval_rho_%s_TP%d.npy" % (
-                         lattice, d2))
+#    cm.write_corr_matrix(res, "./raw_data/corr_fit_res_rho_%s_TP%d.npy" % (
+#                   lattice, d2))
+#    cm.write_corr_matrix(chi2, "./raw_data/corr_fit_chi2_rho_%s_TP%d.npy" % (
+#                   lattice, d2))
+#    cm.write_corr_matrix(pval, "./raw_data/corr_fit_pval_rho_%s_TP%d.npy" % (
+#                         lattice, d2))
     return res, chi2, pval
 
 
@@ -140,7 +191,97 @@ def read_fit_mass(lattice, d):
                          lattice, d2))
     return res, chi2, pval
 
-def calc_phaseshift(data, L, d, lattice, mpi, verbose=True):
+def calc_error(data, pvals, d, lattice):
+    """Calculates the statistical and systematic error of an np-array of 
+    fit results on bootstrap samples of a quantity and the corresponding 
+    p-values.
+
+    Args:
+        data: A numpy array with three axis. The first axis is the bootstrap 
+              sample number, the second axis is the time, the third axis is 
+              the eigenvalue numbers. 
+
+        pvals: The p value indicating the quality of the fit.
+        lattice: The name of the lattice, used for the output file.
+        d:    The total momentum of the reaction.
+
+    Returns:
+        res: The weighted median value on the original data
+        res_std: The standard deviation derived from the deviation of 
+              medians on the bootstrapped data.
+        res_syst: 1 sigma systematic uncertainty is the difference 
+              res - 16%-quantile or 84%-quantile - res respectively
+    """
+
+    d2 = np.dot(d, d)
+
+    data_std = np.empty([data.shape[2]], dtype=float)
+    data_weight = np.empty([data.shape[2]], dtype=float)
+
+    res = np.empty([data.shape[0], data.shape[1]], dtype=float)
+    res_std = np.empty([data.shape[1]], dtype=float)
+    res_syst = np.empty([2, data.shape[1]], dtype=float)
+
+    path="./plots/"
+
+    # loop over principal correlators
+    for _j in range(0, data.shape[1]):
+
+        # calculate the 
+    
+        # calculate the standard deviation of the bootstrap samples and from
+        # that and the p-values the weight of the fit for every chosen interval
+        for _k in range(0, data.shape[2]):
+            data_std[_k] = np.std(data[:, 0, _k])
+        for _k in range(0, data.shape[2]):
+            data_weight[_k] = (1 - 2 * np.fabs(pvals[0, 0, _k] - 0.5) * 
+                              np.amin(data_std)/data_std[_k])**2
+
+        # draw original data as histogram
+        plotlabel = 'hist_%d"' % _j
+        label = ["", "", "principal correlator"]
+        fit.plot_histogram(data[0,_j], data_weight, pvals[0, _j], lattice, d2, 
+                           label, path, plotlabel)
+
+        # using the weights, calculate the median over all fit intervalls for
+        # every bootstrap sample.
+        for _i in range(0, data.shape[0]):
+            res[_i, _j] = fit.weighted_quantile(data[_i, _j], data_weight, 0.5)
+        # the statistical error is the standard deviation of the medians over
+        # the bootstrap samples.
+        res_std = np.std(res[:,_j])
+        # the systematic error is given by difference between the median on the 
+        # original data and the 16%- or 84%-quantile respectively
+        res_syst[0, _j] = res[0, _j] - fit.weighted_quantile(data[0, _j], data_weight, 0.16)
+        res_syst[1, _j] = fit.weighted_quantile(data[0, _j], data_weight, 0.84) - res[0, _j]
+
+#    print('res 1 %lf +- %lf (stat) + %lf - %lf (syst)' % (res[0][0], 
+#          res_std, res[0][0] - res_16[0], res_84[0] - res[0][0]))
+
+
+#    data_std = np.empty([data.shape[3]], dtype=float)
+#    data_weight = np.empty([data.shape[3]], dtype=float)
+#    for _i in range(0, data.shape[3]):
+#        data_std[_i] = np.std(data[:, 1, 1, _i])
+#    for _i in range(0, data.shape[3]):
+#        data_weight[_i] = (1 - 2 * np.fabs(pvals[0, 1, _i] - 0.5) * 
+#                          np.amin(data_std)/data_std[_i])**2
+
+#    plotlabel="hist_2"
+#    label=["", "", "second pc"]
+#    fit.plot_histogram(data[0,1,1], data_weight, pvals[0, 1], lattice, d2, label, path, plotlabel)
+#
+#    for _i in range(0, data.shape[0]):
+#        res[_i][1] = fit.weighted_quantile(data[_i,1,1], data_weight, 0.5)
+#    res_std = np.std(res[:,1])
+#    res_16[1] = fit.weighted_quantile(data[0,1,1], data_weight, 0.16)
+#    res_84[1] = fit.weighted_quantile(data[0,1,1], data_weight, 0.84)
+
+    # only median on original data is of interest later
+    return res[0], res_std, res_syst
+
+
+def calc_phaseshift(data, pvals, L, d, lattice, mpi, verbose=True):
     """Calculates the phaseshift from fit data.
 
     Args:
@@ -153,9 +294,19 @@ def calc_phaseshift(data, L, d, lattice, mpi, verbose=True):
     Returns:
     """
     d2 = np.dot(d, d)
-    odata = np.zeros((data.shape[1], 4))
-    mdata = np.zeros_like(odata)
-    ddata = np.zeros_like(odata)
+
+    # results for original data. data.shape[1] is the number of the 
+    # gevp-eigenvalue
+#    odata = np.zeros((data.shape[1], 4))
+    # result for weighted median
+    meandata = np.zeros((data.shape[1], 4))
+    # result for statistical error
+    statdata = np.zeros_like(meandata)
+    # result for systematic error. Additional 2 because asymetric.
+    systdata = np.zeros((2, data.shape[1], 4))
+
+    # the calculations are carried through on every bootstrap sample and median
+    # as well as errors are calculated directly from the corresponding samples.
 
     if verbose:
         print("calculating CM energy")
@@ -165,42 +316,56 @@ def calc_phaseshift(data, L, d, lattice, mpi, verbose=True):
     q2 = af.calculate_q(Ecm, mpi, L)
     if verbose:
         print("calculating delta")
-    delta, tandelta = af.calculate_delta(q2, gamma, d)
+    delta, tandelta, sindelta = af.calculate_delta(q2, gamma, d)
 
-    mdata[:,0], ddata[:,0] = af.return_mean_corr(Ecm)
-    mdata[:,1], ddata[:,1] = af.return_mean_corr(delta)
-    mdata[:,2], ddata[:,2] = af.return_mean_corr(tandelta)
-    mdata[:,3] = np.sin(mdata[:,1])**2
-    ddata[:,3] = np.abs(np.sin(mdata[:,1]*2.)*ddata[:,1])
-    odata[:,0] = Ecm[0]
-    odata[:,1] = delta[0]
-    odata[:,2] = tandelta[0]
-    odata[:,3] = np.sin(delta[0])**2
+    # data, gamma, Ecm, q2, delta, tandelta are all coded to have the same 
+    # shape. calc_error can be used analogeously to obtain weighted median,
+    # statistical and systematic error.
+
+    meandata[:,0], statdata[:,0], systdata[:,:,0] = calc_error(Ecm, pvals, d, lattice)
+    meandata[:,1], statdata[:,1], systdata[:,:,1] = calc_error(delta, pvals, d, lattice)
+    meandata[:,2], statdata[:,2], systdata[:,:,2] = calc_error(tandelta, pvals, d, lattice)
+    meandata[:,3], statdata[:,3], systdata[:,:,3] = calc_error(sindelta, pvals, d, lattice)
+#    odata[:,0] = Ecm[0]
+#    odata[:,1] = delta[0]
+#    odata[:,2] = tandelta[0]
+#    odata[:,3] = sindelta[0]
+
+#    mdata[:,0], statdata[:,0] = af.return_mean_corr(Ecm)
+#    mdata[:,1], statdata[:,1] = af.return_mean_corr(delta)
+#    mdata[:,2], statdata[:,2] = af.return_mean_corr(tandelta)
+#    mdata[:,3] = np.sin(mdata[:,1])**2
+#    statdata[:,3] = np.abs(np.sin(mdata[:,1]*2.)*statdata[:,1])
+#    odata[:,0] = Ecm[0]
+#    odata[:,1] = delta[0]
+#    odata[:,2] = tandelta[0]
+#    odata[:,3] = np.sin(delta[0])**2
 
     # print data
-    print_results(odata, ddata)
-    #print_results(mdata, ddata)
-    filename="./data_corr_%s_TP%d.dat" % (lattice, d2)
-    write_results(odata, ddata, filename)
+    print_results(meandata, statdata, systdata)
+    #print_results(meandata, statdata)
+#    filename="./data_corr_%s_TP%d.dat" % (lattice, d2)
+#    write_results(odata, statdata, systdata, filename)
     filename="./data_mean_%s_TP%d.dat" % (lattice, d2)
-    write_results(mdata, ddata, filename)
+    write_results(meandata, statdata, systdata, filename)
 
-    return odata, mdata, ddata
+#    return odata, meandata, statdata, systdata
+    return meandata, statdata, systdata
 
 def setup_lattice(lattice, d):
     """Setup of the pion mass, lattice size and fit ranges.
     """
     # the general settings don't make sense!
     mpi=0.11111 
-    L=1
-    T=1
-    lolist = np.array((1,4))
-    lolist = np.array((2,6))
+    L=24
+    T=48
+    lolist = np.array((5,5))
+    uplist = np.array((T/2-1,T/2-1))
     ### setting for each lattice and moving frame
     if lattice == "A30.32": ###################################################
         mpi=0.1239
         L=32
-        T=96
+        T=64
         if np.array_equal(d, np.array([0., 0., 0.])):
             lolist=np.array((9, 11))
             uplist=np.array((16, 15))
@@ -306,10 +471,93 @@ def setup_lattice(lattice, d):
 
     return mpi, L, T, lolist, uplist
 
+def setup_lattice_ranges(lattice, d):
+    """Setup of the pion mass, lattice size and borders for fit intervals
+
+    Args: 
+      lattice: Lattice name e.g. "A40.24".
+      d:    The total momentum of the reaction.
+
+    Returns:
+      mpi:  Effective mass of the 2pt pseudoscalar.
+      L:    Spatial lattice extent.
+      T:    Temporal lattice extent.
+      loborder: Array with lower borders for all intervalls to fit.
+            Contains two entries, one for each principal correlator.
+      upborder: Array with upper border for all intervalls to fit.
+            Contains two entries, one for each principal correlator.
+    """
+
+    # the general settings don't make sense!
+    loborder = np.array((6,6))
+    upborder = np.array((23, 23))
+
+
+    # the general settings don't make sense!
+    mpi=0.11111 
+    L=24
+    T=48
+    ### setting for each lattice
+    if lattice == "A40.20": ####################################################
+        mpi=0.14
+        L=20
+        T=48
+    elif lattice == "A40.24": ##################################################
+        mpi=0.14463
+        L=24
+        T=48
+    elif lattice == "A40.32": ##################################################
+        mpi=0.14151
+        L=32
+        T=64
+
+    ### TODO: is that necessary? Can also use
+    ### TODO: incorporate thermal states and change fit-intervall to whole range
+    loborder=np.array((10, 10))
+    upborder=np.array((T/3+1, T/3+1))
+#    upborder=np.array((27, 27))
+
+#    if np.array_equal(d, np.array([0., 0., 0.])):
+#        loborder=np.array((13, 13))
+#        upborder=np.array((18, 18))
+#    elif np.array_equal(d, np.array([0., 0., 1.])):
+#        print("not yet looked at")
+#        loborder=np.array((13, 13))
+#        upborder=np.array((18, 18))
+#    elif np.array_equal(d, np.array([1., 1., 0.])):
+#        loborder=np.array((13, 13))
+#        upborder=np.array((18, 18))
+
+#    ### setting for each moving frame
+#    if np.array_equal(d, np.array([0., 0., 0.])):
+##       loborder=np.array((9, 7))
+#        loborder=np.array((7, 7))
+##        loborder=np.array((13, 13))
+##        upborder=np.array((17, 23))
+#        upborder=np.array((23, 23))
+##        upborder=np.array((18, 18))
+#    elif np.array_equal(d, np.array([0., 0., 1.])):
+##        loborder=np.array((12, 7))
+#        loborder=np.array((7, 7))
+##        loborder=np.array((13, 13))
+##        upborder=np.array((16, 17))
+#        upborder=np.array((22, 22))
+##        upborder=np.array((18, 18))
+#    elif np.array_equal(d, np.array([1., 1., 0.])):
+##        loborder=np.array((8, 6))
+#        loborder=np.array((6, 6))
+##        loborder=np.array((13, 13))
+##        upborder=np.array((20, 19))
+#        upborder=np.array((20, 20))
+##        upborder=np.array((18, 18))
+
+
+    return mpi, L, T, loborder, upborder
+
 def analyse(lattice="A40.24", d=np.array([0., 0., 0.]), verbose=True):
     #######################################################
     ## definition of main variables
-    nbsamples = 2500 # number of bootstrap samples
+    nbsamples = 1500 # number of bootstrap samples
     tmin=1 # t0 for the GEVP calculation
     #d = np.array([0., 0., 1.]) # total momemtum of the system
     #lattice="A40.24" # lattice to analyse
@@ -333,24 +581,29 @@ def analyse(lattice="A40.24", d=np.array([0., 0., 0.]), verbose=True):
     #######################################################
     ## setting variables
     d2 = np.dot(d, d)
-    path="".join(("/hiskp2/jost/data/rho_analyse/" + lattice + "/"))
+    path="".join(("/hiskp2/werner/analyse/" + lattice + "_mv%d" % d2 + "/Analysis/"))
     filelist = ["rho_corr_TP%d_00" % d2, "rho_corr_TP%d_01" % d2,\
-                "rho_corr_TP%d_01" %d2, "rho_corr_TP%d_11" % d2]
-    mpi, L, T, lolist, uplist = setup_lattice(lattice, d)
+                "rho_corr_TP%d_01" % d2, "rho_corr_TP%d_11" % d2]
+#    filelist = ["rho_corr_TP%d_00" % d2]
+    mpi, L, T, loborder, upborder = setup_lattice_ranges(lattice, d)
     ## print what is being calculated
     print("lattice %s, TP %d" % (lattice, d2))
 
     ## read in new data
-    #gevp_mat = read_new_data(nbsamples, path, filelist, tmin, lattice, d2)
+    gevp_mat = read_new_data(nbsamples, path, filelist, tmin, lattice, d2)
 
     ## read in solution of GEVP
-    #gevp_mat = io.read_npy_data("./raw_data/gevp_mat_rho_%s_TP%d.npy" % (lattice, d2))
+#    gevp_mat = io.read_npy_data("./raw_data/gevp_mat_rho_%s_TP%d.npy" % (lattice, d2))
 
     ## fit correlation function
-    #res, chi2, pvals = fit_corr(gevp_mat, lolist, uplist, fitfunc, start_params,
-    #    tmin, lattice, d)
-    res, chi2, pvals = read_fit_corr(lattice, d)
+    ## TODO: Was ist res eigentlich?
+    res, chi2, pvals = fit_corr_ranges(gevp_mat, loborder, upborder, 5, fitfunc, 
+                                       start_params, tmin, lattice, d, False)
+    #res, chi2, pvals = read_fit_corr(lattice, d)
     #return
+
+#    energy, energy_std, energy_16, energy_84 = calc_error(res, pvals, d, lattice)
+
 
     ## fit mass function NOT YET TESTED
     #massres, masschi2, masspvals = fit_mass(gevp_mat, lolist, uplist, massfunc,
@@ -359,25 +612,93 @@ def analyse(lattice="A40.24", d=np.array([0., 0., 0.]), verbose=True):
     #print(np.array_equal(massres, massres1))
 
     ## calculate phaseshift
-    odata, mdata, ddata = calc_phaseshift(res[:,1], L, d, lattice, mpi)
+    # res[:,1] is the fit data for the energy fit parameter. The amplitude is 
+    # neglected.
+    meandata, statdata, systdata = calc_phaseshift(res[:,1], pvals, L, d, lattice, mpi)
+
     return
 
+#def analyse(lattice="A40.24", d=np.array([0., 0., 0.]), verbose=True):
+#    #######################################################
+#    ## definition of main variables
+#    nbsamples = 2500 # number of bootstrap samples
+#    tmin=1 # t0 for the GEVP calculation
+#    #d = np.array([0., 0., 1.]) # total momemtum of the system
+#    #lattice="A40.24" # lattice to analyse
+#    #######################################################
+#    # these variables are overwritten
+#    T=48
+#    L=24
+#    mpi=0.14463 # A40.24 from Carstens pipi I=2 analysis
+#    #######################################################
+#    ## define the fit function and start parameters
+#    #fitfunc = lambda p,t: p[0]*np.cosh((T/2.0-t)*p[1])
+#    #start_params = [0.005, -0.5]
+#    #fitfunc = lambda p,t: p[0]*np.exp(-p[1]*t)
+#    #start_params = [1.0, 0.5]
+#    #fitfunc = lambda p,t: np.exp(-p[0]*t)
+#    #start_params = [0.5]
+#    fitfunc = lambda p,t: 10e6 if p[1] < 0. else 0.5*p[0]*p[0]*(np.exp(-p[1]*t) + np.exp(-p[1]*(T-t)))
+#    start_params = [1, 0.5]
+#    massfunc = lambda p, t: p
+#    mass_sparams = [0.5]
+#    #######################################################
+#    ## setting variables
+#    d2 = np.dot(d, d)
+#    path="".join(("/hiskp2/werner/analyse/" + lattice + "_mv%d" % d2 + "/Analysis/"))
+#    filelist = ["rho_corr_TP%d_00" % d2, "rho_corr_TP%d_01" % d2,\
+#                "rho_corr_TP%d_01" % d2, "rho_corr_TP%d_11" % d2]
+#    mpi, L, T, lolist, uplist = setup_lattice_ranges(lattice, d)
+#    ## print what is being calculated
+#    print("lattice %s, TP %d" % (lattice, d2))
+#
+#    ## read in new data
+#    #gevp_mat = read_new_data(nbsamples, path, filelist, tmin, lattice, d2)
+#
+#    ## read in solution of GEVP
+#    gevp_mat = io.read_npy_data("./raw_data/gevp_mat_rho_%s_TP%d.npy" % (lattice, d2))
+#
+#    ## fit correlation function
+#    res, chi2, pvals = fit_corr(gevp_mat, lolist, uplist, fitfunc, start_params,
+#        tmin, lattice, d)
+#    #res, chi2, pvals = read_fit_corr(lattice, d)
+#    #return
+#
+#    ## fit mass function NOT YET TESTED
+#    #massres, masschi2, masspvals = fit_mass(gevp_mat, lolist, uplist, massfunc,
+#    #    mass_sparams, tmin, lattice, d)
+#    #massres1, masschi21, masspvals1 = read_fit_mass(lattice, d)
+#    #print(np.array_equal(massres, massres1))
+#
+#    ## calculate phaseshift
+#    odata, mdata, ddata = calc_phaseshift(res[:,1], L, d, lattice, mpi)
+#
+#    return
+
 def main():
-    d0 = np.array([0., 0., 0.]) # total momemtum of the system
-    d1 = np.array([0., 0., 1.]) # total momemtum of the system
-    d2 = np.array([1., 1., 0.]) # total momemtum of the system
-    d3 = np.array([1., 1., 1.]) # total momemtum of the system
+    d0 = np.array([0., 0., 0.]) # total momentum of the system
+    d1 = np.array([0., 0., 1.]) # total momentum of the system
+    d2 = np.array([1., 1., 0.]) # total momentum of the system
+    d3 = np.array([1., 1., 1.]) # total momentum of the system
+    d4 = np.array([0., 0., 2.]) # total momentum of the system
     lattices=["A30.32", "A40.20", "A40.24", "A40.32", "A60.24",\
               "A80.24", "A100.24"]
-    #analyse(lattices[0], d0)
-    #analyse(lattices[0], d1)
-    #analyse(lattices[1], d0) 
-    #analyse(lattices[1], d1) # not complete
-    #analyse(lattices[1], d2) # did not converge
+#    analyse(lattices[2], d3)
+#    analyse(lattices[3], d0)
+#    analyse(lattices[3], d1)
+#    analyse(lattices[3], d2)
+#    analyse(lattices[3], d3) # did not converge
+#    analyse(lattices[3], d4)
+#    analyse(lattices[1], d0) 
+#    analyse(lattices[1], d1)
+#    analyse(lattices[1], d2)
+#    analyse(lattices[1], d3) # did not converge
+#    analyse(lattices[1], d4)
     analyse(lattices[2], d0)
     #analyse(lattices[2], d1)
     #analyse(lattices[2], d2)
     #analyse(lattices[2], d3)
+#    analyse(lattices[2], d4)
     #analyse(lattices[3], d0)
     #analyse(lattices[3], d1) # not complete
     #analyse(lattices[3], d2)
