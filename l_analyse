@@ -115,8 +115,8 @@ def read_in_data(cut=3., debug=False):
     cov[n32:(n32+n24), (n32+n24):] = 0.
     cov[(n32+n24):, n32:(n32+n24)] = 0.
     # invert covariance matrix
-    cov = np.linalg.inv(cov)
-    #cov = np.linalg.cholesky(np.linalg.inv(cov))
+    #cov = np.linalg.inv(cov)
+    cov = np.linalg.cholesky(np.linalg.inv(cov))
     if debug:
         print("cov:")
         print(cov.shape)
@@ -134,7 +134,7 @@ def main():
     r0 = 12.
     a2 = -.0075
     r2 = 0.
-    h = np.array([0.5, 3.5, 0.01])
+    h = np.array([0.5, 2., 0.01])
     par = np.array([a0, r0, a2, r2])
     try:
         # read all data
@@ -144,8 +144,9 @@ def main():
             print(data[0])
 
         # solve
-        ana.minimizer(data, mpi, cov, infolist, a0, r0, a2, r2, h, N)
-        #ana.min2(par, N, data, mpi, cov, infolist)
+        #ana.minimizer(data, mpi, cov, infolist, a0, r0, a2, r2, h, N)
+        res, chi2 = ana.min3(par, N, data, mpi, cov, infolist, h)
+        print("%.10lf %.10lf %.10lf %.10lf\n" % (1./res[0], res[1], 1/res[2], chi2) )
 
     except KeyboardInterrupt:
         print("\nKeyboard Interrupt, exiting...")

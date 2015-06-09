@@ -47,6 +47,8 @@ import numpy as np
 import scipy.special
 import scipy.integrate
 
+from _zeta_memoize import memoize
+
 def zeta_n(function):
     path = "./momenta.npy"
     if not os.path.isfile(path):
@@ -147,13 +149,12 @@ def appendSpherical_np(xyz):
 # coordinates 
 ################################################################################
 def compute_r_in_spherical_coordinates(a, d, gamma, m_split):
-  out = np.zeros(a.shape)
+  out = np.zeros_like(a)
   if (np.linalg.norm(d) == 0.0):
-    for r, i in zip(a, xrange(0,a.shape[0])):
-      out[i,:] = r/gamma
+    out = a/gamma
   # splitting every vector in a in parallel and orthogonal part w.r.t. d
   else:
-    for r, i in zip(a, xrange(0,a.shape[0])):
+    for i, r in enumerate(a):
       r_p = np.dot(r, d)/np.dot(d,d)*d 
       r_o = r-r_p
       out[i,:] = (r_p-0.5*m_split*d)/gamma + r_o
@@ -176,6 +177,18 @@ def sph_harm(m = 0, l = 0, phi = 0, theta = 0):
     return 0.31539156525252005*(3.*np.cos(theta)*np.cos(theta) - 1.)
   elif l is 2 and m is  2:
     return 0.38627420202318957*np.sin(theta)*np.sin(theta) * np.exp(2.*1.j*phi)
+  elif l is 4 and m is -4:
+    return 0.44253269244498263*np.sin(theta)**4*np.exp(-4.*1.j*phi)
+  elif l is 4 and m is -2:
+    return 0.33452327177864458*\
+        np.sin(theta)**2.*(7.*np.cos(theta)**2. - 1.)*np.exp(-2.*1.j*phi)
+  elif l is 4 and m is  0:
+    return 0.10578554691520430*(35.*np.cos(theta)**4 - 30.*np.cos(theta)**2 +3.)
+  elif l is 4 and m is  2:
+    return 0.33452327177864458*\
+        np.sin(theta)**2.*(7.*np.cos(theta)**2. - 1.)*np.exp(2.*1.j*phi)
+  elif l is 4 and m is  4:
+    return 0.44253269244498263*np.sin(theta)**4*np.exp(4.*1.j*phi)
   else:
     return scipy.special.sph_harm(m, l, phi, theta)
 
@@ -192,24 +205,20 @@ def return_momentum_array(p, n):
 ################################################################################
 def compute_summands_A(a_sph, q, l, m): 
   inter = []
-  counter = 0
-  for r in a_sph:
+  for count, r in enumerate(a_sph):
     breaker = 0
-    if counter > 0: # one way to avoid double computation
-      for i in xrange(0, counter):
-        if abs(float(r[0]) - float(a_sph[i, 0])) < 1e-8:
-          inter.append(inter[i])
-          breaker = 1
-          break
+    # one way to avoid double computation
+    for i in xrange(0, count):
+      if abs(float(r[0]) - float(a_sph[i, 0])) < 1e-8:
+        inter.append(inter[i])
+        breaker = 1
+        break
     if breaker == 0:
       inter.append((np.exp(-(r[0]**2.-q)) * r[0]**l) / (r[0]**2-q))
-    counter += 1
 
   result = 0.0 
-  counter = 0
-  for r in a_sph:
-    result += inter[counter]*sph_harm(m, l, r[2], r[1]) 
-    counter += 1
+  for count, r in enumerate(a_sph):
+    result += inter[count]*sph_harm(m, l, r[2], r[1]) 
   return result
 
 # Computation of term A
@@ -243,6 +252,7 @@ def A(q, gamma, l, m, d, precision, verbose, m_split, n):
 
 # Computation of term B
 ################################################################################
+#@memoize(5000)
 def B(q, gamma, l, precision, verbose):
   if l is not 0:
     return 0.0 
@@ -286,15 +296,13 @@ def compute_summands_C(w_sph, w, q, gamma, l, m, d, m_split, precision):
           sph_harm(m, l, w_sph[:,2], w_sph[:,1])
   # Factor two: The integral 
   part2 = []
-  counter = 0
-  for ww in w_sph:
+  for count, ww in enumerate(w_sph):
     breaker = 0
-    if counter > 0: # one way to avoid double computation
-      for i in xrange(0, counter):
-        if abs(float(ww[0]) - float(w_sph[i, 0])) < 1e-8:
-          part2.append(part2[i])
-          breaker = 1
-          break
+    for i in xrange(0, count):
+      if abs(float(ww[0]) - float(w_sph[i, 0])) < 1e-8:
+        part2.append(part2[i])
+        breaker = 1
+        break
     if breaker == 0:
       # the precision in this integral might be crucial at some point but it is
       # rather high right now with a standard of 1e-8. It should be enough
@@ -302,7 +310,6 @@ def compute_summands_C(w_sph, w, q, gamma, l, m, d, m_split, precision):
       part2.append((scipy.integrate.quadrature(integrand, 0., 1., \
                     args=(q, l, (math.pi*ww[0])**2), tol = precision*0.1, \
                     maxiter=1000))[0])
-    counter += 1
   part2 = np.asarray(part2, dtype=float)
   # return the result
   return np.dot(part1, part2)

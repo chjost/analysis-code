@@ -28,522 +28,11 @@
 
 import os
 import numpy as np
-#import numpy.ma as ma
-#import scipy.optimize as opt
+import scipy.optimize as opt
 
 from _memoize import memoize
-#from _determinants import *
 from ._calc_energies import (EfromMpi, WfromE)
 from findroot import root
-
-#@memoize(50)
-#def WfromE(E, d=np.array([0., 0., 0.]), L=24):
-#    """Calculates the CM energery from the energy.
-#
-#    Args:
-#        E: the energy
-#        d: total momentum vector of the system
-#        L: lattice size
-#
-#    Returns:
-#        The center of mass energy.
-#    """
-#    return np.sqrt(E*E + np.dot(d, d) * 4. * np.pi*np.pi / (float(L)*float(L)))
-#
-#@memoize(50)
-#def EfromW(W, d=np.array([0., 0., 0.]), L=24):
-#    """Calculates the moving frame energy from the CM energy.
-#
-#    Args:
-#        W: the energy
-#        d: total momentum vector of the system
-#        L: lattice size
-#
-#    Returns:
-#        The energy.
-#    """
-#    return np.sqrt(W*W - np.dot(d, d) * 4. * np.pi*np.pi / (float(L)* float(L)))
-#
-#@memoize(50)
-#def WfromE_lat(E, d=np.array([0., 0., 0.]), L=24):
-#    """Calculates the CM energery from the energy using the lattice dispersion
-#    relation.
-#
-#    Args:
-#        E: the energy
-#        d: total momentum vector of the system
-#        L: lattice size
-#
-#    Returns:
-#        The center of mass energy.
-#    """
-#    return np.arccosh(np.cosh(E) + 2. * np.sum(np.sin(d*np.pi/float(L))**2))
-#
-#@memoize(50)
-#def EfromW_lat(W, d=np.array([0., 0., 0.]), L=24):
-#    """Calculates the moving frame energy from the CM energy using the lattice
-#    dispersion relation.
-#
-#    Args:
-#        W: the energy
-#        d: total momentum vector of the system
-#        L: lattice size
-#
-#    Returns:
-#        The energy.
-#    """
-#    return np.arccosh(np.cosh(E) - 2. * np.sum(np.sin(d*np.pi/float(L))**2))
-#
-#@memoize(50)
-#def EfromMpi(mpi, q, L):
-#    """Calculates the center of mass energy for a pion with momentum q.
-#
-#    Args:
-#        mpi: pion mass
-#        q: pion momentum
-#        L: lattice size
-#
-#    Returns:
-#        The energy.
-#    """
-#    return 2.*np.sqrt(mpi*mpi + 4.*q*q*np.pi*np.pi/(float(L)*float(L)))
-#
-#@memoize(50)
-#def EfromMpi_lat(mpi, q, L):
-#    """Calculates the center of mass energy for a pion with momentum q using
-#    the lattice dispersion relation.
-#
-#    Args:
-#        mpi: pion mass
-#        q: pion momentum
-#        L: lattice size
-#
-#    Returns:
-#        The energy.
-#    """
-#    return 2. * np.arccosh(np.cosh(mpi) + 2. * np.sin(q * np.pi / float(L))**2)
-#
-#@memoize(50)
-#def calc_gamma(q2, mpi, L, d):
-#    """Calculates the Lorentz boost factor for the given energy and momentum.
-#
-#    Args:
-#        q2: the momentum squared
-#        mpi: the pion mass
-#        L: the lattice size
-#        d: the total momentum vector of the system
-#
-#    Returns:
-#        The Lorentz boost factor.
-#    """
-#    E = EfromMpi(mpi, np.sqrt(q2), L)
-#    return WfromE(E, d, L) / E
-
-#@memoize(200)
-#def SinglePoints(mpi, L, N, P=1):
-#    """Calculates the singular points for moving frames.
-#    Only calculates up to N=6 for MF1 and to N=7 for MF2 and MF3.
-#    Higher moving frames not available yet.
-#
-#    Args:
-#        mpi: lattice pion mass
-#        L: lattice size
-#        N: the singular point to be calculated 
-#        P: The squared total momentum.
-#
-#    Returns:
-#        Nth singular point for the Pth moving frame.
-#    """
-#    if P == 1 and N > 6:
-#        print("SinglePoints only calculates the lowest 7 points for MF1")
-#        os.sys.exit(-5)
-#    elif (P == 2 or P == 3) and (N > 7):
-#        print("SinglePoints only calculates the lowest 8 points for MF%1d" % P)
-#        os.sys.exit(-5)
-#    # lowest momenta squared for two free particles
-#    if P == 1:
-#        k1 = np.array([0. ,1., 1., 2., 2., 3., 4.])
-#        k2 = np.array([1. ,2., 4., 3., 5., 6., 5.])
-#    elif P == 2:
-#        k1 = np.array([0. ,1., 1., 2., 1., 2., 2., 3.])
-#        k2 = np.array([2. ,1., 3., 2., 5., 4., 6., 5.])
-#    elif P == 3:
-#        k1 = np.array([0. ,1., 1., 2., 3., 2., 3., 5.])
-#        k2 = np.array([3. ,2., 6., 5., 4., 9., 8., 6.])
-#    piL = np.pi*np.pi / (float(L) * float(L))
-#    mpi2 = mpi*mpi
-#    W = np.sqrt(k1[N] * 4. * piL + mpi2) + np.sqrt(k2[N] * 4. * piL + mpi2)
-#    E = np.sqrt(W*W - 4. * piL)
-#    q2 = ((E*E - 2. * mpi2)*(E*E - 2. * mpi2) - 4. * mpi2*mpi2) / (4. * E*E)
-#    return q2 * float(L)*float(L) / (4. * np.pi*np.pi)
-#
-#@memoize(100)
-#def SinglePointsP1(mpi, L, N):
-#    """Calculates the singular points for first moving frame.
-#    Only calculates up to N=6.
-#
-#    Args:
-#        mpi: lattice pion mass
-#        L: lattice size
-#        N: the singular point to be calculated 
-#
-#    Returns:
-#        nth singular point
-#    """
-#    if (N > 6):
-#        print("SinglePointsP1 only calculates the lowest 7 points")
-#        os.sys.exit(-5)
-#    # lowest momenta squared for two free particles for total momentum 1
-#    k1 = np.array([0. ,1., 1., 2., 2., 3., 4.])
-#    k2 = np.array([1. ,2., 4., 3., 5., 6., 5.])
-#    piL = np.pi*np.pi / (float(L) * float(L))
-#    mpi2 = mpi*mpi
-#    W = np.sqrt(k1[N] * 4. * piL + mpi2) + np.sqrt(k2[N] * 4. * piL + mpi2)
-#    E = np.sqrt(W*W - 4. * piL)
-#    q2 = ((E*E - 2. * mpi2)*(E*E - 2. * mpi2) - 4. * mpi2*mpi2) / (4. * E*E)
-#    return q2 * float(L)*float(L) / (4. * np.pi*np.pi)
-#
-#@memoize(100)
-#def SinglePointsP2(mpi, L, N):
-#    """Calculates the singular points for second moving frame
-#    Only calculates up to N=7.
-#
-#    Args:
-#        mpi: lattice pion mass
-#        L: lattice size
-#        N: the singular point to be calculated 
-#
-#    Returns:
-#        nth singular point
-#    """
-#    if (N > 7):
-#        print("SinglePointsP2 only calculates the lowest 8 points")
-#        os.sys.exit(-5)
-#    # lowest momenta squared for two free particles for total momentum 2
-#    k1 = np.array([0. ,1., 1., 2., 1., 2., 2., 3.])
-#    k2 = np.array([2. ,1., 3., 2., 5., 4., 6., 5.])
-#    piL = np.pi*np.pi / (float(L) * float(L))
-#    mpi2 = mpi*mpi
-#    W = np.sqrt(k1[N] * 4. * piL + mpi2) + np.sqrt(k2[N] * 4. * piL + mpi2)
-#    E = np.sqrt(W*W - 2. * 4. * piL)
-#    q2 = ((E*E - 2. * mpi2)*(E*E - 2. * mpi2) - 4. * mpi2*mpi2) / (4. * E*E)
-#    return q2 * float(L)*float(L) / (4. * np.pi*np.pi)
-#
-#@memoize(100)
-#def SinglePointsP3(mpi, L, N):
-#    """Calculates the singular points for third moving frame
-#    Only calculates up to N=7.
-#
-#    Args:
-#        mpi: lattice pion mass
-#        L: lattice size
-#        N: the singular point to be calculated 
-#
-#    Returns:
-#        nth singular point
-#    """
-#    if (N > 7):
-#        print("SinglePointsP3 only calculates the lowest 8 points")
-#        os.sys.exit(-5)
-#    # lowest momenta squared for two free particles for total momentum 3
-#    k1 = np.array([0. ,1., 1., 2., 3., 2., 3., 5.])
-#    k2 = np.array([3. ,2., 6., 5., 4., 9., 8., 6.])
-#    piL = np.pi*np.pi / (float(L) * float(L))
-#    mpi2 = mpi*mpi
-#    W = np.sqrt(k1[N] * 4. * piL + mpi2) + \
-#        np.sqrt(k2[N] * 4. * piL + mpi2)
-#    E = np.sqrt(W*W - 3. * 4. * piL)
-#    q2 = ((E*E - 2. * mpi*mpi)*(E*E - 2. * mpi*mpi) - 4. * mpi2*mpi2) / (4.*E*E)
-#    return q2 * float(L)*float(L) / (4. * np.pi*np.pi)
-
-#@memoize(15000)
-#def omega(q2, gamma=None, l=0, m=0, d=np.array([0., 0., 0.]), m_split=1.,
-#         prec=10e-6, verbose=False):
-#    """Calculates the Zeta function including the some prefactor.
-#
-#    Args:
-#        q2: The squared momentum transfer.
-#        gamma: The Lorentz boost factor.
-#        l, m: The quantum numbers.
-#        d: The total momentum vector of the system.
-#        m_split: The mass difference between the particles.
-#        prec: The calculation precision.
-#        verbose: The amount of info printed.
-#
-#    Returns:
-#        The value of the Zeta function.
-#    """
-#    factor = gamma * np.power(np.sqrt(q2), l+1) * np.power(np.pi, 1.5) * np.sqrt(2*l+1)
-#    var =  zeta.Z(q2, gamma, l, m, d, m_split, prec, verbose)
-#    return var / factor
-
-#@memoize(50)
-#def det000(L, mpi, a0, r0, q2):
-#    """Calculates the determinant equation for CMF in A1 irrep.
-#
-#    Args:
-#        mpi: lattice pion mass
-#        L: lattice size
-#        a0: scattering length for l=0
-#        r0: scattering radius for l=0
-#        q2: momentum squared
-#
-#    Returns:
-#        The value of the determinant equation for the given parameters.
-#    """
-#    d = np.array([0., 0., 0.])
-#    omega00 = omega(q2, gamma=1., l=0, m=0, d=d)
-#    q = np.sqrt(q2) * 2. * np.pi / float(L)
-#    delta = a0 / q + 0.5 * r0 * q
-#    return (omega00 - delta).real
-#
-#@memoize(50)
-#def det000_E(L, mpi, a2, r2, q2):
-#    """Calculates the determinant equation for CMF in E irrep.
-#
-#    Args:
-#        mpi: lattice pion mass
-#        L: lattice size
-#        a2: scattering length for l=2
-#        r2: scattering radius for l=2
-#        q2: momentum squared
-#
-#    Returns:
-#        The value of the determinant equation for the given parameters.
-#    """
-#    d = np.array([0., 0., 0.])
-#    omega00 = omega(q2, gamma=1., l=0, m=0, d=d)
-#    omega40 = omega(q2, gamma=1., l=4, m=0, d=d)
-#    q = np.sqrt(q2) * 2. * np.pi / float(L)
-#    delta = a2 / q**5 + 0.5 * r2 / q**3
-#    return (omega00 + 18. * omega40 / 7. - delta).real
-#
-#@memoize(50)
-#def det000_T2(L, mpi, a2, r2, q2):
-#    """Calculates the determinant equation for CMF in T2 irrep.
-#
-#    Args:
-#        mpi: lattice pion mass
-#        L: lattice size
-#        a2: scattering length for l=2
-#        r2: scattering radius for l=2
-#        q2: momentum squared
-#
-#    Returns:
-#        The value of the determinant equation for the given parameters.
-#    """
-#    d = np.array([0., 0., 0.])
-#    omega00 = omega(q2, gamma=1., l=0, m=0, d=d)
-#    omega40 = omega(q2, gamma=1., l=4, m=0, d=d)
-#    q = np.sqrt(q2) * 2. * np.pi / float(L)
-#    delta = a2 / q**5 + 0.5 * r2 / q**3
-#    return (omega00 - 12. * omega40 / 7. - delta).real
-#
-#@memoize(50)
-#def det001(L, mpi, a0, r0, a2, r2, q2):
-#    """Calculates the determinant equation for MF1 in A1 irrep.
-#
-#    Args:
-#        mpi: lattice pion mass
-#        L: lattice size
-#        a0: scattering length for l=0
-#        r0: scattering radius for l=0
-#        a2: scattering length for l=2
-#        r2: scattering radius for l=2
-#        q2: momentum squared
-#
-#    Returns:
-#        The value of the determinant equation for the given parameters.
-#    """
-#    d = np.array([0., 0., 1.])
-#    gamma = calc_gamma(q2, mpi, L, d)
-#    omega00 = omega(q2, gamma=gamma, l=0, m=0, d=d)
-#    omega20 = omega(q2, gamma=gamma, l=2, m=0, d=d)
-#    omega40 = omega(q2, gamma=gamma, l=4, m=0, d=d)
-#    q = np.sqrt(q2) * 2. * np.pi / float(L)
-#    delta0 = a0 / q + 0.5 * r0 * q
-#    delta2 = a2 / q**5 + 0.5 * r2 / q**3
-#    return ((omega00 - delta0) * (omega00 + 10. * omega20 / 7. + \
-#           18. * omega40 / 7. - delta2) - 5. * omega20**2).real
-#
-#@memoize(50)
-#def det110(L, mpi, a0, r0, a2, r2, q2):
-#    """Calculates the determinant equation for MF2 in A1 irrep.
-#
-#    Args:
-#        mpi: lattice pion mass
-#        L: lattice size
-#        a0: scattering length for l=0
-#        r0: scattering radius for l=0
-#        a2: scattering length for l=2
-#        r2: scattering radius for l=2
-#        q2: momentum squared
-#
-#    Returns:
-#        The value of the determinant equation for the given parameters.
-#    """
-#    d = np.array([1., 1., 0.])
-#    gamma = calc_gamma(q2, mpi, L, d)
-#    omega00 = omega(q2, gamma=gamma, l=0, m=0, d=d)
-#    omega20 = omega(q2, gamma=gamma, l=2, m=0, d=d)
-#    omega22 = omega(q2, gamma=gamma, l=2, m=2, d=d)
-#    omega40 = omega(q2, gamma=gamma, l=4, m=0, d=d)
-#    omega42 = omega(q2, gamma=gamma, l=4, m=2, d=d)
-#    omega44 = omega(q2, gamma=gamma, l=4, m=4, d=d)
-#    q = np.sqrt(q2) * 2. * np.pi / float(L)
-#    delta0 = a0 / q + 0.5 * r0 * q
-#    delta2 = a2 / q**5 + 0.5 * r2 / q**3
-#    # splitted over several lines, maybe there is a way to make structure
-#    # more clear
-#    term1 =-(10. * np.sqrt(2.) * omega22 / 7. -\
-#           3. * np.sqrt(30.) * omega42 / 7.) * \
-#           ((3. * np.sqrt(30.) * omega42 / 7. -\
-#           10. * np.sqrt(2.) * omega22 / 7.) * (omega00 - delta0) -\
-#           5. * np.sqrt(2.) * omega20 * omega22)
-#    term2 = np.sqrt(5.) * omega20 *\
-#           (-np.sqrt(5.) * delta2 * omega20 -\
-#           10. * np.sqrt(5.) * omega20**2 / 7. +\
-#           np.sqrt(5.) * omega00 * omega20 +\
-#           3. * np.sqrt(5.0) * omega40 * omega20 / 7. -\
-#           15. * np.sqrt(2.0) * omega44 * omega20 / np.sqrt(7.) -\
-#           20. * np.sqrt(5.0) * omega22**2 / 7. +\
-#           30. * np.sqrt(3.0) * omega22 * omega42 / 7.)
-#    term3 = (omega00 + 10. * omega20 / 7. + 18. * omega40 / 7. - delta2) *\
-#           ((omega00 - delta0) *\
-#           (omega00 - 10. * omega20 / 7. + 3. * omega40 / 7. -\
-#           3. * np.sqrt(10.) * omega44 / np.sqrt(7.) - delta2) +\
-#           10. * omega22**2)
-#    return (term1 - term2 + term3).real
-#
-#@memoize(50)
-#def det111(L, mpi, a0, r0, a2, r2, q2):
-#    """Calculates the determinant equation for MF3 in A1 irrep.
-#
-#    Args:
-#        mpi: lattice pion mass
-#        L: lattice size
-#        a0: scattering length for l=0
-#        r0: scattering radius for l=0
-#        a2: scattering length for l=2
-#        r2: scattering radius for l=2
-#        q2: momentum squared
-#
-#    Returns:
-#        The value of the determinant equation for the given parameters.
-#    """
-#    d = np.array([1., 1., 1.])
-#    gamma = calc_gamma(q2, mpi, L, d)
-#    omega00 = omega(q2, gamma=gamma, l=0, m=0, d=d)
-#    omega22 = omega(q2, gamma=gamma, l=2, m=2, d=d)
-#    omega40 = omega(q2, gamma=gamma, l=4, m=0, d=d)
-#    omega42 = omega(q2, gamma=gamma, l=4, m=2, d=d)
-#    q = np.sqrt(q2) * 2. * np.pi / float(L)
-#    delta0 = a0 / q + 0.5 * r0 * q
-#    delta2 = a2 / q**5 + 0.5 * r2 / q**3
-#    return ( (omega00 - delta0) *\
-#        (omega00 - 12. * omega40 / 7. - 12.j * np.sqrt(10.) * omega42 / 7. -\
-#        10.j * np.sqrt(6.) * omega22 / 7. - delta2) +\
-#        30. * omega22**2 ).real
-
-#@memoize(500)
-#def root(L, mpi, a0, r0, a2, r2, d=np.array([0., 0., 0.]), irrep="A1", n=1):
-#    """Returns roots of the determinant equation.
-#    
-#    Args:
-#        L: lattice size
-#        mpi: lattice pion mass
-#        a0: scattering length for l=0
-#        r0: scattering radius for l=0
-#        a2: scattering length for l=2
-#        r2: scattering radius for l=2
-#        d: total momentum of the system
-#        irrep: the chosen irrep
-#        n: number of roots to look for
-#
-#    Returns:
-#        The values of the roots.
-#    """
-#    #print("Entering root")
-#    #print(irrep, L, d, n)
-#    # These variables were global variables
-#    r_prec = 1e-10
-#    # setup of variables
-#    nroot = 0
-#    roots = np.zeros(n)
-#    # CJ: Used lamda functions to make code more compact
-#    if (irrep == "A1"):
-#        if (np.array_equal(d, np.array([0., 0., 0.]))):
-#            calc_det = lambda q: det000(L, mpi, a0, r0, q)
-#            singular_points = lambda i: float(i)
-#            n_interval = 5
-#            n_blocks = 10
-#        elif (np.array_equal(d, np.array([0., 0., 1.]))):
-#            calc_det = lambda q: det001(L, mpi, a0, r0, a2, r2, q)
-#            singular_points = lambda i: SinglePointsP1(mpi, L, i)
-#            n_interval = 6
-#            n_blocks = 20
-#        elif (np.array_equal(d, np.array([1., 1., 0.]))):
-#            calc_det = lambda q: det110(L, mpi, a0, r0, a2, r2, q)
-#            singular_points = lambda i: SinglePointsP2(mpi, L, i)
-#            n_interval = 7
-#            n_blocks = 20
-#        elif (np.array_equal(d, np.array([1., 1., 1.]))):
-#            calc_det = lambda q: det111(L, mpi, a0, r0, a2, r2, q)
-#            singular_points = lambda i: SinglePointsP3(mpi, L, i)
-#            n_interval = 7
-#            n_blocks = 20
-#        else:
-#            print("wrong value of dVec")
-#            os.sys.exit(-5)
-#    elif (irrep == "E"):
-#        if (np.array_equal(d, np.array([0., 0., 0.]))):
-#            calc_det = lambda q: det000_E(L, mpi, a2, r2, q)
-#            singular_points = lambda i: float(i)
-#            n_interval = 5
-#            n_blocks = 10
-#        else:
-#            print("wrong value of dVec")
-#            os.sys.exit(-5)
-#    elif (irrep == "T2"):
-#        if (np.array_equal(d, np.array([0., 0., 0.]))):
-#            calc_det = lambda q: det000_T2(L, mpi, a2, r2, q)
-#            singular_points = lambda i: float(i)
-#            n_interval = 5
-#            n_blocks = 10
-#        else:
-#            print("wrong value of dVec")
-#            os.sys.exit(-5)
-#    else:
-#        print("wrong irrep")
-#
-#    # set up grid
-#    q2_range_min = np.zeros(n_interval*n_blocks)
-#    q2_range_max = np.zeros(n_interval*n_blocks)
-#    for i in range(n_interval):
-#        q2_min = singular_points(i) + 10e-4
-#        q2_max = singular_points(i+1) - 10e-4
-#        q2_delta = (q2_max - q2_min) / float(n_blocks)
-#        for j in range(n_blocks):
-#            q2_range_min[i*n_blocks + j] = q2_min + j * q2_delta
-#            q2_range_max[i*n_blocks + j] = q2_min + (j + 1) * q2_delta
-#
-#    # main loop
-#    loop_i = 0
-#    while(nroot < n):
-#        det1 = calc_det(q2_range_min[loop_i])
-#        det2 = calc_det(q2_range_max[loop_i])
-#        if (det1 * det2 < 0):
-#            try:
-#                roots[nroot] = opt.brentq(calc_det, q2_range_min[loop_i], \
-#                                          q2_range_max[loop_i], disp=True)
-#                nroot += 1
-#            except RuntimeError:
-#                print("next loop")
-#        loop_i += 1
-#        if(loop_i == q2_range_min.shape[0]):
-#            print("root out of range. d = (%lf, %lf, %lf)" % (d[0], d[1], d[2]))
-#            os.sys.exit(-5)
-#    return roots
 
 def chi2(a0, r0, a2, r2, N, data, mpi, cov, infolist):
     """Calculates the total chi^2 of the problem.
@@ -797,6 +286,32 @@ def min2(par, N, data, mpi, cov, infolist):
     print(res)
     return res.x
 
+def min3(par, N, data, mpi, cov, infolist, h):
+    """Minimizer based on scipy functions.
+
+    Args:
+        par: parameters
+
+    Returns:
+        par: final parameters
+        chi2: final chi^2
+    """
+    # some variables
+    min_tol = 1e-6
+    verbose = False
+
+    # invoke minimizer
+    res,cov1,infodict,mesg,ier = opt.leastsq(chi2_3, x0=par[:3], args=(data[N],
+        mpi[N], cov, infolist), ftol=min_tol, xtol=min_tol, diag=h, full_output=True)
+    # the following works
+    #res,cov1,infodict,mesg,ier = opt.leastsq(chi2_2, x0=par[:3], args=(N, data,
+    #    mpi, cov, infolist), ftol=min_tol, xtol=min_tol, diag=h, full_output=True)
+    chi2 = float(np.sum(infodict['fvec']**2.))
+    if verbose:
+        print(res)
+        print(chi2)
+    return res, chi2
+
 def chi2_2(par, N, data, mpi, cov, infolist):
     """Calculates the total chi^2 of the problem.
 
@@ -814,10 +329,10 @@ def chi2_2(par, N, data, mpi, cov, infolist):
     Returns:
         The total chi^2
     """
+    verbose=False
     print(par)
     calc_root = lambda p, i: root(s[0], mpi[N,s[1]], p[0], p[1], p[2], 0., \
                                   s[3], s[2], i)
-    verbose = False
     Wroot = np.zeros(np.sum(len(t[-1]) for t in infolist))
     # loop over all energy entries, there are 3 mpi entries at the start of
     # the array
@@ -871,11 +386,104 @@ def chi2_2(par, N, data, mpi, cov, infolist):
         else:
             print("wrong number of entries (nE_in)")
             os.sys.exit(-5)
-        print("")
-    for Edata, Ecalc in zip(data[N], Wroot):
-        print("%.7lf, %.7lf, %.4e\n" % (Edata, Ecalc, abs(Edata - Ecalc)))
+        #print("")
+    if verbose:
+        for Edata, Ecalc in zip(data[N], Wroot):
+            print("%.7lf, %.7lf, %.4e\n" % (Edata, Ecalc, abs(Edata - Ecalc)))
 
     # calculate chi^2
-    chi = np.dot((data[N] - Wroot), np.dot(cov, (data[N] - Wroot)))
-    print(chi)
-    return chi
+    #chi = np.dot((data[N] - Wroot), np.dot(cov, (data[N] - Wroot)))
+    #print(chi)
+    #return chi
+    dx = np.dot(cov, (data[N] - Wroot))
+    if verbose:
+        print(np.sum(dx**2))
+    return dx
+
+@memoize(20)
+def chi2_3(par, data, mpi, cov, infolist):
+    """Calculates the total chi^2 of the problem.
+
+    Most things are hardcoded for the test data. This function might change
+    a lot.
+
+    Args:
+        par: parameters, array of length 3
+        data: the energy data
+        mpi: the pion masses
+        cov: the inverse covariance matrix of the different lattice sizes
+        infolist: list with information about lattice size, momentum, etc.
+
+    Returns:
+        The total chi^2
+    """
+    verbose=False
+    print(par)
+    calc_root = lambda p, i: root(s[0], mpi[s[1]], p[0], p[1], p[2], 0., \
+                                  s[3], s[2], i)
+    Wroot = np.zeros(np.sum(len(t[-1]) for t in infolist))
+    # loop over all energy entries, there are 3 mpi entries at the start of
+    # the array
+    for s in infolist:
+        index = s[-1]
+        if len(index) == 1:
+            croot = calc_root(par, 1)
+            Eroot = EfromMpi(mpi[s[1]], np.sqrt(croot), s[0])
+            Wtmp = WfromE(Eroot, s[3], s[0])
+            Wroot[index] = Wtmp
+            if verbose:
+                print("croot")
+                print(croot)
+                print("Eroot")
+                print(Eroot)
+                print("Wroot")
+                print(Wtmp)
+                print("data")
+                print(data[N,index])
+        elif len(index) == 2:
+            croot = calc_root(par, 3)
+            Eroot = EfromMpi(mpi[s[1]], np.sqrt(croot), s[0])
+            Wtmp = WfromE(Eroot, s[3], s[0])
+            Wroot[index[0]] = Wtmp[0]
+            if verbose:
+                print("croot")
+                print(croot)
+                print("Eroot")
+                print(Eroot)
+                print("Wroot")
+                print(Wtmp)
+                print("data")
+                print(data[N,index])
+            if (np.fabs(Wtmp[0]-data[index[0]])> \
+                np.fabs(Wtmp[1]-data[index[0]])):
+                print("unusual first level match")
+                print("iE: %i, W: %.8lf, Wroot1: %.8lf, Wroot2: %.8lf"\
+                      % (index[0], data[index[0]], Wtmp[0], Wtmp[1]))
+            if (np.fabs(Wtmp[1]-data[index[1]])< \
+                np.fabs(Wtmp[2]-data[index[1]])):
+                Wroot[index[1]] = Wtmp[1]
+            else:
+                Wroot[index[1]] = Wtmp[2]
+            if (np.fabs(Wtmp[1]-data[index[1]])> \
+                np.fabs(Wtmp[2]-data[index[1]])):
+                print("unusual second level match")
+                print("iE: %i, W: %.8lf, Wroot2: %.8lf, Wroot3: %.8lf"\
+                      % (index[1], data[index[1]], Wtmp[1], Wtmp[2]))
+        elif len(index) == 0:
+            continue
+        else:
+            print("wrong number of entries (nE_in)")
+            os.sys.exit(-5)
+        #print("")
+    if verbose:
+        for Edata, Ecalc in zip(data, Wroot):
+            print("%.7lf, %.7lf, %.4e\n" % (Edata, Ecalc, abs(Edata - Ecalc)))
+
+    # calculate chi^2
+    #chi = np.dot((data[N] - Wroot), np.dot(cov, (data[N] - Wroot)))
+    #print(chi)
+    #return chi
+    dx = np.dot(cov, (data - Wroot))
+    if verbose:
+        print(np.sum(dx**2))
+    return dx
