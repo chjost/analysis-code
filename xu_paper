@@ -114,9 +114,9 @@ def main():
 
     # calculate delta
     for _l in range(data.shape[0]):
-        delta[_l,0,:], tandelta[_l,0,:] = ana.calculate_delta(q2[_l,0,:], gamma[_l,0,:], d1)
-        delta[_l,1,:], tandelta[_l,1,:] = ana.calculate_delta(q2[_l,1,:], gamma[_l,1,:], d2)
-        delta[_l,2,:], tandelta[_l,2,:] = ana.calculate_delta(q2[_l,2,:], gamma[_l,2,:], d3)
+        delta[_l,0,:], tandelta[_l,0,:], s = ana.calculate_delta(q2[_l,0,:], gamma[_l,0,:], d1)
+        delta[_l,1,:], tandelta[_l,1,:], s = ana.calculate_delta(q2[_l,1,:], gamma[_l,1,:], d2)
+        delta[_l,2,:], tandelta[_l,2,:], s = ana.calculate_delta(q2[_l,2,:], gamma[_l,2,:], d3)
     #print(delta*180./np.pi)
     print_results(data, Ecm, p, delta*180./np.pi)
 

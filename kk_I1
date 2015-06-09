@@ -49,6 +49,7 @@ def main():
     mk_unit = 0.26695
     dmk_unit = 0.00052
     amu_s = [0.0185,0.0225,0.02464]
+<<<<<<< HEAD
     #ensemblelist = ['A40.24/','A60.24/','A80.24/','A100.24/']
     ensemblelist = ['A40.24/']
     filelist = ['k_corr_p0.dat','kk_A1_TP0_00.dat']
@@ -150,6 +151,32 @@ def main():
             print("%f\t%f +/- %e\t%f +/- %e\t%f +/- %e"%(amu_s[s], np.median(m_k_dat[s]), np.std(m_k_dat[s]),
             np.median(a_k_dat[s]), np.std(a_k_dat[s]), np.median(m_k_akk),
             np.std(m_k_akk) ))
+=======
+    # get m_k from single_corr_analysis
+    #path = "/hiskp2/helmes/contractions/A40.24/kaon/merged/"
+    #pathroot = "/home/christopher/studium/PROMO/data/correlators/scattering/k-k/A40.24/mu_s_"
+    #tmp_outroot = "/home/christopher/studium/PROMO/results/correlators/scattering/k-k/A40.24/mu_s_"
+    pathroot = "/hiskp2/correlators/A40.24_L24_T48_beta190_mul0040_musig150_mudel190_kappa1632700/ev120/k-k/mu_s_"
+    #tmp_outroot = "/hiskp2/helmes/correlators/A40.24/kaon/mu_s_"
+    tmp_outroot = "./mu_s_"
+
+    #Numpy array to hold all data at end
+    m_k_dat = np.zeros((len(amu_s), nbsamples))
+    a_k_dat = np.zeros((len(amu_s), nbsamples))
+    m_k_unit = np.zeros(nbsamples)
+
+    for s in range(0,len(amu_s)):
+        path = pathroot+str(amu_s[s])[3:]+"/"
+        tmp_out = tmp_outroot+str(amu_s[s])[3:]+"/"
+        pfit = PdfPages("%s%sk_plot.pdf" % (tmp_out,"corr_")) 
+        prat = PdfPages("%s%skk_plot.pdf" % (tmp_out,"ratio_")) 
+        filelist = ['k_corr_p0.dat','kk_A1_TP0_00.dat']
+        # start with usual analysis (thermal states contamination expected)
+        fitfunc = lambda p,t: 10e6 if p[1] < 0.0 else 0.5*p[0]*p[0]*(np.exp(-p[1]*t) + np.exp(-p[1]*(T-t)))
+        par_mass = [0.26]
+        par_ratio = [2.,0.03]
+        massfunc = lambda p, t: p
+>>>>>>> c98ee5067a67cc215d2827fe5b09a5a4a716babf
         
         # End data acquisition
         #---------------------------------------------------------------------------
