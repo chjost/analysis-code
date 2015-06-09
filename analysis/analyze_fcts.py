@@ -115,9 +115,12 @@ def calc_scat_length(dE, E, L):
     """
     # coefficients according to Luescher
     c=[-2.837297, 6.375183, -8.311951]
+    # creating data array from empty array
+    a = np.zeros_like(dE[:])
+    for b in range(0, dE.shape[0]):
     # Prefactor common to every order
-    comm=-4.*np.pi/(E*L*L)
-    # build up coefficient array
-    p=[comm*c[1]/(L*L*L),comm*c[0]/(L*L),comm/L, -1*dE]
-    a = np.roots(p)
+      comm=-4.*np.pi/(E[b]*L*L)
+      # build up coefficient array
+      p=[comm*c[1]/(L*L*L),comm*c[0]/(L*L),comm/L, -1*dE[b]]
+      a[b] = np.roots(p)[2].real
     return a
