@@ -26,6 +26,7 @@ def calculate_delta(q2, gamma=None, d=np.array([0., 0., 0.]), prec=10e-6,
     # create array for results
     delta=np.zeros(q2.shape)
     tandelta=np.zeros(q2.shape)
+    sindelta=np.zeros(q2.shape)
     _gamma = gamma
     if _gamma == None:
         _gamma = np.ones(q2.shape)
@@ -42,7 +43,8 @@ def calculate_delta(q2, gamma=None, d=np.array([0., 0., 0.]), prec=10e-6,
         tandelta = _num / _den
         delta = np.arctan2( _num, _den)
     # MF1
-    elif np.array_equal(d, np.array([0., 0., 1.])):
+    elif np.array_equal(d, np.array([0., 0., 1.])) or \
+         np.array_equal(d, np.array([0. ,0., 2.])):
         # Irrep. A_1
         #_z1 = zeta.Zp(q2, _gamma, 0, 0, d, 1., prec, verbose).real
         #_z2 = zeta.Zp(q2, _gamma, 2, 0, d, 1., prec, verbose).real
@@ -79,4 +81,5 @@ def calculate_delta(q2, gamma=None, d=np.array([0., 0., 0.]), prec=10e-6,
         delta = np.arctan2( _num, _den)
     else:
         print("for the current vector d delta is not implemented")
-    return delta, tandelta
+    sindelta = np.sin(delta)**2
+    return delta, tandelta, sindelta

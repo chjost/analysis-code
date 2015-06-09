@@ -195,16 +195,44 @@ def scan_fit_range(fitfunc, X, Y, start_params, correlated=True, verbose=False):
             print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, E %.7lf" % (lo, up,
                   pval[0], chi2[0]/(len(X[lo:up])-len(start_params)),res[0,-1]))
 
-def genfit(data, lolist, uplist, fitfunc, start_params, tmin, lattice, d, label,
+    return
+
+def set_fit_intervall(data, lolist, uplist, intervallsize):
+    """Initialize intervalls to fit in with borders given for every principal
+    correlator
+
+    Args: 
+        data: The lattice results to fit to. Necessary to obtain the number of
+              gevp-eigenvalues.
+        lolist: List of lower interval borders for every gevp-eigenvalue.
+        uplist: List of upper interval borders for every gevp-eigenvalue.
+        intervallsize: Minimal number of points to be contained in the 
+                intervall
+
+    Returns:
+        fit_intervals: list of pairs [lo, up] for every gevp-eigenvalue.
+    """
+
+    ncorr = data.shape[2]
+    fit_intervalls = []
+    for _l in range(ncorr):
+        fit_intervalls.append([])
+        for lo in range(lolist[_l], uplist[_l]):
+            for up in range(lolist[_l], uplist[_l]):
+                if (up - lo) > intervallsize - 1:
+                    fit_intervalls[_l].append([lo, up])
+
+    return fit_intervalls
+
+
+def genfit(data, fit_intervalls, fitfunc, start_params, tmin, lattice, d, label,
             path=".plots/", plotlabel="corr", verbose=True):
     """Fit and plot the correlation function.
     
     Args:
         data: The correlation functions.
-        lolist: List of the lower bounds for the fit, for the different
-                correlation functions.
-        uplist: List of the upper bounds for the fit, for the different
-                correlation functions.
+        fit_intervalls: List of intervalls for the fit for the different
+              correlation functions.
         fitfunc: The function to fit to the data.
         start_params: The starting parameters for the fit function.
         tmin: Lower bound of the plot.
@@ -225,11 +253,13 @@ def genfit(data, lolist, uplist, fitfunc, start_params, tmin, lattice, d, label,
     T2 = data.shape[1]
     ncorr = data.shape[2]
     npar = len(start_params)
+    # same intervall size for all correlators hardcoded
+    ninter = len(fit_intervalls[0])
     d2 = np.dot(d,d)
     # initialize empty arrays
-    res = np.zeros((nboot, npar, ncorr))
-    chi2 = np.zeros((nboot, ncorr))
-    pval = np.zeros((nboot, ncorr))
+    res = np.zeros((nboot, npar, ncorr, ninter))
+    chi2 = np.zeros((nboot, ncorr, ninter))
+    pval = np.zeros((nboot, ncorr, ninter))
     # set fit data
     tlist = np.linspace(0., float(T2), float(T2), endpoint=False)
     # outputfile for the plot
@@ -243,36 +273,45 @@ def genfit(data, lolist, uplist, fitfunc, start_params, tmin, lattice, d, label,
         label.append("")
     if len(label) < 5:
         label.append("")
+    label_save = label[0]
     for _l in range(ncorr):
+        ninter = len(fit_intervalls[_l])
         # setup
         mdata, ddata = af.calc_error(data[:,:,_l])
-        lo = lolist[_l]
-        up = uplist[_l]
-        if verbose:
-            print("correlator %d" % _l)
+        for _i in range(ninter):
+            lo = fit_intervalls[_l][_i][0]
+            up = fit_intervalls[_l][_i][1]
+            if verbose:
+                print("Intervall [%d, %d]" % (lo, up))
+                print("correlator %d" % _l)
+            print("Intervall [%d, %d]" % (lo, up))
 
-        # fit the energy and print information
-        if verbose:
-            print("fitting correlation function")
-        res[:,:,_l], chi2[:,_l], pval[:,_l]=fitting(fitfunc, tlist[lo:up],
-            data[:,lo:up,_l], start_params, verbose=verbose)
-        if verbose:
-            print("p-value %.7lf\nChi^2/dof %.7lf" % (pval[0,_l], chi2[0,_l]/(
-                  (up - lo) - npar)))
+            # fit the energy and print information
+            if verbose:
+                print("fitting correlation function")
 
-        mres, dres = af.calc_error(res[:,:,_l])
+            res[:,:,_l,_i], chi2[:,_l,_i], pval[:,_l,_i] =fitting(fitfunc, 
+                    tlist[lo:up], data[:,lo:up,_l], start_params, verbose=False)
+            if verbose:
+                print("%d\tres = %lf\t%lf" % (_i, res[0, 0, _l, _i],
+                      res[0, 1, _l, _i]))
+                print("p-value %.7lf\nChi^2/dof %.7lf" % (pval[0,_l, _i],
+                      chi2[0,_l, _i]/( (up - lo) - len(start_params))))
 
-        # set up the plot labels
-        fitlabel = "fit %d:%d" % (lo, up-1)
-        title="%s, %s, TP %d, pc %d" % (label[0], lattice, d2, _l)
-        label[0] = title
-        label[4] = fitlabel
+            mres, dres = af.calc_error(res[:,:,_l,_i])
 
-        # plot the data and the fit
-        if verbose:
-            print("plotting")
-        corr_fct_with_fit(tlist, data[0,:,_l], ddata, fitfunc, mres,
-                               [tmin,T2], label, corrplot, True)
+            # set up the plot labels
+            fitlabel = "fit %d:%d" % (lo, up-1)
+            title="%s, %s, TP %d, pc %d, [%d, %d]" % (label_save, lattice, d2, 
+                                                      _l, lo, up)
+            label[0] = title
+            label[4] = fitlabel
+
+            # plot the data and the fit
+            if verbose:
+                print("plotting")
+            corr_fct_with_fit(tlist, data[0,:,_l], ddata, fitfunc, mres,
+                                   [tmin,T2], label, corrplot, True)
     corrplot.close()
     return res, chi2, pval
 
@@ -310,3 +349,24 @@ def genfit(data, lolist, uplist, fitfunc, start_params, tmin, lattice, d, label,
 #            append(chi2, chi2_tmp)
 #            append(pval, pval_tmp)
 #    return res, chi2, pval
+
+# compute weights
+################################################################################
+# Input: corr      -> the correlator
+#          params -> contains the p-value for each correlator
+# Output: returns the weights or an empty array
+def compute_weight(corr, params):
+    """compute the weights for the histogram
+
+    Returns:
+        list of weigths if len(params)!=0, else empty list
+    """
+    errors = np.std(corr, axis=1)
+    max_err = np.amax(errors)
+    weights = []
+    if len(params) != 0:
+        for i in range(0, params.shape[0]):
+            w = (1.-abs(params[i,1]-0.5))*max_err/errors[i]
+            weights.append(w**2)
+    return weigths
+

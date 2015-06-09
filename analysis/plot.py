@@ -73,3 +73,48 @@ def corr_fct_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
 #  plt.plot(x, scipy.stats.chi2.pdf(x, dof), 'r-', lw=2, alpha=1, label='chi2 pdf')
 #  plt.bar(center, hist, align='center', width=width)
 #  plt.show()
+
+def plot_histogram(data, data_weight, lattice, d, label, path=".plots/", 
+                   plotlabel="hist", verbose=True):
+    """plot a weighted histogramm
+
+    Args:
+        data: Numpy-array of fit values for mulitple fit intervalls. Will be 
+              depicted on x-axis.
+        data_weight: The weights corresponding to data. Must have same shape
+              and order as data. Their sum per bin is the bin height.
+        lattice: The name of the lattice, used for the output file.
+        d:    The total momentum of the reaction.
+        label: Labels for the title and the axis.
+        path: Path to the saving place of the plot.
+        plotlabel: Label for the plot file.
+        verbose: Amount of information printed to screen.
+
+    Returns:
+    """
+
+    d2 = np.dot(d,d)
+    ninter = data.shape[0]
+
+    histplot = PdfPages("%s/fit_%s_%s_TP%d.pdf" % (path,plotlabel,lattice,d2))
+    # The histogram
+
+    hist, bins = np.histogram(data, 20, weights=data_weight, density=True)
+    width = 0.7 * (bins[1] - bins[0])
+    center = (bins[:-1] + bins[1:]) / 2
+
+    plt.ylabel('weighted distribution of ' + label[2])
+    plt.title('fit methods individually with a p-value between 0.01 and 0.99')
+    plt.grid(True)
+    x = np.linspace(center[0], center[-1], 1000)
+
+#    plt.plot(x, scipy.stats.norm.pdf(x, loc=a_pipi_median_derv[0], \
+#             scale=a_pipi_std_derv), 'r-', lw=3, alpha=1, \
+#             label='median + stat. error')
+    plt.bar(center, hist, align='center', width=width, color='r', alpha=0.5,
+            label='derivative')
+
+    histplot.savefig()
+    histplot.close()
+    
+    return

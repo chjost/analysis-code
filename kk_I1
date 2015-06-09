@@ -54,8 +54,8 @@ def main():
     #pathroot = "/home/christopher/studium/PROMO/data/correlators/scattering/k-k/A40.24/mu_s_"
     #tmp_outroot = "/home/christopher/studium/PROMO/results/correlators/scattering/k-k/A40.24/mu_s_"
     pathroot = "/hiskp2/correlators/A40.24_L24_T48_beta190_mul0040_musig150_mudel190_kappa1632700/ev120/k-k/mu_s_"
-    tmp_outroot = "/hiskp2/helmes/correlators/A40.24/kaon/mu_s_"
-    #tmp_outroot = "./mu_s_"
+    #tmp_outroot = "/hiskp2/helmes/correlators/A40.24/kaon/mu_s_"
+    tmp_outroot = "./mu_s_"
 
     #Numpy array to hold all data at end
     m_k_dat = np.zeros((len(amu_s), nbsamples))

@@ -34,13 +34,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
 # Christian's packages
-import input_output as io
-import bootstrap
-import corr_matrix as cm
-import gevp
-import fit
-import plot
-import analyze_fcts as af
+import analysis as ana
 
 def print_results(data, error):
     print("E dE  delta ddelta  tan dtan  sin2 dsin2")
@@ -73,10 +67,10 @@ def main():
     uplist = np.array((30,32,34))
     entries = ["_00", "_01", "_02", "_10", "_11", "_12", "_20", "_21", "_22"]
     print("create correlation matrix")
-    corr_mat, T2 = cm.create_corr_matrix(nbsamples, path, entries, verbose=1 )
+    corr_mat, T2 = ana.create_corr_matrix(nbsamples, path, entries, verbose=1 )
     corr_save = "".join((tmp_out, "corr_tmp.dat"))
      #cm.write_corr_matrix(corr_mat,corr_save) 
-    gevp_mat = gevp.calculate_gevp(corr_mat)
+    gevp_mat = ana.calculate_gevp(corr_mat)
     print(gevp_mat.shape[0])
     # prepare storage for results
     odata = np.zeros((gevp_mat.shape[2], 4))
@@ -95,7 +89,7 @@ def main():
         #print(gevp_mat[0,:,_l])
         # fit the energy and print information
         print("fitting correlation function")
-        res, chi2, pval=fit.fitting(fitfunc, tlist[lo:up], gevp_mat[:,lo:up,_l],
+        res, chi2, pval=ana.fitting(fitfunc, tlist[lo:up], gevp_mat[:,lo:up,_l],
                                       start_params, verbose=0)
         print("p-value %.7lf" % (pval))
 
@@ -105,43 +99,42 @@ def main():
         #        print("problem on sample %d" % _b)
 
         # set up the plot
-        mgevp, dgevp = af.return_mean_corr(gevp_mat[:,:,_l])
-        mres, dres = af.return_mean_corr(res)
+        mgevp, dgevp = ana.calc_error(gevp_mat[:,:,_l])
+        mres, dres = ana.calc_error(res)
         fitlabel = "fit %d:%d" % (lo, up-1)
         label = ["time", "C(t)", "data", fitlabel]
 
         # plot the data and the fit
         print("plotting")
-        plot.corr_fct_with_fit(tlist, gevp_mat[0,:,_l], dgevp, fitfunc, mres,
+        ana.corr_fct_with_fit(tlist, gevp_mat[0,:,_l], dgevp, fitfunc, mres,
                                [tmin,T2], label, pfit, True)
         
         # calculate Ecm, q and delta
         print("calculating")
-        gamma, Ecm = af.calculate_cm_energy(res[:,1], L, d)
-        q2 = af.calculate_q(Ecm, mpi, L)
+        gamma, Ecm = ana.calculate_cm_energy(res[:,1], L, d)
+        q2 = ana.calculate_q(Ecm, mpi, L)
         print(q2)
-        delta, tandelta = af.calculate_delta(q2, gamma, d)
+        delta, tandelta, sindelta = ana.calculate_delta(q2, gamma, d)
 
         # save data
         print("saving")
-        mdata[_l,0], ddata[_l,0] = af.return_mean_corr(Ecm)
-        mdata[_l,1], ddata[_l,1] = af.return_mean_corr(delta)
-        mdata[_l,2], ddata[_l,2] = af.return_mean_corr(tandelta)
-        mdata[_l,3] = np.sin(mdata[_l,1])**2
-        ddata[_l,3] = np.abs(np.sin(mdata[_l,1]*2.)*ddata[_l,1])
+        mdata[_l,0], ddata[_l,0] = ana.calc_error(Ecm)
+        mdata[_l,1], ddata[_l,1] = ana.calc_error(delta)
+        mdata[_l,2], ddata[_l,2] = ana.calc_error(tandelta)
+        mdata[_l,3], ddata[_l,3] = ana.calc_error(sindelta)
         odata[_l,0] = Ecm[0]
         odata[_l,1] = delta[0]
         odata[_l,2] = tandelta[0]
-        odata[_l,3] = np.sin(delta[0])**2
+        odata[_l,3] = sindelta[0]
         
         # calculate mass and plot
         # not used to extract an energy
         print("fitting mass")
-        mass, mmass, dmass = af.compute_mass(gevp_mat[:,:,_l])
+        mass, mmass, dmass = ana.compute_mass(gevp_mat[:,:,_l])
         mmassres = mres[1]
         print("plotting")
         label[1] = "m_eff(t)"
-        plot.corr_fct_with_fit(tlist[1:-1], mass[0], dmass, massfunc, mmassres,
+        ana.corr_fct_with_fit(tlist[1:-1], mass[0], dmass, massfunc, mmassres,
                                [tmin-1,T2-1], label, pfit, False)
     # print data
     print_results(odata, ddata)
