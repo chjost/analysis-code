@@ -128,11 +128,12 @@ def main():
             upbound = 22
             #for lo in range(lobound, bsamples_k.shape[1]-5):
             #  for up in range(lo+11, bsamples_k.shape[1]):
-            res_R, chi2_R, pvals_R = ana.fitting(ratio, tlist_ratio[14:],
-                  R_boot[:,14:], par_ratio, None, verbose=1)
-            print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, delta E %.7lf" % (lobound,
-                upbound,
-                 pvals_R[0], chi2_R[0]/(len(tlist_ratio[lobound:upbound])-2), res_R[0,1]))
+            ana.scan_fit_range(ratio,tlist_ratio,R_boot,par_ratio)
+            #res_R, chi2_R, pvals_R = ana.fitting(ratio, tlist_ratio[14:],
+            #      R_boot[:,14:], par_ratio, None, verbose=1)
+            #print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, delta E %.7lf" % (lobound,
+            #    upbound,
+            #     pvals_R[0], chi2_R[0]/(len(tlist_ratio[lobound:upbound])-2), res_R[0,1]))
             fitlabel = "fit %d:%d" % (lobound, upbound-1)
             label[3] = fitlabel
             #define the ratiofunction for plotting (median at moment)

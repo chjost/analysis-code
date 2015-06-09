@@ -185,9 +185,9 @@ def scan_fit_range(fitfunc, X, Y, start_params, correlated=True, verbose=False):
     #    # vary the upper end of the fit range
     #    for up in range(lo+5, Y.shape[1]):
     # vary the lower end of the fit range
-    for lo in range(7, 13):
+    for lo in range(10, 16):
         # vary the upper end of the fit range
-        for up in range(15, 25):
+        for up in range(20, 24):
             # fir the data
             res, chi2, pval=fitting(fitfunc, X[lo:up], Y[:,lo:up], start_params,
                                     correlated=correlated, verbose=verbose)
