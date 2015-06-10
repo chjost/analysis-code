@@ -71,7 +71,8 @@ def fitting(fitfunc, X, Y, start_parm, E_single=None, correlated=True, verbose=T
     if E_single is None:
         for b in range(0, Y.shape[0]):
             p,cov1,infodict,mesg,ier = leastsq(errfunc, start_parm,
-                                       args=(X, Y[b,:], cov), full_output=1)
+                                       args=(X, Y[b,:], cov), full_output=1,
+                                       factor = 0.1)
             chisquare[b] = float(sum(infodict['fvec']**2.))
             res[b] = np.array(p)
     else:
@@ -152,7 +153,7 @@ def fitting_range(fitfunc, X, Y, start_parm, correlated=True, verbose=True):
     """
     # vary the lower and upper end of the fit range
     for lo in range(int(Y.shape[1]/4), Y.shape[1]-5):
-        for up in range(lo+5, x.shape[1]):
+        for up in range(lo+5, X.shape[1]):
             # fit the data
             res, chi2, pval=fitting(fitfunc, X[lo:up], Y[:,lo:up], start_params,
                                     correlated=correlated, verbose=False)
@@ -197,7 +198,7 @@ def scan_fit_range(fitfunc, X, Y, start_params, correlated=True, verbose=False):
 
     return
 
-def set_fit_intervall(data, lolist, uplist, intervallsize):
+def set_fit_intervall(_data, lolist, uplist, intervallsize):
     """Initialize intervalls to fit in with borders given for every principal
     correlator
 
@@ -213,6 +214,7 @@ def set_fit_intervall(data, lolist, uplist, intervallsize):
         fit_intervals: list of pairs [lo, up] for every gevp-eigenvalue.
     """
 
+    data = np.atleast_3d(_data)
     ncorr = data.shape[2]
     fit_intervalls = []
     for _l in range(ncorr):
@@ -225,7 +227,7 @@ def set_fit_intervall(data, lolist, uplist, intervallsize):
     return fit_intervalls
 
 
-def genfit(data, fit_intervalls, fitfunc, start_params, tmin, lattice, d, label,
+def genfit(_data, fit_intervalls, fitfunc, start_params, tmin, lattice, d, label,
             path=".plots/", plotlabel="corr", verbose=True):
     """Fit and plot the correlation function.
     
@@ -248,6 +250,7 @@ def genfit(data, fit_intervalls, fitfunc, start_params, tmin, lattice, d, label,
         chi2: Chi^2 for every fit
         pval: p-value for every fit.
     """
+    data = np.atleast_3d(_data)
     # init variables
     nboot = data.shape[0]
     T2 = data.shape[1]
@@ -293,8 +296,8 @@ def genfit(data, fit_intervalls, fitfunc, start_params, tmin, lattice, d, label,
             res[:,:,_l,_i], chi2[:,_l,_i], pval[:,_l,_i] =fitting(fitfunc, 
                     tlist[lo:up], data[:,lo:up,_l], start_params, verbose=False)
             if verbose:
-                print("%d\tres = %lf\t%lf" % (_i, res[0, 0, _l, _i],
-                      res[0, 1, _l, _i]))
+                #print("%d\tres = %lf\t%lf" % (_i, res[0, 0, _l, _i],
+                #      res[0, 1, _l, _i]))
                 print("p-value %.7lf\nChi^2/dof %.7lf" % (pval[0,_l, _i],
                       chi2[0,_l, _i]/( (up - lo) - len(start_params))))
 
@@ -311,7 +314,7 @@ def genfit(data, fit_intervalls, fitfunc, start_params, tmin, lattice, d, label,
             if verbose:
                 print("plotting")
             corr_fct_with_fit(tlist, data[0,:,_l], ddata, fitfunc, mres,
-                                   [tmin,T2], label, corrplot, True)
+                                   [tmin,T2], label, corrplot, False)
     corrplot.close()
     return res, chi2, pval
 
