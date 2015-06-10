@@ -124,7 +124,7 @@ def main():
             mass, mmass, dmass = ana.compute_mass(bsamples_k, True)
             # ana.scan_fit_range(massfunc, tlist_corr,mass, par_mass)
             # TODO: set two points more than wanted for upper limit
-            ranges = ana.set_fit_intervall(mass, [10], [24], 4)
+            ranges = ana.set_fit_intervall(mass, [12], [24], 9)
             res, chi2, pval = ana.genfit(mass,ranges,massfunc,
                 par_mass,1,ens[:-1],np.asarray([0,0,0]),label,tmp_out,"mass")
             #ana.corr_fct_with_fit(tlist_corr[:-2], mmass, dmass, massfunc, res[0],
@@ -132,6 +132,7 @@ def main():
             #print("m_k = %e +/- %e" %(np.median(res),np.std(res)))
 
             #pfit.close()
+            print res[0,:,:,:]
             np.append(m_k_dat,res)
 
 
@@ -141,16 +142,17 @@ def main():
             # initial p (A, deltaE, E_k)
             label = ["Ratio K-K, "+ens, "time", "R(t)", "data", ""]
             # define the ratiofunction, Use fitted energies for better results
-            #ratio = lambda p, t, e : p[0]*(np.cosh(p[1]*(t-T/2))+np.sinh(p[1]*(t-T/2))/(np.tanh(2*e*(t-T/2))))
-            ratio = lambda p, t : p[0]*(np.cosh(p[1]*(t-T/2))+np.sinh(p[1]*(t-T/2))/(np.tanh(2*p[2]*(t-T/2))))
+            ratio = lambda p, t, e : p[0]*(np.cosh(p[1]*(t-T/2))+np.sinh(p[1]*(t-T/2))/(np.tanh(2*e*(t-T/2))))
+            #ratio = lambda p, t : p[0]*(np.cosh(p[1]*(t-T/2))+np.sinh(p[1]*(t-T/2))/(np.tanh(2*p[2]*(t-T/2))))
             # define fit ranges
             lobound = 12
             upbound = 22
         #    ana.scan_fit_range(ratio, tlist_ratio, R_boot, par_ratio)
             #res_R, chi2_R, pvals_R = ana.fitting(ratio, tlist_ratio[12:-1],
             #      R_boot[:,12:-1], par_ratio, m_k_dat[s], verbose=0)
-            res_R, chi2_R, pvals_R = ana.genfit(R_boot,ranges,ratio,par_ratio,
-                1,ens[:-1],np.asarray([0,0,0]),label,tmp_out,"ratio")
+            res_R, chi2_R, pvals_R =
+            ana.genfit_comb(R_boot,ranges,ranges,ratio,par_ratio,res,
+                1,ens[:-1],label,tmp_out,"ratio")
             # Plot mean ratio plus fitted function
             #define the ratiofunction for plotting (median at moment)
             #fitlabel = "fit %d:%d" % (lobound, upbound-1)
@@ -161,7 +163,7 @@ def main():
             #    param_plt, [1,T2], label, prat, False, False, [10,23]) 
 
             prat.close()
-            delE_dat = res_R[:,1]
+            delE_dat = res_R
             a_k_dat[s] = ana.calc_scat_length(res_R[:,1],m_k_dat[s],L)
             m_k_akk = a_k_dat[s]*m_k_dat[s]
             print("amu_s\tm_k +/- d_stat(m_k)\t delE +/- d_stat(delE) \ta_kk +/- d_stat(a_kk)\tm_k*a_kk +/- d_stat(m_k*a_kk)") 

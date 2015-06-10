@@ -226,6 +226,100 @@ def set_fit_intervall(_data, lolist, uplist, intervallsize):
 
     return fit_intervalls
 
+def genfit_comb(_data, fit_ivals_1,fit_ivals_2, fitfunc, start_params, prev_par, tmin, lattice, label,
+            path=".plots/", plotlabel="corr", verbose=True):
+    """Fit and plot a function. With varying parameter, determined in a previous
+    fit
+    
+    Args:
+        data: The correlation functions.
+        fit_ivals_1: List of intervals for the fit of the functions.
+        fit_ivals_2: List of intervals for the varying parameter
+        fitfunc: The function to fit to the data.
+        start_params: The starting parameters for the fit function.
+        tmin: Lower bound of the plot.
+        lattice: The name of the lattice, used for the output file.
+        label: Labels for the title and the axis.
+        path: Path to the saving place of the plot.
+        plotlabel: Label for the plot file.
+        verbose: Amount of information printed to screen.
+
+    Returns:
+        res: Result of the fit to each bootstrap sample for each combination of
+            fit ranges.
+        chi2: Chi^2 for every fit
+        pval: p-value for every fit.
+    """
+    data = np.atleast_3d(_data)
+    # init variables
+    nboot = data.shape[0]
+    T2 = data.shape[1]
+    ncorr = data.shape[2]
+    npar = len(start_params)
+    # same intervall size for all correlators hardcoded
+    ninter = len(fit_ivals_1[0]) * len(fit_ivals_2[0])
+    # initialize empty arrays
+    res = np.zeros((nboot, npar, ncorr, ninter))
+    chi2 = np.zeros((nboot, ncorr, ninter))
+    pval = np.zeros((nboot, ncorr, ninter))
+    # set fit data
+    tlist = np.linspace(0., float(T2), float(T2), endpoint=False)
+    # outputfile for the plot
+    corrplot = PdfPages("%s/fit_%s_%s.pdf" % (path,plotlabel,lattice))
+    # check the labels
+    if len(label) < 3:
+        print("not enough labels, using standard labels.")
+        label = ["fit", "time", "C(t)", "", ""]
+    if len(label) < 4:
+        label.append("data")
+        label.append("")
+    if len(label) < 5:
+        label.append("")
+    label_save = label[0]
+    for _l in range(ncorr):
+        ninter1 = len(fit_ivals_1[_l])
+        ninter2 = len(fit_ivals_2[_l])
+        # setup
+        mdata, ddata = af.calc_error(data[:,:,_l])
+        for _i in range(ninter1):
+            lo_1 = fit_ivals_1[_l][_i][0]
+            up_1 = fit_ivals_2[_l][_i][1]
+            if verbose:
+                print("Intervall [%d, %d]" % (lo_1, up_1))
+                print("correlator %d" % _l)
+            print("Intervall [%d, %d]" % (lo_1, up_1))
+            for _j in range(ninter2):
+
+                # fit the energy and print information
+                if verbose:
+                    print("fitting correlation function")
+
+                res[:,:,_l,_i*ninter2+_j], chi2[:,_l,_i*ninter2+_j], pval[:,_l,_i*ninter2+_j] =fitting(fitfunc, 
+                        tlist[lo_1:up_1], data[:,lo_1:up_1,_l],
+                        start_params,E_single = prev_par[:,:,_l,_j], verbose=False)
+                if verbose:
+                    #print("%d\tres = %lf\t%lf" % (_i, res[0, 0, _l, _i],
+                    #      res[0, 1, _l, _i]))
+                    print("p-value %.7lf\nChi^2/dof %.7lf" % (pval[0,_l,_i*ninter2+_j],
+                          chi2[0,_l,_i*ninter2+_j]/( (up_1 - lo_1) - len(start_params))))
+
+                mres, dres = af.calc_error(res[:,:,_l,_i*ninter2+_j])
+
+                # set up the plot labels
+                fitlabel = "fit %d:%d" % (lo_1, up_1-1)
+                title="%s, %s, pc %d, [%d, %d]" % (label_save, lattice, 
+                                                          _l, lo_1, up_1)
+                label[0] = title
+                label[4] = fitlabel
+
+                # plot the data and the fit
+                if verbose:
+                    print("plotting")
+                print mres
+                corr_fct_with_fit(tlist, data[0,:,_l], ddata, fitfunc, mres,
+                                       [tmin,T2], label, corrplot, False)
+    corrplot.close()
+    return res, chi2, pval
 
 def genfit(_data, fit_intervalls, fitfunc, start_params, tmin, lattice, d, label,
             path=".plots/", plotlabel="corr", verbose=True):
