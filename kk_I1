@@ -38,7 +38,6 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 # Christian's packages
 import analysis as ana
-
 def main():
     # number of bootstrap samples
     nbsamples = 1500
@@ -134,43 +133,44 @@ def main():
             #pfit.close()
             print res[0,:,:,:]
             np.append(m_k_dat,res)
+            print res.shape[-1:]
+            ana.sys_error(res,np.expand_dims(pval,2),np.asarray([0,0,0]),ens[:-1])
 
 
             #-------------- Ratio of C_kk and C_k^2 ----------------------
 
-            R_boot, R_mean, R_stdev, = ana.simple_ratio_subtract(bsamples_kk, bsamples_k, bsamples_k)
-            # initial p (A, deltaE, E_k)
-            label = ["Ratio K-K, "+ens, "time", "R(t)", "data", ""]
-            # define the ratiofunction, Use fitted energies for better results
-            ratio = lambda p, t, e : p[0]*(np.cosh(p[1]*(t-T/2))+np.sinh(p[1]*(t-T/2))/(np.tanh(2*e*(t-T/2))))
-            #ratio = lambda p, t : p[0]*(np.cosh(p[1]*(t-T/2))+np.sinh(p[1]*(t-T/2))/(np.tanh(2*p[2]*(t-T/2))))
-            # define fit ranges
-            lobound = 12
-            upbound = 22
-        #    ana.scan_fit_range(ratio, tlist_ratio, R_boot, par_ratio)
-            #res_R, chi2_R, pvals_R = ana.fitting(ratio, tlist_ratio[12:-1],
-            #      R_boot[:,12:-1], par_ratio, m_k_dat[s], verbose=0)
-            res_R, chi2_R, pvals_R =
-            ana.genfit_comb(R_boot,ranges,ranges,ratio,par_ratio,res,
-                1,ens[:-1],label,tmp_out,"ratio")
-            # Plot mean ratio plus fitted function
-            #define the ratiofunction for plotting (median at moment)
-            #fitlabel = "fit %d:%d" % (lobound, upbound-1)
-            #label[3] = fitlabel
-            #param_plt = [np.median(res_R[:,0]),np.median(res_R[:,1]),np.median(m_k_dat[s])]
-            #ratio_plt = lambda p, t : p[0]*(np.cosh(p[1]*(t-T/2))+np.sinh(p[1]*(t-T/2))/(np.tanh(2*p[2]*(t-T/2))))
-            #ana.corr_fct_with_fit(tlist_ratio, R_mean, R_stdev, ratio_plt,
-            #    param_plt, [1,T2], label, prat, False, False, [10,23]) 
+ #           R_boot, R_mean, R_stdev, = ana.simple_ratio_subtract(bsamples_kk, bsamples_k, bsamples_k)
+ #           # initial p (A, deltaE, E_k)
+ #           label = ["Ratio K-K, "+ens, "time", "R(t)", "data", ""]
+ #           # define the ratiofunction, Use fitted energies for better results
+ #           ratio = lambda p, t, e : p[0]*(np.cosh(p[1]*(t-T/2))+np.sinh(p[1]*(t-T/2))/(np.tanh(2*e*(t-T/2))))
+ #           #ratio = lambda p, t : p[0]*(np.cosh(p[1]*(t-T/2))+np.sinh(p[1]*(t-T/2))/(np.tanh(2*p[2]*(t-T/2))))
+ #           # define fit ranges
+ #           lobound = 12
+ #           upbound = 22
+ #       #    ana.scan_fit_range(ratio, tlist_ratio, R_boot, par_ratio)
+ #           #res_R, chi2_R, pvals_R = ana.fitting(ratio, tlist_ratio[12:-1],
+ #           #      R_boot[:,12:-1], par_ratio, m_k_dat[s], verbose=0)
+ #           res_R, chi2_R, pvals_R = ana.genfit_comb(R_boot,ranges,ranges,ratio,par_ratio,res,
+ #               1,ens[:-1],label,tmp_out,"ratio")
+ #           # Plot mean ratio plus fitted function
+ #           #define the ratiofunction for plotting (median at moment)
+ #           #fitlabel = "fit %d:%d" % (lobound, upbound-1)
+ #           #label[3] = fitlabel
+ #           #param_plt = [np.median(res_R[:,0]),np.median(res_R[:,1]),np.median(m_k_dat[s])]
+ #           #ratio_plt = lambda p, t : p[0]*(np.cosh(p[1]*(t-T/2))+np.sinh(p[1]*(t-T/2))/(np.tanh(2*p[2]*(t-T/2))))
+ #           #ana.corr_fct_with_fit(tlist_ratio, R_mean, R_stdev, ratio_plt,
+ #           #    param_plt, [1,T2], label, prat, False, False, [10,23]) 
 
-            prat.close()
-            delE_dat = res_R
-            a_k_dat[s] = ana.calc_scat_length(res_R[:,1],m_k_dat[s],L)
-            m_k_akk = a_k_dat[s]*m_k_dat[s]
-            print("amu_s\tm_k +/- d_stat(m_k)\t delE +/- d_stat(delE) \ta_kk +/- d_stat(a_kk)\tm_k*a_kk +/- d_stat(m_k*a_kk)") 
-            print("%f\t%f +/- %f\t%f +/- %f\t%f +/- %f\t%f +/- %e"%(amu_s[s],
-              np.median(m_k_dat[s]), np.std(m_k_dat[s]),np.median(delE_dat),
-              np.std(delE_dat), np.median(a_k_dat[s]), np.std(a_k_dat[s]),
-              np.median(m_k_akk), np.std(m_k_akk) ))
+ #           prat.close()
+ #           delE_dat = res_R
+ #           a_k_dat[s] = ana.calc_scat_length(res_R[:,1],m_k_dat[s],L)
+ #           m_k_akk = a_k_dat[s]*m_k_dat[s]
+ #           print("amu_s\tm_k +/- d_stat(m_k)\t delE +/- d_stat(delE) \ta_kk +/- d_stat(a_kk)\tm_k*a_kk +/- d_stat(m_k*a_kk)") 
+ #           print("%f\t%f +/- %f\t%f +/- %f\t%f +/- %f\t%f +/- %e"%(amu_s[s],
+ #             np.median(m_k_dat[s]), np.std(m_k_dat[s]),np.median(delE_dat),
+ #             np.std(delE_dat), np.median(a_k_dat[s]), np.std(a_k_dat[s]),
+ #             np.median(m_k_akk), np.std(m_k_akk) ))
 
 
         ##----------------- Start analysis ------------------------------------------
