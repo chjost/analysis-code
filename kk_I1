@@ -50,8 +50,8 @@ def main():
     dmk_unit = 0.00052
     amu_s = [0.0185,0.0225,0.02464]
     #amu_s = [1]
-    ensemblelist = ['A40.24/','A60.24/','A80.24/','A100.24/']
-    #ensemblelist = ['A40.24/']
+    #ensemblelist = ['A40.24/','A60.24/','A80.24/','A100.24/']
+    ensemblelist = ['A100.24/']
     filelist = ['k_corr_p0.dat','kk_A1_TP0_00.dat']
     #filelist = ['C2.dat','kpi_4.dat']
     pathroot ="/hiskp2/helmes/k-k-scattering/"
@@ -123,7 +123,8 @@ def main():
             mass, mmass, dmass = ana.compute_mass(bsamples_k, True)
             # ana.scan_fit_range(massfunc, tlist_corr,mass, par_mass)
             # TODO: set two points more than wanted for upper limit
-            ranges = ana.set_fit_intervall(mass, [12], [24], 9)
+            ranges = ana.set_fit_intervall(mass, [10], [24], 12)
+            print len(ranges)
             res, chi2, pval = ana.genfit(mass,ranges,massfunc,
                 par_mass,1,ens[:-1],np.asarray([0,0,0]),label,tmp_out,"mass")
             #ana.corr_fct_with_fit(tlist_corr[:-2], mmass, dmass, massfunc, res[0],
@@ -133,44 +134,42 @@ def main():
             #pfit.close()
             print res[0,:,:,:]
             np.append(m_k_dat,res)
-            print res.shape[-1:]
-            ana.sys_error(res,np.expand_dims(pval,2),np.asarray([0,0,0]),ens[:-1])
+            print res.shape
+            m_k_w, dm_stat, dm_sys =  ana.sys_error(res[:,0],pval,np.asarray([0,0,0]),ens[:-1])
+            print m_k_w, dm_stat, dm_sys
 
 
             #-------------- Ratio of C_kk and C_k^2 ----------------------
 
- #           R_boot, R_mean, R_stdev, = ana.simple_ratio_subtract(bsamples_kk, bsamples_k, bsamples_k)
- #           # initial p (A, deltaE, E_k)
- #           label = ["Ratio K-K, "+ens, "time", "R(t)", "data", ""]
- #           # define the ratiofunction, Use fitted energies for better results
- #           ratio = lambda p, t, e : p[0]*(np.cosh(p[1]*(t-T/2))+np.sinh(p[1]*(t-T/2))/(np.tanh(2*e*(t-T/2))))
- #           #ratio = lambda p, t : p[0]*(np.cosh(p[1]*(t-T/2))+np.sinh(p[1]*(t-T/2))/(np.tanh(2*p[2]*(t-T/2))))
- #           # define fit ranges
- #           lobound = 12
- #           upbound = 22
- #       #    ana.scan_fit_range(ratio, tlist_ratio, R_boot, par_ratio)
- #           #res_R, chi2_R, pvals_R = ana.fitting(ratio, tlist_ratio[12:-1],
- #           #      R_boot[:,12:-1], par_ratio, m_k_dat[s], verbose=0)
- #           res_R, chi2_R, pvals_R = ana.genfit_comb(R_boot,ranges,ranges,ratio,par_ratio,res,
- #               1,ens[:-1],label,tmp_out,"ratio")
- #           # Plot mean ratio plus fitted function
- #           #define the ratiofunction for plotting (median at moment)
- #           #fitlabel = "fit %d:%d" % (lobound, upbound-1)
- #           #label[3] = fitlabel
- #           #param_plt = [np.median(res_R[:,0]),np.median(res_R[:,1]),np.median(m_k_dat[s])]
- #           #ratio_plt = lambda p, t : p[0]*(np.cosh(p[1]*(t-T/2))+np.sinh(p[1]*(t-T/2))/(np.tanh(2*p[2]*(t-T/2))))
- #           #ana.corr_fct_with_fit(tlist_ratio, R_mean, R_stdev, ratio_plt,
- #           #    param_plt, [1,T2], label, prat, False, False, [10,23]) 
+            R_boot, R_mean, R_stdev, = ana.simple_ratio_subtract(bsamples_kk, bsamples_k, bsamples_k)
+            # initial p (A, deltaE, E_k)
+            label = ["Ratio K-K, "+ens, "time", "R(t)", "data", ""]
+            # define the ratiofunction, Use fitted energies for better results
+            ratio = lambda p, t, e : p[0]*(np.cosh(p[1]*(t-T/2))+np.sinh(p[1]*(t-T/2))/(np.tanh(2*e*(t-T/2))))
+            #ratio = lambda p, t : p[0]*(np.cosh(p[1]*(t-T/2))+np.sinh(p[1]*(t-T/2))/(np.tanh(2*p[2]*(t-T/2))))
+            # define fit ranges
+            lobound = 12
+            upbound = 22
+            res_R, chi2_R, pvals_R = ana.genfit_comb(R_boot,ranges,ranges,ratio,par_ratio,res,
+                1,ens[:-1],label,tmp_out,"ratio")
+            # Reshape res_R and pvals_R for systematic error calculation
+            r = 9 
+            print res_R.size, pvals_R.size
+            print r, nbsamples 
+            w_res_R = np.reshape(res_R, (nbsamples,3,1,r))
+            w_pvals_R = np.reshape(pvals_R, (nbsamples,1,1,r))
+            #print w_res_R.shape, w_pvals_R.shape
+            del_E_w, ddel_E_stat, ddel_E_sys = ana.sys_error(w_res_R[:,1],w_pvals_R,np.asarray([0,0,0]),ens[:-1])
+            print del_E_w, ddel_E_stat, ddel_E_sys
+            prat.close()
 
- #           prat.close()
- #           delE_dat = res_R
- #           a_k_dat[s] = ana.calc_scat_length(res_R[:,1],m_k_dat[s],L)
- #           m_k_akk = a_k_dat[s]*m_k_dat[s]
- #           print("amu_s\tm_k +/- d_stat(m_k)\t delE +/- d_stat(delE) \ta_kk +/- d_stat(a_kk)\tm_k*a_kk +/- d_stat(m_k*a_kk)") 
- #           print("%f\t%f +/- %f\t%f +/- %f\t%f +/- %f\t%f +/- %e"%(amu_s[s],
- #             np.median(m_k_dat[s]), np.std(m_k_dat[s]),np.median(delE_dat),
- #             np.std(delE_dat), np.median(a_k_dat[s]), np.std(a_k_dat[s]),
- #             np.median(m_k_akk), np.std(m_k_akk) ))
+            a_k_dat[s] = ana.calc_scat_length(res_R[:,1],m_k_dat[s],L)
+            m_k_akk = a_k_dat[s]*m_k_dat[s]
+            print("amu_s\tm_k +/- d_stat(m_k)\t delE +/- d_stat(delE) \ta_kk +/- d_stat(a_kk)\tm_k*a_kk +/- d_stat(m_k*a_kk)") 
+            print("%f\t%f +/- %f\t%f +/- %f\t%f +/- %f\t%f +/- %e"%(amu_s[s],
+              np.median(m_k_dat[s]), np.std(m_k_dat[s]),np.median(delE_dat),
+              np.std(delE_dat), np.median(a_k_dat[s]), np.std(a_k_dat[s]),
+              np.median(m_k_akk), np.std(m_k_akk) ))
 
 
         ##----------------- Start analysis ------------------------------------------

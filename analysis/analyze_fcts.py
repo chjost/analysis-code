@@ -151,6 +151,7 @@ def sys_error(data, pvals, d, lattice):
         # draw original data as histogram
         plotlabel = 'hist_%d"' % _j
         label = ["", "", "principal correlator"]
+        print data[0,_j].shape, data_weight.shape
         plt.plot_histogram(data[0,_j], data_weight, lattice, d2, label, path,
                            plotlabel)
 
