@@ -108,8 +108,8 @@ def sys_error(data, pvals, d, lattice):
 
     Args:
         data: A numpy array with three axis. The first axis is the bootstrap 
-              sample number, the second axis is the time, the third axis is 
-              the eigenvalue numbers. 
+              sample number, the second axis is the number of correlators, the third axis is 
+              the fit range index
 
         pvals: The p value indicating the quality of the fit.
         lattice: The name of the lattice, used for the output file.
@@ -121,6 +121,8 @@ def sys_error(data, pvals, d, lattice):
               medians on the bootstrapped data.
         res_syst: 1 sigma systematic uncertainty is the difference 
               res - 16%-quantile or 84%-quantile - res respectively
+        weights: numpy array of the calculated weights for every bootstrap
+        sample and fit range
     """
 
     d2 = np.dot(d, d)
@@ -140,7 +142,7 @@ def sys_error(data, pvals, d, lattice):
         # calculate the standard deviation of the bootstrap samples and from
         # that and the p-values the weight of the fit for every chosen interval
         data_std = np.std(data[:,0])
-        data_weight = (1. - 2. * np.fabs(pvals[0, 0] - 0.5) *
+        data_weight = (1. - 2. * np.fabs(pvals[0, _j] - 0.5) *
                       np.amin(data_std)/data_std)**2
         # draw original data as histogram
         plotlabel = 'hist_%d"' % _j
@@ -165,7 +167,8 @@ def sys_error(data, pvals, d, lattice):
 #          res_std, res[0][0] - res_16[0], res_84[0] - res[0][0]))
 
     # only median on original data is of interest later
-    return res[0], res_std, res_syst
+    return res[0], res_std, res_syst, data_weight
+
 def square(sample):
   return map(lambda x: x**2, sample)
 
@@ -182,11 +185,14 @@ def calc_scat_length(dE, E, L):
     # coefficients according to Luescher
     c=[-2.837297, 6.375183, -8.311951]
     # creating data array from empty array
-    a = np.zeros_like(dE[:])
-    for b in range(0, dE.shape[0]):
-    # Prefactor common to every order
-      comm=-4.*np.pi/(E[b]*L*L)
-      # build up coefficient array
-      p=[comm*c[1]/(L*L*L),comm*c[0]/(L*L),comm/L, -1*dE[b]]
-      a[b] = np.roots(p)[2].real
+    a = np.zeros_like(dE[])
+    # loop over fit ranges
+    for _r in range(0,dE.shape[1]):
+        # loop over bootstrap samples
+        for _b in range(0, dE.shape[0]):
+        # Prefactor common to every order
+          comm=-4.*np.pi/(E[_b,_r]*L*L)
+          # build up coefficient array
+          p=[comm*c[1]/(L*L*L),comm*c[0]/(L*L),comm/L, -1*dE[_b,_r]]
+          a[_b,_r] = np.roots(p)[2].real
     return a

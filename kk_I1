@@ -135,8 +135,8 @@ def main():
             print res[0,:,:,:]
             np.append(m_k_dat,res)
             print res.shape, pval.shape
-            m_k_w, dm_stat, dm_sys =  ana.sys_error(res[:,0],pval,np.asarray([0,0,0]),ens[:-1])
-            print m_k_w, dm_stat, dm_sys
+            m_k_w, dm_stat, dm_sys, weights_m_k=  ana.sys_error(res[:,0],pval,np.asarray([0,0,0]),ens[:-1])
+            print("weights_m_k shape is:%d" % weights_m_k.shape)
 
 
             #-------------- Ratio of C_kk and C_k^2 ----------------------
@@ -159,11 +159,12 @@ def main():
             w_res_R = np.reshape(res_R, (nbsamples,3,1,r))
             w_pvals_R = np.reshape(pvals_R, (nbsamples,1,r))
             print w_res_R[:,1].shape, w_pvals_R.shape
-            del_E_w, ddel_E_stat, ddel_E_sys = ana.sys_error(w_res_R[:,1],w_pvals_R,np.asarray([0,0,0]),ens[:-1])
-            print del_E_w, ddel_E_stat, ddel_E_sys
+            del_E_w, ddel_E_stat, ddel_E_sys , weights_delE= ana.sys_error(w_res_R[:,1],w_pvals_R,np.asarray([0,0,0]),ens[:-1])
+            print("weights_delE shape is:%d" % weights_m_k.shape)
+            
             prat.close()
 
-            a_k_dat[s] = ana.calc_scat_length(res_R[:,1],m_k_dat[s],L)
+            print ana.calc_scat_length(res_R[:,1],m_k_dat[s],L)
             m_k_akk = a_k_dat[s]*m_k_dat[s]
             print("amu_s\tm_k +/- d_stat(m_k)\t delE +/- d_stat(delE) \ta_kk +/- d_stat(a_kk)\tm_k*a_kk +/- d_stat(m_k*a_kk)") 
             print("%f\t%f +/- %f\t%f +/- %f\t%f +/- %f\t%f +/- %e"%(amu_s[s],
