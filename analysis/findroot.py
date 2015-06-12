@@ -1,4 +1,6 @@
+__all__ = ["root"]
 
+import os
 import numpy as np
 import scipy.optimize as opt
 

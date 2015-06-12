@@ -122,6 +122,7 @@ def read_in_data(cut=3., debug=False):
         print(cov.shape)
         for i in range(cov.shape[0]):
             print(cov[i])
+    print(raw_data.shape)
     return raw_data, mpi, cov, infolist
 
 def main():
@@ -130,9 +131,9 @@ def main():
     cut = 3.
     N = 0
     # starting values for the minimizer
-    a0 = -.8
-    r0 = 12.
-    a2 = -.0075
+    a0 = -0.8
+    r0 = 15.
+    a2 = -0.05
     r2 = 0.
     h = np.array([0.5, 2., 0.01])
     par = np.array([a0, r0, a2, r2])

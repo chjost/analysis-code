@@ -39,30 +39,30 @@ def main():
     nbsamples = 1500
     #inputpath="/hiskp2/helmes/contractions/A40.24/kaon/strange_225/merged/"
     #outputpath="/hiskp2/helmes/contractions/A40.24/kaon/strange_225/merged/scratch/"
-    inputpath="/hiskp2/correlators/A40.24_L24_T48_beta190_mul0040_musig150_mudel190_kappa1632700/ev120/k-k/mu_s_185/"
-    outputpath="./"
-    suffix="k_corr_p0.dat"
-    suffix1="k_p0_average.dat"
-    suffix2="k_p0_mass.dat"
-    inputlist=[""]
-    #inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/"
-    #outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/"
-    #suffix="pi_corr_p0.dat"
-    #suffix1="pi_corr_average.dat"
-    #suffix2="pi_corr_mass.dat"
-    #inputlist=["D15_new/"]
+    #inputpath="/hiskp2/correlators/A40.24_L24_T48_beta190_mul0040_musig150_mudel190_kappa1632700/ev120/k-k/mu_s_185/"
+    #outputpath="./"
+    #suffix="k_corr_p0.dat"
+    #suffix1="k_p0_average.dat"
+    #suffix2="k_p0_mass.dat"
+    #inputlist=[""]
+    inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/"
+    outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_all/"
+    suffix="pi_corr_p0.dat"
+    suffix1="pi_corr_average.dat"
+    suffix2="pi_corr_mass.dat"
+    inputlist=["D15_all/"]
     #inputlist=["D15_new/", "D15_old/", "D15_combined/"]
 
     # get mass from correlation function
     #fitfunc = lambda p,t: p[0]*np.cosh((T/2.0-t)*p[1])
-    fitfunc = lambda p,t: 10e6 if p[1] < 0.0 else 0.5*p[0]*p[0]*(np.exp(-p[1]*t) + np.exp(-p[1]*(T-t)))
+    fitfunc = lambda p,t: 0.5*p[0]*p[0]*(np.exp(-p[1]*t) + np.exp(-p[1]*(T-t)))
     massfunc = lambda p,t: p
     for _i in inputlist:
         #pfit = PdfPages("./plots/%s_plot.pdf" % (_i[:-1]))
         pfit = PdfPages("%sm_eff_plot.pdf" % outputpath)
         # read in data
         print("".join((inputpath, inputlist[0], suffix)))
-        corrs = ana.read_data_ascii("".join((inputpath, inputlist[0], suffix)))
+        corrs = ana.read_data_ascii("".join((inputpath, _i, suffix)))
         T = corrs.shape[1]
         nbcfg = corrs.shape[0]
         T2=int(T/2)+1
@@ -82,7 +82,7 @@ def main():
         # choose fitrange
 
         # single pi
-        #label = ["single pion, D15", "time", "C(t)", "data", ""]
+        label = ["single pion, D15", "time", "C(t)", "data", ""]
         #for lo in range(14, bsamples.shape[1]-5):
         #    for up in range(lo+3, bsamples.shape[1]-1):
         #        res, chi2, pval = ana.fitting(fitfunc, tlist[lo:up], bsamples[:,lo:up], [1., 0.07], verbose=0)
@@ -91,24 +91,29 @@ def main():
         #        label[3] = fitlabel
         #        ana.corr_fct_with_fit(tlist, bsamples[0], ddata, fitfunc, res[0],
         #                               [1,T2], label, pfit, True)
-        #mass, mmass, dmass = ana.compute_mass(bsamples, True)
-        #ana.corr_fct_with_fit(tlist[:-2], mmass, dmass, massfunc, res[0,1],
-        #                      [1,T2-2], label, pfit, False)
-
-        # single kaon
-        label = ["single kaon, A40.24", "time", "C(t)", "data", ""]
-        up=T2-1
-        for lo in range(12, bsamples.shape[1]-11):
-            #for up in range(lo+5, bsamples.shape[1]):
-            res, chi2, pval = ana.fitting(fitfunc, tlist[lo:up], bsamples[:,lo:up], [1., 1.], verbose=1)
-            print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, E %.7lf" % (lo, up, pval[0], chi2[0]/(len(tlist[lo:up])-2), res[0,1]))
-            fitlabel = "fit %d:%d" % (lo, up-1)
-            label[3] = fitlabel
-            ana.corr_fct_with_fit(tlist, bsamples[0], ddata, fitfunc, res[0],
-                                       [1,T2-2], label, pfit, True, True, [lo,up])
+        lo, up = 14, 36
+        res, chi2, pval = ana.fitting(fitfunc, tlist[lo:up], bsamples[:,lo:up], [1., 0.07], verbose=0)
+        fitlabel = "fit %d:%d" % (lo, up-1)
+        label[3] = fitlabel
+        ana.corr_fct_with_fit(tlist, bsamples[0], ddata, fitfunc, res[0], [1,T2], label, pfit, True)
         mass, mmass, dmass = ana.compute_mass(bsamples, True)
         ana.corr_fct_with_fit(tlist[:-2], mmass, dmass, massfunc, res[0,1],
-                              [1,T2], label, pfit, False, False)
+                              [1,T2-2], label, pfit, False)
+
+        # single kaon
+        #label = ["single kaon, A40.24", "time", "C(t)", "data", ""]
+        #up=T2-1
+        #for lo in range(12, bsamples.shape[1]-11):
+        #    #for up in range(lo+5, bsamples.shape[1]):
+        #    res, chi2, pval = ana.fitting(fitfunc, tlist[lo:up], bsamples[:,lo:up], [1., 1.], verbose=1)
+        #    print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, E %.7lf" % (lo, up, pval[0], chi2[0]/(len(tlist[lo:up])-2), res[0,1]))
+        #    fitlabel = "fit %d:%d" % (lo, up-1)
+        #    label[3] = fitlabel
+        #    ana.corr_fct_with_fit(tlist, bsamples[0], ddata, fitfunc, res[0],
+        #                               [1,T2-2], label, pfit, True, True, [lo,up])
+        #mass, mmass, dmass = ana.compute_mass(bsamples, True)
+        #ana.corr_fct_with_fit(tlist[:-2], mmass, dmass, massfunc, res[0,1],
+        #                      [1,T2], label, pfit, False, False)
         pfit.close()
 
 # make this script importable, according to the Google Python Style Guide

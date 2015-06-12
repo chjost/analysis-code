@@ -152,12 +152,12 @@ def fitting_range(fitfunc, X, Y, start_parm, correlated=True, verbose=True):
     """
     # vary the lower and upper end of the fit range
     for lo in range(int(Y.shape[1]/4), Y.shape[1]-5):
-        for up in range(lo+5, x.shape[1]):
+        for up in range(lo+5, X.shape[1]):
             # fit the data
             res, chi2, pval=fitting(fitfunc, X[lo:up], Y[:,lo:up], start_params,
                                     correlated=correlated, verbose=False)
             # calculate the weight
-            weight = ((1. - np.abs(pval - 0.5)) * (1.0))**2
+            weight = ((1. - 2*np.abs(pval - 0.5)) * (1.0))**2
             # calculate weighted median
             median = quantile_1D(res[:,1], weight, 0.5)
 
@@ -197,7 +197,7 @@ def scan_fit_range(fitfunc, X, Y, start_params, correlated=True, verbose=False):
 
     return
 
-def set_fit_intervall(data, lolist, uplist, intervallsize):
+def set_fit_intervall(_data, lolist, uplist, intervallsize):
     """Initialize intervalls to fit in with borders given for every principal
     correlator
 
@@ -212,7 +212,7 @@ def set_fit_intervall(data, lolist, uplist, intervallsize):
     Returns:
         fit_intervals: list of pairs [lo, up] for every gevp-eigenvalue.
     """
-
+    data = np.atleast_3d(_data)
     ncorr = data.shape[2]
     fit_intervalls = []
     for _l in range(ncorr):
@@ -225,12 +225,12 @@ def set_fit_intervall(data, lolist, uplist, intervallsize):
     return fit_intervalls
 
 
-def genfit(data, fit_intervalls, fitfunc, start_params, tmin, lattice, d, label,
+def genfit(_data, fit_intervalls, fitfunc, start_params, tmin, lattice, d, label,
             path=".plots/", plotlabel="corr", verbose=True):
     """Fit and plot the correlation function.
     
     Args:
-        data: The correlation functions.
+        _data: The correlation functions.
         fit_intervalls: List of intervalls for the fit for the different
               correlation functions.
         fitfunc: The function to fit to the data.
@@ -248,6 +248,7 @@ def genfit(data, fit_intervalls, fitfunc, start_params, tmin, lattice, d, label,
         chi2: Chi^2 for every fit
         pval: p-value for every fit.
     """
+    data = np.atleast_3d(_data)
     # init variables
     nboot = data.shape[0]
     T2 = data.shape[1]

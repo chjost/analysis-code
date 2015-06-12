@@ -26,6 +26,8 @@
 #
 ################################################################################
 
+__all__ = ["minimizer", "min3"]
+
 import os
 import numpy as np
 import scipy.optimize as opt
