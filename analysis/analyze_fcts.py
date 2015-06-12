@@ -140,14 +140,8 @@ def sys_error(data, pvals, d, lattice):
         # calculate the standard deviation of the bootstrap samples and from
         # that and the p-values the weight of the fit for every chosen interval
         data_std = np.std(data[:,0])
-        #for _k in range(0, data.shape[2]):
-        #    data_std[_k] = np.std(data[:, 0, _k])
         data_weight = (1. - 2. * np.fabs(pvals[0, 0] - 0.5) *
                       np.amin(data_std)/data_std)**2
-        #for _k in range(0, data.shape[2]):
-        #    data_weight[_k] = (1 - 2 * np.fabs(pvals[0, 0, _k] - 0.5) * 
-        #                      np.amin(data_std)/data_std[_k])**2
-
         # draw original data as histogram
         plotlabel = 'hist_%d"' % _j
         label = ["", "", "principal correlator"]
