@@ -1,4 +1,4 @@
-################################################################################
+  ################################################################################
 #
 # Author: Christian Jost (jost@hiskp.uni-bonn.de)
 # Date:   Februar 2015
@@ -101,6 +101,55 @@ def calc_error(data, axis=0):
     err  = np.std(data, axis)
     return mean, err
 
+def sys_error_der(data, weights, lattice):
+    """Error calculation for derived results
+    
+    Args:
+        data: the derived data
+        weight: a (multidimensional) np-array holding the combination of weights
+        for all combination of fit intervals
+
+    Returns:
+        res: The weighted median value on the original data
+        res_std: The standard deviation derived from the deviation of 
+              medians on the bootstrapped data.
+        res_syst: 1 sigma systematic uncertainty is the difference 
+              res - 16%-quantile or 84%-quantile - res respectively
+        
+    """
+    data_std = np.empty([data.shape[1]], dtype=float)
+
+    res = np.empty([data.shape[0]], dtype=float)
+    res_syst = np.empty(2, dtype=float)
+
+    path="./plots/"
+
+    # loop over principal correlators
+    # calculate the standard deviation of the bootstrap samples and from
+    # that and the p-values the weight of the fit for every chosen interval
+    data_std = np.std(data[:,0])
+    # draw original data as histogram
+    plotlabel = 'hist'
+    label = ["", "", "principal correlator"]
+    print data[0].shape, weights.shape
+    plt.plot_histogram(data[0], weights, lattice, 0, label, path,
+                       plotlabel)
+
+    # using the weights, calculate the median over all fit intervalls for
+    # every bootstrap sample.
+    for _i in range(0, data.shape[0]):
+        res[_i] = qlt.weighted_quantile(data[_i], weights, 0.5)
+    # the statistical error is the standard deviation of the medians over
+    # the bootstrap samples.
+    res_std = np.std(res)
+    # the systematic error is given by difference between the median on the 
+    # original data and the 16%- or 84%-quantile respectively
+    res_syst[0] = res[0] - qlt.weighted_quantile(data[0],
+        weights, 0.16)
+    res_syst[1] = qlt.weighted_quantile(data[0], weights, 0.84) - res[0]
+
+    return res[0], res_std, res_syst
+
 def sys_error(data, pvals, d, lattice):
     """Calculates the statistical and systematic error of an np-array of 
     fit results on bootstrap samples of a quantity and the corresponding 
@@ -182,17 +231,23 @@ def calc_scat_length(dE, E, L):
        Returns:
            a: roots of the function
     """
+    print dE.shape, E.shape
     # coefficients according to Luescher
     c=[-2.837297, 6.375183, -8.311951]
     # creating data array from empty array
-    a = np.zeros_like(dE[])
+    a = np.zeros((dE.shape[0], dE.shape[2]))
     # loop over fit ranges
-    for _r in range(0,dE.shape[1]):
+    for _r in range(dE.shape[2]):
         # loop over bootstrap samples
-        for _b in range(0, dE.shape[0]):
+        for _b in range(dE.shape[0]):
         # Prefactor common to every order
-          comm=-4.*np.pi/(E[_b,_r]*L*L)
-          # build up coefficient array
-          p=[comm*c[1]/(L*L*L),comm*c[0]/(L*L),comm/L, -1*dE[_b,_r]]
-          a[_b,_r] = np.roots(p)[2].real
+          #print E[_b,0,_r], dE[_b,0,_r]
+          comm = -4.*np.pi/(E[_b,0,0,_r]*L*L)
+          # build up coefficient list
+          p = np.asarray((comm*c[1]/(L*L*L),comm*c[0]/(L*L),comm/L,
+            -1*dE[_b,0,_r]))
+          # write scattering length to array
+          #print p
+
+          a[_b,_r] = np.roots(p[_r])[2].real
     return a

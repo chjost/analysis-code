@@ -63,7 +63,8 @@ def main():
         m_k_dat = [] #np.zeros((len(amu_s), nbsamples))
         a_k_dat = [] #np.zeros((len(amu_s), nbsamples))
         m_k_unit =[] # np.zeros(nbsamples)
-
+        save_res=open(datapath+"res.dat","w")
+        save_res.write("amu_s\tm_k +/- d_stat(m_k)\t delE +/- d_stat(delE) \ta_kk +/- d_stat(a_kk)\tm_k*a_kk +/- d_stat(m_k*a_kk)\n") 
         for s in range(0,len(amu_s)):
             # need two cachepaths
             name_cache_k = cachepath+ens[:-1]+"_"+str(amu_s[s])[3:]+"_"+filelist[0]
@@ -123,7 +124,7 @@ def main():
             mass, mmass, dmass = ana.compute_mass(bsamples_k, True)
             # ana.scan_fit_range(massfunc, tlist_corr,mass, par_mass)
             # TODO: set two points more than wanted for upper limit
-            ranges = ana.set_fit_intervall(mass, [10], [24], 12)
+            ranges = ana.set_fit_intervall(mass, [9], [24], 10)
             print len(ranges)
             res, chi2, pval = ana.genfit(mass,ranges,massfunc,
                 par_mass,1,ens[:-1],np.asarray([0,0,0]),label,tmp_out,"mass")
@@ -148,12 +149,11 @@ def main():
             ratio = lambda p, t, e : p[0]*(np.cosh(p[1]*(t-T/2))+np.sinh(p[1]*(t-T/2))/(np.tanh(2*e*(t-T/2))))
             #ratio = lambda p, t : p[0]*(np.cosh(p[1]*(t-T/2))+np.sinh(p[1]*(t-T/2))/(np.tanh(2*p[2]*(t-T/2))))
             # define fit ranges
-            lobound = 12
-            upbound = 22
-            res_R, chi2_R, pvals_R = ana.genfit_comb(R_boot,ranges,ranges,ratio,par_ratio,res,
+            ranges1 = ana.set_fit_intervall(R_boot,[11],[24],12)
+            res_R, chi2_R, pvals_R = ana.genfit_comb(R_boot,ranges,ranges1,ratio,par_ratio,res,
                 1,ens[:-1],label,tmp_out,"ratio")
             # Reshape res_R and pvals_R for systematic error calculation
-            r = len(ranges[0])**2 
+            r = len(ranges[0])*len(ranges1[0]) 
             print res_R.size, pvals_R.size
             print r, nbsamples 
             w_res_R = np.reshape(res_R, (nbsamples,3,1,r))
@@ -163,15 +163,42 @@ def main():
             print("weights_delE shape is:%d" % weights_m_k.shape)
             
             prat.close()
+            print("results shapes:")
+            print res_R.shape, res.shape
 
-            print ana.calc_scat_length(res_R[:,1],m_k_dat[s],L)
-            m_k_akk = a_k_dat[s]*m_k_dat[s]
-            print("amu_s\tm_k +/- d_stat(m_k)\t delE +/- d_stat(delE) \ta_kk +/- d_stat(a_kk)\tm_k*a_kk +/- d_stat(m_k*a_kk)") 
-            print("%f\t%f +/- %f\t%f +/- %f\t%f +/- %f\t%f +/- %e"%(amu_s[s],
-              np.median(m_k_dat[s]), np.std(m_k_dat[s]),np.median(delE_dat),
-              np.std(delE_dat), np.median(a_k_dat[s]), np.std(a_k_dat[s]),
-              np.median(m_k_akk), np.std(m_k_akk) ))
+            #---------------------- Scattering length a_kk --------------------
 
+            # calculate Scattering length
+            a_kk = ana.calc_scat_length(res_R[:,1],res,L)
+            # and its median and errors and weights
+            weights_a_kk = weights_delE*weights_m_k
+            print a_kk.shape, weights_a_kk.shape
+            a_kk_w, a_kk_stat, a_kk_sys = ana.sys_error_der(a_kk, weights_a_kk ,ens[:-1])
+            #print("%f\t%f +/- %f\t%f +/- %f\t%f +/- %f\t%f +/- %e"%(amu_s[s],
+            #  m_k_w, dm_stat, dm_sys, del_E_w, ddel_E_stat, ddel_E_sys,
+            #  a_kk_w, a_kk_stat, a_kk_sys[0], a_kk_sys[1]
+            #  #np.median(m_k_akk[:,0]), np.std(m_k_akk[:,0]
+            #  ))
+            save_res.write("%f\t%f +/- %f +%f-%f\t%f +/- %f +%f-%f\t%f +/- %f +%f-%f\n"%(amu_s[s],
+              m_k_w, dm_stat[0], dm_sys[0], dm_sys[1], del_E_w, ddel_E_stat[0],
+              ddel_E_sys[0],ddel_E_sys[1],
+              a_kk_w, a_kk_stat, a_kk_sys[0], a_kk_sys[1]))
+            
+            #------------------------- m_k*a_kk -------------------------------
+
+            ma_k = a_kk * res[:,0,0]
+            weights_ma_k = weights_a_kk * weights_m_k 
+            ma_k_w , ma_k_stat, ma_k_sys = ana.sys_error_der(ma_k, weights_ma_k,
+                ens[:-1])
+
+            print("%f\t%f +/- %f +%f-%f\t%f +/- %f +%f-%f\t%f +/- %f +%f-%f\t%f +/- %f +%f-%f"%(
+              amu_s[s],
+              m_k_w, dm_stat[0], dm_sys[0], dm_sys[1],
+              del_E_w, ddel_E_stat[0], ddel_E_sys[0],ddel_E_sys[1],
+              a_kk_w, a_kk_stat, a_kk_sys[0], a_kk_sys[1],
+              ma_k_w, ma_k_stat, ma_k_sys[0], ma_k_sys[1]))
+        
+        save_res.close()
 
         ##----------------- Start analysis ------------------------------------------
 
