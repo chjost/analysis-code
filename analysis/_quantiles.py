@@ -1,5 +1,4 @@
 import numpy as np
-
 def weighted_quantile(data, weights, quantile):
     """Compute the weighted quantile, where a fixed percentage of the sum of
     all weights lie below.
@@ -11,7 +10,6 @@ def weighted_quantile(data, weights, quantile):
         quantile: The percentage of weights to be below the quantile. 
               0.5 is the weighted median
     """
-
     ind_sorted = np.argsort(data)
     sorted_data = data[ind_sorted]
     sorted_weights = weights[ind_sorted]

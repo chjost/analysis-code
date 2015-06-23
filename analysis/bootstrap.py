@@ -45,7 +45,10 @@ def bootstrap(source, nbsamples):
     """
     # seed the random number generator
     # the seed is hardcoded to be able to recreate the samples
-    np.random.seed(125013)
+    # original seed
+    #np.random.seed(125013)
+    # Bastians seed
+    np.random.seed(1227)
     # initialize the bootstrapsamples to 0.
     boot = np.zeros(nbsamples, dtype=float)
     # the first entry is the average over the original data
