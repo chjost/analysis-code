@@ -118,7 +118,7 @@ def sym(source):
 
     # the first timeslice is not symmetrized
     data = source[:,0]
-    for _t in range(1, int(T/2)):
+    for _t in range(1, int(_T/2)):
         # symmetrize the correlation function
         _symm = (source[:,_t] + source[:,(_T - _t)]) / 2.
         # append to previous data

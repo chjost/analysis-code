@@ -45,7 +45,7 @@ def read_data(path, pilist, pipilist, datafolder, nsamples, readnew=True):
             for f in pipilist:
                 print(f)
         pipi_data = ana.create_corr_matrix(nsamples, path, pipilist)
-        pi_data = ana.create_corr_matrix(nsamples, path, pipilist)
+        pi_data = ana.create_corr_matrix(nsamples, path, pilist)
         ana.write_data(pipi_data, "%s/pipi_data.npy" % (datafolder))
         ana.write_data(pi_data, "%s/pi_data.npy" % (datafolder))
     else:
