@@ -1,0 +1,149 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+##!/usr/bin/python
+################################################################################
+#
+# Author: Christian Jost (jost@hiskp.uni-bonn.de)
+# Date:   Februar 2015
+#
+# Copyright (C) 2015 Christian Jost
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Function: This is the start of the eta/eta' analysis program
+#
+# For informations on input parameters see the description of the function.
+#
+################################################################################
+
+import numpy as np
+import matplotlib
+matplotlib.use('QT4Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+
+import analysis as ana
+
+def read_data(path, pilist, pipilist, datafolder, nsamples, readnew=True):
+    verbose = True
+    if readnew:
+        if verbose:
+            print("reading files:")
+            for f in pilist:
+                print(f)
+            for f in pipilist:
+                print(f)
+        pipi_data = ana.create_corr_matrix(nsamples, path, pipilist)
+        pi_data = ana.create_corr_matrix(nsamples, path, pipilist)
+        ana.write_data(pipi_data, "%s/pipi_data.npy" % (datafolder))
+        ana.write_data(pi_data, "%s/pi_data.npy" % (datafolder))
+    else:
+        if verbose:
+            print("reading numpy data")
+        pipi_data = ana.read_data("%s/pipi_data.npy" % (datafolder))
+        pi_data = ana.read_data("%s/pi_data.npy" % (datafolder))
+    return pi_data, pipi_data
+
+def analyse(lattice="A40.24", d=np.asarray([0., 0., 0.])):
+    """pi-pi scattering analysis for I=2.
+
+    Args:
+        lattice: a string with the lattice name.
+        d: A numpy array with the total momentum.
+    """
+    ## define main variables
+    verbose=True
+    nsamples = 1500 # number of bootstrap samples
+    L, T = 24, 48
+    tmin = 1 # for the GEVP
+    path = "/hiskp2/correlators/A40.24_L24_T48_beta190_mul0040_musig150_mudel190_kappa1632700/ev120/liuming/"
+    datafolder = "./raw_data/"
+    plotfolder = "./plots/"
+    gmax = 5 # maximum index of the gevp
+    mpi = 0.1446
+
+    ## other variables
+    d2 = np.dot(d, d)
+    pipilist = ["pipi_pipi_A1_corr_TP%d_%d%d" % (d2, x, y) for x in range(gmax)
+                for y in range(gmax)]
+    pilist = ["pi_corr_p%d" % d2 ]
+    corr_fit = lambda p, t: p[0]*np.exp(-p[1]*t) + p[2]*np.exp(-p[3]*t) + p[4]
+    corr_plot = lambda p, t: np.exp(2.*mpi*t)*(p[0]*np.exp(-p[1]*t) + p[2]*np.exp(-p[3]*t))
+    label = ["shifted pipi I=2, A40.24", "time", "exp(dE(t-tmin))C(t)", "data", ""]
+
+    ## read in data
+    pi_data, pipi_data = read_data(path, pilist, pipilist, datafolder, nsamples, False)
+
+    #if verbose:
+    #    print(pi_data.shape)
+    #    print(pipi_data.shape)
+
+    xlims = [(0,25), (0,25), (0,25), (0,25), (0,25)]
+    ylims = [(0.2, 0.4), (0.5, 0.8), (0.7, 0.9), (0.8, 1.2), (1., 1.5)]
+    for s in xrange(2):
+        print("shift %d" % s)
+        #pipi_data_shift = ana.shift_corr_matrix(pipi_data, s)
+
+        #if verbose:
+        #    print("shifted data")
+        #    print(pipi_data_shift.shape)
+
+        ## GEVP
+        #gevp_mat = ana.calculate_gevp(pipi_data_shift, tmin)
+        #ana.write_data(gevp_mat, "%s/pipi_corr_mat_TP%d_s%d.npy" % (datafolder, d2, s))
+        gevp_mat = ana.read_data("%s/pipi_corr_mat_TP%d_s%d.npy" % (datafolder, d2, s))
+        mgevp, dgevp = ana.calc_error(gevp_mat)
+        
+        #if verbose:
+        #    print(gevp_mat.shape)
+        #    print(mgevp.shape)
+        #    print(dgevp.shape)
+
+        # plot gevp result
+        pfit = PdfPages("%spipi_gevp_plot_shift%d.pdf" % (plotfolder, s)) 
+        tlist = np.linspace(0., gevp_mat.shape[1], gevp_mat.shape[1], endpoint=False)
+        for i in xrange(gevp_mat.shape[2]):
+            print("correlator %d" % i)
+            res, chi2, pvals = ana.fitting(corr_fit, tlist[(tmin+2):-5], gevp_mat[:,(tmin+2):-5,i], [8e4, 0.15, 8e4, 0.3, 25.],verbose=1)
+            data = np.zeros((gevp_mat.shape[:2]))
+            for t in xrange(data.shape[1]):
+                data[:,t] = gevp_mat[:,t,i] * np.exp(2.*mpi*t)
+            mdata, ddata = ana.calc_error(data)
+            #ana.plot_data(tlist, gevp_mat[0,:,i], dgevp[:,i], pfit, logscale=True)
+            ana.corr_fct_with_fit(tlist, data[0], ddata, corr_plot, res[0,:-1], [tmin, gevp_mat.shape[1]], label, pfit)
+        pfit.close()
+
+        # calc mass from gevp results
+        pfit = PdfPages("%spipi_mass_plot_shift%d.pdf" % (plotfolder, s)) 
+        for i in xrange(gevp_mat.shape[2]):
+            mass, mmass, dmass = ana.compute_mass(gevp_mat[:,:,i], False)
+            #ana.plot_data(tlist[1:-1], mass[0], dmass, pfit)
+            ana.plot_data(tlist[1:-1], mass[0], dmass, pfit, xlim=xlims[i], ylim=ylims[i])
+        pfit.close()
+
+    return
+
+def main():
+    d0 = np.array([0., 0., 0.]) # total momentum of the system
+    d1 = np.array([0., 0., 1.]) # total momentum of the system
+    lattices=["A30.32", "A40.20", "A40.24", "A40.32", "A60.24",\
+              "A80.24", "A100.24"]
+    analyse()
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass

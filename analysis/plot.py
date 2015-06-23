@@ -4,9 +4,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
-
 def corr_fct_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
-                      logscale=False, setLimits=False, fitrange=None):
+                      logscale=False, xlim=None, ylim=None, fitrange=None):
     """A function that plots a correlation function.
 
     This function plots the given data points and the fit to the data. The plot
@@ -24,6 +23,7 @@ def corr_fct_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
         label: A list with labels for title, x axis, y axis, data and fit.
         pdfplot: A PdfPages object in which to save the plot.
         logscale: Make the y-scale a logscale.
+        xlim, ylim: limits for the x and y axis, respectively
         setLimits: Set limits to the y range of the plot.
         fitrange: A list with two entries, bounds of the fitted function.
 
@@ -55,9 +55,11 @@ def corr_fct_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
     plt.legend()
     if logscale:
         plt.yscale('log')
-    # set the yaxis range
-    if setLimits:
-        plt.ylim(0.25, 1.)
+    # set the axis ranges
+    if xlim:
+        plt.xlim(xlim)
+    if ylim:
+        plt.ylim(ylim)
     # save pdf
     pdfplot.savefig()
     plt.clf()
@@ -73,6 +75,62 @@ def corr_fct_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
 #  plt.plot(x, scipy.stats.chi2.pdf(x, dof), 'r-', lw=2, alpha=1, label='chi2 pdf')
 #  plt.bar(center, hist, align='center', width=width)
 #  plt.show()
+
+def plot_data(X, Y, dY, pdfplot, plotrange=None, logscale=False, xlim=None, ylim=None):
+    """A function that plots a correlation function.
+
+    This function plots the given data points and the fit to the data. The plot
+    is saved to pdfplot. It is assumed that pdfplot is a pdf backend to
+    matplotlib so that multiple plots can be saved to the object.
+
+    Args:
+        X: The data for the x axis.
+        Y: The data for the y axis.
+        dY: The error on the y axis data.
+        pdfplot: A PdfPages object in which to save the plot.
+        plotrange: A list with two entries, the lower and upper range of the
+                   plot.
+        logscale: Make the y-scale a logscale.
+        xlim: tuple of the limits on the x axis
+        ylim: tuple of the limits on the y axis
+
+    Returns:
+        Nothing.
+    """
+    # check boundaries for the plot
+    if plotrange:
+        plotrange = np.asarray(plotrange).flatten()
+        if plotrange.size() is not 2:
+            print("size of plotrange is wrong, cannot plot")
+            return
+        else:
+            l = plotrange[0]
+            u = plotrange[1]
+    else:
+        l = 0
+        u = X.shape[0] - 1
+
+    # plot the data
+    p1 = plt.errorbar(X[l:u], Y[l:u], dY[l:u], fmt='x' + 'b', label="data")
+
+    # adjusting the plot style
+    plt.grid(True)
+    #plt.xlabel(label[1])
+    #plt.ylabel(label[2])
+    #plt.title(label[0])
+    plt.legend()
+    if logscale:
+        plt.yscale('log')
+    if xlim:
+        plt.xlim(xlim)
+    if ylim:
+        plt.ylim(ylim)
+
+    # save pdf and clear plot
+    pdfplot.savefig()
+    plt.clf()
+
+    return
 
 def plot_histogram(data, data_weight, lattice, d, label, path=".plots/", 
                    plotlabel="hist", verbose=True):

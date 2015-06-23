@@ -95,6 +95,7 @@ def main():
         res, chi2, pval = ana.fitting(fitfunc, tlist[lo:up], bsamples[:,lo:up], [1., 0.07], verbose=0)
         fitlabel = "fit %d:%d" % (lo, up-1)
         label[3] = fitlabel
+        print(bsamples[0].shape, ddata.shape, len(tlist))
         ana.corr_fct_with_fit(tlist, bsamples[0], ddata, fitfunc, res[0], [1,T2], label, pfit, True)
         mass, mmass, dmass = ana.compute_mass(bsamples, True)
         ana.corr_fct_with_fit(tlist[:-2], mmass, dmass, massfunc, res[0,1],
