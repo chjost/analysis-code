@@ -71,7 +71,7 @@ def fitting(fitfunc, X, Y, start_parm, E_single=None, correlated=True, verbose=T
     if E_single is None:
         for b in range(0, Y.shape[0]):
             p,cov1,infodict,mesg,ier = leastsq(errfunc, start_parm,
-                                       args=(X, Y[b,:], cov), full_output=1)
+                                       args=(X, Y[b,:], cov), full_output=1, factor=0.1)
             chisquare[b] = float(sum(infodict['fvec']**2.))
             res[b] = np.array(p)
     else:
@@ -253,13 +253,18 @@ def genfit(data, fit_intervalls, fitfunc, start_params, tmin, lattice, d, label,
     T2 = data.shape[1]
     ncorr = data.shape[2]
     npar = len(start_params)
-    # same intervall size for all correlators hardcoded
-    ninter = len(fit_intervalls[0])
     d2 = np.dot(d,d)
     # initialize empty arrays
-    res = np.zeros((nboot, npar, ncorr, ninter))
-    chi2 = np.zeros((nboot, ncorr, ninter))
-    pval = np.zeros((nboot, ncorr, ninter))
+    res = []
+    chi2 = []
+    pval = []
+    # initialize array for every principal correlator
+    for _l in range(ncorr):
+        ninter = len(fit_intervalls[_l])
+
+        res.append(np.zeros((nboot, npar, ninter)))
+        chi2.append(np.zeros((nboot, ninter)))
+        pval.append(np.zeros((nboot, ninter)))
     # set fit data
     tlist = np.linspace(0., float(T2), float(T2), endpoint=False)
     # outputfile for the plot
@@ -284,21 +289,20 @@ def genfit(data, fit_intervalls, fitfunc, start_params, tmin, lattice, d, label,
             if verbose:
                 print("Intervall [%d, %d]" % (lo, up))
                 print("correlator %d" % _l)
-            print("Intervall [%d, %d]" % (lo, up))
 
             # fit the energy and print information
             if verbose:
                 print("fitting correlation function")
 
-            res[:,:,_l,_i], chi2[:,_l,_i], pval[:,_l,_i] =fitting(fitfunc, 
+            res[_l][:,:,_i], chi2[_l][:,_i], pval[_l][:,_i] =fitting(fitfunc, 
                     tlist[lo:up], data[:,lo:up,_l], start_params, verbose=False)
             if verbose:
-                print("%d\tres = %lf\t%lf" % (_i, res[0, 0, _l, _i],
-                      res[0, 1, _l, _i]))
-                print("p-value %.7lf\nChi^2/dof %.7lf" % (pval[0,_l, _i],
-                      chi2[0,_l, _i]/( (up - lo) - len(start_params))))
+                print("%d\tres = %lf\t%lf" % (_i, res[_l][0, 0, _i],
+                      res[_l][0, 1, _i]))
+                print("p-value %.7lf\nChi^2/dof %.7lf" % (pval[_l][ 0, _i],
+                      chi2[_l][0,_i]/( (up - lo) - len(start_params))))
 
-            mres, dres = af.calc_error(res[:,:,_l,_i])
+            mres, dres = af.calc_error(res[_l][:,:,_i])
 
             # set up the plot labels
             fitlabel = "fit %d:%d" % (lo, up-1)
@@ -355,6 +359,7 @@ def genfit(data, fit_intervalls, fitfunc, start_params, tmin, lattice, d, label,
 # Input: corr      -> the correlator
 #          params -> contains the p-value for each correlator
 # Output: returns the weights or an empty array
+# corr is np-array  nb_boot, nb_inter
 def compute_weight(corr, params):
     """compute the weights for the histogram
 
