@@ -199,48 +199,6 @@ def calc_error(data, pvals, j, d, lattice, plot=False):
         res_syst: 1 sigma systematic uncertainty is the difference 
               res - 16%-quantile or 84%-quantile - res respectively
     """
-#    d2 = np.dot(d, d)
-#
-#    data_std = np.empty([data.shape[2]], dtype=float)
-#    data_weight = np.empty([data.shape[2]], dtype=float)
-#
-#    res = np.empty([data.shape[0], data.shape[1]], dtype=float)
-#    res_std = np.empty([data.shape[1]], dtype=float)
-#    res_syst = np.empty([2, data.shape[1]], dtype=float)
-#
-#    path="./plots/"
-#
-#    # loop over principal correlators
-#    for _j in range(0, data.shape[1]):
-#        # calculate the standard deviation of the bootstrap samples and from
-#        # that and the p-values the weight of the fit for every chosen interval
-#        data_std = np.std(data[:,0])
-#        #for _k in range(0, data.shape[2]):
-#        #    data_std[_k] = np.std(data[:, 0, _k])
-#        data_weight = (1. - 2. * np.fabs(pvals[0, 0] - 0.5) *
-#                      np.amin(data_std)/data_std)**2
-#        #for _k in range(0, data.shape[2]):
-#        #    data_weight[_k] = (1 - 2 * np.fabs(pvals[0, 0, _k] - 0.5) * 
-#        #                      np.amin(data_std)/data_std[_k])**2
-#
-#        # draw original data as histogram
-#        plotlabel = 'hist_%d' % _j
-#        label = ["", "", "principal correlator"]
-#        ana.plot_histogram(data[0,_j], data_weight, lattice, d2, label, path,
-#                           plotlabel)
-#
-#        # using the weights, calculate the median over all fit intervalls for
-#        # every bootstrap sample.
-#        for _i in range(0, data.shape[0]):
-#            res[_i, _j] = ana.weighted_quantile(data[_i, _j], data_weight, 0.5)
-#        # the statistical error is the standard deviation of the medians over
-#        # the bootstrap samples.
-#        res_std[_j] = np.std(res[:,_j])
-#        # the systematic error is given by difference between the median on the 
-#        # original data and the 16%- or 84%-quantile respectively
-#        res_syst[0, _j] = res[0, _j] - ana.weighted_quantile(data[0, _j], data_weight, 0.16)
-#        res_syst[1, _j] = ana.weighted_quantile(data[0, _j], data_weight, 0.84) - res[0, _j]
-
     d2 = np.dot(d, d)
 
     data_std = np.empty([data.shape[1]], dtype=float)
@@ -286,11 +244,16 @@ def calc_phaseshift(data, pvals, L, d, lattice, mpi, verbose=True):
     """Calculates the phaseshift from fit data.
 
     Args:
-        data: The fit data.
-        L: The spatial extent of the lattice.
-        d: The total momentum of the system.
+        data: A list of numpy arrays with 3 axes. The first axis is the 
+              bootstrap sampe number, the second axis is the number of
+              the fit parameter to use. The third axis is the fit intervall
+              number.
+        pvals: The p value indicating the quality of the fit. Dimensions
+              must be the same as for data.
+        L:    The spatial extent of the lattice.
+        d:    The total momentum of the system.
         lattice: The name of the lattice.
-        mpi: The pion mass of the lattice.
+        mpi:  The pion mass of the lattice.
 
     Returns:
     """
@@ -537,6 +500,8 @@ def analyse(lattice="A40.24", d=np.array([0., 0., 0.]), verbose=True):
     #print(np.array_equal(massres, massres1))
 
     ## calculate phaseshift
+    ## TODO: Why does res[:][:,1] not have the right dimensions. Fix the fit 
+    ## parameter to value for the energy
     meandata, statdata, systdata = calc_phaseshift(res, pvals, L, d, lattice, mpi)
 
     # print data
