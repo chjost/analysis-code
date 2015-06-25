@@ -36,7 +36,9 @@ from matplotlib.backends.backend_pdf import PdfPages
 import analysis as ana
 
 def read_data(path, pilist, pipilist, datafolder, nsamples, readnew=True):
-    verbose = True
+    verbose = False
+    if not verbose:
+        print("reading data")
     if readnew:
         if verbose:
             print("reading files:")
@@ -45,7 +47,8 @@ def read_data(path, pilist, pipilist, datafolder, nsamples, readnew=True):
             for f in pipilist:
                 print(f)
         pipi_data = ana.create_corr_matrix(nsamples, path, pipilist)
-        pi_data = ana.create_corr_matrix(nsamples, path, pilist)
+        corr = ana.read_data_ascii("".join((path, pilist[0])))
+        pi_data = ana.sym_and_boot(corr, nsamples)
         ana.write_data(pipi_data, "%s/pipi_data.npy" % (datafolder))
         ana.write_data(pi_data, "%s/pi_data.npy" % (datafolder))
     else:
@@ -53,7 +56,107 @@ def read_data(path, pilist, pipilist, datafolder, nsamples, readnew=True):
             print("reading numpy data")
         pipi_data = ana.read_data("%s/pipi_data.npy" % (datafolder))
         pi_data = ana.read_data("%s/pi_data.npy" % (datafolder))
+    if verbose:
+        print("data shapes")
+        print(pi_data.shape)
+        print(pipi_data.shape)
     return pi_data, pipi_data
+
+def fit_single_pion(pi_data, lo, up, fmin, pars, pionfit, tmin, lattice, d,
+                    label, plotfolder, datafolder, newfit=True):
+    """Fit the correlation function for the single pion.
+
+    Args:
+        pi_data: the correlation function
+        lo, up: lower and upper bound for the fitranges
+        fmin: minimal number of fitpoints in the fitranges
+        pars: the start parameters for the fit
+        pionfit: fit function for the correlator
+        tmin: minimum x to plot
+        lattice: the name of the lattice
+        d: the total momentum vector
+        label: label for the plots
+        plotfolder: path to save the plots
+        datafolder: path to save the fit results
+        newfit: do the fit, if false read data from disk
+
+    Returns:
+        pi: the resulting parameters from the fit
+        chi2: the chi^2 of each fit
+        pvals: the p-values of each fit
+        fitranges: the used fitranges
+    """
+    verbose = True
+    d2 = np.dot(d, d)
+    if not verbose:
+        print("fitting single pion")
+    if newfit:
+        if verbose:
+            print("new fit")
+            print(pi_data.shape)
+        pionranges = np.asarray(ana.set_fit_intervall(pi_data, lo, up, fmin))
+        if verbose:
+            print(pionranges.shape)
+        pi, chi2, pvals = ana.genfit(pi_data, pionranges, pionfit, pars, tmin,
+                                    lattice, d, label, plotfolder, "pion_corr")
+        np.savez("%s/fit_results_%s_TP%d.npz" % (datafolder, lattice, d2),
+                 pi=pi, chi2=chi2, pvals=pvals, pionranges=pionranges)
+        if verbose:
+            print(pi.shape)
+            print(chi2.shape)
+            print(pvals.shape)
+    else:
+        f = np.load("%s/fit_results_%s_TP%d.npz" % (datafolder, lattice, d2))
+        pionranges = f['pionranges']
+        pi = f['pi']
+        chi2 = f['chi2']
+        pvals = f['pvals']
+
+    if verbose:
+        print(pi[0])
+    return pi, chi2, pvals, pionranges
+
+def calc_gevp(data, s, tmin, d2, datafolder, solvenew=True):
+    """Shift the correlation function matrix and solve the gevp.
+
+    Args:
+        data: correlation function matrix
+        s: number of timeslices to shift
+        tmin: t0 for the GEVP solver
+        d2: total momentum squared
+        datafolder: folder where to store numpy data
+
+    Returns:
+        gevp: solution of the GEVP
+        mgevp: mean of the solution of the GEVP
+        dgevp: std of the solution of the GEVP
+    """
+    verbose=False
+    if solvenew:
+        if verbose:
+            print("shift %d" % s)
+        data_shift = ana.shift_corr_matrix(data, s)
+
+        if verbose:
+            print("shifted data")
+            print(data_shift.shape)
+
+        ## GEVP
+        gevp = ana.calculate_gevp(data_shift, tmin)
+        ana.write_data(gevp, "%s/pipi_corr_mat_TP%d_s%d.npy" % (datafolder, d2, s))
+    else:
+        if verbose:
+            print("read shifted data")
+        gevp = ana.read_data("%s/pipi_corr_mat_TP%d_s%d.npy" % (datafolder, d2, s))
+    mgevp, dgevp = ana.calc_error(gevp)
+    
+    if verbose:
+        print("gevp shapes")
+        print(gevp.shape)
+        print(mgevp.shape)
+        print(dgevp.shape)
+
+    return gevp, mgevp, dgevp
 
 def analyse(lattice="A40.24", d=np.asarray([0., 0., 0.])):
     """pi-pi scattering analysis for I=2.
@@ -74,63 +177,71 @@ def analyse(lattice="A40.24", d=np.asarray([0., 0., 0.])):
     mpi = 0.1446
 
     ## other variables
+    # total momentum
     d2 = np.dot(d, d)
+    # time extend of the symmetrized data
+    T2 = int(T/2)+1
+    # file list
     pipilist = ["pipi_pipi_A1_corr_TP%d_%d%d" % (d2, x, y) for x in range(gmax)
                 for y in range(gmax)]
-    pilist = ["pi_corr_p%d" % d2 ]
-    corr_fit = lambda p, t: p[0]*np.exp(-p[1]*t) + p[2]*np.exp(-p[3]*t) + p[4]
-    corr_plot = lambda p, t: np.exp(2.*mpi*t)*(p[0]*np.exp(-p[1]*t) + p[2]*np.exp(-p[3]*t))
-    label = ["shifted pipi I=2, A40.24", "time", "exp(dE(t-tmin))C(t)", "data", ""]
-
-    ## read in data
-    pi_data, pipi_data = read_data(path, pilist, pipilist, datafolder, nsamples, False)
-
-    #if verbose:
-    #    print(pi_data.shape)
-    #    print(pipi_data.shape)
-
+    pilist = ["pi_corr_p%d.dat" % d2 ]
+    # fit function for the ratio
+    #pionfit = lambda p, t: 0.5*p[0]*p[0]*(np.exp(-p[1]*t)+np.exp(-p[1]*(T2-t)))
+    pionfit = lambda p, t: 0.5*p[0]*p[0]*np.exp(-p[1]*t)
+    ratiofit = lambda p, t, e : p[0]*(np.cosh(p[1]*(t-T-1))+\
+                                np.sinh(p[1]*(t-T2-1))/(np.tanh(2*e*(t-T2-1))))
+    # label for the plots
+    label_pion = ["single pion, %s" % lattice, "time", "C_{\pi}(t)", "data", ""]
+    label_ratio = ["ratio, %s" % lattice, "time", "R(t)", "data", ""]
+    # lower and upper fit ranges for the different correlators
+    lo_pion = [10]
+    up_pion = [20]
+    lo_ratio = [5, 5, 5, 5, 5]
+    up_ratio = [int(T/2+1), 20, 15, 12, 10]
+    # minimal number of points in each fit
+    fmin = 6
+    # x and y limits for plots
     xlims = [(0,25), (0,25), (0,25), (0,25), (0,25)]
     ylims = [(0.2, 0.4), (0.5, 0.8), (0.7, 0.9), (0.8, 1.2), (1., 1.5)]
+    # initial parameters for the fits
+    par_pion = [20., 0.07]
+    par_ratio = [2., 0.06, 0.3]
+
+    ## read in data
+    pi_data, pipi_data = read_data(path, pilist, pipilist, datafolder,
+                                   nsamples, False)
+
+    ## fit single pion correlation function
+    pi, m_pi, d_pi, pionranges = fit_single_pion(pi_data, lo_pion, up_pion, 
+        fmin, par_pion, pionfit, tmin, lattice, d, label_pion, plotfolder,
+        datafolder, True)
+
     for s in xrange(2):
         print("shift %d" % s)
-        #pipi_data_shift = ana.shift_corr_matrix(pipi_data, s)
-
-        #if verbose:
-        #    print("shifted data")
-        #    print(pipi_data_shift.shape)
-
         ## GEVP
-        #gevp_mat = ana.calculate_gevp(pipi_data_shift, tmin)
-        #ana.write_data(gevp_mat, "%s/pipi_corr_mat_TP%d_s%d.npy" % (datafolder, d2, s))
-        gevp_mat = ana.read_data("%s/pipi_corr_mat_TP%d_s%d.npy" % (datafolder, d2, s))
-        mgevp, dgevp = ana.calc_error(gevp_mat)
-        
-        #if verbose:
-        #    print(gevp_mat.shape)
-        #    print(mgevp.shape)
-        #    print(dgevp.shape)
+        gevp, mgevp, dgevp=calc_gevp(pipi_data, s, tmin, d2, datafolder, False)
 
-        # plot gevp result
-        pfit = PdfPages("%spipi_gevp_plot_shift%d.pdf" % (plotfolder, s)) 
-        tlist = np.linspace(0., gevp_mat.shape[1], gevp_mat.shape[1], endpoint=False)
-        for i in xrange(gevp_mat.shape[2]):
-            print("correlator %d" % i)
-            res, chi2, pvals = ana.fitting(corr_fit, tlist[(tmin+2):-5], gevp_mat[:,(tmin+2):-5,i], [8e4, 0.15, 8e4, 0.3, 25.],verbose=1)
-            data = np.zeros((gevp_mat.shape[:2]))
-            for t in xrange(data.shape[1]):
-                data[:,t] = gevp_mat[:,t,i] * np.exp(2.*mpi*t)
-            mdata, ddata = ana.calc_error(data)
-            #ana.plot_data(tlist, gevp_mat[0,:,i], dgevp[:,i], pfit, logscale=True)
-            ana.corr_fct_with_fit(tlist, data[0], ddata, corr_plot, res[0,:-1], [tmin, gevp_mat.shape[1]], label, pfit)
-        pfit.close()
+        ## build ratio to determine dE
+        ratio, mratio, dratio=ana.simple_ratio_subtract(gevp, pi_data, pi_data)
+        print(ratio.shape)
 
-        # calc mass from gevp results
-        pfit = PdfPages("%spipi_mass_plot_shift%d.pdf" % (plotfolder, s)) 
-        for i in xrange(gevp_mat.shape[2]):
-            mass, mmass, dmass = ana.compute_mass(gevp_mat[:,:,i], False)
-            #ana.plot_data(tlist[1:-1], mass[0], dmass, pfit)
-            ana.plot_data(tlist[1:-1], mass[0], dmass, pfit, xlim=xlims[i], ylim=ylims[i])
-        pfit.close()
+        ## plot ratio
+        #pfit = PdfPages("%s/pipi_ratio_shift%d.pdf" % (plotfolder, s)) 
+        #tlist = np.linspace(0., ratio.shape[1], ratio.shape[1], endpoint=False)
+        #for i in xrange(ratio.shape[2]):
+        #    print("principal correlator %d" % i)
+        #    ana.plot_data(tlist[1:], ratio[0,1:,i], dratio[1:,i], pfit)
+        #pfit.close()
+
+        ## fit ratio
+        #pfit = PdfPages("%s/pipi_ratiofit_shift%d.pdf" % (plotfolder, s)) 
+        #tlist = np.linspace(0., ratio.shape[1], ratio.shape[1], endpoint=False)
+        #for i in xrange(ratio.shape[2]):
+        #    print("principal correlator %d" % i)
+        #    fitranges = ana.set_fit_intervall(ratio, lo, up, fmin)
+        #    rres, mrres, drres = ana.genfit_comb(ratio, ran)
+        #    ana.plot_data(tlist[1:], ratio[0,1:,i], dratio[1:,i], pfit)
+        #pfit.close()
 
     return
 

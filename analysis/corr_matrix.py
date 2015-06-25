@@ -152,7 +152,7 @@ def create_corr_matrix(nbsamples, filepath, filestring, filesuffix=".dat",
 
     corr_mat_symm = np.zeros_like(corr_mat)
     for _s in range(0, nbsamples):
-        for _t in range(0, int(_T1/2)+1):
+        for _t in range(0, int(_T/2)+1):
             corr_mat_symm[_s, _t] = (corr_mat[_s, _t] + corr_mat[_s, _t].T) / 2.
     return corr_mat_symm
 
