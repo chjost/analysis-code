@@ -158,8 +158,8 @@ def plot_histogram(data, data_weight, lattice, d, label, path=".plots/",
     ninter = data.shape[0]
 
     histplot = PdfPages("%s/fit_%s_%s_TP%d.pdf" % (path,plotlabel,lattice,d2))
-    # The histogram
 
+    # The histogram
     hist, bins = np.histogram(data, 20, weights=data_weight, density=True)
     width = 0.7 * (bins[1] - bins[0])
     center = (bins[:-1] + bins[1:]) / 2
@@ -167,7 +167,6 @@ def plot_histogram(data, data_weight, lattice, d, label, path=".plots/",
     plt.ylabel('weighted distribution of ' + label[2])
     plt.title('fit methods individually with a p-value between 0.01 and 0.99')
     plt.grid(True)
-    x = np.linspace(center[0], center[-1], 1000)
 
 #    plt.plot(x, scipy.stats.norm.pdf(x, loc=a_pipi_median_derv[0], \
 #             scale=a_pipi_std_derv), 'r-', lw=3, alpha=1, \
@@ -177,5 +176,8 @@ def plot_histogram(data, data_weight, lattice, d, label, path=".plots/",
 
     histplot.savefig()
     histplot.close()
+
+    # delete settings
+    plt.clf()
     
     return

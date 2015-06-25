@@ -50,9 +50,12 @@ def calculate_delta(q2, gamma=None, d=np.array([0., 0., 0.]), prec=10e-6,
         #_z2 = zeta.Zp(q2, _gamma, 2, 0, d, 1., prec, verbose).real
         #_num = _gamma * np.sqrt(_pi3 * q2)
         #_den = (_z1 + (2. / (np.sqrt(5) * q2)) * _z2).real
+        print 'denominator'
         _den = omega(q2, _gamma, 0, 0, d, exFac=True).real + \
                2 * omega(q2, _gamma, 2, 0, d, exFac=True).real
+        print 'tandelta'
         tandelta = _num / _den
+        print 'delta'
         delta = np.arctan2( _num, _den)
     # MF2
     elif np.array_equal(d, np.array([1., 1., 0.])):
@@ -75,7 +78,8 @@ def calculate_delta(q2, gamma=None, d=np.array([0., 0., 0.]), prec=10e-6,
         #_z2 = zeta.Zp(q2, _gamma, 2, 2, d, 1., prec, verbose).imag
         #_num = _gamma * np.sqrt(_pi3 * q2)
         #_den = (_z1 - ( 2. * np.sqrt(6./5.) / q2) * _z2 ).real
-        _den = omega(q2, _gamma, 0, 0, d, exFac=True).real -\
+#        _den = omega(q2, _gamma, 0, 0, d, exFac=True).real -\
+        _den = omega(q2, _gamma, 0, 0, d, exFac=True).real +\
                2 * np.sqrt(6) * omega(q2, _gamma, 2, 2, d, exFac=True).imag
         tandelta = _num / _den
         delta = np.arctan2( _num, _den)
