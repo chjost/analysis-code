@@ -28,7 +28,7 @@
 
 __all__ = ["write_data", "read_data", "write_data_ascii", "read_data_ascii",
            "write_data_w_err_ascii", "read_data_w_err_ascii",
-           "extract_bin_corr_fct"]
+           "extract_bin_corr_fct", "write_fitresults", "read_fitresults"]
 
 import os
 import numpy as np
@@ -210,6 +210,109 @@ def read_data_w_err_ascii(filename, datacol=(1,), errcol=(2,), verbose=False):
     _data = read_data_ascii(filename, column=cols, verbose=verbose)
     return _data[:,:,:len(datacol)], _data[:,:,len(datacol):]
 
+def write_fitresults(filename, fitint, par, chi2, pvals, verbose=True):
+    """Writes the fitresults to a numpy file.
+
+    The function takes lists of numpy arrays and writes them in the npz format.
+
+    Args:
+        filename: the name of the file
+        fitint: the list with fit intervals
+        par: the results of the fits
+        chi2: the chi^2 values of the fit
+        pvals: the p-values of the fit.
+        verbose: amount of information written to screen
+
+    Returns:
+        nothing
+    """
+    # check file
+    check_write(filename)
+    if verbose:
+        print("saving to file " + str(filename))
+    # check the depth of the lists
+    depth = lambda L: isinstance(L, list) and max(map(depth, L))+1
+    d = depth(par)
+    # NOTE: The dictionary building is necessary to recover the data with the
+    # corresponding read function. Furthermore the read function needs to know
+    # the level of recursion to build. Thus it is necessary that all labels
+    # except for the fit intervals are 2 characters plus their two digit index 
+    # for each level of recursion. The name of the fit intervals is chosen to
+    # be always shorter than the other names.
+    if d is 1:
+        # create a dictionary to pass to savez
+        dic = {'fi' : fitint}
+        dic.update({'pi%02d' % i: p for (i, p) in enumerate(par)})
+        dic.update({'ch%02d' % i: p for (i, p) in enumerate(chi2)})
+        dic.update({'pv%02d' % i: p for (i, p) in enumerate(pvals)})
+        np.savez(filename, **dic)
+    elif d is 2:
+        # create a dictionary to pass to savez
+        dic = {'fi' : fitint}
+        dic.update({'pi%02d%02d' % (i, j): p for (i, s) in enumerate(par) for
+                   (j, p) in enumerate(s)})
+        dic.update({'ch%02d%02d' % (i, j): p for (i, s) in enumerate(chi2) for
+                   (j, p) in enumerate(s)})
+        dic.update({'pv%02d%02d' % (i, j): p for (i, s) in enumerate(pvals) for
+                   (j, p) in enumerate(s)})
+        np.savez(filename, **dic)
+    else:
+        print("the write function only covers two levels of lists.")
+        print("NOTHING IS SAVED!")
+    return
+
+def read_fitresults(filename, verbose=True):
+    """Reads the fit results from file.
+
+    Args:
+        filename: name of the file
+        verbose: amount of information written to screen
+
+    Returns:
+        fitint: array of the fit intervals
+        par: list of arrays of fitted parameters
+        chi2: list of arrays of chi^2
+        pvals: list of arrays of p-values
+    """
+    check_read(filename)
+    if verbose:
+        print("reading from file " + str(filename))
+    with np.load(filename) as f:
+        # check the number of levels to build
+        # The array names are  2 characters plus the two digit index of the
+        # for each level. The name of the fit intervals is only 2 characters
+        # to be able to treat it different to the rest
+        if verbose:
+            print("reading %d items" % len(f.files))
+        L = f.files
+        Lmax = max([len(s) for s in L])
+        d = int((Lmax - 2) / 2)
+        n = (len(L) - 1) / 3
+        if d is 1:
+            fitint = f['fi']
+            par, chi2, pvals = [], [], []
+            for i in range(n):
+                par.append(f['pi%02d' % i])
+                chi2.append(f['ch%02d' % i])
+                pvals.append(f['pv%02d' % i])
+        elif d is 2:
+            fitint = f['fi']
+            par, chi2, pvals = [], [], []
+            for i in range(n):
+                if 'pi%02d00' % i in L:
+                    par.append([])
+                    chi2.append([])
+                    pvals.append([])
+                    for j in range(n):
+                        if 'pi%02d%02d' % (i,j) in L:
+                            par[i].append(f['pi%02d%02d' % (i,j)])
+                            chi2[i].append(f['ch%02d%02d' % (i,j)])
+                            pvals[i].append(f['pv%02d%02d' % (i,j)])
+        else:
+            print("the read function only covers up to two levels if lists")
+            print("RETURNING NONE")
+            return None
+    return fitint, par, chi2, pvals
 
 #TODO(CJ): still needed?
 def extract_bin_corr_fct(name='', start_cfg=0, delta_cfg=0, nb_cfg=0, T=0,

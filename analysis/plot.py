@@ -35,7 +35,7 @@ def corr_fct_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
     u = int(plotrange[1])
     p1 = plt.errorbar(X[l:u], Y[l:u], dY[l:u], fmt='x' + 'b', label = label[3])
     # plotting the fit function, check for seperate range
-    if fitrange:
+    if fitrange is not None:
         lfunc = fitrange[0]
         ufunc = fitrange[1]
     else:

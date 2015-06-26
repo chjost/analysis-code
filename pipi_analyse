@@ -86,34 +86,31 @@ def fit_single_pion(pi_data, lo, up, fmin, pars, pionfit, tmin, lattice, d,
         pvals: the p-values of each fit
         fitranges: the used fitranges
     """
-    verbose = True
+    verbose = False
     d2 = np.dot(d, d)
+    fname = "%s/fit_results_%s_TP%d.npz" % (datafolder, lattice, d2)
     if not verbose:
         print("fitting single pion")
     if newfit:
         if verbose:
             print("new fit")
             print(pi_data.shape)
-        pionranges = np.asarray(ana.set_fit_intervall(pi_data, lo, up, fmin))
+        pionranges = np.asarray(ana.set_fit_interval(pi_data, lo, up, fmin))
         if verbose:
             print(pionranges.shape)
         pi, chi2, pvals = ana.genfit(pi_data, pionranges, pionfit, pars, tmin,
-                                    lattice, d, label, plotfolder, "pion_corr")
-        np.savez("%s/fit_results_%s_TP%d.npz" % (datafolder, lattice, d2),
-                 pi=pi, chi2=chi2, pvals=pvals, pionranges=pionranges)
-        if verbose:
-            print(pi.shape)
-            print(chi2.shape)
-            print(pvals.shape)
+                                    lattice, d, label, plotfolder, "pion_mass",
+                                    verbose=verbose)
+        ana.write_fitresults(fname, pionranges, pi, chi2, pvals)
     else:
-        f = np.load("%s/fit_results_%s_TP%d.npz" % (datafolder, lattice, d2))
-        pionranges = f['pionranges']
-        pi = f['pi']
-        chi2 = f['chi2']
-        pvals = f['pvals']
+        if verbose:
+            ("reading fit data")
+        pionranges, pi, chi2, pvals = ana.read_fitresults(fname)
 
     if verbose:
-        print(pi[0])
+        print("fit infos")
+        for p in pi:
+            print(p.shape)
     return pi, chi2, pvals, pionranges
 
 def calc_gevp(data, s, tmin, d2, datafolder, solvenew=True):
@@ -185,35 +182,37 @@ def analyse(lattice="A40.24", d=np.asarray([0., 0., 0.])):
     pipilist = ["pipi_pipi_A1_corr_TP%d_%d%d" % (d2, x, y) for x in range(gmax)
                 for y in range(gmax)]
     pilist = ["pi_corr_p%d.dat" % d2 ]
-    # fit function for the ratio
-    #pionfit = lambda p, t: 0.5*p[0]*p[0]*(np.exp(-p[1]*t)+np.exp(-p[1]*(T2-t)))
-    pionfit = lambda p, t: 0.5*p[0]*p[0]*np.exp(-p[1]*t)
+    # fit functions
+    massfit = lambda p,t : p
+    pionfit = lambda p, t: 0.5*p[0]*p[0]*(np.exp(-p[1]*t)+np.exp(-p[1]*(T2-t)))
     ratiofit = lambda p, t, e : p[0]*(np.cosh(p[1]*(t-T-1))+\
                                 np.sinh(p[1]*(t-T2-1))/(np.tanh(2*e*(t-T2-1))))
     # label for the plots
-    label_pion = ["single pion, %s" % lattice, "time", "C_{\pi}(t)", "data", ""]
-    label_ratio = ["ratio, %s" % lattice, "time", "R(t)", "data", ""]
+    label_pion = ["single pion", "time", r"am$_{\pi}$(t)", "data", ""]
+    label_ratio = ["ratio", "time", "R(t)", "data", ""]
     # lower and upper fit ranges for the different correlators
-    lo_pion = [10]
-    up_pion = [20]
-    lo_ratio = [5, 5, 5, 5, 5]
-    up_ratio = [int(T/2+1), 20, 15, 12, 10]
+    lo_pion = [8]
+    up_pion = [T2]
+    lo_ratio = [4, 4, 4, 4, 4]
+    up_ratio = [18, 15, 10, 9, 9]
     # minimal number of points in each fit
-    fmin = 6
+    fmin = 4
     # x and y limits for plots
     xlims = [(0,25), (0,25), (0,25), (0,25), (0,25)]
     ylims = [(0.2, 0.4), (0.5, 0.8), (0.7, 0.9), (0.8, 1.2), (1., 1.5)]
     # initial parameters for the fits
-    par_pion = [20., 0.07]
-    par_ratio = [2., 0.06, 0.3]
+    par_pion = [0.2]
+    par_ratio = [2., 0.06]
 
     ## read in data
     pi_data, pipi_data = read_data(path, pilist, pipilist, datafolder,
                                    nsamples, False)
 
-    ## fit single pion correlation function
-    pi, m_pi, d_pi, pionranges = fit_single_pion(pi_data, lo_pion, up_pion, 
-        fmin, par_pion, pionfit, tmin, lattice, d, label_pion, plotfolder,
+    ## calculate effective mass of the pion
+    pimass, pimmass, pidmass = ana.compute_mass(pi_data)
+    ## fit single pion effective mass function
+    pi, pichi2, pipvals, pionranges = fit_single_pion(pimass, lo_pion, up_pion, 
+        fmin, par_pion, massfit, tmin, lattice, d, label_pion, plotfolder,
         datafolder, True)
 
     for s in xrange(2):
@@ -234,15 +233,16 @@ def analyse(lattice="A40.24", d=np.asarray([0., 0., 0.])):
         #pfit.close()
 
         ## fit ratio
-        #pfit = PdfPages("%s/pipi_ratiofit_shift%d.pdf" % (plotfolder, s)) 
-        #tlist = np.linspace(0., ratio.shape[1], ratio.shape[1], endpoint=False)
-        #for i in xrange(ratio.shape[2]):
-        #    print("principal correlator %d" % i)
-        #    fitranges = ana.set_fit_intervall(ratio, lo, up, fmin)
-        #    rres, mrres, drres = ana.genfit_comb(ratio, ran)
-        #    ana.plot_data(tlist[1:], ratio[0,1:,i], dratio[1:,i], pfit)
-        #pfit.close()
-
+        fname = "%s/fit_ratio_%s_TP%d_s%d.npz" % (datafolder, lattice, d2, s)
+        fitnew = True
+        if fitnew:
+            ratioranges = ana.set_fit_interval(ratio, lo_ratio, up_ratio, fmin)
+            rres, rchi2, rpvals = ana.genfit_comb(ratio, ratioranges, pionranges,
+                ratiofit, par_ratio, pi, tmin, lattice, label_ratio, plotfolder,
+                "ratio_s%d" % s, verbose=True)
+            ana.write_fitresults(fname, ratioranges, rres, rchi2, rpvals)
+        else:
+            ratioranges, rres, rchi2, rpvals = ana.read_fitresults(fname)
     return
 
 def main():
