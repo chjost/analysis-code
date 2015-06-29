@@ -111,7 +111,7 @@ def fit_corr_ranges(data, loborder, upborder, intervallsize, fitfunc,
     # expects a intervall for each principal correlator
     # TODO: change res to list of np-array with an array for every principal 
     # correlator
-    fit_intervalls = ana.set_fit_intervall(data, loborder, upborder, intervallsize)
+    fit_intervalls = ana.set_fit_interval(data, loborder, upborder, intervallsize)
     res, chi2, pval = ana.genfit(data, fit_intervalls, fitfunc, start_params, 
                                  tmin, lattice, d, label, path, plotlabel, 
                                  verbose)
@@ -175,7 +175,9 @@ def read_fit_mass(lattice, d):
     pval = ana.read_data("./raw_data/mass_fit_pval_rho_%s_TP%d.npy"%(lattice,d2))
     return res, chi2, pval
 
-def calc_error(data, pvals, j, d, lattice, plot=False):
+def calc_error(data, pvals, d, lattice, label, path=".plots/", 
+               plotlabel="", plot=False):
+
     """Calculates the statistical and systematic error of an np-array of 
     fit results on bootstrap samples of a quantity and the corresponding 
     p-values.
@@ -185,11 +187,11 @@ def calc_error(data, pvals, j, d, lattice, plot=False):
               sample number, the second axis is the fit intervall number.
         pvals: The p value indicating the quality of the fit. Dimensions
               must be the same as for data.
-        j:    The number of the principal correlator corresponding to data
-              and pvals. Only needed in case a histogram shall be plotted.
-              TODO: rather pass plotlabel?
         d:    The total momentum of the reaction.
         lattice: The name of the lattice, used for the output file.
+        label: Labels for the title and the axis.
+        path: Path to the saving place of the plot.
+        plotlabel: Label for the plot file.
         plot: Flag determining whether result shall be plotted or not.
 
     Returns:
@@ -207,8 +209,6 @@ def calc_error(data, pvals, j, d, lattice, plot=False):
     res = np.empty([data.shape[0]], dtype=float)
     res_syst = np.empty([2], dtype=float)
 
-    path="./plots/"
-
     # calculate the standard deviation of the bootstrap samples for every 
     # chosen fit intervall
     data_std = np.std(data, axis=0)
@@ -219,10 +219,8 @@ def calc_error(data, pvals, j, d, lattice, plot=False):
 
     # draw original data as histogram
     if plot:
-        plotlabel = 'hist_%d' % j
-        label = ["", "", "principal correlator"]
-        ana.plot_histogram(data[0], data_weight, lattice, d2, label, path,
-                           plotlabel)
+        ana.plot_histogram(data[0], data_weight, lattice, d, label, 
+                           path, plotlabel)
 
     # using the weights, calculate the median over all fit intervalls for
     # every bootstrap sample.
@@ -292,10 +290,28 @@ def calc_phaseshift(data, pvals, L, d, lattice, mpi, verbose=True):
 
         # for Ecm a histogram ist plotted in addition to calculating the 
         # systematic error
-        meandata[_i,0], statdata[_i,0], systdata[:,_i,0] = calc_error(Ecm, pvals[_i], _i, d, lattice, True)
-        meandata[_i,1], statdata[_i,1], systdata[:,_i,1] = calc_error(delta, pvals[_i], _i, d, lattice)
-        meandata[_i,2], statdata[_i,2], systdata[:,_i,2] = calc_error(tandelta, pvals[_i], _i, d, lattice)
-        meandata[_i,3], statdata[_i,3], systdata[:,_i,3] = calc_error(sindelta, pvals[_i], _i, d, lattice)
+        path="./plots/"
+
+        plotlabel = 'hist_Ecm_%d' % _i
+#        label = ["", "", "principal correlator"]
+        label = ["a", "b", "c"]
+        meandata[_i,0], statdata[_i,0], systdata[:,_i,0] = calc_error(Ecm, 
+            pvals[_i], d, lattice, label, path, plotlabel, True)
+
+        plotlabel = 'hist_delta_%d' % _i
+#        label = ["", "", "principal correlator"]
+        meandata[_i,1], statdata[_i,1], systdata[:,_i,1] = calc_error(delta, 
+            pvals[_i], d, lattice, label, path, plotlabel, True)
+
+        plotlabel = 'hist_tandelta_%d' % _i
+#        label = ["", "", "principal correlator"]
+        meandata[_i,2], statdata[_i,2], systdata[:,_i,2] = calc_error(tandelta, 
+            pvals[_i], d, lattice, label, path, plotlabel, True)
+
+        plotlabel = 'hist_sindelta_%d' % _i
+#        label = ["", "", "principal correlator"]
+        meandata[_i,3], statdata[_i,3], systdata[:,_i,3] = calc_error(sindelta, 
+            pvals[_i], d, lattice, label, path, plotlabel, True)
 
     return meandata, statdata, systdata
 
@@ -451,8 +467,8 @@ def setup_lattice(lattice, d):
 #            upborder=np.array((16, 17))
 
     # for testing -> three intervalls on A40.24 TP0
-#    loborder = np.array((7,7))
-#    upborder = np.array((16, 16))
+    loborder = np.array((7,7))
+    upborder = np.array((16, 16))
 
     return mpi, L, T, loborder, upborder
 
@@ -554,10 +570,10 @@ def main():
 
     #A100
     analyse(lattices[6], d0)
-    analyse(lattices[6], d1)
-    #analyse(lattices[6], d2)
-    analyse(lattices[6], d3)
-    analyse(lattices[6], d4)
+    #analyse(lattices[6], d1)
+    analyse(lattices[6], d2)
+    #analyse(lattices[6], d3)
+    #analyse(lattices[6], d4)
 
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':

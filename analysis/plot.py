@@ -135,7 +135,7 @@ def plot_data(X, Y, dY, pdfplot, plotrange=None, logscale=False, xlim=None, ylim
 
     return
 
-def plot_histogram(data, data_weight, lattice, d, label, path=".plots/", 
+def plot_histogram(data, data_weight, lattice, d, label, path="./plots/", 
                    plotlabel="hist", verbose=True):
     """plot a weighted histogramm
 
@@ -157,7 +157,7 @@ def plot_histogram(data, data_weight, lattice, d, label, path=".plots/",
     d2 = np.dot(d,d)
     ninter = data.shape[0]
 
-    histplot = PdfPages("%s/fit_%s_%s_TP%d.pdf" % (path,plotlabel,lattice,d2))
+    histplot = PdfPages("%s/%s_%s_TP%d.pdf" % (path,plotlabel,lattice,d2))
 
     # The histogram
     hist, bins = np.histogram(data, 20, weights=data_weight, density=True)
