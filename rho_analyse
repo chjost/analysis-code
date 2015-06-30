@@ -237,6 +237,10 @@ def calc_error(data, pvals, d, lattice, label, path=".plots/",
     # only median on original data is of interest later
     return res[0], res_std, res_syst
 
+def ensure_dir(f):
+    d = os.path.dirname(f)
+    if not os.path.exists(d):
+          os.makedirs(d)
 
 def calc_phaseshift(data, pvals, L, d, lattice, mpi, verbose=True):
     """Calculates the phaseshift from fit data.
@@ -283,6 +287,17 @@ def calc_phaseshift(data, pvals, L, d, lattice, mpi, verbose=True):
         if verbose:
             print("calculating delta")
         delta, tandelta, sindelta = ana.calculate_delta(q2, gamma, d)
+
+        f = "./refined_data/%s/%s_Ecm_pc_%d_mv_%d_mpi_%lf" % (lattice[:-3], lattice, _i, d2, mpi)
+        ensure_dir(f)
+        np.save(f, Ecm)
+        f = "./refined_data/%s/%s_delta_pc_%d_mv_%d_mpi_%lf" % (lattice[:-3], lattice, _i, d2, mpi)
+        ensure_dir(f)
+        np.save(f, delta)
+        f = "./refined_data/%s/%s_pvals_pc_%d_mv_%d_mpi_%lf" % (lattice[:-3], lattice, _i, d2, mpi)
+        ensure_dir(f)
+        np.save(f, pvals[_i])
+
 
         # data, gamma, Ecm, q2, delta, tandelta are all coded to have the same 
         # shape. calc_error can be used analogeously to obtain weighted median,
