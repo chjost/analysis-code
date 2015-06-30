@@ -44,9 +44,10 @@ def corr_fct_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
     x1 = np.linspace(lfunc, ufunc, 1000)
     y1 = []
     for i in x1:
-        if len(args) is 3:
-            y1.append(fitfunc(args[:-1],i,args[2]))
-        else:
+        if len(args) > 1:
+            # the star in front of the args is needed
+            y1.append(fitfunc(args[0],i,*args[1:]))
+        else:    
             y1.append(fitfunc(args,i))
     y1 = np.asarray(y1)
     p2, = plt.plot(x1, y1, 'r', label = label[4])

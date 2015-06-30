@@ -193,8 +193,8 @@ def analyse(lattice="A40.24", d=np.asarray([0., 0., 0.])):
     # lower and upper fit ranges for the different correlators
     lo_pion = [8]
     up_pion = [T2]
-    lo_ratio = [4, 4, 4, 4, 4]
-    up_ratio = [18, 15, 10, 9, 9]
+    lo_ratio = [5, 5, 4, 4, 4]
+    up_ratio = [17, 14, 10, 9, 9]
     # minimal number of points in each fit
     fmin = 4
     # x and y limits for plots
@@ -213,7 +213,8 @@ def analyse(lattice="A40.24", d=np.asarray([0., 0., 0.])):
     ## fit single pion effective mass function
     pi, pichi2, pipvals, pionranges = fit_single_pion(pimass, lo_pion, up_pion, 
         fmin, par_pion, massfit, tmin, lattice, d, label_pion, plotfolder,
-        datafolder, True)
+        datafolder, False)
+    print(pionranges.shape)
 
     for s in xrange(2):
         print("shift %d" % s)

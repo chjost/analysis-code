@@ -217,6 +217,10 @@ def set_fit_interval(_data, lolist, uplist, intervalsize):
     fit_intervals = []
     for _l in range(ncorr):
         fit_intervals.append([])
+        if uplist[_l] > data.shape[1] - 1:
+            print("upper bound for fit greater than time extent of data")
+            print("using data time extend!")
+            uplist[_l] = data.shape[1] - 1
         for lo in range(lolist[_l], uplist[_l] + 1):
             for up in range(lolist[_l], uplist[_l] + 1):
                 # the +2 comes from the fact that the interval contains one
@@ -343,10 +347,9 @@ def genfit_comb(data, fitint_data, fitint_par, fitfunc, start_params,
                     # plot the original data and the fit for every fit range
                     if verbose:
                         print("plotting")
-                    mres[2] = par[k][0,0,j]
-                    corr_fct_with_fit(tlist, data[0,:,l], ddata, fitfunc, mres,
-                                           [tmin,T2], label, corrplot, 
-                                            logscale=False,fitrange=fitint_data[l][i])
+                    corr_fct_with_fit(tlist, data[0,:,l], ddata, fitfunc,
+                        (mres, par[k][0,0,j]), [tmin,T2], label, corrplot,
+                        logscale=False,fitrange=fitint_data[l][i])
     corrplot.close()
     return res, chi2, pval
 
@@ -417,6 +420,7 @@ def genfit(_data, fit_intervals, fitfunc, start_params, tmin, lattice, d, label,
             if verbose:
                 print("fitting correlation function")
 
+            print(tlist[lo:up+1])
             res[_l][:,:,_i], chi2[_l][:,_i], pval[_l][:,_i] = fitting(fitfunc, 
                     tlist[lo:up+1], data[:,lo:up+1,_l], start_params, verbose=False)
             if verbose:
