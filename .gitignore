@@ -3,4 +3,5 @@
 *.npy
 *.dat
 *.pdf
+note
 __pycache__/

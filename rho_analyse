@@ -424,15 +424,31 @@ def setup_lattice(lattice, d):
         L=24
         T=48
         if np.array_equal(d, np.array([0., 0., 0.])):
-            loborder=np.array((10, 9))
-            upborder=np.array((22, 13))
+            loborder=np.array((7, 5))
+            upborder=np.array((20, 17))
         elif np.array_equal(d, np.array([0., 0., 1.])):
-            loborder=np.array((12, 10))
-            upborder=np.array((20, 16))
+            loborder=np.array((7, 5))
+            upborder=np.array((19, 16))
         elif np.array_equal(d, np.array([1., 1., 0.])):
-            print("not yet looked at")
-            loborder=np.array((12, 7))
-            upborder=np.array((16, 17))
+            loborder=np.array((7, 5))
+            upborder=np.array((18, 15))
+        elif np.array_equal(d, np.array([1., 1., 1.])):
+            loborder=np.array((6, 5))
+            upborder=np.array((17, 13))
+        elif np.array_equal(d, np.array([0., 0., 2.])):
+            loborder=np.array((5, 5))
+            upborder=np.array((16, 14))
+
+#        if np.array_equal(d, np.array([0., 0., 0.])):
+#            loborder=np.array((10, 9))
+#            upborder=np.array((22, 13))
+#        elif np.array_equal(d, np.array([0., 0., 1.])):
+#            loborder=np.array((12, 10))
+#            upborder=np.array((20, 16))
+#        elif np.array_equal(d, np.array([1., 1., 0.])):
+#            print("not yet looked at")
+#            loborder=np.array((12, 7))
+#            upborder=np.array((16, 17))
 
     # for testing -> three intervalls on A40.24 TP0
 #    loborder = np.array((7,7))
@@ -519,11 +535,7 @@ def main():
     d4 = np.array([0., 0., 2.]) # total momentum of the system
     lattices=["A30.32", "A40.20", "A40.24", "A40.32", "A60.24",\
               "A80.24", "A100.24"]
-    analyse(lattices[3], d0)
-    #analyse(lattices[3], d1)
-    #analyse(lattices[3], d2)
-    #analyse(lattices[3], d3)
-    analyse(lattices[3], d4)
+    #A40
     #analyse(lattices[1], d0) 
     #analyse(lattices[1], d1)
     #analyse(lattices[1], d2)
@@ -535,11 +547,17 @@ def main():
     #analyse(lattices[2], d3)
     #analyse(lattices[2], d4)
     #analyse(lattices[3], d0)
-    #analyse(lattices[3], d1) # not complete
+    #analyse(lattices[3], d1)
     #analyse(lattices[3], d2)
-    #analyse(lattices[5], d1)
-    #analyse(lattices[6], d0)
-    #analyse(lattices[6], d1) 
+    #analyse(lattices[3], d3)
+    #analyse(lattices[3], d4)
+
+    #A100
+    analyse(lattices[6], d0)
+    analyse(lattices[6], d1)
+    #analyse(lattices[6], d2)
+    analyse(lattices[6], d3)
+    analyse(lattices[6], d4)
 
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':
