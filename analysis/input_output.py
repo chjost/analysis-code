@@ -27,8 +27,8 @@
 ################################################################################
 
 __all__ = ["write_data", "read_data", "write_data_ascii", "read_data_ascii",
-           "write_data_w_err_ascii", "read_data_w_err_ascii",
-           "extract_bin_corr_fct"]
+           "read_data_part_ascii", "write_data_w_err_ascii",
+           "read_data_w_err_ascii", "extract_bin_corr_fct"]
 
 import os
 import numpy as np
@@ -106,6 +106,57 @@ def write_data_ascii(data, filename, verbose=False):
     fmt = ('%.0f',) + ('%.14f',) * _data[0].size
     # write data to file
     savetxt(filename, _fdata, header=head, comments='', fmt=fmt)
+
+def read_data_part_ascii(filename, nb_cfg, column=(1,), noheader=False, verbose=False):
+    """Reads in data from an ascii file.
+
+    The file is assumed to have L. Liu's data format so that the first line
+    has information about the number of samples and the length of each sample.
+    This info is used to shape the data into the correct array format.
+
+    Args:
+        filename: The filename of the file.
+        column: Which column is read.
+        noheader: Skips reading of the header.
+        verbose: The amount of info shown.
+
+    Returns:
+        A numpy array. In case one column is read, the array is 2D, otherwise
+        the array is three dimensional.
+    """
+    # check file
+    check_read(filename)
+    if verbose:
+        print("reading from file " + str(filename))
+
+    # check if column is sensible
+    if isinstance(column, (list, tuple)):
+        nbcol = len(column)
+    else:
+        print("column must be list or tuple and not %s" % type(column))
+        os.sys.exit(-1)
+
+    # open the file to read first line
+    if not noheader:
+        var = read_header(filename)
+    # read in data from file, skipping the header if needed
+    if noheader:
+        data = np.genfromtxt(filename, skip_header=0, usecols=column)
+    else:
+        data = np.genfromtxt(filename, skip_header=1, usecols=column)
+    # casting the array into the right shape, sample number as first index,
+    # time index as second index
+    # if more than one column is read, the third axis reflects this
+    if noheader:
+        if nbcol > 1:
+            data.shape = (-1, nbcol)
+    else:
+        if nbcol is 1:
+            data.shape = (var[0],var[1])
+        else:
+            data.shape = (var[0],var[1], nbcol)
+    # dirty hack to vary number of read configurations
+    return data[:nb_cfg]
 
 def read_data_ascii(filename, column=(1,), noheader=False, verbose=False):
     """Reads in data from an ascii file.

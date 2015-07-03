@@ -237,6 +237,7 @@ def genfit_comb(_data, fit_ivals_1,fit_ivals_2, fitfunc, start_params, prev_par,
         fit_ivals_2: List of intervals for the varying parameter
         fitfunc: The function to fit to the data.
         start_params: The starting parameters for the fit function.
+        prev_par: parameters needed for fit function
         tmin: Lower bound of the plot.
         lattice: The name of the lattice, used for the output file.
         label: Labels for the title and the axis.
@@ -259,6 +260,9 @@ def genfit_comb(_data, fit_ivals_1,fit_ivals_2, fitfunc, start_params, prev_par,
     # same intervall size for all correlators hardcoded
     ninter1 = len(fit_ivals_1[0])
     ninter2 = len(fit_ivals_2[0])
+    #print("Number of intervals: ratio: %d, m_k: %d" % (ninter1, ninter2))
+    #print("Using masses:")
+    #print prev_par[0,0,0]
     # initialize empty arrays with shape
     # nboot: number of bootstrap samples
     # npar: number of parameters to fit to
@@ -283,26 +287,26 @@ def genfit_comb(_data, fit_ivals_1,fit_ivals_2, fitfunc, start_params, prev_par,
         label.append("")
     label_save = label[0]
     for _l in range(ncorr):
-        ninter1 = len(fit_ivals_1[_l])
-        ninter2 = len(fit_ivals_2[_l])
+        #ninter1 = len(fit_ivals_1[_l])
+        #ninter2 = len(fit_ivals_2[_l])
         # setup
         mdata, ddata = af.calc_error(data[:,:,_l])
         for _i in range(ninter1):
             lo_1 = fit_ivals_1[_l][_i][0]
             up_1 = fit_ivals_1[_l][_i][1]
-            if verbose:
-                print("Intervall [%d, %d]" % (lo_1, up_1))
-                print("correlator %d" % _l)
-            print("Intervall [%d, %d]" % (lo_1, up_1))
+            #if verbose:
+                #print("Intervall [%d, %d]" % (lo_1, up_1))
+                #print("correlator %d" % _l)
+            #print("Intervall [%d, %d]" % (lo_1, up_1))
             for _j in range(ninter2):
 
                 # fit the energy and print information
                 if verbose:
                     print("fitting correlation function")
-                print prev_par[0,0,_l,_j]
+                    print("using m_k = %f" % prev_par[0,0,_l,_j])
                 res[:,:,_l,_i, _j], chi2[:,_l,_i,_j], pval[:,_l,_i,_j] =fitting(fitfunc, 
                         tlist[lo_1:up_1], data[:,lo_1:up_1,_l],
-                        start_params,E_single = prev_par[:,:,_l,_j], verbose=False)
+                        start_params, E_single = prev_par[:,0,_l,_j], verbose=False)
                 if verbose:
                     print("%d\tres = %lf\t%lf" % (_i, res[0, 0, _l, _i,_j],
                           res[0, 1, _l, _i,_j]))
@@ -322,10 +326,11 @@ def genfit_comb(_data, fit_ivals_1,fit_ivals_2, fitfunc, start_params, prev_par,
                 # plot the original data and the fit for every fit range
                 if verbose:
                     print("plotting")
-                mres[2] = prev_par[0,0,_l,_j]
-                print mres
+                    print mres
+                mres = np.append(mres, prev_par[0,0,_l,_j])
                 corr_fct_with_fit(tlist, data[0,:,_l], ddata, fitfunc, mres,
-                                       [tmin,T2], label, corrplot, False)
+                                   [tmin,T2], label, corrplot,
+                                   False, False, (lo_1,up_1-1))
     corrplot.close()
     return res, chi2, pval
 
@@ -379,17 +384,19 @@ def genfit(_data, fit_intervalls, fitfunc, start_params, tmin, lattice, d, label
     if len(label) < 5:
         label.append("")
     label_save = label[0]
+    # loop over correlators
     for _l in range(ncorr):
         ninter = len(fit_intervalls[_l])
         # setup
         mdata, ddata = af.calc_error(data[:,:,_l])
+        # loop over fit ranges
         for _i in range(ninter):
             lo = fit_intervalls[_l][_i][0]
             up = fit_intervalls[_l][_i][1]
             if verbose:
                 print("Intervall [%d, %d]" % (lo, up))
                 print("correlator %d" % _l)
-            print("Intervall [%d, %d]" % (lo, up))
+                print("Intervall [%d, %d]" % (lo, up))
 
             # fit the energy and print information
             if verbose:
@@ -400,7 +407,7 @@ def genfit(_data, fit_intervalls, fitfunc, start_params, tmin, lattice, d, label
             if verbose:
                 #print("%d\tres = %lf\t%lf" % (_i, res[0, 0, _l, _i],
                 #      res[0, 1, _l, _i]))
-                print("p-value %.7lf\nChi^2/dof %.7lf" % (pval[0,_l, _i],
+                print("p-value %.7lf\tChi^2/dof %.7lf" % (pval[0,_l, _i],
                       chi2[0,_l, _i]/( (up - lo) - len(start_params))))
 
             mres, dres = af.calc_error(res[:,:,_l,_i])
@@ -412,11 +419,12 @@ def genfit(_data, fit_intervalls, fitfunc, start_params, tmin, lattice, d, label
             label[0] = title
             label[4] = fitlabel
 
-            # plot the data and the fit
+            # plot the original data and it's fit
             if verbose:
                 print("plotting")
             corr_fct_with_fit(tlist, data[0,:,_l], ddata, fitfunc, mres,
-                                   [tmin,T2], label, corrplot, False)
+                                   [tmin,T2], label, corrplot,
+                                  False, False, (lo,up-1))
     corrplot.close()
     return res, chi2, pval
 
