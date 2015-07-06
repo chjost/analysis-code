@@ -101,7 +101,7 @@ def calc_error(data, axis=0):
     err  = np.std(data, axis)
     return mean, err
 
-def sys_error_der(data, weights, lattice, path="./plots/"):
+def sys_error_der(data, weights, lattice):
     """Error calculation for derived results
     
     Args:
@@ -122,7 +122,7 @@ def sys_error_der(data, weights, lattice, path="./plots/"):
     res = np.empty([data.shape[0]], dtype=float)
     res_syst = np.empty(2, dtype=float)
 
-    
+    path="./plots/"
 
     # loop over principal correlators
     # calculate the standard deviation of the bootstrap samples and from
@@ -131,7 +131,7 @@ def sys_error_der(data, weights, lattice, path="./plots/"):
     # draw original data as histogram
     plotlabel = 'hist'
     label = ["", "", "principal correlator"]
-    #print data[0].shape, weights.shape
+    print data[0].shape, weights.shape
     plt.plot_histogram(data[0], weights, lattice, 0, label, path,
                        plotlabel)
 
@@ -150,7 +150,7 @@ def sys_error_der(data, weights, lattice, path="./plots/"):
 
     return res[0], res_std, res_syst
 
-def sys_error(data, pvals, d, lattice, path="./plots"):
+def sys_error(data, pvals, d, lattice):
     """Calculates the statistical and systematic error of an np-array of 
     fit results on bootstrap samples of a quantity and the corresponding 
     p-values.
@@ -184,6 +184,7 @@ def sys_error(data, pvals, d, lattice, path="./plots"):
     res_std = np.empty([data.shape[1]], dtype=float)
     res_syst = np.empty([2, data.shape[1]], dtype=float)
 
+    path="./plots/"
 
     # loop over principal correlators
     for _j in range(0, data.shape[1]):
@@ -193,9 +194,8 @@ def sys_error(data, pvals, d, lattice, path="./plots"):
         data_weight = (1. - 2. * np.fabs(pvals[0, _j] - 0.5) *
                       np.amin(data_std)/data_std)**2
         # draw original data as histogram
-        plotlabel = ''
-        label = ["", "", ""]
-        print("data and weight shapes:")
+        plotlabel = 'hist_%d"' % _j
+        label = ["", "", "principal correlator"]
         print data[0,_j].shape, data_weight.shape
         plt.plot_histogram(data[0,_j], data_weight, lattice, d2, label, path,
                            plotlabel)
@@ -237,18 +237,17 @@ def calc_scat_length(dE, E, L):
     # creating data array from empty array
     a = np.zeros((dE.shape[0], dE.shape[2]))
     # loop over fit ranges
-    for _r1 in range(dE.shape[2]):
+    for _r in range(dE.shape[2]):
         # loop over bootstrap samples
         for _b in range(dE.shape[0]):
         # Prefactor common to every order
           #print E[_b,0,_r], dE[_b,0,_r]
-          ind_E = _r1/(E.shape[3])
-          comm = -4.*np.pi/(E[_b,0,0,ind_E]*L*L)
+          comm = -4.*np.pi/(E[_b,0,0,_r]*L*L)
           # build up coefficient list
           p = np.asarray((comm*c[1]/(L*L*L),comm*c[0]/(L*L),comm/L,
-            -1*dE[_b,0,_r1]))
+            -1*dE[_b,0,_r]))
           # write scattering length to array
           #print p
 
-          a[_b,_r1] = np.roots(p)[2].real
+          a[_b,_r] = np.roots(p[_r])[2].real
     return a
