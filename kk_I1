@@ -40,7 +40,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 import analysis as ana
 def main():
     # number of bootstrap samples
-    nbsamples = 1500
+    nbsamples = 250
     # temporal lattice extent
     tmin = 1
     T = 48
@@ -80,7 +80,7 @@ def main():
             # start with usual analysis (thermal states contamination expected)
             fitfunc = lambda p,t: 10e6 if p[1] < 0.0 else 0.5*p[0]*p[0]*(np.exp(-p[1]*t) + np.exp(-p[1]*(T-t)))
             par_mass = [1.]
-            par_ratio = [2.,0.06]
+            par_ratio = [2.,0.1]
             massfunc = lambda p, t: p
             
             T2=int(T/2)+1
@@ -125,18 +125,25 @@ def main():
             mass, mmass, dmass = ana.compute_mass(bsamples_k, True)
             # ana.scan_fit_range(massfunc, tlist_corr,mass, par_mass)
             # TODO: set two points more than wanted for upper limit
-            ranges = ana.set_fit_intervall(mass, [10], [24], 5)
+            ranges = ana.set_fit_intervall(mass, [10], [24], 10)
             
             # For mass use one parameter fit
             # res has shape (nb_samples, nb_pars, ncorr, nb_fitranges)
             print ens[:-1], amu_s[s]
             prefix = "_"+ens[:-1]+str(amu_s[s])[3:]
+
+            # Check and conditionally read cache of fit
+            genfit_mass_cache = cachepath+"genfit_mass.npy"
             if osp.isfile(genfit_mass_cache):
-               res
-            res, chi2, pval = ana.genfit(mass,ranges,massfunc,
-                par_mass,1,prefix,np.asarray([0,0,0]),label,tmp_out,"mass",False)
-            
-            # Save fit results
+                ranges, res, chi2, pval = ana.read_fitresults(genfit_mass_cache)
+            else:
+                res, chi2, pval = ana.genfit(mass,ranges,massfunc,
+                    par_mass,1,prefix,np.asarray([0,0,0]),label,tmp_out,"mass",False)
+                print len(ranges)
+                
+                # Save fit results
+                print("saving Mass fits to %s" %genfit_mass_cache)
+                ana.write_fitresults(genfit_mass_cache, ranges, res, chi2, pval)
           
             print("Shape of mass calculation is:")
             print res.shape
@@ -169,14 +176,22 @@ def main():
             # define the ratiofunction, Using fitted energies seems to make more
             # sense
             ratio = lambda p, t, e : p[0]*(np.cosh(p[1]*(t-T/2))+np.sinh(p[1]*(t-T/2))/(np.tanh(2*e*(t-T/2))))
-            # define fit ranges
-            ranges1 = ana.set_fit_intervall(R_boot,[13],[25],6)
-            # res_R has shape (nb_samples, nb_pars, n_corr, nb_ranges1 *
-            # nb_ranges2)
-            res_R, chi2_R, pvals_R = ana.genfit_comb(R_boot,ranges1,ranges,
-                                                     ratio,par_ratio,res,
-                                                     1,ens[:-1],label,tmp_out,
-                                                     "ratio", verbose=False)
+            # Check and conditionally read cache of fit
+            genfit_ratio_cache = cachepath+"genfit_ratio.npy"
+            if osp.isfile(genfit_ratio_cache):
+                ranges1, res, chi2, pval = ana.read_fitresults(genfit_ratio_cache)
+            else:
+                # define fit ranges
+                # res_R has shape (nb_samples, nb_pars, n_corr, nb_ranges1 *
+                # nb_ranges2)
+                ranges1 = ana.set_fit_intervall(R_boot,[13],[25],10)
+                res_R, chi2_R, pvals_R = ana.genfit_comb(R_boot,ranges1,ranges,
+                                                         ratio,par_ratio,res,
+                                                         1,ens[:-1],label,tmp_out,
+                                                         "ratio", verbose=True)
+                # Save fit results
+                ana.write_fitresults(genfit_ratio_cache, ranges1, res_R, chi2_R, pvals_R)
+          
             # Reshape res_R and pvals_R for systematic error calculation
             r = len(ranges[0])*len(ranges1[0]) 
             #print res_R.size, pvals_R.size
