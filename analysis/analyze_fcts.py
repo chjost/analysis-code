@@ -150,7 +150,7 @@ def sys_error_der(data, weights, lattice):
 
     return res[0], res_std, res_syst
 
-def sys_error(data, pvals, d, lattice):
+def sys_error(data, pvals, d, lattice, path="./plots/"):
     """Calculates the statistical and systematic error of an np-array of 
     fit results on bootstrap samples of a quantity and the corresponding 
     p-values.
@@ -183,8 +183,6 @@ def sys_error(data, pvals, d, lattice):
     res = np.empty([data.shape[0], data.shape[1]], dtype=float)
     res_std = np.empty([data.shape[1]], dtype=float)
     res_syst = np.empty([2, data.shape[1]], dtype=float)
-
-    path="./plots/"
 
     # loop over principal correlators
     for _j in range(0, data.shape[1]):

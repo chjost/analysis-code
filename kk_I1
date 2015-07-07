@@ -125,7 +125,7 @@ def main():
             mass, mmass, dmass = ana.compute_mass(bsamples_k, True)
             # ana.scan_fit_range(massfunc, tlist_corr,mass, par_mass)
             # TODO: set two points more than wanted for upper limit
-            ranges = ana.set_fit_intervall(mass, [10], [24], 10)
+            ranges = ana.set_fit_interval(mass, [10], [24], 10)
             
             # For mass use one parameter fit
             # res has shape (nb_samples, nb_pars, ncorr, nb_fitranges)
@@ -145,11 +145,9 @@ def main():
                 print("saving Mass fits to %s" %genfit_mass_cache)
                 ana.write_fitresults(genfit_mass_cache, ranges, res, chi2, pval)
           
-            print("Shape of mass calculation is:")
-            print res.shape
             np.append(m_k_dat,res)
             prefix = ens[:-1]+"_mass_"+str(amu_s[s])[3:] 
-            m_k_w, dm_stat, dm_sys, weights_m_k = ana.sys_error(res[:,0],pval,
+            m_k_w, dm_stat, dm_sys, weights_m_k = ana.sys_error(res,pval,
                                                                 p_zero,prefix,
                                                                 tmp_out)
             print("m_k +/- d_stat(m_k) + d_sys(m_k) -d_sys(m_k)\n%f +/- %f +%f-%f\n" 
@@ -184,7 +182,7 @@ def main():
                 # define fit ranges
                 # res_R has shape (nb_samples, nb_pars, n_corr, nb_ranges1 *
                 # nb_ranges2)
-                ranges1 = ana.set_fit_intervall(R_boot,[13],[25],10)
+                ranges1 = ana.set_fit_interval(R_boot,[13],[25],10)
                 res_R, chi2_R, pvals_R = ana.genfit_comb(R_boot,ranges1,ranges,
                                                          ratio,par_ratio,res,
                                                          1,ens[:-1],label,tmp_out,
