@@ -77,7 +77,8 @@ def fitting(fitfunc, X, Y, start_parm, E_single=None, correlated=True, verbose=T
     else:
         for b in range(0, Y.shape[0]):
             p,cov1,infodict,mesg,ier = leastsq(errfunc, start_parm,
-                                       args=(X, Y[b,:],E_single[b], cov ), full_output=1)
+                                       args=(X, Y[b,:],E_single[b], cov ), 
+                                       full_output=1, factor=0.1)
             chisquare[b] = float(sum(infodict['fvec']**2.))
             res[b] = np.array(p)
     # calculate mean and standard deviation

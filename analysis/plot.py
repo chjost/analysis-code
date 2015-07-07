@@ -154,7 +154,6 @@ def plot_histogram(data, data_weight, lattice, d, label, path="./plots/",
 
     Returns:
     """
-
     d2 = np.dot(d,d)
     ninter = data.shape[0]
 

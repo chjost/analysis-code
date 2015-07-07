@@ -214,7 +214,14 @@ def analyse(lattice="A40.24", d=np.asarray([0., 0., 0.])):
     pi, pichi2, pipvals, pionranges = fit_single_pion(pimass, lo_pion, up_pion, 
         fmin, par_pion, massfit, tmin, lattice, d, label_pion, plotfolder,
         datafolder, False)
-    print(pionranges.shape)
+    # calculate statistic and systematic error of the pion
+    # TODO(CJ): hijacking lattice name for distinguishing different plots
+    mpi, dmpi_stat, dmpi_syst, weights_mpi = ana.sys_error(pi, pipvals, d, 
+                                                 "pion_"+lattice, path=plotfolder)
+    print("single pion")
+    print(len(weights_mpi))
+    for p in weights_mpi:
+        print(d.shape)
 
     for s in xrange(2):
         print("shift %d" % s)
@@ -223,7 +230,7 @@ def analyse(lattice="A40.24", d=np.asarray([0., 0., 0.])):
 
         ## build ratio to determine dE
         ratio, mratio, dratio=ana.simple_ratio_subtract(gevp, pi_data, pi_data)
-        print(ratio.shape)
+        #print("ratio shape", ratio.shape)
 
         ## plot ratio
         #pfit = PdfPages("%s/pipi_ratio_shift%d.pdf" % (plotfolder, s)) 
@@ -235,7 +242,7 @@ def analyse(lattice="A40.24", d=np.asarray([0., 0., 0.])):
 
         ## fit ratio
         fname = "%s/fit_ratio_%s_TP%d_s%d.npz" % (datafolder, lattice, d2, s)
-        fitnew = True
+        fitnew = False
         if fitnew:
             ratioranges = ana.set_fit_interval(ratio, lo_ratio, up_ratio, fmin)
             rres, rchi2, rpvals = ana.genfit_comb(ratio, ratioranges, pionranges,
@@ -244,6 +251,63 @@ def analyse(lattice="A40.24", d=np.asarray([0., 0., 0.])):
             ana.write_fitresults(fname, ratioranges, rres, rchi2, rpvals)
         else:
             ratioranges, rres, rchi2, rpvals = ana.read_fitresults(fname)
+        #print("rres")
+        #print(len(rres))
+        #for p in rres:
+        #    print(len(p))
+        #    for q in p:
+        #        print(q.shape)
+        #print("rpvals")
+        #print(len(rpvals))
+        #for p in rpvals:
+        #    print(len(p))
+        #    for q in p:
+        #        print(q.shape)
+
+        # calculate statistic and systematic error for delta E
+        dE, ddE_stat, ddE_syst, weights_dE = ana.sys_error(rres, rpvals, d, "ratio_s%d_%s" % (s, lattice), par=1, path=plotfolder)
+        #print("weights_dE")
+        #print(len(weights_dE))
+        #for p in weights_dE:
+        #    print(len(p))
+        #    for q in p:
+        #        print(q.shape)
+        print("dE with errors")
+        for p, dp, ddp in zip(dE, ddE_stat, ddE_syst):
+            for q, dq, ddq in zip(p, dp, ddp):
+                print(q, dq, ddq)
+        #print(len(dE))
+        #for p in dE:
+        #    print(len(p))
+        #    for q in p:
+        #        print(q)
+
+        # calculate scattering length
+        anew = True
+        if anew:
+            a, weights_a = ana.calc_scat_length(rres, pi, weights_dE, weights_mpi, L)
+            fname = "%s/scat_len_%s_TP%d_s%d.npz" % (datafolder, lattice, d2, s)
+            # since a is a list of lists of arrays, hack the fit results
+            # routines to save
+            ana.write_fitresults(fname, np.zeros((10,)), a, weights_a, a)
+        else:
+            fname = "%s/scat_len_%s_TP%d_s%d.npz" % (datafolder, lattice, d2, s)
+            # since a is a list of lists of arrays, hack the fit results
+            # routines to read
+            _u, _a, weigths_a, a = ana.read_fitresults(fname)
+        print("a")
+        print(len(a))
+        for p in a:
+            print(len(p))
+            for q in p:
+                print(q.shape)
+        print("weights_a")
+        print(len(weights_a))
+        for p in weights_a:
+            print(len(p))
+            for q in p:
+                print(q.shape)
+        a_pipi, da_stat, da_syst = ana.sys_error_der(a, weights_a, lattice)
     return
 
 def main():
