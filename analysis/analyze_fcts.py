@@ -102,7 +102,7 @@ def calc_error(data, axis=0):
     err  = np.std(data, axis)
     return mean, err
 
-def sys_error_der(data, weights, lattice, path="./plots/"):
+def sys_error_der(data, weights, d, lattice, path="./plots/"):
     """Error calculation for derived results
     
     Args:
@@ -159,7 +159,7 @@ def sys_error_der(data, weights, lattice, path="./plots/"):
             res_sys.append([])
             for j, q in enumerate(p):
                 # append the necessary data arrays
-                res[i].append(np.zeros(p.shape[0]))
+                res[i].append(np.zeros(q.shape[0]))
                 res_std[i].append(np.zeros((1,)))
                 res_sys[i].append(np.zeros((2,)))
 
@@ -171,17 +171,17 @@ def sys_error_der(data, weights, lattice, path="./plots/"):
                 # using the weights, calculate the median over all fit intervals
                 # for every bootstrap sample.
                 for b in xrange(q.shape[0]):
-                    res[i][j][b] = qlt.weighted_quantile(q[b], weights[i][j], 0.5)
+                    res[i][j][b] = qlt.weighted_quantile(q[b].ravel(), weights[i][j].ravel(), 0.5)
                 # the statistical error is the standard deviation of the medians
                 # over the bootstrap samples.
-                res_std[i][j] = np.std(res[i])
+                res_std[i][j] = np.std(res[i][j])
                 # the systematic error is given by difference between the median 
                 # on the original data and the 16%- or 84%-quantile respectively
-                res_sys[i][j][0]=res[i][j][0]-qlt.weighted_quantile(q[0],weights[i][j],0.16)
-                res_sys[i][j][1]=qlt.weighted_quantile(q[0],weights[i][j],0.84)-res[i][j][0]
+                res_sys[i][j][0]=res[i][j][0]-qlt.weighted_quantile(q[0].ravel(),weights[i][j].ravel(),0.16)
+                res_sys[i][j][1]=qlt.weighted_quantile(q[0].ravel(),weights[i][j].ravel(),0.84)-res[i][j][0]
                 # keep only the median of the original data
                 res[i][j] = res[i][j][0]
-    return res, res_std, res_syst
+    return res, res_std, res_sys
 
 def sys_error(data, pvals, d, lattice, par=0, path="./plots/"):
     """Calculates the statistical and systematic error of an np-array of 

@@ -294,7 +294,7 @@ def analyse(lattice="A40.24", d=np.asarray([0., 0., 0.])):
             fname = "%s/scat_len_%s_TP%d_s%d.npz" % (datafolder, lattice, d2, s)
             # since a is a list of lists of arrays, hack the fit results
             # routines to read
-            _u, _a, weigths_a, a = ana.read_fitresults(fname)
+            _u, _a, weights_a, a = ana.read_fitresults(fname)
         print("a")
         print(len(a))
         for p in a:
@@ -307,7 +307,18 @@ def analyse(lattice="A40.24", d=np.asarray([0., 0., 0.])):
             print(len(p))
             for q in p:
                 print(q.shape)
-        a_pipi, da_stat, da_syst = ana.sys_error_der(a, weights_a, lattice)
+        a_pipi, da_stat, da_syst = ana.sys_error_der(a, weights_a, d, lattice, path=plotfolder)
+        print("scattering length")
+        print(len(a_pipi))
+        for p in a_pipi:
+            print(len(p))
+            for q in p:
+                print(q)
+        print("a with errors")
+        for p, dp, ddp in zip(a_pipi, da_stat, da_syst):
+            for q, dq, ddq in zip(p, dp, ddp):
+                print(q, dq, ddq)
+
     return
 
 def main():
