@@ -303,7 +303,7 @@ def calc_scat_length(dE, E, weight_dE, weight_E, L, pars=(1, 0)):
         weights_dE: weights of the energy shift
         weights_E: weights of the single particle energy
         L: The spatial lattice extent
-        pars: which fit parameters to use
+        pars: which fit parameters to use, if None, skip the index
     Returns:
         a: roots of the function
         weights: the weight of a
@@ -349,20 +349,33 @@ def calc_scat_length(dE, E, weight_dE, weight_E, L, pars=(1, 0)):
         for _s in xrange(ncorr_ratio[_r]): # ratio
             # calculate prefactor
             # TODO(CJ): can the shape of E[i] change?
-            pre = -4.*np.pi/(E[_r][:,0,:]*float(L*L*L))
+            if pars[1] == None:
+                pre = -4.*np.pi/(E[_r]*float(L*L*L))
+            else:
+                pre = -4.*np.pi/(E[_r][:,pars[1]]*float(L*L*L))
             # loop over fitranges
             for _f in xrange(E[_r].shape[-1]): # single particle
                 for _g in xrange(dE[_r][_s].shape[-2]): # ratio
                     # loop over bootstrap samples
                     for _b in xrange(E[_r].shape[0]):
-                        p = np.asarray((pre[_b,_f]*c[1]/float(L*L), 
-                            pre[_b,_f]*c[0]/float(L), pre[_b,_f],
-                            -1.*dE[_r][_s][_b,0,_g,_f]))
+                        if pars[0] == None:
+                            p = np.asarray((pre[_b,_f]*c[1]/float(L*L), 
+                                pre[_b,_f]*c[0]/float(L), pre[_b,_f],
+                                -1.*dE[_r][_s][_b,_g,_f]))
+                        else:
+                            p = np.asarray((pre[_b,_f]*c[1]/float(L*L), 
+                                pre[_b,_f]*c[0]/float(L), pre[_b,_f],
+                                -1.*dE[_r][_s][_b,pars[0],_g,_f]))
                         # calculate roots
                         root = np.roots(p)
                         # sort according to absolute value of the imaginary part
                         ind_root = np.argsort(np.fabs(root.imag))
+                        if(root[ind_root][0].imag) > 1e-6:
+                            print("imaginary part of root > 1e-6 for c1 %d, c2 %d, f1 %d, f2 %d, b %d" % (_r, _s, _f, _g, _b))
                         # the first entry of the sorted array is the one we want
-                        a[_r][_s][_b,_g, _f] = root[ind_root][0].real
+                        a[_r][_s][_b, _g, _f] = root[ind_root][0].real
                         weight[_r][_s][_g, _f] = weight_dE[_r][_s][_g,_f] * weight_E[_r][_f]
     return a, weight
+
+def multiply(data, energy, w_data, w_energy, pars=(1, 0)):
+    pass

@@ -218,10 +218,13 @@ def analyse(lattice="A40.24", d=np.asarray([0., 0., 0.])):
     # TODO(CJ): hijacking lattice name for distinguishing different plots
     mpi, dmpi_stat, dmpi_syst, weights_mpi = ana.sys_error(pi, pipvals, d, 
                                                  "pion_"+lattice, path=plotfolder)
-    print("single pion")
-    print(len(weights_mpi))
-    for p in weights_mpi:
-        print(d.shape)
+    #print("single pion")
+    #print(len(weights_mpi))
+    #for p in weights_mpi:
+    #    print(d.shape)
+    print("mpi with errors")
+    for p, dp, ddp in zip(mpi, dmpi_stat, dmpi_syst):
+        print(p, dp, ddp)
 
     for s in xrange(2):
         print("shift %d" % s)
@@ -283,42 +286,64 @@ def analyse(lattice="A40.24", d=np.asarray([0., 0., 0.])):
         #        print(q)
 
         # calculate scattering length
-        anew = True
+        anew = False
+        fname = "%s/scat_len_%s_TP%d_s%d.npz" % (datafolder, lattice, d2, s)
         if anew:
             a, weights_a = ana.calc_scat_length(rres, pi, weights_dE, weights_mpi, L)
-            fname = "%s/scat_len_%s_TP%d_s%d.npz" % (datafolder, lattice, d2, s)
             # since a is a list of lists of arrays, hack the fit results
             # routines to save
             ana.write_fitresults(fname, np.zeros((10,)), a, weights_a, a)
         else:
-            fname = "%s/scat_len_%s_TP%d_s%d.npz" % (datafolder, lattice, d2, s)
             # since a is a list of lists of arrays, hack the fit results
             # routines to read
             _u, _a, weights_a, a = ana.read_fitresults(fname)
-        print("a")
-        print(len(a))
-        for p in a:
-            print(len(p))
-            for q in p:
-                print(q.shape)
-        print("weights_a")
-        print(len(weights_a))
-        for p in weights_a:
-            print(len(p))
-            for q in p:
-                print(q.shape)
+        #print("a")
+        #print(len(a))
+        #for p in a:
+        #    print(len(p))
+        #    for q in p:
+        #        print(q.shape)
+        #print("weights_a")
+        #print(len(weights_a))
+        #for p in weights_a:
+        #    print(len(p))
+        #    for q in p:
+        #        print(q.shape)
+
+        # statistical error for scattering length
         a_pipi, da_stat, da_syst = ana.sys_error_der(a, weights_a, d, lattice, path=plotfolder)
-        print("scattering length")
-        print(len(a_pipi))
-        for p in a_pipi:
-            print(len(p))
-            for q in p:
-                print(q)
-        print("a with errors")
+        #print("a_pipi")
+        #print(len(a_pipi))
+        #for p in a_pipi:
+        #    print(len(p))
+        #    for q in p:
+        #        print(q.shape)
+        print("a_pipi with errors")
         for p, dp, ddp in zip(a_pipi, da_stat, da_syst):
             for q, dq, ddq in zip(p, dp, ddp):
                 print(q, dq, ddq)
 
+        # calculate mpi * a
+        ampinew = True
+        fname = "%s/ampi_%s_TP%d_s%d.npz" % (datafolder, lattice, d2, s)
+        if ampinew:
+            ampi, weights_ampi = ana.calc_scat_length(a, pi, weights_a, weights_mpi, L, pars=(None, 0))
+            ana.write_fitresults(fname, np.zeros((10,)), ampi, weights_ampi, ampi)
+        else:
+            _u, _ampi, weights_ampi, ampi = ana.read_fitresults(fname)
+
+        # statistical and systematic error for a*mpi
+        am_pipi, dam_stat, dam_syst = ana.sys_error_der(ampi, weights_ampi, d, lattice, path=plotfolder)
+        #print("a_pipi * m_pi")
+        #print(len(ampi))
+        #for p in ampi:
+        #    print(len(p))
+        #    for q in p:
+        #        print(q.shape)
+        print("a_pipi * m_pi with errors")
+        for p, dp, ddp in zip(am_pipi, dam_stat, dam_syst):
+            for q, dq, ddq in zip(p, dp, ddp):
+                print(q, dq, ddq)
     return
 
 def main():
