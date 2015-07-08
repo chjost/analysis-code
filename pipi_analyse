@@ -327,7 +327,7 @@ def analyse(lattice="A40.24", d=np.asarray([0., 0., 0.])):
         ampinew = True
         fname = "%s/ampi_%s_TP%d_s%d.npz" % (datafolder, lattice, d2, s)
         if ampinew:
-            ampi, weights_ampi = ana.calc_scat_length(a, pi, weights_a, weights_mpi, L, pars=(None, 0))
+            ampi, weights_ampi = ana.multiply(a, pi, weights_a, weights_mpi, pars=(None, 0))
             ana.write_fitresults(fname, np.zeros((10,)), ampi, weights_ampi, ampi)
         else:
             _u, _ampi, weights_ampi, ampi = ana.read_fitresults(fname)

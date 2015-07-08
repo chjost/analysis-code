@@ -377,5 +377,66 @@ def calc_scat_length(dE, E, weight_dE, weight_E, L, pars=(1, 0)):
                         weight[_r][_s][_g, _f] = weight_dE[_r][_s][_g,_f] * weight_E[_r][_f]
     return a, weight
 
-def multiply(data, energy, w_data, w_energy, pars=(1, 0)):
-    pass
+def multiply(data1, data2, w1, w2, pars=(1, 0)):
+    """Multiply a list of lists of numpy arrays with a list of numpy arrays.
+    Needed for the calculation of scattering length and single particle mass.
+
+    Args:
+        data1: the first data set
+        data2: the second data set
+        w1: weights of the first data set
+        w2: weights of the second data set
+        pars: which index to use, if None, skip the index
+
+    Returns:
+        a: data set 1 * data set 2
+        weights: the weight of a
+    """
+    ncorr1 = len(data1)
+    # check if dE has same length
+    if len(data2) is not ncorr1:
+        print("error in multiply, data shapes incompatible")
+        print(len(data1), len(data2))
+        os.sys.exit(-10)
+    ncorr2 = [len(d) for d in data1]
+    nboot = [d.shape[0] for d in data2]
+    nfit1 = [d.shape[-1] for d in data2]
+    nfit2 = [[e.shape[-2] for e in d] for d in data1]
+    # check number of bootstrap samples and fit intervals for data sets
+    for i in xrange(ncorr1):
+        for j in xrange(ncorr2[i]):
+            if data1[i][j].shape[0] != nboot[i]:
+                print("number of bootstrap samples is different in multiply")
+                print(data1[i][j].shape[0], nboot[i])
+                os.sys.exit(-10)
+            if data1[i][j].shape[-1] != nfit1[i]:
+                print("number of fit intervals is different in multiply")
+                print(data1[i][j].shape[-1], nfit[i])
+                os.sys.exit(-10)
+    # creating data array from empty array
+    a = []
+    weight = []
+    for i in xrange(ncorr1):
+        a.append([])
+        weight.append([])
+        for j in xrange(ncorr2[i]):
+            a[i].append(np.zeros((nboot[i], nfit2[i][j], nfit1[i])))
+            weight[i].append(np.zeros((nfit2[i][j], nfit1[i])))
+    # loop over the correlation functions
+    for r in xrange(ncorr1):
+        for s in xrange(ncorr2[r]):
+            # loop over fitranges
+            for g in xrange(nfit2[r][s]):
+                # implicit looping over the bootstrap samples and the 
+                # fit ranges nfit1
+                if pars[0] == None:
+                    d1 = data1[r][s][:,g]
+                else:
+                    d1 = data1[r][s][:,pars[0],g]
+                if pars[1] == None:
+                    d2 = data2[r]
+                else:
+                    d2 = data2[r][:,pars[1]]
+                a[r][s][:,g] = d1 * d2
+                weight[r][s][g] = w1[r][s][g] * w2[r]
+    return a, weight
