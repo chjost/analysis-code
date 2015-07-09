@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
 ################################################################################
 #
 # Author: Christopher Helmes (helmes@hiskp.uni-bonn.de)
@@ -40,7 +40,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 import analysis as ana
 def main():
     # number of bootstrap samples
-    nbsamples = 250
+    nbsamples = 1500
     # temporal lattice extent
     tmin = 1
     T = 48
@@ -125,7 +125,7 @@ def main():
             mass, mmass, dmass = ana.compute_mass(bsamples_k, True)
             # ana.scan_fit_range(massfunc, tlist_corr,mass, par_mass)
             # TODO: set two points more than wanted for upper limit
-            ranges = ana.set_fit_interval(mass, [10], [24], 10)
+            ranges = ana.set_fit_interval(mass, [9], [24], 5)
             
             # For mass use one parameter fit
             # res has shape (nb_samples, nb_pars, ncorr, nb_fitranges)
@@ -133,9 +133,9 @@ def main():
             prefix = "_"+ens[:-1]+str(amu_s[s])[3:]
 
             # Check and conditionally read cache of fit
-            genfit_mass_cache = cachepath+"genfit_mass.npy"
-            if osp.isfile(genfit_mass_cache):
-                ranges, res, chi2, pval = ana.read_fitresults(genfit_mass_cache)
+            genfit_mass_cache = cachepath+"genfit_mass"
+            if osp.isfile(genfit_mass_cache+".npz"):
+                ranges, res, chi2, pval = ana.read_fitresults(genfit_mass_cache+".npz")
             else:
                 res, chi2, pval = ana.genfit(mass,ranges,massfunc,
                     par_mass,1,prefix,np.asarray([0,0,0]),label,tmp_out,"mass",False)
@@ -146,12 +146,14 @@ def main():
                 ana.write_fitresults(genfit_mass_cache, ranges, res, chi2, pval)
           
             np.append(m_k_dat,res)
+            for i in res:
+                print i.shape
             prefix = ens[:-1]+"_mass_"+str(amu_s[s])[3:] 
             m_k_w, dm_stat, dm_sys, weights_m_k = ana.sys_error(res,pval,
                                                                 p_zero,prefix,
-                                                                tmp_out)
+                                                                path=tmp_out)
             print("m_k +/- d_stat(m_k) + d_sys(m_k) -d_sys(m_k)\n%f +/- %f +%f-%f\n" 
-                %(m_k_w, dm_stat, dm_sys[0], dm_sys[1]))
+                %(m_k_w[0], dm_stat[0], dm_sys[0][0], dm_sys[0][1]))
             #print("weights_m_k shape is:%d" % weights_m_k.shape)
 
             ##--------------- Have a look at the 4 pt mean correlator and effective mass -----------
@@ -175,14 +177,14 @@ def main():
             # sense
             ratio = lambda p, t, e : p[0]*(np.cosh(p[1]*(t-T/2))+np.sinh(p[1]*(t-T/2))/(np.tanh(2*e*(t-T/2))))
             # Check and conditionally read cache of fit
-            genfit_ratio_cache = cachepath+"genfit_ratio.npy"
-            if osp.isfile(genfit_ratio_cache):
-                ranges1, res, chi2, pval = ana.read_fitresults(genfit_ratio_cache)
+            genfit_ratio_cache = cachepath+"genfit_ratio"
+            if osp.isfile(genfit_ratio_cache+".npz"):
+                ranges1, res_R, chi2_R, pvals_R = ana.read_fitresults(genfit_ratio_cache+".npz")
             else:
                 # define fit ranges
                 # res_R has shape (nb_samples, nb_pars, n_corr, nb_ranges1 *
                 # nb_ranges2)
-                ranges1 = ana.set_fit_interval(R_boot,[13],[25],10)
+                ranges1 = ana.set_fit_interval(R_boot,[13],[23],6)
                 res_R, chi2_R, pvals_R = ana.genfit_comb(R_boot,ranges1,ranges,
                                                          ratio,par_ratio,res,
                                                          1,ens[:-1],label,tmp_out,
@@ -194,14 +196,15 @@ def main():
             r = len(ranges[0])*len(ranges1[0]) 
             #print res_R.size, pvals_R.size
             #print r, nbsamples 
-            w_res_R = np.reshape(res_R, (nbsamples,2,1,r))
-            w_pvals_R = np.reshape(pvals_R, (nbsamples,1,r))
-            print("Shape of del_E calculation is:")
-            print res_R.shape, pvals_R.shape
+            #w_res_R = np.reshape(res_R, (nbsamples,2,1,r))
+            #w_pvals_R = np.reshape(pvals_R, (nbsamples,1,r))
             prefix = ens[:-1]+"ratio_"+str(amu_s[s])[3:]
-            del_E_w, ddel_E_stat, ddel_E_sys , weights_del_E = ana.sys_error(w_res_R[:,1], w_pvals_R, p_zero,prefix,tmp_out)
+            del_E_w, ddel_E_stat, ddel_E_sys , weights_del_E = ana.sys_error(res_R,
+                                                                  pvals_R, p_zero,
+                                                                  prefix,par=1,
+                                                                  path=tmp_out)
             print("delE +/- d_stat(del_E) + d_sys(del_E) -d_sys(del_E)\n%f +/- %f +%f-%f\n" 
-                %(del_E_w, ddel_E_stat, ddel_E_sys[0], ddel_E_sys[1]))
+                %(del_E_w[0][0], ddel_E_stat[0][0], ddel_E_sys[0][0][0], ddel_E_sys[0][0][1]))
             #print("weights_delE shape is:%d" % weights_m_k.shape)
             
  #           prat.close()
@@ -211,39 +214,40 @@ def main():
           #  #---------------------- Scattering length a_kk --------------------
 
             # calculate Scattering length
-            a_kk = ana.calc_scat_length(w_res_R[:,1],res,L)
+            a_kk, weights_a_kk= ana.calc_scat_length(res_R, res, weights_del_E, weights_m_k, L)
             # and its median and errors and weights
-            print a_kk.shape, weights_del_E.shape
+            # print a_kk.shape, weights_del_E.shape
             # TODO: reshape is nasty but necessary...
             #a_kk = np.atleast_3d(a_kk)
             #weights_del_E = np.atleast_2d(weights_del_E)
             #weights_del_E.shape = (9,1)
-            #print a_kk[0]
             #a_kk.shape = (1500,1,9)
-            #print a_kk[0]
-            a_kk_w, a_kk_stat, a_kk_sys = ana.sys_error_der(a_kk, weights_del_E ,ens[:-1])
+            a_kk_w, a_kk_stat, a_kk_sys = ana.sys_error_der(a_kk, weights_a_kk ,p_zero,ens[:-1])
+            #print a_kk_w[0][0], a_kk_stat[0][0], a_kk_sys[0][0][1]
             #print("%f\t%f +/- %f\t%f +/- %f\t%f +/- %f\t%f +/- %e"%(amu_s[s],
             #  m_k_w, dm_stat, dm_sys, del_E_w, ddel_E_stat, ddel_E_sys,
             #  a_kk_w, a_kk_stat, a_kk_sys[0], a_kk_sys[1]
             #  #np.median(m_k_akk[:,0]), np.std(m_k_akk[:,0]
             #  ))
-            #save_res.write("%f\t%f +/- %f +%f-%f\t%f +/- %f +%f-%f\t%f +/- %f +%f-%f\n"%(amu_s[s],
-            #  m_k_w, dm_stat[0], dm_sys[0], dm_sys[1], del_E_w, ddel_E_stat[0],
-            #  ddel_E_sys[0],ddel_E_sys[1],
-            #  a_kk_w, a_kk_stat, a_kk_sys[0], a_kk_sys[1]))
+            #save_res.write("%f\t%f +/- %f +%f-%f\t%f +/- %f +%f-%f\t%f +/- %f +%f-%f\n"
+            #  %(amu_s[s],
+            #  m_k_w[0], dm_stat[0], dm_sys[0][0], dm_sys[0][1], 
+            #  del_E_w[0][0], ddel_E_stat[0][0], ddel_E_sys[0][0][0],ddel_E_sys[0][0][1],
+            #  a_kk_w[0][0], a_kk_stat[0][0], a_kk_sys[0][0][0], a_kk_sys[0][0][1]))
             
             #------------------------- m_k*a_kk -------------------------------
             # To match the shapes the tiling is done by the second fit range
-            ma_k = a_kk * np.tile(res[:,0,0],len(ranges1[0]))
-            weights_ma_k = weights_del_E * np.tile(weights_m_k,len(ranges1[0])) 
-            ma_k_w , ma_k_stat, ma_k_sys = ana.sys_error_der(ma_k, weights_ma_k,
-                ens[:-1])
+            ma_k , weights_ma_k = ana.multiply(a_kk, res, weights_a_kk,
+                weights_m_k, pars=(None,0))
+            ma_k_w , ma_k_stat, ma_k_sys = ana.sys_error_der(ma_k, weights_ma_k, p_zero, ens[:-1])
 
             save_res.write("%f\t%f %f +%f-%f\t%f +/- %f +%f-%f\t%f +/- %f +%f-%f\t%f +/- %f +%f-%f\n"
-              %( amu_s[s], m_k_w, dm_stat[0], dm_sys[0], dm_sys[1],
-              del_E_w, ddel_E_stat[0], ddel_E_sys[0],ddel_E_sys[1],
-              a_kk_w, a_kk_stat, a_kk_sys[0], a_kk_sys[1],
-              ma_k_w, ma_k_stat, ma_k_sys[0], ma_k_sys[1]))
+              %(amu_s[s],
+              m_k_w[0], dm_stat[0], dm_sys[0][0], dm_sys[0][1], 
+              del_E_w[0][0], ddel_E_stat[0][0], ddel_E_sys[0][0][0],ddel_E_sys[0][0][1],
+              a_kk_w[0][0], a_kk_stat[0][0], a_kk_sys[0][0][0], a_kk_sys[0][0][1],
+              ma_k_w[0][0], ma_k_stat[0][0], ma_k_sys[0][0][0], ma_k_sys[0][0][1]))
+
         
         save_res.close()
 

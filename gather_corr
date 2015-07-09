@@ -28,33 +28,48 @@
 
 import os
 import numpy as np
-import input_output as io
+
+import analysis as ana
 
 def main():
-    try:
-        # needed variables
-        inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/sum/pi_corr_p0.conf"
-        outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/pi_corr_p0"
-        suffix=".dat"
-        inputlist = []
-        for i in range(4, 640, 8):
-            inputlist.append("%04d" % i)
+    # needed variables
+    #inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/sum/pi_corr_p0.conf"
+    #outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/pi_corr_p0"
+    inputpath="/hiskp2/helmes/contractions/A60.24/k-k_test_C4/strange_0225/merged/"
+    outputpath="/hiskp2/helmes/contractions/A60.24/k-k_test_C4/strange_0225/merged/"
+    filelist = ["C2_k"]
+    filelist += ["C4_%d" % (x) for x in [1,2,3,4]]
+    #filelist += ["pipi_pipi_A1_corr_TP0_%02d" % (x) for x in [00, 01, 02, 10, 11, 12, 20, 21, 22]]
+    #filelist += ["pipi_pipi_A1_corr_TP1_%02d" % (x) for x in [00, 01, 10, 11]]
+    #filelist += ["pipi_pipi_A1_corr_TP2_%02d" % (x) for x in [00, 01, 10, 11]]
+    #filelist += ["pipi_pipi_A1_corr_TP3_%02d" % (x) for x in [00, 01, 10, 11]]
+    #for p in xrange(4):
+    #    filelist += ["pipi_pipi_A1_corr_TP%01d_%02d" % (p,x) for x in 
+    #                 [00, 01, 02, 10, 11, 12, 20, 21, 22]]
+    suffix=".dat"
+    missing = [292, 328, 388, 444, 516, 524, 556]
+    inputlist = []
+    for i in range(600, 3104, 8):
+        if i in missing:
+            continue
+        inputlist.append("_c%04d" % i)
+    #print(inputpath)
+    #print(outputpath)
+    #print(filelist)
+    print(len(filelist))
+    print(len(inputlist))
+    #return
 
-        for i in (40, 48, 56, 64, 88, 312):
-            inputlist.append("%04d" % i)
-
-        #print(inputlist)
-        #return
-
+    for d in filelist:
         # read in data
         # read in the first file to create all variables
-        corrs = io.read_data_ascii( "".join((inputpath, inputlist[0], suffix)) )
+        corrs = ana.read_data_ascii( "".join((inputpath, d, inputlist[0], suffix)),(0,) )
         _nbcfg = corrs.shape[0]
         _t = corrs.shape[1]
         # loop over the remaining files and append to the first data set
         for _i in inputlist[1:]:
             # read in file
-            _ctmp = io.read_data_ascii("".join((inputpath, _i, suffix)))
+            _ctmp = ana.read_data_ascii("".join((inputpath, d, _i, suffix)), (0,))
             _nbtmp = _ctmp.shape[0]
             _ttmp = _ctmp.shape[1]
             # check whether time extend is the same
@@ -68,12 +83,14 @@ def main():
             _nbcfg += _nbtmp
 
         # print to file
-        io.write_data_ascii(corrs, "".join((outputpath, suffix)), verbose=False)
+        ana.write_data_ascii(corrs, "".join((outputpath, d, suffix)), verbose=False)
         #print(corrs)
+        print("".join((outputpath, d, suffix)))
         print(corrs.shape)
-    except KeyboardInterrupt:
-        print("\nKeyboard Interrupt, exiting...")
 
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nKeyboard Interrupt, exiting...")
