@@ -39,8 +39,8 @@ def main():
     nbsamples = 1500
     #inputpath="/hiskp2/helmes/contractions/A40.24/kaon/strange_225/merged/"
     #outputpath="/hiskp2/helmes/contractions/A40.24/kaon/strange_225/merged/scratch/"
-    #inputpath="/hiskp2/correlators/A40.24_L24_T48_beta190_mul0040_musig150_mudel190_kappa1632700/ev120/k-k/mu_s_185/"
-    #outputpath="./"
+    #inputpath="/hiskp2/helmes/contractions/A60.24/k-k/strange_185/merged"
+    #outputpath="/hiskp2/helmes/contractions/A60.24/k-k/strange_185/merged/scratch"
     #suffix="k_corr_p0.dat"
     #suffix1="k_p0_average.dat"
     #suffix2="k_p0_mass.dat"

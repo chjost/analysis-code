@@ -32,31 +32,31 @@ matplotlib.use('QT4Agg') # has to be imported before the next lines
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
-
+import math
 import analysis as ana
 
 def main():
   ## definition of some variables
     nbsamples = 100
-    T = 96
+    T = 64
     T2 = int(T/2)+1
     massfunc = lambda p, t: p
 
     # get mean correlators for varying number of configs
 
-    nb_cfgs = [30,60,90,120,150,180,210]
-    path = "/hiskp2/helmes/B35_nb_cfg_test/"
-    name_2pt = path+"data/pi_corr_p0.dat"
-    name_4pt = path+"data/pipi_pipi_A1_corr_TP0_00.dat"
+    nb_cfgs = ["EI10","EI4","EI2"]
+    path = "/hiskp2/helmes/B35_interlace_test/"
     plotpath = path+"plots/"
     # Arrays for different configuration subsets
     # shape is ( nb_subsets, time, dat_type)
     mean_corr_2pt = np.zeros((len(nb_cfgs), T2-2, 2))
     mean_corr_4pt = np.zeros((len(nb_cfgs), T2-2, 2)) 
     for _e in range(0,len(nb_cfgs)):
-        _c = nb_cfgs[_e]
-        corrs_2pt = ana.read_data_part_ascii(name_2pt,_c)
-        corrs_4pt = ana.read_data_part_ascii(name_4pt,_c)
+        name_2pt = path+"data/pi_corr_p0."+nb_cfgs[_e]+".dat"
+        name_4pt = path+"data/pipi_corr_p0."+nb_cfgs[_e]+".dat"
+        print ("Reading:\n%s\n%s" % (name_2pt, name_4pt))
+        corrs_2pt = ana.read_data_part_ascii(name_2pt,10)
+        corrs_4pt = ana.read_data_part_ascii(name_4pt,10)
 
         bsamples_2pt =  ana.sym_and_boot(corrs_2pt,nbsamples)
         bsamples_4pt =  ana.sym_and_boot(corrs_4pt,nbsamples)
@@ -66,41 +66,56 @@ def main():
 
         # compute effective masses
         m_eff_2pt, mm_eff_2pt, err_m_eff_2pt = ana.compute_mass(bsamples_2pt) 
-        m_eff_4pt, mm_eff_4pt, err_m_eff_4pt = ana.compute_mass(bsamples_4pt) 
+        m_eff_4pt, mm_eff_4pt, err_m_eff_4pt = ana.compute_mass(bsamples_4pt)
+        print mm_eff_2pt, mm_eff_4pt
         # append stuff to array
         mean_corr_2pt [_e,:, 0] = mm_eff_2pt
         mean_corr_2pt [_e,:, 1] = err_m_eff_2pt
         mean_corr_4pt [_e,:, 0] = mm_eff_4pt
         mean_corr_4pt [_e,:, 1] = err_m_eff_4pt
 
-
-    # plot mean and stdev
-
-    tlist_corr = np.linspace(0., float(T2-2), float(T2-2), endpoint=False)
-    label_2pt = ["rel_error", "time", "dC_2(t)/C_2(t)", "data", "#cfg: "+str(_c)]
-    label_4pt = ["rel_error", "time", "dC_4(t)/C_4(t)", "data", "#cfg: "+str(_c)]
-
     # relative error
     rel_err_2pt = np.divide(mean_corr_2pt[:,:,1], mean_corr_2pt[:,:,0])
     rel_err_4pt = np.divide(mean_corr_4pt[:,:,1], mean_corr_4pt[:,:,0])
-    
+    print rel_err_2pt[0].shape, rel_err_4pt[1].shape
 
+    # Noise to signal ratios i vs j configs
+    nsr_2pt = np.divide(rel_err_2pt[0], rel_err_2pt[1] )
+    nsr_4pt = np.divide(rel_err_4pt[0], rel_err_4pt[1] )
+
+    # plot mean and stdev
+    tlist_corr = np.linspace(0., float(T2-2), float(T2-2), endpoint=False)
+    print len(tlist_corr)
     pfit = PdfPages("%s%s_plot.pdf" % (plotpath,"rel_err_"))
-    ana.corr_fct(tlist_corr, rel_err_2pt, [1,T2], label_2pt, pfit, nb_cfgs)
-    ana.corr_fct(tlist_corr, rel_err_4pt, [1,T2], label_4pt, pfit, nb_cfgs)
+    for _e in range(0,len(nb_cfgs)):
+        label_2pt = ["rel_error", "time", "dm_eff_2pt(t)/m_eff_2pt(t)", "data", nb_cfgs[_e]]
+        label_4pt = ["rel_error", "time", "dm_eff_4pt(t)/dm_eff_4pt(t)", "data", nb_cfgs[_e]]
+
+        ana.corr_fct(tlist_corr, rel_err_2pt[_e], [1,T2], label_2pt, pfit)
+        ana.corr_fct(tlist_corr, rel_err_4pt[_e], [1,T2], label_4pt, pfit)
     pfit.close()
     
-    # Noise to signal ratios 210 vs 90 configs
-    label_2pt = ["Stat. error growth 2pt", "time", "NSR_hi/NSR_low", "data", "#cfg: "+str(_c)]
-    label_4pt = ["Stat. error growth 4pt", "time", "NSR_hi/NSR_low", "data", "#cfg: "+str(_c)]
-    nsr_2pt = np.divide(rel_err_2pt[6], rel_err_2pt[0] )
-    nsr_4pt = np.divide(rel_err_4pt[6], rel_err_4pt[0] )
+    label_2pt = ["Ratio rel. errors", "time", "NSR_2pt(t)", "data", nb_cfgs[0] +" : "+ nb_cfgs[1]]
+    label_4pt = ["Ratio rel. errors", "time", "NSR_4pt(t)", "data", nb_cfgs[0] +" : "+ nb_cfgs[1]]
     pfit = PdfPages("%s%s_plot.pdf" % (plotpath,"NSR_"))
-    print nsr_2pt
-    ana.corr_fct(tlist_corr, nsr_2pt, [1,T2], label_2pt, pfit, nb_cfgs)
-    ana.corr_fct(tlist_corr, nsr_4pt, [1,T2], label_4pt, pfit, nb_cfgs)
-    #ana.corr_fct(tlist_corr, rel_err_4pt, [1,T2], label_4pt, pfit)
+    ana.corr_fct(tlist_corr, nsr_2pt,[1,T2], label_2pt, pfit)
+    ana.corr_fct(tlist_corr, nsr_4pt,[1,T2], label_4pt, pfit)
     pfit.close()
+    #for a in range(0,2):
+    #    for b in range(0,2):
+    #        if ( a == b ):
+    #            continue
+    #        if (a < b):
+    #            i, j = nb_cfgs[b], nb_cfgs[a]
+    #            #rat = math.sqrt(float(j)/float(i))
+    #            label_2pt = ["Stat. error growth 2pt", "time", "NSR_hi/NSR_low", "data", "#cfg: "+str(i)+" vs. "+str(j)]
+    #            label_4pt = ["Stat. error growth 4pt", "time", "NSR_hi/NSR_low", "data", "#cfg: "+str(i)+" vs. "+str(j)]
+    #            nsr_2pt = np.divide(rel_err_2pt[b], rel_err_2pt[a] )
+    #            nsr_4pt = np.divide(rel_err_4pt[b], rel_err_4pt[a] )
+    #            ana.corr_fct(tlist_corr, nsr_2pt, [1,T2], label_2pt, pfit)
+    #            ana.corr_fct(tlist_corr, nsr_4pt, [1,T2], label_4pt, pfit)
+    #            #ana.corr_fct(tlist_corr, rel_err_4pt, [1,T2], label_4pt, pfit)
+    #pfit.close()
 
 
 

@@ -1,0 +1,140 @@
+#!/usr/bin/python
+################################################################################
+#
+# Author: Christian Jost (jost@hiskp.uni-bonn.de)
+# Date:   Februar 2015
+#
+# Copyright (C) 2015 Christian Jost
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Function: A short analysis of the error dependence on the number of
+# interlaces
+#
+# For informations on input parameters see the description of the function.
+#
+################################################################################
+
+import matplotlib
+matplotlib.use('QT4Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+import numpy as np
+import math
+import analysis as ana
+
+def main():
+  ## definition of some variables
+    nbsamples = 100
+    T = 64
+    T2 = T
+    massfunc = lambda p, t: p
+
+    # Define data paths and array structures
+
+    dil_e = ["EI10","EI4","EI2"]
+    path = "/hiskp2/helmes/B35_interlace_test/"
+    plotpath = path+"plots/"
+    # Arrays for different configuration subsets
+    # shape is ( nb_subsets, time, dat_type)
+    mean_corr_2pt = np.zeros((len(dil_e), T2, 2))
+    mean_corr_4pt = np.zeros((len(dil_e), T2, 2)) 
+
+
+    # ---------- Read in everything--------------------------------------------
+
+    for _e in range(0,len(dil_e)):
+        name_2pt = path+"data/pi_corr_p0."+dil_e[_e]+".dat"
+        name_4pt = path+"data/pipi_corr_p0."+dil_e[_e]+".dat"
+        print ("Reading:\n%s\n%s" % (name_2pt, name_4pt))
+        corrs_2pt = ana.read_data_part_ascii(name_2pt,10)
+        corrs_4pt = ana.read_data_part_ascii(name_4pt,10)
+
+        #bsamples_2pt =  ana.sym_and_boot(corrs_2pt,nbsamples)
+        #bsamples_4pt =  ana.sym_and_boot(corrs_4pt,nbsamples)
+
+        corr_2pt_data, d_2pt_data = ana.calc_error(corrs_2pt)
+        corr_4pt_data, d_4pt_data = ana.calc_error(corrs_4pt)
+
+        ## compute effective masses
+        #m_eff_2pt, mm_eff_2pt, err_m_eff_2pt = ana.compute_mass(bsamples_2pt) 
+        #m_eff_4pt, mm_eff_4pt, err_m_eff_4pt = ana.compute_mass(bsamples_4pt)
+        ## append stuff to array
+        #mean_corr_2pt [_e,:, 0] = mm_eff_2pt
+        #mean_corr_2pt [_e,:, 1] = err_m_eff_2pt
+        #mean_corr_4pt [_e,:, 0] = mm_eff_4pt
+        #mean_corr_4pt [_e,:, 1] = err_m_eff_4pt
+        mean_corr_2pt [_e,:, 0] = corr_2pt_data
+        mean_corr_2pt [_e,:, 1] = d_2pt_data
+        mean_corr_4pt [_e,:, 0] = corr_4pt_data 
+        mean_corr_4pt [_e,:, 1] = d_4pt_data
+
+    
+    # -------------------- Calculate ratios and relative errors ---------------
+
+    # relative error
+    rel_err_2pt = np.divide(mean_corr_2pt[:,:,1], mean_corr_2pt[:,:,0])
+    rel_err_4pt = np.divide(mean_corr_4pt[:,:,1], mean_corr_4pt[:,:,0])
+    print rel_err_2pt.shape, rel_err_4pt.shape
+
+    nsr_2pt = np.zeros((len(dil_e)-1,T2))
+    nsr_4pt = np.zeros_like(nsr_2pt)
+    for _d in range(1,len(dil_e)):
+        print _d
+        nsr_2pt[_d-1] = np.divide(rel_err_2pt[_d-1], rel_err_2pt[_d] )
+        nsr_4pt[_d-1] = np.divide(rel_err_4pt[_d-1], rel_err_4pt[_d] )
+
+
+
+    # ------------------- plot Correlation functions and errors -----------------
+
+    # Global list with time values
+    tlist_corr = np.linspace(0., float(T2), float(T2), endpoint=False)
+
+    # Start with C_2(t) and C_4(t)
+    pfit = PdfPages("%s%s_plot.pdf" % (plotpath,"C_"))
+    label_2pt = ["Mean Correlator, B35.32", "time", "C_2(t)", "data", dil_e]
+    label_4pt = ["Mean Corrleator, B35.32", "time", "C_4(t)", "data", dil_e]
+    ana.corr_fct(tlist_corr, mean_corr_2pt[:,:,0], [1,T2], label_2pt, pfit,logscale=True, dY=mean_corr_2pt[:,:,1])
+    ana.corr_fct(tlist_corr, mean_corr_4pt[:,:,0], [1,T2], label_4pt, pfit,logscale=True, dY=mean_corr_4pt[:,:,1])
+    pfit.close()
+
+    # Plot the relative errors of the correlation functions
+    pfit = PdfPages("%s%s_plot.pdf" % (plotpath,"rel_err_"))
+    label_2pt = ["rel. stat. error", "time", "dC_2(t)/C_2(t)", "data", dil_e]
+    label_4pt = ["rel. stat. error", "time", "dC_4(t)/C_4(t)", "data", dil_e]
+    ana.corr_fct(tlist_corr, rel_err_2pt, [1,T2], label_2pt, pfit)
+    ana.corr_fct(tlist_corr, rel_err_4pt, [1,T2], label_4pt, pfit)
+    pfit.close()
+
+    # Plot the ratio of the relative errors with the expectation Value from
+    # #inversions N_I
+    pfit = PdfPages("%s%s_plot.pdf" % (plotpath,"NSR_"))
+    lbl_dil = [dil_e[0] +" : "+ dil_e[1],dil_e[1]+" : "+dil_e[2] ]
+    rat = [4./10.,2./4.]
+    label_2pt = ["Ratio rel. errors", "time", "NSR_2pt(t)", "data", lbl_dil]
+    label_4pt = ["Ratio rel. errors", "time", "NSR_4pt(t)", "data", lbl_dil]
+    ana.corr_fct(tlist_corr, nsr_2pt,[1,T2], label_2pt, pfit, rat = rat)
+    ana.corr_fct(tlist_corr, nsr_4pt,[1,T2], label_4pt, pfit, rat = rat)
+    pfit.close()
+
+
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+  try:
+    main()
+  except KeyboardInterrupt:
+    print("Keyboard Interrupt")

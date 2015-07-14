@@ -125,7 +125,7 @@ def main():
             mass, mmass, dmass = ana.compute_mass(bsamples_k, True)
             # ana.scan_fit_range(massfunc, tlist_corr,mass, par_mass)
             # TODO: set two points more than wanted for upper limit
-            ranges = ana.set_fit_interval(mass, [9], [24], 8)
+            ranges = ana.set_fit_interval(mass, [9], [24], 5)
             
             # For mass use one parameter fit
             # res has shape (nb_samples, nb_pars, ncorr, nb_fitranges)
@@ -184,7 +184,7 @@ def main():
                 # define fit ranges
                 # res_R has shape (nb_samples, nb_pars, n_corr, nb_ranges1 *
                 # nb_ranges2)
-                ranges1 = ana.set_fit_interval(R_boot,[13],[25],8)
+                ranges1 = ana.set_fit_interval(R_boot,[13],[23],6)
                 res_R, chi2_R, pvals_R = ana.genfit_comb(R_boot,ranges1,ranges,
                                                          ratio,par_ratio,res,
                                                          1,ens[:-1],label,tmp_out,
@@ -202,9 +202,9 @@ def main():
             del_E_w, ddel_E_stat, ddel_E_sys , weights_del_E = ana.sys_error(res_R,
                                                                   pvals_R, p_zero,
                                                                   prefix,par=1,
-                                                                  path=tmp_out) 
-            #print("delE +/- d_stat(del_E) + d_sys(del_E) -d_sys(del_E)\n%f +/- %f +%f-%f\n" 
-            #    %(del_E_w[0][0], ddel_E_stat[0][0], ddel_E_sys[0][0], ddel_E_sys[0][0]))
+                                                                  path=tmp_out)
+            print("delE +/- d_stat(del_E) + d_sys(del_E) -d_sys(del_E)\n%f +/- %f +%f-%f\n" 
+                %(del_E_w[0][0], ddel_E_stat[0][0], ddel_E_sys[0][0][0], ddel_E_sys[0][0][1]))
             #print("weights_delE shape is:%d" % weights_m_k.shape)
             
  #           prat.close()
@@ -221,18 +221,19 @@ def main():
             #a_kk = np.atleast_3d(a_kk)
             #weights_del_E = np.atleast_2d(weights_del_E)
             #weights_del_E.shape = (9,1)
-            print a_kk[0][0].shape
             #a_kk.shape = (1500,1,9)
             a_kk_w, a_kk_stat, a_kk_sys = ana.sys_error_der(a_kk, weights_a_kk ,p_zero,ens[:-1])
+            #print a_kk_w[0][0], a_kk_stat[0][0], a_kk_sys[0][0][1]
             #print("%f\t%f +/- %f\t%f +/- %f\t%f +/- %f\t%f +/- %e"%(amu_s[s],
             #  m_k_w, dm_stat, dm_sys, del_E_w, ddel_E_stat, ddel_E_sys,
             #  a_kk_w, a_kk_stat, a_kk_sys[0], a_kk_sys[1]
             #  #np.median(m_k_akk[:,0]), np.std(m_k_akk[:,0]
             #  ))
-            #save_res.write("%f\t%f +/- %f +%f-%f\t%f +/- %f +%f-%f\t%f +/- %f +%f-%f\n"%(amu_s[s],
-            #  m_k_w, dm_stat[0], dm_sys[0], dm_sys[1], del_E_w, ddel_E_stat[0],
-            #  ddel_E_sys[0],ddel_E_sys[1],
-            #  a_kk_w, a_kk_stat, a_kk_sys[0], a_kk_sys[1]))
+            #save_res.write("%f\t%f +/- %f +%f-%f\t%f +/- %f +%f-%f\t%f +/- %f +%f-%f\n"
+            #  %(amu_s[s],
+            #  m_k_w[0], dm_stat[0], dm_sys[0][0], dm_sys[0][1], 
+            #  del_E_w[0][0], ddel_E_stat[0][0], ddel_E_sys[0][0][0],ddel_E_sys[0][0][1],
+            #  a_kk_w[0][0], a_kk_stat[0][0], a_kk_sys[0][0][0], a_kk_sys[0][0][1]))
             
             #------------------------- m_k*a_kk -------------------------------
             # To match the shapes the tiling is done by the second fit range
@@ -240,11 +241,13 @@ def main():
                 weights_m_k, pars=(None,0))
             ma_k_w , ma_k_stat, ma_k_sys = ana.sys_error_der(ma_k, weights_ma_k, p_zero, ens[:-1])
 
-            #save_res.write("%f\t%f %f +%f-%f\t%f +/- %f +%f-%f\t%f +/- %f +%f-%f\t%f +/- %f +%f-%f\n"
-            #  %( amu_s[s], m_k_w, dm_stat[0], dm_sys[0], dm_sys[1],
-            #  del_E_w, ddel_E_stat[0], ddel_E_sys[0],ddel_E_sys[1],
-            #  a_kk_w, a_kk_stat, a_kk_sys[0], a_kk_sys[1],
-            #  ma_k_w, ma_k_stat, ma_k_sys[0], ma_k_sys[1]))
+            save_res.write("%f\t%f %f +%f-%f\t%f +/- %f +%f-%f\t%f +/- %f +%f-%f\t%f +/- %f +%f-%f\n"
+              %(amu_s[s],
+              m_k_w[0], dm_stat[0], dm_sys[0][0], dm_sys[0][1], 
+              del_E_w[0][0], ddel_E_stat[0][0], ddel_E_sys[0][0][0],ddel_E_sys[0][0][1],
+              a_kk_w[0][0], a_kk_stat[0][0], a_kk_sys[0][0][0], a_kk_sys[0][0][1],
+              ma_k_w[0][0], ma_k_stat[0][0], ma_k_sys[0][0][0], ma_k_sys[0][0][1]))
+
         
         save_res.close()
 
