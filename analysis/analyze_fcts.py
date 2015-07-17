@@ -102,13 +102,21 @@ def calc_error(data, axis=0):
     err  = np.std(data, axis)
     return mean, err
 
-def sys_error_der(data, weights, d, lattice, path="./plots/"):
-    """Error calculation for derived results
-    
+def sys_error_der(data, weights, d, lattice, path="./plots/", absolute=False):
+    """Calculates the statistical and systematic error of an np-array of 
+    derived data on bootstrap samples of a quantity and the corresponding 
+    p-values.
+
     Args:
-        data: the derived data
-        weight: a (multidimensional) np-array holding the combination of weights
-        for all combination of fit intervals
+        data: A numpy array with three axis. The first axis is the bootstrap 
+              sample number, the second axis is the number of correlators, the
+              third axis is the fit range index
+        pvals: The p value indicating the quality of the fit.
+        lattice: The name of the lattice, used for the output file.
+        d: The total momentum of the reaction.
+        par: which parameter to plot (second index of data arrays)
+        path: path where the plots are saved
+        absolute: calculate with the absolute values of data
 
     Returns:
         res: The weighted median value on the original data
@@ -116,7 +124,8 @@ def sys_error_der(data, weights, d, lattice, path="./plots/"):
               medians on the bootstrapped data.
         res_syst: 1 sigma systematic uncertainty is the difference 
               res - 16%-quantile or 84%-quantile - res respectively
-        
+        weights: numpy array of the calculated weights for every bootstrap
+        sample and fit range
     """
     # check the deepness of the list structure
     depth = lambda L: isinstance(L, list) and max(map(depth, L))+1
@@ -132,21 +141,37 @@ def sys_error_der(data, weights, d, lattice, path="./plots/"):
             res_sys.append(np.zeros((2,)))
 
             # draw data in histogram
-            plotlabel = 'hist_der_'
+            plotlabel = 'hist_der_%d' % i
             label = ["", "", "principal correlator"]
-            plt.plot_histogram(p[0], weights[i], lattice, d, label, path,
-                               plotlabel)
+            if absolute:
+                plt.plot_histogram(np.fabs(p[0]), weights[i], lattice, d, label, path,
+                                   plotlabel)
+            else:
+                plt.plot_histogram(p[0], weights[i], lattice, d, label, path,
+                                   plotlabel)
             # using the weights, calculate the median over all fit intervals
             # for every bootstrap sample.
-            for b in xrange(p.shape[0]):
-                res[i][b] = qlt.weighted_quantile(p[b], weights[i], 0.5)
+            if absolute:
+                for b in xrange(p.shape[0]):
+                    res[i][b] = qlt.weighted_quantile(np.fabs(p[b]), weights[i], 0.5)
+            else:
+                for b in xrange(p.shape[0]):
+                    res[i][b] = qlt.weighted_quantile(p[b], weights[i], 0.5)
             # the statistical error is the standard deviation of the medians
             # over the bootstrap samples.
             res_std[i] = np.std(res[i])
             # the systematic error is given by difference between the median 
             # on the original data and the 16%- or 84%-quantile respectively
-            res_sys[i][0]=res[i][0]-qlt.weighted_quantile(p[0],weights[i],0.16)
-            res_sys[i][1]=qlt.weighted_quantile(p[0],weights[i],0.84)-res[i][0]
+            if absolute:
+                res_sys[i][0] = res[i][0] - qlt.weighted_quantile(np.fabs(p[0]),
+                                weights[i], 0.16)
+                res_sys[i][1] = qlt.weighted_quantile(np.fabs(p[0]), weights[i],
+                                0.84) - res[i][0]
+            else:
+                res_sys[i][0] = res[i][0] - qlt.weighted_quantile(np.fabs(p[0]),
+                                weights[i], 0.16)
+                res_sys[i][1] = qlt.weighted_quantile(np.fabs(p[0]), weights[i],
+                                0.84) - res[i][0]
             # keep only the median of the original data
             res[i] = res[i][0]
     elif deep == 2:
@@ -164,38 +189,59 @@ def sys_error_der(data, weights, d, lattice, path="./plots/"):
                 res_sys[i].append(np.zeros((2,)))
 
                 # draw data in histogram
-                plotlabel = 'hist_der_'
+                plotlabel = 'hist_der_%d_%d' % (i, j)
                 label = ["", "", "principal correlator"]
-                plt.plot_histogram(q[0], weights[i][j], lattice, d, label, path,
-                                   plotlabel)
+                if absolute:
+                    plt.plot_histogram(np.fabs(q[0]), weights[i][j], lattice, d,
+                                       label, path, plotlabel)
+                else:
+                    plt.plot_histogram(q[0], weights[i][j], lattice, d, label,
+                                       path, plotlabel)
                 # using the weights, calculate the median over all fit intervals
                 # for every bootstrap sample.
-                for b in xrange(q.shape[0]):
-                    res[i][j][b] = qlt.weighted_quantile(q[b].ravel(), weights[i][j].ravel(), 0.5)
+                if absolute:
+                    for b in xrange(q.shape[0]):
+                        res[i][j][b] = qlt.weighted_quantile(np.fabs(q[b]).ravel(),
+                                       weights[i][j].ravel(), 0.5)
+                else:
+                    for b in xrange(q.shape[0]):
+                        res[i][j][b] = qlt.weighted_quantile(q[b].ravel(),
+                                       weights[i][j].ravel(), 0.5)
                 # the statistical error is the standard deviation of the medians
                 # over the bootstrap samples.
                 res_std[i][j] = np.std(res[i][j])
                 # the systematic error is given by difference between the median 
                 # on the original data and the 16%- or 84%-quantile respectively
-                res_sys[i][j][0]=res[i][j][0]-qlt.weighted_quantile(q[0].ravel(),weights[i][j].ravel(),0.16)
-                res_sys[i][j][1]=qlt.weighted_quantile(q[0].ravel(),weights[i][j].ravel(),0.84)-res[i][j][0]
+                if absolute:
+                    res_sys[i][j][0] = res[i][j][0] - qlt.weighted_quantile(
+                                       np.fabs(q[0]).ravel(), weights[i][j].ravel(),
+                                       0.16)
+                    res_sys[i][j][1] = qlt.weighted_quantile(np.fabs(q[0]).ravel(),
+                                       weights[i][j].ravel(), 0.84) - res[i][j][0]
+                else:
+                    res_sys[i][j][0] = res[i][j][0] - qlt.weighted_quantile(q[0].ravel(),
+                                       weights[i][j].ravel(), 0.16)
+                    res_sys[i][j][1] = qlt.weighted_quantile(q[0].ravel(),
+                                       weights[i][j].ravel(), 0.84) - res[i][j][0]
                 # keep only the median of the original data
                 res[i][j] = res[i][j][0]
     return res, res_std, res_sys
 
-def sys_error(data, pvals, d, lattice, par=0, path="./plots/"):
+def sys_error(data, pvals, d, lattice, par=0, path="./plots/", absolute=False):
     """Calculates the statistical and systematic error of an np-array of 
     fit results on bootstrap samples of a quantity and the corresponding 
     p-values.
 
     Args:
         data: A numpy array with three axis. The first axis is the bootstrap 
-              sample number, the second axis is the number of correlators, the third axis is the fit range index
+              sample number, the second axis is the number of correlators, the
+              third axis is the fit range index
         pvals: The p value indicating the quality of the fit.
         lattice: The name of the lattice, used for the output file.
-        d:    The total momentum of the reaction.
+        d: The total momentum of the reaction.
         par: which parameter to plot (second index of data arrays)
         path: path where the plots are saved
+        absolute: calculate with the absolute values of data
 
     Returns:
         res: The weighted median value on the original data
@@ -223,25 +269,46 @@ def sys_error(data, pvals, d, lattice, par=0, path="./plots/"):
 
             # calculate the weight for the fit ranges using the standard
             # deviation and the p-values of the fit
-            data_std = np.std(p[:,par])
+            if absolute:
+                data_std = np.std(np.fabs(p[:,par]))
+            else:
+                data_std = np.std(p[:,par])
             data_weight[i] = (1. - 2. * np.fabs(pvals[i][0] - 0.5) *
                               np.amin(data_std) / data_std)**2
             # draw data in histogram
             plotlabel = 'hist_%d' % i
             label = ["", "", "principal correlator"]
-            plt.plot_histogram(p[0,par], data_weight[i], lattice, d, label, path,
-                               plotlabel)
+            if absolute:
+                plt.plot_histogram(np.fabs(p[0,par]), data_weight[i], lattice, d,
+                                   label, path, plotlabel)
+            else:
+                plt.plot_histogram(p[0,par], data_weight[i], lattice, d, label,
+                                   path, plotlabel)
             # using the weights, calculate the median over all fit intervals
             # for every bootstrap sample.
-            for b in xrange(p.shape[0]):
-                res[i][b] = qlt.weighted_quantile(p[b,par], data_weight[i], 0.5)
+            if absolute:
+                for b in xrange(p.shape[0]):
+                    res[i][b] = qlt.weighted_quantile(np.fabs(p[b,par]),
+                                    data_weight[i], 0.5)
+            else:
+                for b in xrange(p.shape[0]):
+                    res[i][b] = qlt.weighted_quantile(p[b,par], data_weight[i],
+                                                      0.5)
             # the statistical error is the standard deviation of the medians
             # over the bootstrap samples.
             res_std[i] = np.std(res[i])
             # the systematic error is given by difference between the median 
             # on the original data and the 16%- or 84%-quantile respectively
-            res_sys[i][0]=res[i][0]-qlt.weighted_quantile(p[0,par],data_weight[i],0.16)
-            res_sys[i][1]=qlt.weighted_quantile(p[0,par],data_weight[i],0.84)-res[i][0]
+            if absolute:
+                res_sys[i][0]=res[i][0]-qlt.weighted_quantile(np.fabs(p[0,par]),
+                              data_weight[i],0.16)
+                res_sys[i][1]=qlt.weighted_quantile(np.fabs(p[0,par]),
+                              data_weight[i],0.84)-res[i][0]
+            else:
+                res_sys[i][0]=res[i][0]-qlt.weighted_quantile(p[0,par],
+                              data_weight[i],0.16)
+                res_sys[i][1]=qlt.weighted_quantile(p[0,par],data_weight[i],
+                              0.84)-res[i][0]
             # keep only the median of the original data
             res[i] = res[i][0]
     elif deep == 2:
@@ -263,25 +330,48 @@ def sys_error(data, pvals, d, lattice, par=0, path="./plots/"):
 
                 # calculate the weight for the fit ranges using the standard
                 # deviation and the p-values of the fit
-                data_std = np.std(q[:,par], axis=0)
+                if absolute:
+                    data_std = np.std(np.fabs(q[:,par]), axis=0)
+                else:
+                    data_std = np.std(q[:,par], axis=0)
                 data_weight[i][j] = (1. - 2. * np.fabs(pvals[i][j][0] - 0.5) *
                                   np.amin(data_std) / data_std)**2
                 # draw data in histogram
                 plotlabel = 'hist_%d_%d' % (i, j)
                 label = ["", "", "principal correlator"]
-                plt.plot_histogram(q[0,par].ravel(), data_weight[i][j].ravel(), lattice, d, label, path, plotlabel)
+                if absolute:
+                    plt.plot_histogram(np.fabs(q[0,par]).ravel(),
+                                       data_weight[i][j].ravel(), lattice, d,
+                                       label, path, plotlabel)
+                else:
+                    plt.plot_histogram(np.fabs(q[0,par]).ravel(),
+                                       data_weight[i][j].ravel(), lattice, d,
+                                       label, path, plotlabel)
                 # using the weights, calculate the median over all fit intervals
                 # for every bootstrap sample.
-                for b in xrange(q.shape[0]):
-                    res[i][j][b] = qlt.weighted_quantile(q[b,par].ravel(), 
-                                       data_weight[i][j].ravel(), 0.5)
+                if absolute:
+                    for b in xrange(q.shape[0]):
+                        res[i][j][b] = qlt.weighted_quantile(np.fabs(q[b,par]).ravel(), 
+                                           data_weight[i][j].ravel(), 0.5)
+                else:
+                    for b in xrange(q.shape[0]):
+                        res[i][j][b] = qlt.weighted_quantile(q[b,par].ravel(), 
+                                           data_weight[i][j].ravel(), 0.5)
                 # the statistical error is the standard deviation of the medians
                 # over the bootstrap samples.
                 res_std[i][j] = np.std(res[i][j])
                 # the systematic error is given by difference between the median
                 # on the original data and the 16%- or 84%-quantile respectively
-                res_sys[i][j][0] = res[i][j][0] - qlt.weighted_quantile(q[0,par].ravel(), data_weight[i][j].ravel(), 0.16)
-                res_sys[i][j][1] = qlt.weighted_quantile(q[0,par].ravel(), data_weight[i][j].ravel(), 0.84) - res[i][j][0]
+                if absolute:
+                    res_sys[i][j][0] = res[i][j][0] - qlt.weighted_quantile(
+                        np.fabs(q[0,par]).ravel(), data_weight[i][j].ravel(), 0.16)
+                    res_sys[i][j][1] = qlt.weighted_quantile(np.fabs(q[0,par]).ravel(),
+                        data_weight[i][j].ravel(), 0.84) - res[i][j][0]
+                else:
+                    res_sys[i][j][0] = res[i][j][0] - qlt.weighted_quantile(
+                        q[0,par].ravel(), data_weight[i][j].ravel(), 0.16)
+                    res_sys[i][j][1] = qlt.weighted_quantile(q[0,par].ravel(),
+                        data_weight[i][j].ravel(), 0.84) - res[i][j][0]
                 # keep only the median of the original data
                 res[i][j] = res[i][j][0]
     else:

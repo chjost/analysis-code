@@ -210,7 +210,7 @@ def read_data_w_err_ascii(filename, datacol=(1,), errcol=(2,), verbose=False):
     _data = read_data_ascii(filename, column=cols, verbose=verbose)
     return _data[:,:,:len(datacol)], _data[:,:,len(datacol):]
 
-def write_fitresults(filename, fitint, par, chi2, pvals, verbose=True):
+def write_fitresults(filename, fitint, par, chi2, pvals, verbose=False):
     """Writes the fitresults to a numpy file.
 
     The function takes lists of numpy arrays and writes them in the npz format.
@@ -261,7 +261,7 @@ def write_fitresults(filename, fitint, par, chi2, pvals, verbose=True):
         print("NOTHING IS SAVED!")
     return
 
-def read_fitresults(filename, verbose=True):
+def read_fitresults(filename, verbose=False):
     """Reads the fit results from file.
 
     Args:

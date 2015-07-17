@@ -21,7 +21,7 @@
 #
 ################################################################################
 #
-# Function: This is the start of the eta/eta' analysis program
+# Function: This program fits the single pion and the ratio
 #
 # For informations on input parameters see the description of the function.
 #
@@ -176,11 +176,13 @@ def analyse(path, datafolder, plotfolder, lattice="A40.24",
         gmax: maximal index of the gevp
     """
     ## define main variables
-    readnewdata=False
-    fitsinglepion=False
-    calculategevp=False
-    fitratio=False
-    verbose=True
+    # flags for the different parts
+    readnewdata=True
+    fitsinglepion=True
+    calculategevp=True
+    fitratio=True
+    # verbose prints all the shaped of the different arrays
+    verbose=False
     nsamples = 1500 # number of bootstrap samples
     tmin = 1 # for the GEVP
 
@@ -214,20 +216,20 @@ def analyse(path, datafolder, plotfolder, lattice="A40.24",
         # minimal number of points in each fit
         fmin = 4
     elif L == 32:
+        lo_pion = [10]
         lo_ratio = [10, 15, 4, 4, 4]
         up_ratio = [20, 25, 7, 7, 7]
         # minimal number of points in each fit
         fmin = 6
     elif L == 48:
-        lo_ratio = [21, 26, 4, 4, 4]
+        lo_pion = [12]
+        lo_ratio = [14, 20, 4, 4, 4]
         up_ratio = [32, 37, 7, 7, 7]
         # minimal number of points in each fit
         fmin = 7
     else:
         print("no fit ranges given for L = %d" % L)
         sys.exit(-1)
-    # minimal number of points in each fit
-    fmin = 4
     # initial parameters for the fits
     par_pion = [0.2]
     par_ratio = [2., 0.06]
@@ -281,6 +283,7 @@ def analyse(path, datafolder, plotfolder, lattice="A40.24",
             ana.write_fitresults(fname, ratioranges, rres, rchi2, rpvals)
         else:
             ratioranges, rres, rchi2, rpvals = ana.read_fitresults(fname)
+
         if verbose:
             print("rres")
             print(len(rres))
@@ -316,66 +319,6 @@ def analyse(path, datafolder, plotfolder, lattice="A40.24",
         for p, dp, ddp in zip(dE, ddE_stat, ddE_syst):
             for q, dq, ddq in zip(p, dp, ddp):
                 print("%.4f +- %.4f -%.4f +%.4f" % (q, dq, ddq[0], ddq[1]))
-
-        # calculate scattering length
-        anew = False
-        fname = "%s/scat_len_%s_TP%d_s%d.npz" % (datafolder, lattice, d2, s)
-        if anew:
-            a, weights_a = ana.calc_scat_length(rres, pi, weights_dE, weights_mpi, L)
-            # since a is a list of lists of arrays, hack the fit results
-            # routines to save
-            ana.write_fitresults(fname, np.zeros((10,)), a, weights_a, a)
-        else:
-            # since a is a list of lists of arrays, hack the fit results
-            # routines to read
-            _u, _a, weights_a, a = ana.read_fitresults(fname)
-        #print("a")
-        #print(len(a))
-        #for p in a:
-        #    print(len(p))
-        #    for q in p:
-        #        print(q.shape)
-        #print("weights_a")
-        #print(len(weights_a))
-        #for p in weights_a:
-        #    print(len(p))
-        #    for q in p:
-        #        print(q.shape)
-
-        # statistical error for scattering length
-        a_pipi, da_stat, da_syst = ana.sys_error_der(a, weights_a, d, lattice, path=plotfolder)
-        #print("a_pipi")
-        #print(len(a_pipi))
-        #for p in a_pipi:
-        #    print(len(p))
-        #    for q in p:
-        #        print(q.shape)
-        print("a_pipi with errors")
-        for p, dp, ddp in zip(a_pipi, da_stat, da_syst):
-            for q, dq, ddq in zip(p, dp, ddp):
-                print(q, dq, ddq)
-
-        # calculate mpi * a
-        ampinew = True
-        fname = "%s/ampi_%s_TP%d_s%d.npz" % (datafolder, lattice, d2, s)
-        if ampinew:
-            ampi, weights_ampi = ana.multiply(a, pi, weights_a, weights_mpi, pars=(None, 0))
-            ana.write_fitresults(fname, np.zeros((10,)), ampi, weights_ampi, ampi)
-        else:
-            _u, _ampi, weights_ampi, ampi = ana.read_fitresults(fname)
-
-        # statistical and systematic error for a*mpi
-        am_pipi, dam_stat, dam_syst = ana.sys_error_der(ampi, weights_ampi, d, lattice, path=plotfolder)
-        #print("a_pipi * m_pi")
-        #print(len(ampi))
-        #for p in ampi:
-        #    print(len(p))
-        #    for q in p:
-        #        print(q.shape)
-        print("a_pipi * m_pi with errors")
-        for p, dp, ddp in zip(am_pipi, dam_stat, dam_syst):
-            for q, dq, ddq in zip(p, dp, ddp):
-                print(q, dq, ddq)
     return
 
 def main():

@@ -138,7 +138,11 @@ def plot_data(X, Y, dY, pdfplot, plotrange=None, logscale=False, xlim=None, ylim
 
 def plot_histogram(data, data_weight, lattice, d, label, path="./plots/", 
                    plotlabel="hist", verbose=True):
-    """plot a weighted histogramm
+    """Plots histograms for the given data set.
+
+    The function plots the weighted distribution of the data, the unweighted
+    distribution and a plot containing both the weighted and the unweighted
+    distribution.
 
     Args:
         data: Numpy-array of fit values for mulitple fit intervalls. Will be 
@@ -160,24 +164,55 @@ def plot_histogram(data, data_weight, lattice, d, label, path="./plots/",
     histplot = PdfPages("%s/%s_%s_TP%d.pdf" % (path,plotlabel,lattice,d2))
 
     # The histogram
+    # generate weighted histogram
     hist, bins = np.histogram(data, 20, weights=data_weight, density=True)
+    # generate the unweighted histogram
+    uhist, ubins = np.histogram(data, 20, weights=np.ones_like(data_weight),
+                                density=True)
+
+    # prepare the plot for the weighted histogram
     width = 0.7 * (bins[1] - bins[0])
     center = (bins[:-1] + bins[1:]) / 2
 
+    # set labels for axis
     plt.ylabel('weighted distribution of ' + label[2])
-    plt.title('fit methods individually with a p-value between 0.01 and 0.99')
+    plt.title('fit methods individually')
     plt.grid(True)
-
-#    plt.plot(x, scipy.stats.norm.pdf(x, loc=a_pipi_median_derv[0], \
-#             scale=a_pipi_std_derv), 'r-', lw=3, alpha=1, \
-#             label='median + stat. error')
+    # plot
     plt.bar(center, hist, align='center', width=width, color='r', alpha=0.5,
-            label='derivative')
-
+            label='weighted data')
+    # save and clear
     histplot.savefig()
-    histplot.close()
-
-    # delete settings
     plt.clf()
-    
+
+    # prepare plot for unweighted histogram
+    # the center and width stays the same for comparison
+    plt.ylabel('unweighted distribution of ' + label[2])
+    plt.title('fit methods individually')
+    plt.grid(True)
+    # plot
+    plt.bar(center, uhist, align='center', width=width, color='b', alpha=0.5,
+            label='unweighted data')
+
+    # save and clear
+    histplot.savefig()
+    plt.clf()
+
+    # plot both histograms in same plot
+    plt.ylabel('distribution of ' + label[2])
+    plt.title('fit methods individually')
+    plt.grid(True)
+    # plot
+    plt.bar(center, hist, align='center', width=width, color='r', alpha=0.5,
+            label='weighted data')
+    plt.bar(center, uhist, align='center', width=width, color='b', alpha=0.5,
+            label='unweighted data')
+    plt.legend()
+
+    # save and clear
+    histplot.savefig()
+    plt.clf()
+
+    # close plotfile
+    histplot.close()
     return

@@ -133,70 +133,70 @@ def quantile_1D(data, weights, quantile):
     Pn = (Sn - 0.5*sort_weig) / np.sum(sort_weig)
     return np.interp(quantile, Pn, sort_data)
 
-def fitting_range(fitfunc, X, Y, start_parm, correlated=True, verbose=True):
-    """A function that fits a correlation function for different fit ranges.
+#def fitting_range(fitfunc, X, Y, start_parm, correlated=True, verbose=True):
+#    """A function that fits a correlation function for different fit ranges.
+#
+#    This function fits the given function fitfunc to the data given in X and Y.
+#    The function needs some start values, given in start_parm, and can use a
+#    correlated or an uncorrelated fit. Fits are performed for many different
+#    fit ranges.
+#
+#    Args:
+#        fitfunc: The function to fit to the data.
+#        X: The time slices.
+#        Y: The bootstrap samples of the data.
+#        start_parm: The starting parameters for the fit.
+#        correlated: Flag to use a correlated or uncorrelated fit.
+#        verbose: Controls the amount of information written to the screen.
+#
+#    Returns:
+#    """
+#    # vary the lower and upper end of the fit range
+#    for lo in range(int(Y.shape[1]/4), Y.shape[1]-5):
+#        for up in range(lo+5, X.shape[1]):
+#            # fit the data
+#            res, chi2, pval=fitting(fitfunc, X[lo:up], Y[:,lo:up], start_params,
+#                                    correlated=correlated, verbose=False)
+#            # calculate the weight
+#            weight = ((1. - 2*np.abs(pval - 0.5)) * (1.0))**2
+#            # calculate weighted median
+#            median = quantile_1D(res[:,1], weight, 0.5)
+#
+#            # print some result on screen
+#            print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, E %.7lf" % (lo, up,
+#                  pval[0], chi2[0]/(len(X[lo:up])-len(start_params)),median))
 
-    This function fits the given function fitfunc to the data given in X and Y.
-    The function needs some start values, given in start_parm, and can use a
-    correlated or an uncorrelated fit. Fits are performed for many different
-    fit ranges.
-
-    Args:
-        fitfunc: The function to fit to the data.
-        X: The time slices.
-        Y: The bootstrap samples of the data.
-        start_parm: The starting parameters for the fit.
-        correlated: Flag to use a correlated or uncorrelated fit.
-        verbose: Controls the amount of information written to the screen.
-
-    Returns:
-    """
-    # vary the lower and upper end of the fit range
-    for lo in range(int(Y.shape[1]/4), Y.shape[1]-5):
-        for up in range(lo+5, X.shape[1]):
-            # fit the data
-            res, chi2, pval=fitting(fitfunc, X[lo:up], Y[:,lo:up], start_params,
-                                    correlated=correlated, verbose=False)
-            # calculate the weight
-            weight = ((1. - 2*np.abs(pval - 0.5)) * (1.0))**2
-            # calculate weighted median
-            median = quantile_1D(res[:,1], weight, 0.5)
-
-            # print some result on screen
-            print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, E %.7lf" % (lo, up,
-                  pval[0], chi2[0]/(len(X[lo:up])-len(start_params)),median))
-
-def scan_fit_range(fitfunc, X, Y, start_params, correlated=True, verbose=False):
-    """Fits the fitfunction to the data for different fit ranges and prints the
-       result.
-
-       Args:
-           fitfunc: The function to fit.
-           X: The time slices.
-           Y: The bootstrap samples of the data.
-           start_params: The start parameters for the fit.
-           correlated: Correlated or uncorrelated fit.
-           verbose: Verbosity of the fit function.
-
-       Returns:
-           Nothing.
-    """
-    ## vary the lower end of the fit range
-    #for lo in range(int(Y.shape[1]/4), Y.shape[1]-5):
-    #    # vary the upper end of the fit range
-    #    for up in range(lo+5, Y.shape[1]):
-    # vary the lower end of the fit range
-    for lo in range(10, 16):
-        # vary the upper end of the fit range
-        for up in range(20, 24):
-            # fir the data
-            res, chi2, pval=fitting(fitfunc, X[lo:up], Y[:,lo:up], start_params,
-                                    correlated=correlated, verbose=verbose)
-            # print some result on screen
-            print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, E %.7lf" % (lo, up,
-                  pval[0], chi2[0]/(len(X[lo:up])-len(start_params)),res[0,-1]))
-
-    return
+#def scan_fit_range(fitfunc, X, Y, start_params, correlated=True, verbose=False):
+#    """Fits the fitfunction to the data for different fit ranges and prints the
+#       result.
+#
+#       Args:
+#           fitfunc: The function to fit.
+#           X: The time slices.
+#           Y: The bootstrap samples of the data.
+#           start_params: The start parameters for the fit.
+#           correlated: Correlated or uncorrelated fit.
+#           verbose: Verbosity of the fit function.
+#
+#       Returns:
+#           Nothing.
+#    """
+#    ## vary the lower end of the fit range
+#    #for lo in range(int(Y.shape[1]/4), Y.shape[1]-5):
+#    #    # vary the upper end of the fit range
+#    #    for up in range(lo+5, Y.shape[1]):
+#    # vary the lower end of the fit range
+#    for lo in range(10, 16):
+#        # vary the upper end of the fit range
+#        for up in range(20, 24):
+#            # fir the data
+#            res, chi2, pval=fitting(fitfunc, X[lo:up], Y[:,lo:up], start_params,
+#                                    correlated=correlated, verbose=verbose)
+#            # print some result on screen
+#            print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, E %.7lf" % (lo, up,
+#                  pval[0], chi2[0]/(len(X[lo:up])-len(start_params)),res[0,-1]))
+#
+#    return
 
 def set_fit_interval(_data, lolist, uplist, intervalsize):
     """Initialize intervals to fit in with borders given for every principal
@@ -235,7 +235,7 @@ def set_fit_interval(_data, lolist, uplist, intervalsize):
 
 def genfit_comb(data, fitint_data, fitint_par, fitfunc, start_params, 
                 par, tmin, lattice, _label, path=".plots/", 
-                plotlabel="corr", verbose=True):
+                plotlabel="corr", verbose=False):
     """Fit and plot a function. With varying parameter, determined in a previous
     fit
     
@@ -485,14 +485,12 @@ def genfit(_data, fit_intervals, fitfunc, start_params, tmin, lattice, d, label,
 #            append(pval, pval_tmp)
 #    return res, chi2, pval
 
-# compute weights
-################################################################################
-# Input: corr      -> the correlator
-#          params -> contains the p-value for each correlator
-# Output: returns the weights or an empty array
-# corr is np-array  nb_boot, nb_inter
 def compute_weight(corr, params):
     """compute the weights for the histogram
+
+    Args:
+        corr: the correlation function
+        params: the p-values for each correlator
 
     Returns:
         list of weigths if len(params)!=0, else empty list
