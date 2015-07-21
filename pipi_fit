@@ -37,7 +37,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 import analysis as ana
 
 def read_data(path, pilist, pipilist, datafolder, nsamples, lattice, d,
-              readnew=True, verbose=False):
+              readnew=True, verbose=True):
     d2 = np.dot(d,d)
     suffix="%s_TP%d.npy" % (lattice, d2)
     if not verbose:
@@ -66,7 +66,7 @@ def read_data(path, pilist, pipilist, datafolder, nsamples, lattice, d,
     return pi_data, pipi_data
 
 def fit_single_pion(pi_data, lo, up, fmin, pars, pionfit, tmin, lattice, d,
-                    label, plotfolder, datafolder, newfit=True, verbose=False):
+                    label, plotfolder, datafolder, newfit=True, verbose=True):
     """Fit the correlation function for the single pion.
 
     Args:
@@ -103,7 +103,7 @@ def fit_single_pion(pi_data, lo, up, fmin, pars, pionfit, tmin, lattice, d,
             print(pionranges.shape)
         pi, chi2, pvals = ana.genfit(pi_data, pionranges, pionfit, pars, tmin,
                                     lattice, d, label, plotfolder, "pion_mass",
-                                    verbose=verbose)
+                                    olddata=fname, verbose=verbose)
         ana.write_fitresults(fname, pionranges, pi, chi2, pvals)
     else:
         if verbose:
@@ -177,12 +177,12 @@ def analyse(path, datafolder, plotfolder, lattice="A40.24",
     """
     ## define main variables
     # flags for the different parts
-    readnewdata=True
+    readnewdata=False
     fitsinglepion=True
     calculategevp=True
     fitratio=True
     # verbose prints all the shaped of the different arrays
-    verbose=False
+    verbose=True
     nsamples = 1500 # number of bootstrap samples
     tmin = 1 # for the GEVP
 
@@ -244,6 +244,7 @@ def analyse(path, datafolder, plotfolder, lattice="A40.24",
     pi, pichi2, pipvals, pionranges = fit_single_pion(pimass, lo_pion, up_pion, 
         fmin, par_pion, massfit, tmin, lattice, d, label_pion, plotfolder,
         datafolder, newfit=fitsinglepion)
+    return
     # calculate statistic and systematic error of the pion
     plotname="".join(("pion_", lattice))
     mpi, dmpi_stat, dmpi_syst, weights_mpi = ana.sys_error(pi, pipvals, d, 

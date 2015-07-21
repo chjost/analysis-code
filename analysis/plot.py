@@ -4,12 +4,12 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
-def corr_fct_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
-                      logscale=False, xlim=None, ylim=None, fitrange=None):
-    """A function that plots a correlation function.
+def plot_data_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
+                       logscale=False, xlim=None, ylim=None, fitrange=None,
+                       pval=None):
+    """A function that plots data and the fit to the data.
 
-    This function plots the given data points and the fit to the data. The plot
-    is saved to pdfplot. It is assumed that pdfplot is a pdf backend to
+    The plot is saved to pdfplot. It is assumed that pdfplot is a pdf backend to
     matplotlib so that multiple plots can be saved to the object.
 
     Args:
@@ -26,21 +26,34 @@ def corr_fct_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
         xlim, ylim: limits for the x and y axis, respectively
         setLimits: Set limits to the y range of the plot.
         fitrange: A list with two entries, bounds of the fitted function.
+        pval: write the p-value in the plot if given
 
     Returns:
         Nothing.
     """
-    # plotting the data
-    l = int(plotrange[0])
-    u = int(plotrange[1])
+    # check boundaries for the plot
+    if isinstance(plotrange, (np.ndarray, list, tuple)):
+        plotrange = np.asarray(plotrange).flatten()
+        if plotrange.size < 2:
+            raise IndexError("plotrange has not enough indices")
+        else:
+            l = int(plotrange[0])
+            u = int(plotrange[1])
+    else:
+        l = 0
+        u = x.shape[0]
     p1 = plt.errorbar(X[l:u], Y[l:u], dY[l:u], fmt='x' + 'b', label = label[3])
     # plotting the fit function, check for seperate range
-    if fitrange is not None:
-        lfunc = fitrange[0]
-        ufunc = fitrange[1]
+    if isinstance(fitrange, (np.ndarray, list, tuple)):
+        fitrange = np.asarray(fitrange).flatten()
+        if fitrange.size < 2:
+            raise IndexError("fitrange has not enough indices")
+        else:
+            lfunc = int(fitrange[0])
+            ufunc = int(fitrange[1])
     else:
-        lfunc = l
-        ufunc = u
+        lfunc = X[0]
+        ufunc = X[-1]
     x1 = np.linspace(lfunc, ufunc, 1000)
     y1 = []
     for i in x1:
@@ -50,15 +63,27 @@ def corr_fct_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
         else:    
             y1.append(fitfunc(args,i))
     y1 = np.asarray(y1)
-    p2, = plt.plot(x1, y1, 'r', label = label[4])
+    p2, = plt.plot(x1, y1, "r", label = label[4])
     # adjusting the plot style
     plt.grid(True)
+    plt.title(label[0])
     plt.xlabel(label[1])
     plt.ylabel(label[2])
-    plt.title(label[0])
     plt.legend()
+    if pval is not None:
+        # x and y position of the label
+        x = np.max(X) * 0.7
+        y = np.max(Y) * 0.8
+        print(x,y)
+        datalabel = "p-val = %.5f" % pval
+        try:
+            for k, d in enumerate(args[0]):
+                datalabel = "".join((datalabel, "\npar %d = %.4e" % (k, d)))
+        except TypeError:
+            datalabel = "".join((datalabel, "\npar = %.4e" % (args[0])))
+        plt.text(x, y, datalabel)
     if logscale:
-        plt.yscale('log')
+        plt.yscale("log")
     # set the axis ranges
     if xlim:
         plt.xlim(xlim)
@@ -102,17 +127,16 @@ def plot_data(X, Y, dY, pdfplot, plotrange=None, logscale=False, xlim=None, ylim
         Nothing.
     """
     # check boundaries for the plot
-    if plotrange:
+    if isinstance(plotrange, (np.ndarray, list, tuple)):
         plotrange = np.asarray(plotrange).flatten()
-        if plotrange.size() is not 2:
-            print("size of plotrange is wrong, cannot plot")
-            return
+        if plotrange.size < 2:
+            raise indexerror("plotrange is too small")
         else:
-            l = plotrange[0]
-            u = plotrange[1]
+            l = int(plotrange[0])
+            u = int(plotrange[1])
     else:
         l = 0
-        u = X.shape[0] - 1
+        u = x.shape[0]
 
     # plot the data
     p1 = plt.errorbar(X[l:u], Y[l:u], dY[l:u], fmt='x' + 'b', label="data")

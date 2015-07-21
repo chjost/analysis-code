@@ -34,14 +34,6 @@ import os
 import numpy as np
 
 ### MAIN FUNCTIONS ###
-# available:
-# write_data
-# read_data
-# write_data_ascii
-# read_data_ascii
-# write_data_w_err_ascii
-# read_data_w_err_ascii
-# extract_bin_corr_fct <- NOT TESTED
 
 def write_data(data, filename, verbose=False):
     """Write numpy array to binary numpy format.
@@ -63,7 +55,11 @@ def read_data(filename, verbose=False):
         filename: The name of the file from which the data is read
         verbose: Changes the amount of information written.
     """
-    check_read(filename)
+    try:
+        check_read(filename)
+    except IOError as e:
+        raise e
+
     if verbose:
         print("reading from file " + str(filename))
     data = np.load(filename)
@@ -125,7 +121,11 @@ def read_data_ascii(filename, column=(1,), noheader=False, verbose=False):
         the array is three dimensional.
     """
     # check file
-    check_read(filename)
+    try:
+        check_read(filename)
+    except IOError as e:
+        raise e
+
     if verbose:
         print("reading from file " + str(filename))
 
@@ -274,7 +274,12 @@ def read_fitresults(filename, verbose=False):
         chi2: list of arrays of chi^2
         pvals: list of arrays of p-values
     """
-    check_read(filename)
+    # check filename
+    try:
+        check_read(filename)
+    except IOError as e:
+        raise e
+
     if verbose:
         print("reading from file " + str(filename))
     with np.load(filename) as f:
@@ -397,17 +402,17 @@ def write_header(outfile, nsam, T, L, x=0, y=0):
 
 def check_read(filename):
     """Do some checks before opening a file.
+    Raises IOErrors on fails.
     """
     # get path
     _dir = os.path.dirname(filename)
     # check if path exists, if not raise an error
-    if not os.path.exists(_dir):
-        print("ERROR: could not read data from file, path not existent")
-        os.sys.exit(-1)
+    if _dir and not os.path.exists(_dir):
+        print(_dir)
+        raise IOError("directory %s not found" % _dir)
     # check whether file exists
     if not os.path.isfile(filename):
-        print(filename + " does not exist. Aborting...")
-        os.sys.exit(-1)
+        raise IOError("file %s not found" % os.path.basename(filename))
 
 def check_write(filename):
     """Do some checks before writing a file.

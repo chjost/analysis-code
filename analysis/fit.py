@@ -25,11 +25,13 @@
 #
 ################################################################################
 
+import sys
 from scipy.optimize import leastsq
 import scipy.stats
 import numpy as np
 import analyze_fcts as af
 from .plot import *
+from .input_output import read_fitresults, write_fitresults
 
 def fitting(fitfunc, X, Y, start_parm, E_single=None, correlated=True, verbose=True):
     """A function that fits a correlation function.
@@ -355,7 +357,7 @@ def genfit_comb(data, fitint_data, fitint_par, fitfunc, start_params,
     return res, chi2, pval
 
 def genfit(_data, fit_intervals, fitfunc, start_params, tmin, lattice, d, label,
-            path=".plots/", plotlabel="corr", verbose=True):
+            path=".plots/", plotlabel="corr", olddata=None, verbose=True):
     """Fit and plot the correlation function.
     
     Args:
@@ -370,6 +372,7 @@ def genfit(_data, fit_intervals, fitfunc, start_params, tmin, lattice, d, label,
         label: Labels for the title and the axis.
         path: Path to the saving place of the plot.
         plotlabel: Label for the plot file.
+        olddata: if not None, reuses old data at the location specified, if possible
         verbose: Amount of information printed to screen.
 
     Returns:
@@ -394,6 +397,29 @@ def genfit(_data, fit_intervals, fitfunc, start_params, tmin, lattice, d, label,
         res.append(np.zeros((nboot, npar, ninter[_l])))
         chi2.append(np.zeros((nboot, ninter[_l])))
         pval.append(np.zeros((nboot, ninter[_l])))
+    # read old data and incorporate if possible
+    if olddata:
+        try:
+            print("reading old data from %s" % olddata)
+            _ranges, _par, _chi2, _pvals = read_fitresults(olddata)
+            # sanity checks
+            if len(_par) is not ncorr:
+                print("old data has different ncorr")
+                sys.exit(-15)
+            # TODO(CJ):assumes all corr have same nboot
+            if _par[0].shape[0] != nboot:
+                print("old data (%d) has different nboot (%d)" % (_par[0].shape[0],nboot))
+                sys.exit(-15)
+            if _par[0].shape[1] != npar:
+                print("old data has different number of parameter")
+                sys.exit(-15)
+            if _par[0].shape[1] != npar:
+                print("old data has different number of parameter")
+                sys.exit(-15)
+        except IOError as e:
+            print("could not read old data: %s" % e.message)
+            print("continuing")
+            olddata=None
     # set fit data
     tlist = np.linspace(0., float(T2), float(T2), endpoint=False)
     # outputfile for the plot
@@ -413,17 +439,29 @@ def genfit(_data, fit_intervals, fitfunc, start_params, tmin, lattice, d, label,
         mdata, ddata = af.calc_error(data[:,:,_l])
         for _i in range(ninter[_l]):
             lo, up = fit_intervals[_l][_i]
+            dofit=True
             if verbose:
                 print("Interval [%d, %d]" % (lo, up))
                 print("correlator %d" % _l)
 
-            # fit the energy and print information
-            if verbose:
-                print("fitting correlation function")
-
-            print(tlist[lo:up+1])
-            res[_l][:,:,_i], chi2[_l][:,_i], pval[_l][:,_i] = fitting(fitfunc, 
-                    tlist[lo:up+1], data[:,lo:up+1,_l], start_params, verbose=False)
+            # check if already in old data
+            if olddata:
+                #print(_ranges[_l])
+                #print(fit_intervals[_l][_i])
+                for ind, v in enumerate(_ranges[_l]):
+                    if v[0] == lo and v[1] == up:
+                        print("found match at index %d" % ind)
+                        res[_l][:,:,_i] = _par[_l][:,:,ind]
+                        chi2[_l][:,_i] = _chi2[_l][:,ind]
+                        pval[_l][:,_i] = _pvals[_l][:,ind]
+                dofit=False
+            if dofit:
+                # fit the energy and print information
+                if verbose:
+                    print("fitting correlation function")
+                    print(tlist[lo:up+1])
+                res[_l][:,:,_i], chi2[_l][:,_i], pval[_l][:,_i] = fitting(fitfunc, 
+                        tlist[lo:up+1], data[:,lo:up+1,_l], start_params, verbose=False)
             if verbose:
                 print("p-value %.7lf\nChi^2/dof %.7lf\nresults:"
                       % (pval[_l][ 0, _i], chi2[_l][0,_i]/( (up - lo + 1) -
@@ -444,9 +482,9 @@ def genfit(_data, fit_intervals, fitfunc, start_params, tmin, lattice, d, label,
             # plot the data and the fit
             if verbose:
                 print("plotting")
-            corr_fct_with_fit(tlist, data[0,:,_l], ddata, fitfunc, mres,
+            plot_data_with_fit(tlist, data[0,:,_l], ddata, fitfunc, mres,
                                    [tmin,T2], label, corrplot, logscale=False,
-                                   fitrange=fit_intervals[_l][_i])
+                                   fitrange=fit_intervals[_l][_i], pval=pval[_l][0,_i])
     corrplot.close()
     return res, chi2, pval
 

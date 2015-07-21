@@ -1,0 +1,244 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+##!/usr/bin/python
+################################################################################
+#
+# Author: Christian Jost (jost@hiskp.uni-bonn.de)
+# Date:   Februar 2015
+#
+# Copyright (C) 2015 Christian Jost
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Function: This is the start of the eta/eta' analysis program
+#
+# For informations on input parameters see the description of the function.
+#
+################################################################################
+
+import sys
+import numpy as np
+import matplotlib
+matplotlib.use('Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+
+import analysis as ana
+
+def wiki_dict():
+    """Dictionaries of the pion data from the ETMC wiki.
+    """
+    w_pi = {"A30.32": 0.12395,
+            "A40.20": 0.14927,
+            "A40.24": 0.14492,
+            "A40.32": 0.14142,
+            "A60.24": 0.17275,
+            "A80.24": 0.19875,
+            "A100.24": 0.22293,
+            "A80.24s": 0.19880,
+            "A100.24s": 0.22125,
+            "B25.32": 0.10680,
+            "B35.48": 0.12402,
+            "B35.32": 0.12602,
+            "B55.32": 0.15518,
+            "B85.24": 0.19396,
+            "D15.48": 0.06975,
+            "D30.48": 0.09780,
+            "D45.32": 0.12087}
+    w_dpi_stat = {"A30.32": 0.00036,
+            "A40.20": 0.00074,
+            "A40.24": 0.00052,
+            "A40.32": 0.00027,
+            "A60.24": 0.00045,
+            "A80.24": 0.00041,
+            "A100.24": 0.00035,
+            "A80.24s": 0.00046,
+            "A100.24s": 0.00058,
+            "B25.32": 0.00039,
+            "B35.48": 0.00011,
+            "B35.32": 0.00030,
+            "B55.32": 0.00021,
+            "B85.24": 0.00038,
+            "D15.48": 0.00020,
+            "D30.48": 0.00016,
+            "D45.32": 0.00040}
+    w_dpi_syst = {"A30.32": 0.00014,
+            "A40.20": 0.00096,
+            "A40.24": 0.00034,
+            "A40.32": 0.00042,
+            "A60.24": 0.00023,
+            "A80.24": 0.00035,
+            "A100.24": 0.00038,
+            "A80.24s": 0.00053,
+            "A100.24s": 0.00119,
+            "B25.32": 0.00027,
+            "B35.48": 0.00000,
+            "B35.32": 0.00030,
+            "B55.32": 0.00033,
+            "B85.24": 0.00054,
+            "D15.48": 0.00000,
+            "D30.48": 0.00032,
+            "D45.32": 0.00000}
+    return w_pi, w_dpi_stat, w_dpi_syst
+
+def print_summary(datafolder, plotfolder, lattices, shift=0, 
+                  d=np.asarray([0., 0., 0.])):
+    """Print a summary of the lattices given.
+
+    Args:
+        datafolder: where the raw data is stored
+        plotfolder: where to store the plots
+        lattices: a list with the lattice name.
+        d: A numpy array with the total momentum.
+    """
+    readnew=True
+    verbose=False
+    ## other variables
+    # total momentum
+    d2 = np.dot(d, d)
+
+    if readnew:
+        summ_mpi, dsumm_mpi, ddsumm_mpi = [], [], []
+        summ_dE, dsumm_dE, ddsumm_dE = [], [], []
+        summ_a, dsumm_a, ddsumm_a = [], [], []
+        summ_ampi, dsumm_ampi, ddsumm_ampi = [], [], []
+        for lat in lattices:
+            if verbose:
+                print("reading %s data" % (lat))
+            ## read pion data
+            if verbose:
+                print("reading pion data")
+            fname = "%s/fit_results_%s_TP%d.npz" % (datafolder, lat, d2)
+            pionranges, pi, pichi2, pipvals = ana.read_fitresults(fname)
+            # calculate statistic and systematic error of the pion
+            plotname="".join(("pion_", lat))
+            mpi, dmpi_stat, dmpi_syst, weights_mpi = ana.sys_error(pi, pipvals, d, 
+                                                         plotname, path=plotfolder)
+            # append to global list
+            summ_mpi.append(mpi)
+            dsumm_mpi.append(dmpi_stat)
+            ddsumm_mpi.append(dmpi_syst)
+
+            ### read ratio fit data
+            #if verbose:
+            #    print("reading dE data")
+            #fname = "%s/fit_ratio_%s_TP%d_s%d.npz" % (datafolder, lat, d2, shift)
+            #ratioranges, rres, rchi2, rpvals = ana.read_fitresults(fname)
+            ## calculate statistic and systematic error for delta E
+            #plotname = "ratio_s%d_%s" % (shift, lat)
+            #dE, ddE_stat, ddE_syst, weights_dE = ana.sys_error(rres, rpvals, d, 
+            #    plotname, par=1, path=plotfolder, absolute=True)
+
+            ## append to global list
+            #summ_dE.append(dE)
+            #dsumm_dE.append(ddE_stat)
+            #ddsumm_dE.append(ddE_syst)
+
+            ## calculate scattering length
+            #if verbose:
+            #    print("reading scattering length data")
+            #fname = "%s/scat_len_%s_TP%d_s%d.npz" % (datafolder, lat, d2, shift)
+            #_u, _a, weights_a, a = ana.read_fitresults(fname)
+            ## statistical error for scattering length
+            #plotname = "scatlen_s%d_%s" % (shift, lat)
+            #a_pipi, da_stat, da_syst = ana.sys_error_der(a, weights_a, d, plotname,
+            #                                             path=plotfolder, absolute=True)
+
+            ## append to global list
+            #summ_a.append(a_pipi)
+            #dsumm_a.append(da_stat)
+            #ddsumm_a.append(da_syst)
+
+            ## calculate mpi * a
+            #if verbose:
+            #    print("reading a * mpi data")
+            #fname = "%s/ampi_%s_TP%d_s%d.npz" % (datafolder, lat, d2, shift)
+            #_u, _ampi, weights_ampi, ampi = ana.read_fitresults(fname)
+
+            ## statistical and systematic error for a*mpi
+            #plotname = "ampi_s%d_%s" % (shift, lat)
+            #am_pipi, dam_stat, dam_syst = ana.sys_error_der(ampi, weights_ampi, d,
+            #                                                plotname, path=plotfolder,
+            #                                                absolute=True)
+
+            ## append to global list
+            #summ_ampi.append(am_pipi)
+            #dsumm_ampi.append(dam_stat)
+            #ddsumm_ampi.append(dam_syst)
+        #fname = "%s/summary_mpi.npz" % datafolder
+        #ana.write_fitresults(fname, np.zeros((9,)), summ_mpi, dsumm_mpi, ddsumm_mpi)
+        #fname = "%s/summary_dE.npz" % datafolder
+        #ana.write_fitresults(fname, np.zeros((9,)), summ_dE, dsumm_dE, ddsumm_dE)
+        #fname = "%s/summary_a.npz" % datafolder
+        #ana.write_fitresults(fname, np.zeros((9,)), summ_a, dsumm_a, ddsumm_a)
+        #fname = "%s/summary_ampi.npz" % datafolder
+        #ana.write_fitresults(fname, np.zeros((9,)), summ_ampi, dsumm_ampi, ddsumm_ampi)
+    else:
+        pass
+        #fname = "%s/summary_mpi.npz" % datafolder
+        #_u, summ_mpi, dsumm_mpi, ddsum_mpi = ana.read_fitresults(fname)
+        #fname = "%s/summary_dE.npz" % datafolder
+        #_u, summ_dE, dsumm_dE, ddsumm_dE = ana.read_fitresults(fname)
+        #fname = "%s/summary_a.npz" % datafolder
+        #_u, summ_a, dsumm_a, ddsumm_a = ana.read_fitresults(fname)
+        #fname = "%s/summary_ampi.npz" % datafolder
+        #_u, summ_ampi, dsumm_ampi, ddsumm_ampi = ana.read_fitresults(fname)
+
+    w_pi, w_dpi, w_ddpi = wiki_dict()
+    print(w_pi, w_dpi, w_ddpi)
+    print("mpi")
+    for i, lat in enumerate(lattices):
+        for p, dp, ddp in zip(summ_mpi[i], dsumm_mpi[i], ddsumm_mpi[i]):
+            print("%8s: %.4f +- %.4f +%.4f -%.4f\t%.4f +- %.4f +%.4f -%.4f\t%+.2f  %+.2f" % 
+                  (lat, p, dp, ddp[1], ddp[0], w_pi[lat], w_dpi[lat], w_ddpi[lat], w_ddpi[lat],
+                  (p-w_pi[lat])/dp, (p-w_pi[lat])/w_dpi[lat]))
+
+    #print("dE")
+    #for i, lat in enumerate(lattices):
+    #    for p, dp, ddp in zip(summ_dE[i], dsumm_dE[i], ddsumm_dE[i]):
+    #        for q, dq, ddq in zip(p, dp, ddp):
+    #            print("%8s: %.4f +- %.4f +%.4f -%.4f" % (lat, q, dq, ddq[1], ddq[0]))
+    #print("a")
+    #for i, lat in enumerate(lattices):
+    #    for p, dp, ddp in zip(summ_a[i], dsumm_a[i], ddsumm_a[i]):
+    #        for q, dq, ddq in zip(p, dp, ddp):
+    #            print("%8s: %5.2f +- %.2f +%.2f -%.2f" % (lat, q, dq, ddq[1], ddq[0]))
+    #print("a * mpi")
+    #for i, lat in enumerate(lattices):
+    #    for p, dp, ddp in zip(summ_ampi[i], dsumm_ampi[i], ddsumm_ampi[i]):
+    #        for q, dq, ddq in zip(p, dp, ddp):
+    #            print("%8s: %.3f +- %.3f +%.3f -%.3f" % (lat, q, dq, ddq[1], ddq[0]))
+    return
+
+def main():
+    d0 = np.array([0., 0., 0.]) # total momentum of the system
+    #lattices=["A30.32", "A40.20", "A40.24", "A40.32", "A60.24",
+    #          "A80.24", "A100.24", "B25.32", "B35.32", "B35.48",
+    #          "B55.32", "B85.24", "D15.48", "D30.48", "D45.32"]
+    lattices=["A30.32", "A40.20", "A40.24", "A40.32", "A60.24",
+              "A80.24", "A100.24", "B25.32", "B35.32", "B55.32",
+              "B85.24", "D45.32"]
+    datafolder = "./raw_data/"
+    plotfolder = "./plots/"
+    #print(path[ens], datafolder, plotfolder, lattices[ens],
+    #      int(lattices[ens][-2:]), gmax[ens])
+    print_summary(datafolder, plotfolder, lattices)
+    return
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass
