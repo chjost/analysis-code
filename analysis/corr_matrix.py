@@ -25,13 +25,59 @@
 #
 ################################################################################
 
-__all__ = ["create_corr_matrix", "calculate_gevp"]
+__all__ = ["create_corr_matrix", "calculate_gevp", "shift_corr_matrix"]
 
 import os
 import numpy as np
 import scipy.linalg as spla
 import input_output as io
 import bootstrap
+
+def shift_corr_matrix(cmat, dt, dE=None, axis=1):
+    """Weight-shift the correlation function matrix.
+
+    This is based on the paper by Dudek et al, Phys.Rev. D86, 034031 (2012).
+    First the matrix is weighted by exp(dE*t) on every timeslice and then shifted.
+    If dE is not given, the matrix is only shifted
+
+    Args:
+        cmat: correlation function matrix
+        dt: number of timeslices to shift
+        dE: the energy for the weighting
+        axis: axis along which the shift is performed
+
+    Returns:
+        shifted correlation function matrix
+    """
+    # check whether axis is in the number of dimension
+    ndim = cmat.ndim
+    if axis > ndim or axis < 0:
+        print("axis not in range of the dimensions. Not doing anything")
+        return cmat
+
+    # calculate shape of the new matrix
+    cmshape = np.asarray(cmat.shape)
+    cmshape[axis] -= dt
+
+    # weighting of the matrix
+    if dE:
+        for t in xrange(cmat.shape[axis]):
+          # TODO(CJ): Think of a way to do this more general
+          cmat[:,t] = np.exp(dE*t) * cmat[:,t]
+
+    # if dt is zero, don't shift
+    if dt is 0:
+        return cmat
+
+    # create the new array
+    cm = np.zeros(cmshape)
+
+    # fill the new array
+    for i in xrange(cmshape[axis]):
+        cm[:,i] = cmat[:,i] - cmat[:,i+dt]
+
+    # return shifted matrix
+    return cm
 
 def create_corr_matrix(nbsamples, filepath, filestring, filesuffix=".dat",
                        column=(1,), verbose=0):
@@ -106,7 +152,7 @@ def create_corr_matrix(nbsamples, filepath, filestring, filesuffix=".dat",
 
     corr_mat_symm = np.zeros_like(corr_mat)
     for _s in range(0, nbsamples):
-        for _t in range(0, int(_T1/2)+1):
+        for _t in range(0, int(_T/2)+1):
             corr_mat_symm[_s, _t] = (corr_mat[_s, _t] + corr_mat[_s, _t].T) / 2.
     return corr_mat_symm
 

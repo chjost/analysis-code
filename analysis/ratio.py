@@ -42,9 +42,11 @@ def simple_ratio_subtract(d1, d2, d3):
         The ratio, its mean and its standard deviation.
     """
     # create array from dimensions of the data
-    ratio = np.zeros((d1.shape[0], d1.shape[1]-1))
-    for _s in range(d1.shape[0]):
-        for _t in range(d1.shape[1]-1):
+    rshape = list(d1.shape)
+    rshape[1] -= 1
+    ratio = np.zeros(rshape)
+    for _s in range(rshape[0]):
+        for _t in range(rshape[1]):
             # calculate ratio
             ratio[_s,_t] = (d1[_s,_t] - d1[_s,_t+1]) / ((d2[_s,_t]*d3[_s,_t]) -
                             (d2[_s,_t+1]*d3[_s,_t+1]))

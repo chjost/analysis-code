@@ -1,10 +1,11 @@
 
 import numpy as np
 import matplotlib
+import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
-def corr_fct_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
+def corr_fct_with_fit(_X, _Y, _dY, fitfunc, args, plotrange, label, pdfplot,
                       logscale=False, xlim=None, ylim=None, fitrange=None):
     """A function that plots a correlation function.
 
@@ -13,9 +14,9 @@ def corr_fct_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
     matplotlib so that multiple plots can be saved to the object.
 
     Args:
-        X: The data for the x axis.
-        Y: The data for the y axis.
-        dY: The error on the y axis data.
+        _X: The data for the x axis. (gets expanded to at least 2d to be loopable)
+        _Y: The data for the y axis. (gets expanded to at least 2d to be loopable)
+        _dY: The error on the y axis data. (gets expanded to at least 2d to be loopable)
         fitfunc: The function to fit to the data.
         args: The parameters of the fit function from the fit.
         plotrange: A list with two entries, the lower and upper range of the
@@ -33,7 +34,14 @@ def corr_fct_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
     # plotting the data
     l = int(plotrange[0])
     u = int(plotrange[1])
-    p1 = plt.errorbar(X[l:u], Y[l:u], dY[l:u], fmt='x' + 'b', label = label[3])
+    X, Y, dY = np.atleast_2d(_X, _Y, _dY)
+    if(X.shape[0] == Y.shape[0]): 
+        colors = iter(cm.Dark2(np.linspace(0, 1, Y.shape[0])))
+        # loop over number of datasets
+        for _dl in range(0,X.shape[0]):
+            # assign different color to each dataset
+            p1 = plt.errorbar(X[_dl][l:u], Y[_dl][l:u], dY[_dl][l:u], fmt='o' + 'b',
+                              label = label[3][_dl],color=next(colors))
     # plotting the fit function, check for seperate range
     if fitrange is not None:
         lfunc = fitrange[0]
