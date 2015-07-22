@@ -32,7 +32,7 @@ from scipy import stats
 import numpy as np
 from numpy.polynomial import polynomial as P
 import matplotlib
-matplotlib.use('QT4Agg') # has to be imported before the next lines
+matplotlib.use('Agg') # has to be imported before the next lines
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
@@ -48,16 +48,16 @@ def main():
     # Strange quark masses and unitary kaon mass
     #mk_unit = 0.26695
     #dmk_unit = 0.00052
-    #amu_s = [0.0185,0.0225,0.02464]
+    amu_s = [0.0185,0.0225,0.02464]
     p_zero = np.asarray([0,0,0])
-    amu_s = [0.0225]
+    #amu_s = [0.0225]
     #ensemblelist = ['A40.24/','A60.24/','A80.24/','A100.24/']
     ensemblelist = ['A60.24/']
     filelist = ['k_corr_p0.dat','kk_A1_TP0_00.dat']
     #filelist = ['C2.dat','kpi_4.dat']
-    pathroot ="/hiskp2/helmes/contractions/A60.24/k-k_test_C4/strange_0225/merged/"
+    pathroot ="/hiskp2/helmes/k-k-scattering/"
     for ens in ensemblelist:
-        datapath = pathroot+"data/"
+        datapath = pathroot+"data/"+ens
         cachepath = pathroot+"data/cache/"
         #print datapath
         #Numpy array to hold all data at end
@@ -72,6 +72,7 @@ def main():
             name_cache_kk = cachepath+ens[:-1]+"_"+str(amu_s[s])[3:]+"_"+filelist[1]
             #set up paths for data read in and result storage
             path = datapath+"amu_s_"+str(amu_s[s])[3:]+"/"
+            print path
             #path = datapath
             #tmp_out = pathroot+"plots/"+ens+"amu_s_"+str(amu_s[s])[3:]
             tmp_out = pathroot+"plots/"
@@ -100,8 +101,8 @@ def main():
             else:
             # else read data anew
                 print("Starting from scratch")
-                corrs_k = ana.read_data_ascii("".join((datapath, filelist[0])))
-                corrs_kk = ana.read_data_ascii("".join((datapath, filelist[1])))
+                corrs_k = ana.read_data_ascii("".join((path, filelist[0])))
+                corrs_kk = ana.read_data_ascii("".join((path, filelist[1])))
                 nbcfg = corrs_k.shape[0]
                 # Create symmetrized bootstrap samples of 2pt and 4pt Corr-function
                 bsamples_k = ana.sym_and_boot(corrs_k, nbsamples)
@@ -125,7 +126,7 @@ def main():
             mass, mmass, dmass = ana.compute_mass(bsamples_k, True)
             # ana.scan_fit_range(massfunc, tlist_corr,mass, par_mass)
             # TODO: set two points more than wanted for upper limit
-            ranges = ana.set_fit_interval(mass, [9], [24], 5)
+            ranges = ana.set_fit_interval(mass, [9], [24], 9)
             
             # For mass use one parameter fit
             # res has shape (nb_samples, nb_pars, ncorr, nb_fitranges)
@@ -133,7 +134,7 @@ def main():
             prefix = "_"+ens[:-1]+str(amu_s[s])[3:]
 
             # Check and conditionally read cache of fit
-            genfit_mass_cache = cachepath+"genfit_mass"
+            genfit_mass_cache = name_cache_k+"genfit_mass"
             if osp.isfile(genfit_mass_cache+".npz"):
                 ranges, res, chi2, pval = ana.read_fitresults(genfit_mass_cache+".npz")
             else:
@@ -158,16 +159,16 @@ def main():
 
             ##--------------- Have a look at the 4 pt mean correlator and effective mass -----------
 
-            #label = ["KK 4pt func", "time", "C4(t)", "data", ""]
-            #up=23
-            #pfit = PdfPages("%s%sC4_%s_plot.pdf" % (tmp_out,"m_eff_",str(amu_s[s]))) 
-            #ana.corr_fct_with_fit(tlist_corr, corr_kk_data, d_kk_data, massfunc, [0], [1,T2-2], label, pfit, logscale=True, setLimits=False)
+            label = ["KK 4pt func", "time", "C4(t)", "data", ""]
+            up=23
+            pfit = PdfPages("%s%sC4_%s_plot.pdf" % (tmp_out,"m_eff_",str(amu_s[s]))) 
+            ana.corr_fct_with_fit(tlist_corr, corr_kk_data, d_kk_data, massfunc, [0], [1,T2-2], label, pfit, logscale=True )
 
-            #label[2] = "m_eff_4pt(t)"
-            #m_eff_C4, mm_eff_C4, dm_eff_C4 = ana.compute_mass(bsamples_kk, False)
-            #ana.corr_fct_with_fit(tlist_corr, mm_eff_C4, dm_eff_C4, massfunc,
-            #    [0], [1,T2-2], label, pfit, False, False)
-            #pfit.close()
+            label[2] = "m_eff_4pt(t)"
+            m_eff_C4, mm_eff_C4, dm_eff_C4 = ana.compute_mass(bsamples_kk, False)
+            ana.corr_fct_with_fit(tlist_corr, mm_eff_C4, dm_eff_C4, massfunc,
+                [0], [1,T2-2], label, pfit, False, False)
+            pfit.close()
 
             #-------------- Ratio of C_kk and C_k^2 ---------------------------
 
@@ -177,14 +178,14 @@ def main():
             # sense
             ratio = lambda p, t, e : p[0]*(np.cosh(p[1]*(t-T/2))+np.sinh(p[1]*(t-T/2))/(np.tanh(2*e*(t-T/2))))
             # Check and conditionally read cache of fit
-            genfit_ratio_cache = cachepath+"genfit_ratio"
+            genfit_ratio_cache = name_cache_k+"genfit_ratio"
             if osp.isfile(genfit_ratio_cache+".npz"):
                 ranges1, res_R, chi2_R, pvals_R = ana.read_fitresults(genfit_ratio_cache+".npz")
             else:
                 # define fit ranges
                 # res_R has shape (nb_samples, nb_pars, n_corr, nb_ranges1 *
                 # nb_ranges2)
-                ranges1 = ana.set_fit_interval(R_boot,[13],[23],6)
+                ranges1 = ana.set_fit_interval(R_boot,[13],[23],8)
                 res_R, chi2_R, pvals_R = ana.genfit_comb(R_boot,ranges1,ranges,
                                                          ratio,par_ratio,res,
                                                          1,ens[:-1],label,tmp_out,

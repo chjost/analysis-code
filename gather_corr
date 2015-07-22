@@ -35,8 +35,8 @@ def main():
     # needed variables
     #inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/sum/pi_corr_p0.conf"
     #outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/pi_corr_p0"
-    inputpath="/hiskp2/helmes/contractions/A60.24/k-k_test_C4/strange_0225/merged/"
-    outputpath="/hiskp2/helmes/contractions/A60.24/k-k_test_C4/strange_0225/merged/"
+    inputpath="/hiskp2/helmes/contractions/A80.24/k-k_test/strange_2464/merged/"
+    outputpath="/hiskp2/helmes/contractions/A80.24/k-k_test/strange_2464/merged/"
     filelist = ["C2_k"]
     filelist += ["C4_%d" % (x) for x in [1,2,3,4]]
     #filelist += ["pipi_pipi_A1_corr_TP0_%02d" % (x) for x in [00, 01, 02, 10, 11, 12, 20, 21, 22]]
@@ -47,9 +47,9 @@ def main():
     #    filelist += ["pipi_pipi_A1_corr_TP%01d_%02d" % (p,x) for x in 
     #                 [00, 01, 02, 10, 11, 12, 20, 21, 22]]
     suffix=".dat"
-    missing = [292, 328, 388, 444, 516, 524, 556]
+    missing = [2838,2846,2854,2862,2870,2950,2958,2966,2974]
     inputlist = []
-    for i in range(600, 3104, 8):
+    for i in range(750, 3198, 8):
         if i in missing:
             continue
         inputlist.append("_c%04d" % i)
