@@ -235,24 +235,20 @@ def set_fit_interval(_data, lolist, uplist, intervalsize):
 
     return fit_intervals
 
-def genfit_comb(data, fitint_data, fitint_par, fitfunc, start_params, 
-                par, tmin, lattice, _label, path=".plots/", 
-                plotlabel="corr", verbose=False):
+def genfit_comb(_data, fitint_data, fitint_par, fitfunc, start_params, 
+                par, par_index=0, olddata=None, verbose=False):
     """Fit and plot a function. With varying parameter, determined in a previous
     fit
     
     Args:
-        data: The correlation functions.
+        _data: The correlation functions.
         fitint_data: List of intervals for the fit of the functions.
         fitint_par: List of intervals for the varying parameter
         fitfunc: The function to fit to the data.
         start_params: The starting parameters for the fit function.
         par: the varying parameter
-        tmin: Lower bound of the plot.
-        lattice: The name of the lattice, used for the output file.
-        label: Labels for the title and the axis.
-        path: Path to the saving place of the plot.
-        plotlabel: Label for the plot file.
+        par_index: which parameter or set of parameters to give to the fit function
+        olddata: if not None, reuses old data at the location specified, if possible
         verbose: Amount of information printed to screen.
 
     Returns:
@@ -262,8 +258,7 @@ def genfit_comb(data, fitint_data, fitint_par, fitfunc, start_params,
         pval: p-value for every fit.
     """
     # ensure at least 3d 
-    data = np.atleast_3d(data)
-    label = _label
+    data = np.atleast_3d(_data)
     # init variables
     # nboot: number of bootstrap samples
     # npar: number of parameters to fit to
@@ -287,6 +282,8 @@ def genfit_comb(data, fitint_data, fitint_par, fitfunc, start_params,
         print(nint_data)
         print(ncorr_par)
         print(nint_par)
+    # set fit data
+    tlist = np.linspace(0., float(T2), float(T2), endpoint=False)
     # initialize empty arrays with correct shape
     res, chi2, pval = [], [], []
     # loop over the correlators of the parameter
@@ -299,19 +296,34 @@ def genfit_comb(data, fitint_data, fitint_par, fitfunc, start_params,
             res[k].append(np.zeros((nboot, npar, nint_data[l], nint_par[k])))
             chi2[k].append(np.zeros((nboot, nint_data[l], nint_par[k])))
             pval[k].append(np.zeros((nboot, nint_data[l], nint_par[k])))
-    # set fit x data for fit
-    tlist = np.linspace(0., float(T2), float(T2), endpoint=False)
-    # outputfile for the plot
-    corrplot = PdfPages("%s/fit_%s_%s.pdf" % (path,plotlabel,lattice))
-    # check the labels
-    if len(label) < 3:
-        print("not enough labels, using standard labels.")
-        label = ["fit", "time", "C(t)", "", ""]
-    if len(label) < 4:
-        label.append("data")
-    if len(label) < 5:
-        label.append("")
-    label_save = label[0]
+    if olddata:
+        try:
+            print("reading old data from %s" % olddata)
+            _ranges, _par, _chi2, _pvals = read_fitresults(olddata)
+            # sanity checks
+            if len(_par) != ncorr_par:
+                print("old data has different ncorr_par")
+                sys.exit(-15)
+            for _i in range(ncorr_par):
+                if len(_par[_i]) != ncorr:
+                    print("old data has different ncorr")
+                    sys.exit(-15)
+                for _j in range(ncorr):
+                    if _par[_i][_j].shape[0] != nboot:
+                        print("old data has different nboot")
+                        sys.exit(-15)
+                    if _par[_i][_j].shape[1] != npar:
+                        print("old data has different number of parameter")
+                        sys.exit(-15)
+                    # since the fit intervals for the single particle are not available
+                    # nint_par has to be the same
+                    if _par[_i][_j].shape[-1] != nint_par[_i]:
+                        print("old data has different number of par fit intervals")
+                        sys.exit(-15)
+        except IOError as e:
+            print("could not read old data: %s" % e.message)
+            print("continuing")
+            olddata=None
     # loop over the correlation functions of the data
     for l in range(ncorr):
         # setup
@@ -319,19 +331,31 @@ def genfit_comb(data, fitint_data, fitint_par, fitfunc, start_params,
         # loop over the fit intervals
         for i in range(nint_data[l]):
             lo, up = fitint_data[l][i]
+            dofit=True
             if verbose:
                 print("Interval [%d, %d]" % (lo, up))
                 print("correlator %d" % l)
             # loop over the varying parameter and its fit intervals
             for k in range(ncorr_par):
+                if olddata:
+                    for ind, v in enumerate(_ranges[l]):
+                        if v[0] == lo and v[1] == up:
+                            print("found match at index %d (k %d, l %d)" % (ind, k, l))
+                            res[k][l][:,:,i] = _par[k][l][:,:,ind]
+                            chi2[k][l][:,i] = _chi2[k][l][:,ind]
+                            pval[k][l][:,i] = _pvals[k][l][:,ind]
+                            dofit=False
+                            # if a matching range was found stop searching
+                            break
                 for j in range(nint_par[k]):
-                    # fit the energy and print information
-                    if verbose:
-                        print("fitting correlation function")
-                    res[k][l][:,:,i,j], chi2[k][l][:,i,j], pval[k][l][:,i,j] = \
-                        fitting(fitfunc, tlist[lo:up+1], data[:,lo:up+1,l],
-                                start_params, E_single = par[k][:,:,j], 
-                                verbose=False)
+                    if dofit:
+                        # fit the energy and print information
+                        if verbose:
+                            print("fitting correlation function")
+                        res[k][l][:,:,i,j], chi2[k][l][:,i,j], pval[k][l][:,i,j] = \
+                            fitting(fitfunc, tlist[lo:up+1], data[:,lo:up+1,l],
+                                    start_params, E_single = par[k][:,par_index,j], 
+                                    verbose=False)
                     if verbose:
                         print("p-value %.7lf\nChi^2/dof %.7lf\nresults:"
                               % (pval[k][l][0,i,j], chi2[k][l][0,i,j]/(
@@ -339,25 +363,9 @@ def genfit_comb(data, fitint_data, fitint_par, fitfunc, start_params,
                         for p in enumerate(res[k][l][0,:,i,j]):
                             print("\tpar %d = %lf" % p)
                         print(" ")
-                    mres, dres = af.calc_error(res[k][l][:,:,i,j])
-
-                    # set up the plot labels
-                    fitlabel = r"fit %d:%d\nm$_{\pi}$ = %f" % (lo, up, par[k][0,0,j])
-                    title = "%s, %s, pc %d, [%d, %d]" % (label_save, lattice, l, lo, up)
-                    label[0] = title
-                    label[4] = fitlabel
-
-                    # plot the original data and the fit for every fit range
-                    if verbose:
-                        print("plotting")
-                    corr_fct_with_fit(tlist, data[0,:,l], ddata, fitfunc,
-                        (mres, par[k][0,0,j]), [tmin,T2], label, corrplot,
-                        logscale=False,fitrange=fitint_data[l][i])
-    corrplot.close()
     return res, chi2, pval
 
-def genfit(_data, fit_intervals, fitfunc, start_params, tmin, lattice, d, label,
-            path=".plots/", plotlabel="corr", olddata=None, verbose=True):
+def genfit(_data, fit_intervals, fitfunc, start_params, olddata=None, verbose=True):
     """Fit and plot the correlation function.
     
     Args:
@@ -366,12 +374,6 @@ def genfit(_data, fit_intervals, fitfunc, start_params, tmin, lattice, d, label,
               correlation functions.
         fitfunc: The function to fit to the data.
         start_params: The starting parameters for the fit function.
-        tmin: Lower bound of the plot.
-        lattice: The name of the lattice, used for the output file.
-        d: The total momentum of the reaction.
-        label: Labels for the title and the axis.
-        path: Path to the saving place of the plot.
-        plotlabel: Label for the plot file.
         olddata: if not None, reuses old data at the location specified, if possible
         verbose: Amount of information printed to screen.
 
@@ -386,8 +388,9 @@ def genfit(_data, fit_intervals, fitfunc, start_params, tmin, lattice, d, label,
     T2 = data.shape[1]
     ncorr = data.shape[2]
     npar = len(start_params)
-    d2 = np.dot(d,d)
     ninter = [len(fitint) for fitint in fit_intervals]
+    # set fit data
+    tlist = np.linspace(0., float(T2), float(T2), endpoint=False)
     # initialize empty arrays
     res = []
     chi2 = []
@@ -406,7 +409,6 @@ def genfit(_data, fit_intervals, fitfunc, start_params, tmin, lattice, d, label,
             if len(_par) is not ncorr:
                 print("old data has different ncorr")
                 sys.exit(-15)
-            # TODO(CJ):assumes all corr have same nboot
             if _par[0].shape[0] != nboot:
                 print("old data (%d) has different nboot (%d)" % (_par[0].shape[0],nboot))
                 sys.exit(-15)
@@ -420,20 +422,6 @@ def genfit(_data, fit_intervals, fitfunc, start_params, tmin, lattice, d, label,
             print("could not read old data: %s" % e.message)
             print("continuing")
             olddata=None
-    # set fit data
-    tlist = np.linspace(0., float(T2), float(T2), endpoint=False)
-    # outputfile for the plot
-    corrplot = PdfPages("%s/fit_%s_%s_TP%d.pdf" % (path,plotlabel,lattice,d2))
-    # check the labels
-    if len(label) < 3:
-        print("not enough labels, using standard labels.")
-        label = ["fit", "time", "C(t)", "", ""]
-    if len(label) < 4:
-        label.append("data")
-        label.append("")
-    if len(label) < 5:
-        label.append("")
-    label_save = label[0]
     for _l in range(ncorr):
         # setup
         mdata, ddata = af.calc_error(data[:,:,_l])
@@ -454,7 +442,9 @@ def genfit(_data, fit_intervals, fitfunc, start_params, tmin, lattice, d, label,
                         res[_l][:,:,_i] = _par[_l][:,:,ind]
                         chi2[_l][:,_i] = _chi2[_l][:,ind]
                         pval[_l][:,_i] = _pvals[_l][:,ind]
-                dofit=False
+                        dofit=False
+                        # stop if match was found
+                        break
             if dofit:
                 # fit the energy and print information
                 if verbose:
@@ -469,23 +459,6 @@ def genfit(_data, fit_intervals, fitfunc, start_params, tmin, lattice, d, label,
                 for p in enumerate(res[_l][0,:,_i]):
                     print("\tpar %d = %lf" % p)
                 print(" ")
-
-            mres, dres = af.calc_error(res[_l][:,:,_i])
-
-            # set up the plot labels
-            fitlabel = "fit %d:%d" % (lo, up)
-            title="%s, %s, TP %d, pc %d, [%d, %d]" % (label_save, lattice, d2, 
-                                                      _l, lo, up)
-            label[0] = title
-            label[4] = fitlabel
-
-            # plot the data and the fit
-            if verbose:
-                print("plotting")
-            plot_data_with_fit(tlist, data[0,:,_l], ddata, fitfunc, mres,
-                                   [tmin,T2], label, corrplot, logscale=False,
-                                   fitrange=fit_intervals[_l][_i], pval=pval[_l][0,_i])
-    corrplot.close()
     return res, chi2, pval
 
 #def fit_ratio_samples(X, Y, start_parm, E_single, correlated=True, verbose=True):

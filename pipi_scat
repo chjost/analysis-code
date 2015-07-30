@@ -50,8 +50,8 @@ def analyse(path, datafolder, plotfolder, lattice="A40.24",
         gmax: maximal index of the gevp
     """
     ## define main variables
-    calculatea=False
-    calculateampi=False
+    calculatea=True
+    calculateampi=True
     # verbose prints all the shapes of the different arrays
     verbose=False
     nsamples = 1500 # number of bootstrap samples
@@ -124,7 +124,7 @@ def analyse(path, datafolder, plotfolder, lattice="A40.24",
         # statistical error for scattering length
         plotname = "scatlen_s%d_%s" % (s, lattice)
         a_pipi, da_stat, da_syst = ana.sys_error_der(a, weights_a, d, plotname,
-                                                     path=plotfolder, absolute=True)
+                                                     path=plotfolder, absolute=False)
         if verbose:
             print("a_pipi")
             print(len(a_pipi))
@@ -153,7 +153,7 @@ def analyse(path, datafolder, plotfolder, lattice="A40.24",
         plotname = "ampi_s%d_%s" % (s, lattice)
         am_pipi, dam_stat, dam_syst = ana.sys_error_der(ampi, weights_ampi, d,
                                                         plotname, path=plotfolder,
-                                                        absolute=True)
+                                                        absolute=False)
         if verbose:
             print("a_pipi * m_pi")
             print(len(ampi))

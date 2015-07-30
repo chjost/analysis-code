@@ -29,6 +29,7 @@ import os
 import numpy as np
 import plot as plt
 import _quantiles as qlt
+
 def compute_derivative(data):
     """Computes the derivative of a correlation function.
 

@@ -37,8 +37,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 import analysis as ana
 
 def wiki_dict():
-    """Dictionaries of the pion data from the ETMC wiki.
-    """
+    """Dictionaries of the pion data from the ETMC wiki."""
     w_pi = {"A30.32": 0.12395,
             "A40.20": 0.14927,
             "A40.24": 0.14492,
@@ -92,6 +91,116 @@ def wiki_dict():
             "D45.32": 0.00000}
     return w_pi, w_dpi_stat, w_dpi_syst
 
+def paper_dE():
+    """The values for dE from the paper."""
+    p_dE = {"A30.32": 0.0037,
+            "A40.20": 0.0179,
+            "A40.24": 0.0082,
+            "A40.32": 0.0033,
+            "A60.24": 0.0076,
+            "A80.24": 0.0071,
+            "A100.24": 0.0063,
+            "A80.24s": 0.0000,
+            "A100.24s": 0.0000,
+            "B25.32": 0.0000,
+            "B35.48": 0.0000,
+            "B35.32": 0.0041,
+            "B55.32": 0.0039,
+            "B85.24": 0.0085,
+            "D15.48": 0.0000,
+            "D30.48": 0.0000,
+            "D45.32": 0.0084}
+    p_ddE_stat = {"A30.32": 0.0001,
+            "A40.20": 0.0005,
+            "A40.24": 0.0003,
+            "A40.32": 0.0001,
+            "A60.24": 0.0002,
+            "A80.24": 0.0001,
+            "A100.24": 0.0001,
+            "A80.24s": 0.0000,
+            "A100.24s": 0.0000,
+            "B25.32": 0.0000,
+            "B35.48": 0.0000,
+            "B35.32": 0.0002,
+            "B55.32": 0.0001,
+            "B85.24": 0.0001,
+            "D15.48": 0.0000,
+            "D30.48": 0.0000,
+            "D45.32": 0.0002}
+    p_ddE_syst = {"A30.32": (0.0002, 0.0001),
+            "A40.20": (0.0001, 0.0002),
+            "A40.24": (0.0001, 0.0004),
+            "A40.32": (0.0001, 0.0001),
+            "A60.24": (0.0001, 0.0001),
+            "A80.24": (0.0001, 0.0000),
+            "A100.24": (0.0001, 0.0001),
+            "A80.24s": (0.0000, 0.0000),
+            "A100.24s": (0.0000, 0.0000),
+            "B25.32": (0.0000, 0.0000),
+            "B35.48": (0.0000, 0.0000),
+            "B35.32": (0.0001, 0.0001),
+            "B55.32": (0.0001, 0.0001),
+            "B85.24": (0.0001, 0.0000),
+            "D15.48": (0.0000, 0.0000),
+            "D30.48": (0.0000, 0.0000),
+            "D45.32": (0.0005, 0.0000)}
+    return p_dE, p_ddE_stat, p_ddE_syst
+
+def paper_am():
+    """The values for a*mpi from the paper."""
+    p_am = {"A30.32": -0.1325,
+            "A40.20": -0.2024,
+            "A40.24": -0.1640,
+            "A40.32": -0.1553,
+            "A60.24": -0.2165,
+            "A80.24": -0.2622,
+            "A100.24": -0.2938,
+            "A80.24s": -0.0000,
+            "A100.24s": -0.0000,
+            "B25.32": -0.0000,
+            "B35.48": -0.1567,
+            "B35.32": -0.1507,
+            "B55.32": -0.2185,
+            "B85.24": -0.2921,
+            "D15.48": -0.1163,
+            "D30.48": -0.0000,
+            "D45.32": -0.2618}
+    p_dam_stat = {"A30.32": 0.0042,
+            "A40.20": 0.0044,
+            "A40.24": 0.0054,
+            "A40.32": 0.0048,
+            "A60.24": 0.0038,
+            "A80.24": 0.0033,
+            "A100.24": 0.0033,
+            "A80.24s": 0.0000,
+            "A100.24s": 0.0000,
+            "B25.32": 0.0000,
+            "B35.48": 0.0193,
+            "B35.32": 0.0059,
+            "B55.32": 0.0052,
+            "B85.24": 0.0034,
+            "D15.48": 0.0157,
+            "D30.48": 0.0000,
+            "D45.32": 0.0058}
+    p_dam_syst = {"A30.32": (0.0042, 0.0069),
+            "A40.20": (0.0020, 0.0011),
+            "A40.24": (0.0088, 0.0017),
+            "A40.32": (0.0031, 0.0035),
+            "A60.24": (0.0027, 0.0023),
+            "A80.24": (0.0008, 0.0009),
+            "A100.24": (0.0008, 0.0030),
+            "A80.24s": (0.0000, 0.0000),
+            "A100.24s": (0.0000, 0.0000),
+            "B25.32": (0.0000, 0.0000),
+            "B35.48": (0.0085, 0.0261),
+            "B35.32": (0.0027, 0.0027),
+            "B55.32": (0.0023, 0.0025),
+            "B85.24": (0.0007, 0.0039),
+            "D15.48": (0.0089, 0.0107),
+            "D30.48": (0.0000, 0.0000),
+            "D45.32": (0.0011, 0.0120)}
+    return p_am, p_dam_stat, p_dam_syst
+
 def print_summary(datafolder, plotfolder, lattices, shift=0, 
                   d=np.asarray([0., 0., 0.])):
     """Print a summary of the lattices given.
@@ -102,101 +211,81 @@ def print_summary(datafolder, plotfolder, lattices, shift=0,
         lattices: a list with the lattice name.
         d: A numpy array with the total momentum.
     """
-    readnew=True
     verbose=False
     ## other variables
     # total momentum
     d2 = np.dot(d, d)
+    L = {x: int(x[-2:]) for x in lattices}
 
-    if readnew:
-        summ_mpi, dsumm_mpi, ddsumm_mpi = [], [], []
-        summ_dE, dsumm_dE, ddsumm_dE = [], [], []
-        summ_a, dsumm_a, ddsumm_a = [], [], []
-        summ_ampi, dsumm_ampi, ddsumm_ampi = [], [], []
-        for lat in lattices:
-            if verbose:
-                print("reading %s data" % (lat))
-            ## read pion data
-            if verbose:
-                print("reading pion data")
-            fname = "%s/fit_results_%s_TP%d.npz" % (datafolder, lat, d2)
-            pionranges, pi, pichi2, pipvals = ana.read_fitresults(fname)
-            # calculate statistic and systematic error of the pion
-            plotname="".join(("pion_", lat))
-            mpi, dmpi_stat, dmpi_syst, weights_mpi = ana.sys_error(pi, pipvals, d, 
-                                                         plotname, path=plotfolder)
-            # append to global list
-            summ_mpi.append(mpi)
-            dsumm_mpi.append(dmpi_stat)
-            ddsumm_mpi.append(dmpi_syst)
+    summ_mpi, dsumm_mpi, ddsumm_mpi = [], [], []
+    summ_dE, dsumm_dE, ddsumm_dE = [], [], []
+    summ_a, dsumm_a, ddsumm_a = [], [], []
+    summ_ampi, dsumm_ampi, ddsumm_ampi = [], [], []
+    for lat in lattices:
+        if verbose:
+            print("reading %s data" % (lat))
+        ## read pion data
+        if verbose:
+            print("reading pion data")
+        fname = "%s/fit_results_%s_TP%d.npz" % (datafolder, lat, d2)
+        pionranges, pi, pichi2, pipvals = ana.read_fitresults(fname)
+        # calculate statistic and systematic error of the pion
+        plotname="".join(("pion_", lat))
+        mpi, dmpi_stat, dmpi_syst, weights_mpi = ana.sys_error(pi, pipvals, d, 
+                                                     plotname, path=plotfolder)
+        # append to global list
+        summ_mpi.append(mpi)
+        dsumm_mpi.append(dmpi_stat)
+        ddsumm_mpi.append(dmpi_syst)
 
-            ### read ratio fit data
-            #if verbose:
-            #    print("reading dE data")
-            #fname = "%s/fit_ratio_%s_TP%d_s%d.npz" % (datafolder, lat, d2, shift)
-            #ratioranges, rres, rchi2, rpvals = ana.read_fitresults(fname)
-            ## calculate statistic and systematic error for delta E
-            #plotname = "ratio_s%d_%s" % (shift, lat)
-            #dE, ddE_stat, ddE_syst, weights_dE = ana.sys_error(rres, rpvals, d, 
-            #    plotname, par=1, path=plotfolder, absolute=True)
+        ## read ratio fit data
+        if verbose:
+            print("reading dE data")
+        fname = "%s/fit_ratio_%s_TP%d_s%d.npz" % (datafolder, lat, d2, shift)
+        ratioranges, rres, rchi2, rpvals = ana.read_fitresults(fname)
+        # calculate statistic and systematic error for delta E
+        plotname = "ratio_s%d_%s" % (shift, lat)
+        dE, ddE_stat, ddE_syst, weights_dE = ana.sys_error(rres, rpvals, d, 
+            plotname, par=1, path=plotfolder, absolute=True)
 
-            ## append to global list
-            #summ_dE.append(dE)
-            #dsumm_dE.append(ddE_stat)
-            #ddsumm_dE.append(ddE_syst)
+        # append to global list
+        summ_dE.append(dE)
+        dsumm_dE.append(ddE_stat)
+        ddsumm_dE.append(ddE_syst)
 
-            ## calculate scattering length
-            #if verbose:
-            #    print("reading scattering length data")
-            #fname = "%s/scat_len_%s_TP%d_s%d.npz" % (datafolder, lat, d2, shift)
-            #_u, _a, weights_a, a = ana.read_fitresults(fname)
-            ## statistical error for scattering length
-            #plotname = "scatlen_s%d_%s" % (shift, lat)
-            #a_pipi, da_stat, da_syst = ana.sys_error_der(a, weights_a, d, plotname,
-            #                                             path=plotfolder, absolute=True)
+        # calculate scattering length
+        if verbose:
+            print("reading scattering length data")
+        fname = "%s/scat_len_%s_TP%d_s%d.npz" % (datafolder, lat, d2, shift)
+        _u, _a, weights_a, a = ana.read_fitresults(fname)
+        # statistical error for scattering length
+        plotname = "scatlen_s%d_%s" % (shift, lat)
+        a_pipi, da_stat, da_syst = ana.sys_error_der(a, weights_a, d, plotname,
+                                                     path=plotfolder, absolute=False)
 
-            ## append to global list
-            #summ_a.append(a_pipi)
-            #dsumm_a.append(da_stat)
-            #ddsumm_a.append(da_syst)
+        # append to global list
+        summ_a.append(a_pipi)
+        dsumm_a.append(da_stat)
+        ddsumm_a.append(da_syst)
 
-            ## calculate mpi * a
-            #if verbose:
-            #    print("reading a * mpi data")
-            #fname = "%s/ampi_%s_TP%d_s%d.npz" % (datafolder, lat, d2, shift)
-            #_u, _ampi, weights_ampi, ampi = ana.read_fitresults(fname)
+        # calculate mpi * a
+        if verbose:
+            print("reading a * mpi data")
+        fname = "%s/ampi_%s_TP%d_s%d.npz" % (datafolder, lat, d2, shift)
+        _u, _ampi, weights_ampi, ampi = ana.read_fitresults(fname)
 
-            ## statistical and systematic error for a*mpi
-            #plotname = "ampi_s%d_%s" % (shift, lat)
-            #am_pipi, dam_stat, dam_syst = ana.sys_error_der(ampi, weights_ampi, d,
-            #                                                plotname, path=plotfolder,
-            #                                                absolute=True)
+        # statistical and systematic error for a*mpi
+        plotname = "ampi_s%d_%s" % (shift, lat)
+        am_pipi, dam_stat, dam_syst = ana.sys_error_der(ampi, weights_ampi, d,
+                                                        plotname, path=plotfolder,
+                                                        absolute=False)
 
-            ## append to global list
-            #summ_ampi.append(am_pipi)
-            #dsumm_ampi.append(dam_stat)
-            #ddsumm_ampi.append(dam_syst)
-        #fname = "%s/summary_mpi.npz" % datafolder
-        #ana.write_fitresults(fname, np.zeros((9,)), summ_mpi, dsumm_mpi, ddsumm_mpi)
-        #fname = "%s/summary_dE.npz" % datafolder
-        #ana.write_fitresults(fname, np.zeros((9,)), summ_dE, dsumm_dE, ddsumm_dE)
-        #fname = "%s/summary_a.npz" % datafolder
-        #ana.write_fitresults(fname, np.zeros((9,)), summ_a, dsumm_a, ddsumm_a)
-        #fname = "%s/summary_ampi.npz" % datafolder
-        #ana.write_fitresults(fname, np.zeros((9,)), summ_ampi, dsumm_ampi, ddsumm_ampi)
-    else:
-        pass
-        #fname = "%s/summary_mpi.npz" % datafolder
-        #_u, summ_mpi, dsumm_mpi, ddsum_mpi = ana.read_fitresults(fname)
-        #fname = "%s/summary_dE.npz" % datafolder
-        #_u, summ_dE, dsumm_dE, ddsumm_dE = ana.read_fitresults(fname)
-        #fname = "%s/summary_a.npz" % datafolder
-        #_u, summ_a, dsumm_a, ddsumm_a = ana.read_fitresults(fname)
-        #fname = "%s/summary_ampi.npz" % datafolder
-        #_u, summ_ampi, dsumm_ampi, ddsumm_ampi = ana.read_fitresults(fname)
+        # append to global list
+        summ_ampi.append(am_pipi)
+        dsumm_ampi.append(dam_stat)
+        ddsumm_ampi.append(dam_syst)
 
     w_pi, w_dpi, w_ddpi = wiki_dict()
-    print(w_pi, w_dpi, w_ddpi)
     print("mpi")
     for i, lat in enumerate(lattices):
         for p, dp, ddp in zip(summ_mpi[i], dsumm_mpi[i], ddsumm_mpi[i]):
@@ -204,21 +293,68 @@ def print_summary(datafolder, plotfolder, lattices, shift=0,
                   (lat, p, dp, ddp[1], ddp[0], w_pi[lat], w_dpi[lat], w_ddpi[lat], w_ddpi[lat],
                   (p-w_pi[lat])/dp, (p-w_pi[lat])/w_dpi[lat]))
 
-    #print("dE")
-    #for i, lat in enumerate(lattices):
-    #    for p, dp, ddp in zip(summ_dE[i], dsumm_dE[i], ddsumm_dE[i]):
-    #        for q, dq, ddq in zip(p, dp, ddp):
-    #            print("%8s: %.4f +- %.4f +%.4f -%.4f" % (lat, q, dq, ddq[1], ddq[0]))
-    #print("a")
-    #for i, lat in enumerate(lattices):
-    #    for p, dp, ddp in zip(summ_a[i], dsumm_a[i], ddsumm_a[i]):
-    #        for q, dq, ddq in zip(p, dp, ddp):
-    #            print("%8s: %5.2f +- %.2f +%.2f -%.2f" % (lat, q, dq, ddq[1], ddq[0]))
-    #print("a * mpi")
-    #for i, lat in enumerate(lattices):
-    #    for p, dp, ddp in zip(summ_ampi[i], dsumm_ampi[i], ddsumm_ampi[i]):
-    #        for q, dq, ddq in zip(p, dp, ddp):
-    #            print("%8s: %.3f +- %.3f +%.3f -%.3f" % (lat, q, dq, ddq[1], ddq[0]))
+    p_dE, p_ddE, p_dddE = paper_dE()
+    print("dE")
+    for i, lat in enumerate(lattices):
+        for p, dp, ddp in zip(summ_dE[i], dsumm_dE[i], ddsumm_dE[i]):
+            for q, dq, ddq in zip(p, dp, ddp):
+                print("%8s: %.4f +- %.4f +%.4f -%.4f\t%.4f +- %.4f +%.4f -%.4f\t%+.2f  %+.2f" %
+                      (lat, q, dq, ddq[1], ddq[0], p_dE[lat], p_ddE[lat], p_dddE[lat][1], p_dddE[lat][0],
+                      (q-p_dE[lat])/dq, (q-p_dE[lat])/p_ddE[lat]))
+
+    print("a")
+    for i, lat in enumerate(lattices):
+        for p, dp, ddp in zip(summ_a[i], dsumm_a[i], ddsumm_a[i]):
+            for q, dq, ddq in zip(p, dp, ddp):
+                print("%8s: %5.2f +- %.2f +%.2f -%.2f" % (lat, q, dq, ddq[1], ddq[0]))
+
+    p_am, p_dam, p_ddam = paper_am()
+    print("a * mpi")
+    for i, lat in enumerate(lattices):
+        for p, dp, ddp in zip(summ_ampi[i], dsumm_ampi[i], ddsumm_ampi[i]):
+            for q, dq, ddq in zip(p, dp, ddp):
+                print("%8s: %.3f +- %.3f +%.3f -%.3f\t%.3f +- %.3f +%.3f -%.3f\t%+.2f  %+.2f" %
+                      (lat, q, dq, ddq[1], ddq[0], p_am[lat], p_dam[lat], p_ddam[lat][1], p_ddam[lat][0],
+                      (q+p_am[lat])/dq, (q+p_am[lat])/p_dam[lat]))
+
+    # output for latex
+    print("mpi")
+    for i, lat in enumerate(lattices):
+        for p, dp, ddp in zip(summ_mpi[i], dsumm_mpi[i], ddsumm_mpi[i]):
+            print("%8s & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%+.2f$ \\\\" % 
+                  (lat, w_pi[lat], w_dpi[lat]*10000., w_ddpi[lat]*10000., w_ddpi[lat]*10000., p, dp*10000., ddp[1]*10000.,
+                  ddp[0]*10000., (p-w_pi[lat])/dp))
+
+    print("dE")
+    for i, lat in enumerate(lattices):
+        for p, dp, ddp in zip(summ_dE[i], dsumm_dE[i], ddsumm_dE[i]):
+            for q, dq, ddq in zip(p, dp, ddp):
+                print("%8s & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%+.2f$ \\\\" % 
+                      (lat, p_dE[lat], p_ddE[lat]*10000., p_dddE[lat][1]*10000., p_dddE[lat][0]*10000., q, dq*10000., ddq[1]*10000.,
+                      ddq[0]*10000., (q-p_dE[lat])/dq))
+
+    print("a")
+    for i, lat in enumerate(lattices):
+        for p, dp, ddp in zip(summ_a[i], dsumm_a[i], ddsumm_a[i]):
+            for q, dq, ddq in zip(p, dp, ddp):
+                print("%8s & $%.2f(%1.0f)(^{+%1.0f}_{-%1.0f})$ \\\\" % (lat, q, dq*100., ddq[1]*100., ddq[0]*100.))
+
+    print("a * mpi")
+    for i, lat in enumerate(lattices):
+        for p, dp, ddp in zip(summ_ampi[i], dsumm_ampi[i], ddsumm_ampi[i]):
+            for q, dq, ddq in zip(p, dp, ddp):
+                print("%8s & $%.3f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%.3f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%+.2f$ \\\\" % 
+                      (lat, p_am[lat], p_dam[lat]*1000., p_ddam[lat][1]*1000., p_ddam[lat][0]*1000., q, dq*1000., ddq[1]*1000.,
+                      ddq[0]*1000., (q-p_am[lat])/dq))
+
+    # output for latex, second principal correlator
+    print("dE")
+    for i, lat in enumerate(lattices):
+        for p, dp, ddp in zip(summ_dE[i], dsumm_dE[i], ddsumm_dE[i]):
+            for q, dq, ddq in zip(p, dp, ddp):
+                print("%8s & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%+.2f$ \\\\" % 
+                      (lat, (np.sqrt((p_dE[lat]+2.*w_pi[lat])**2-(2.*np.pi/L[lat])**2)-2.*w_pi[lat]), p_ddE[lat]*10000., p_dddE[lat][1]*10000., p_dddE[lat][0]*10000., q, dq*10000., ddq[1]*10000.,
+                      ddq[0]*10000., (q-(np.sqrt((p_dE[lat]+2.*w_pi[lat])**2-(2.*np.pi/L[lat])**2)-2.*w_pi[lat]))/dq))
     return
 
 def main():
