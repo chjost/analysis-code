@@ -64,7 +64,7 @@ def corr_fct_with_fit(_X, _Y, _dY, fitfunc, args, plotrange, label, pdfplot,
     plt.xlabel(label[1])
     plt.ylabel(label[2])
     plt.title(label[0])
-    plt.legend()
+    plt.legend(ncol=2)
     if logscale:
         plt.yscale('log')
     # set the axis ranges

@@ -27,7 +27,7 @@
 ################################################################################
 
 import matplotlib
-matplotlib.use('QT4Agg') # has to be imported before the next lines
+matplotlib.use('Agg') # has to be imported before the next lines
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
@@ -36,14 +36,14 @@ import analysis as ana
 
 def main():
     ## definition of some variables
-    nbsamples = 1500
+    nbsamples = 250
     #inputpath="/hiskp2/helmes/contractions/A40.24/kaon/strange_225/merged/"
     #outputpath="/hiskp2/helmes/contractions/A40.24/kaon/strange_225/merged/scratch/"
-    inputpath="/hiskp2/helmes/contractions/A60.24/k-k/strange_185/merged"
-    outputpath="/hiskp2/helmes/contractions/A60.24/k-k/strange_185/merged/scratch"
-    suffix="k_corr_p0.dat"
-    suffix1="k_p0_average.dat"
-    suffix2="k_p0_mass.dat"
+    inputpath="/hiskp2/helmes/contractions/B85.24/charm_test/merged/"
+    outputpath="/hiskp2/helmes/contractions/B85.24/charm_test/merged/scratch/"
+    suffix="eta_c_ps.dat"
+    suffix1="eta_c_p0_average.dat"
+    suffix2="eta_c_p0_mass.dat"
     inputlist=[""]
     #inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/"
     #outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/"
@@ -96,16 +96,18 @@ def main():
         #                      [1,T2-2], label, pfit, False)
 
         # single kaon
-        label = ["single kaon, A40.24", "time", "C(t)", "data", ""]
+        label = ["single eta_c, B85.24", "time", "C(t)", "data", ""]
         up=T2-1
         for lo in range(12, bsamples.shape[1]-11):
             #for up in range(lo+5, bsamples.shape[1]):
-            res, chi2, pval = ana.fitting(fitfunc, tlist[lo:up], bsamples[:,lo:up], [1., 1.], verbose=1)
+            res, chi2, pval = ana.fitting(fitfunc, tlist[lo:up], bsamples[:,lo:up], [2., 2.], verbose=1)
             print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, E %.7lf" % (lo, up, pval[0], chi2[0]/(len(tlist[lo:up])-2), res[0,1]))
             fitlabel = "fit %d:%d" % (lo, up-1)
-            label[3] = fitlabel
-            ana.corr_fct_with_fit(tlist, bsamples[0], ddata, fitfunc, res[0],
-                                       [1,T2-2], label, pfit, True, True, [lo,up])
+            label[3]
+            print res[0].shape
+            ana.corr_fct_with_fit(tlist, mdata, ddata , fitfunc, res[0],
+                                       [1,T2-2], label, pfit, True, True,
+                                       fitrange=[lo,up])
         mass, mmass, dmass = ana.compute_mass(bsamples, True)
         ana.corr_fct_with_fit(tlist[:-2], mmass, dmass, massfunc, res[0,1],
                               [1,T2], label, pfit, False, False)
@@ -116,4 +118,4 @@ if __name__ == '__main__':
     try:
         main()
     except KeyboardInterrupt:
-        print("Keyboard Interrupt")
+      print("Keyboard Interrupt")

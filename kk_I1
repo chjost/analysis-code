@@ -48,11 +48,14 @@ def main():
     # Strange quark masses and unitary kaon mass
     #mk_unit = 0.26695
     #dmk_unit = 0.00052
-    amu_s = [0.0185,0.0225,0.02464]
+    #A-ensemble strange quark masses
+    amu_s = [0.0225]
+    #B-ensemble strange quark masses
+    #amu_s = [0.016, 0.01861, 0.021]
     p_zero = np.asarray([0,0,0])
     #amu_s = [0.0225]
     #ensemblelist = ['A40.24/','A60.24/','A80.24/','A100.24/']
-    ensemblelist = ['A60.24/']
+    ensemblelist = ['A40.24/']
     filelist = ['k_corr_p0.dat','kk_A1_TP0_00.dat']
     #filelist = ['C2.dat','kpi_4.dat']
     pathroot ="/hiskp2/helmes/k-k-scattering/"
@@ -126,7 +129,7 @@ def main():
             mass, mmass, dmass = ana.compute_mass(bsamples_k, True)
             # ana.scan_fit_range(massfunc, tlist_corr,mass, par_mass)
             # TODO: set two points more than wanted for upper limit
-            ranges = ana.set_fit_interval(mass, [9], [24], 9)
+            ranges = ana.set_fit_interval(mass, [9], [24], 7)
             
             # For mass use one parameter fit
             # res has shape (nb_samples, nb_pars, ncorr, nb_fitranges)
