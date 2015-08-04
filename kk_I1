@@ -49,7 +49,7 @@ def main():
     #mk_unit = 0.26695
     #dmk_unit = 0.00052
     #A-ensemble strange quark masses
-    amu_s = [0.0225]
+    amu_s = [0.0185,0.0225,0.02464]
     #B-ensemble strange quark masses
     #amu_s = [0.016, 0.01861, 0.021]
     p_zero = np.asarray([0,0,0])
@@ -156,6 +156,12 @@ def main():
             m_k_w, dm_stat, dm_sys, weights_m_k = ana.sys_error(res,pval,
                                                                 p_zero,prefix,
                                                                 path=tmp_out)
+
+            _m_k_w, _dm_stat, _dm_sys, _weights_m_k = ana.sys_error(res,pval,
+                                                                p_zero,prefix,
+                                                                path=tmp_out,boot=True)
+            m_k_path = datapath + "m_k_" + str(amu_s[s])[3:] + ".npy" 
+            ana.write_data(_m_k_w, m_k_path)
             print("m_k +/- d_stat(m_k) + d_sys(m_k) -d_sys(m_k)\n%f +/- %f +%f-%f\n" 
                 %(m_k_w[0], dm_stat[0], dm_sys[0][0], dm_sys[0][1]))
             #print("weights_m_k shape is:%d" % weights_m_k.shape)
@@ -226,7 +232,8 @@ def main():
             #weights_del_E = np.atleast_2d(weights_del_E)
             #weights_del_E.shape = (9,1)
             #a_kk.shape = (1500,1,9)
-            a_kk_w, a_kk_stat, a_kk_sys = ana.sys_error_der(a_kk, weights_a_kk ,p_zero,ens[:-1])
+            a_kk_w, a_kk_stat, a_kk_sys = ana.sys_error_der(a_kk, weights_a_kk,
+                p_zero,ens[:-1],boot=False)
             #print a_kk_w[0][0], a_kk_stat[0][0], a_kk_sys[0][0][1]
             #print("%f\t%f +/- %f\t%f +/- %f\t%f +/- %f\t%f +/- %e"%(amu_s[s],
             #  m_k_w, dm_stat, dm_sys, del_E_w, ddel_E_stat, ddel_E_sys,
@@ -243,63 +250,21 @@ def main():
             # To match the shapes the tiling is done by the second fit range
             ma_k , weights_ma_k = ana.multiply(a_kk, res, weights_a_kk,
                 weights_m_k, pars=(None,0))
-            ma_k_w , ma_k_stat, ma_k_sys = ana.sys_error_der(ma_k, weights_ma_k, p_zero, ens[:-1])
+            ma_k_w , ma_k_stat, ma_k_sys = ana.sys_error_der(ma_k, weights_ma_k,
+                p_zero, ens[:-1], boot=True)
+            scat_length_path = datapath + "scat_length_" + str(amu_s[s])[3:] + ".npy" 
+            ana.write_data(ma_k_w, scat_length_path)
 
-            save_res.write("%f\t%f %f +%f-%f\t%f +/- %f +%f-%f\t%f +/- %f +%f-%f\t%f +/- %f +%f-%f\n"
-              %(amu_s[s],
-              m_k_w[0], dm_stat[0], dm_sys[0][0], dm_sys[0][1], 
-              del_E_w[0][0], ddel_E_stat[0][0], ddel_E_sys[0][0][0],ddel_E_sys[0][0][1],
-              a_kk_w[0][0], a_kk_stat[0][0], a_kk_sys[0][0][0], a_kk_sys[0][0][1],
-              ma_k_w[0][0], ma_k_stat[0][0], ma_k_sys[0][0][0], ma_k_sys[0][0][1]))
+
+            #save_res.write("%f\t%f %f +%f-%f\t%f +/- %f +%f-%f\t%f +/- %f +%f-%f\t%f +/- %f +%f-%f\n"
+            #  %(amu_s[s],
+            #  m_k_w[0], dm_stat[0], dm_sys[0][0], dm_sys[0][1], 
+            #  del_E_w[0][0], ddel_E_stat[0][0], ddel_E_sys[0][0][0],ddel_E_sys[0][0][1],
+            #  a_kk_w[0][0], a_kk_stat[0][0], a_kk_sys[0][0][0], a_kk_sys[0][0][1],
+            #  ma_k_w[0][0], ma_k_stat[0][0], ma_k_sys[0][0][0], ma_k_sys[0][0][1]))
 
         
         save_res.close()
-
-        ##----------------- Start analysis ------------------------------------------
-
-        ## reshape data by switching axes
-        #a_k_fin = a_k_dat.T
-        #m_k_fin = m_k_dat.T
-
-        ## Unitary mass matching of amu_s
-        ## fit samples to straight line
-        ##linear fitfunction
-        #par_match = [0.1,2.]
-        #m_k2 = lambda p, mu : p[0]*mu+p[1]
-        #res_m2, chi2_m2, pvals_m2 = ana.fitting(m_k2,
-        #    np.asarray(amu_s)[1:], m_k_fin[:,1:]**2, par_match, None, False, False)
-
-        ## Create parametrized bootstrap samples for unitary mass
-        #mk_u = np.random.normal(mk_unit, dmk_unit, len(corrs_k[0]))
-        #m_k_unit = ana.bootstrap(mk_u, nbsamples)
-        ## extract nb_samples amu_s values
-        #amu_s_fin = (m_k_unit**2-res_m2[:,1])/res_m2[:,0] 
-        ## print out mean and standard deviation
-        ##print("amu_s from unitary Kaon matching:")
-        ##print("amu_s^unit: %f +/- %f\n" % (np.median(amu_s_fin), np.std(amu_s_fin)))
-        #
-        ## Extract a_kk*am_k
-        #par_match = [0.5,-2]
-        #res_makk, chi2_makk, pvals_makk = ana.fitting(m_k2,
-        #    np.asarray(amu_s)[1:], a_k_fin[:,1:]*m_k_fin[:,1:], par_match, None,
-        #    False, False)
-        #akk_mk = res_makk[:,1]+res_makk[:,0]*amu_s_fin
-        ##print("Extracted m_k*a_kk:")
-        ##print("m_k*akk: %f +/- %f\n" % (np.median(akk_mk), np.std(akk_mk)))
-        ###plot data
-        ##pscat = PdfPages("%s%skk_.pdf" % (tmp_out,"a_"))
-        ###fit linear functions
-        ##coef,stats = P.polyfit(scat_dat[:,0], scat_dat[:,1]**2,1,None,True,scat_dat[:,2]**2)
-        ##print(coef, stats)
-        ###linear fitfunction
-        ##m_k2 = lambda p, mu : p[0]*mu+p[1]
-        ###plot data with linear regression
-        ##m_k_sq = ["Kaon scatt. length",  "a_mu_s", "m_K^2","A40.24", "data", ""]
-        ##
-        ##ana.corr_fct_with_fit(scat_dat[:,0],scat_dat[:,1]**2,scat_dat[:,2]**2,m_k2,
-        ##    coef[::-1], [0,2],m_k_sq, pscat, False, False, [0.0185,0.02464])
-        ##pscat.close()
-
 
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':

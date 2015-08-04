@@ -102,16 +102,18 @@ def calc_error(data, axis=0):
     err  = np.std(data, axis)
     return mean, err
 
-def sys_error_der(data, weights, d, lattice, path="./plots/"):
+def sys_error_der(data, weights, d, lattice, path="./plots/", boot=False):
     """Error calculation for derived results
     
     Args:
         data: the derived data
         weight: a (multidimensional) np-array holding the combination of weights
         for all combination of fit intervals
+        boot: Flag controlling output. If false, median over bootstrap samples
+        is calculated, otherwise bootstrap samples are kept and res is an array
 
     Returns:
-        res: The weighted median value on the original data
+        res: The weighted median value on the original data, see flag "boot"
         res_std: The standard deviation derived from the deviation of 
               medians on the bootstrapped data.
         res_syst: 1 sigma systematic uncertainty is the difference 
@@ -147,8 +149,12 @@ def sys_error_der(data, weights, d, lattice, path="./plots/"):
             # on the original data and the 16%- or 84%-quantile respectively
             res_sys[i][0]=res[i][0]-qlt.weighted_quantile(p[0],weights[i],0.16)
             res_sys[i][1]=qlt.weighted_quantile(p[0],weights[i],0.84)-res[i][0]
-            # keep only the median of the original data
-            res[i] = res[i][0]
+            if not boot:
+                # keep only the median of the original data
+                res[i] = res[i][0]
+            else:
+                # keep all the bootstrap samples
+                res[i] = res[i]
     elif deep == 2:
         # initialize empty arrays
         res, res_std, res_sys = [], [], []
@@ -179,11 +185,15 @@ def sys_error_der(data, weights, d, lattice, path="./plots/"):
                 # on the original data and the 16%- or 84%-quantile respectively
                 res_sys[i][j][0]=res[i][j][0]-qlt.weighted_quantile(q[0].ravel(),weights[i][j].ravel(),0.16)
                 res_sys[i][j][1]=qlt.weighted_quantile(q[0].ravel(),weights[i][j].ravel(),0.84)-res[i][j][0]
-                # keep only the median of the original data
-                res[i][j] = res[i][j][0]
+                if not boot:
+                    # keep only the median of the original data
+                    res[i][j] = res[i][j][0]
+                else:
+                    # keep bootstrapsamples
+                    res[i][j] = res[i][j]
     return res, res_std, res_sys
 
-def sys_error(data, pvals, d, lattice, par=0, path="./plots/"):
+def sys_error(data, pvals, d, lattice, par=0, path="./plots/",boot=False):
     """Calculates the statistical and systematic error of an np-array of 
     fit results on bootstrap samples of a quantity and the corresponding 
     p-values.
@@ -196,9 +206,11 @@ def sys_error(data, pvals, d, lattice, par=0, path="./plots/"):
         d:    The total momentum of the reaction.
         par: which parameter to plot (second index of data arrays)
         path: path where the plots are saved
+        boot: Flag controlling output. If false, median over bootstrap samples
+        is calculated, otherwise bootstrap samples are kept and res is an array
 
     Returns:
-        res: The weighted median value on the original data
+        res: The weighted median value on the original data, see flag "boot"
         res_std: The standard deviation derived from the deviation of 
               medians on the bootstrapped data.
         res_syst: 1 sigma systematic uncertainty is the difference 
@@ -242,8 +254,12 @@ def sys_error(data, pvals, d, lattice, par=0, path="./plots/"):
             # on the original data and the 16%- or 84%-quantile respectively
             res_sys[i][0]=res[i][0]-qlt.weighted_quantile(p[0,par],data_weight[i],0.16)
             res_sys[i][1]=qlt.weighted_quantile(p[0,par],data_weight[i],0.84)-res[i][0]
-            # keep only the median of the original data
-            res[i] = res[i][0]
+            if not boot:
+                # keep only the median of the original data
+                res[i] = res[i][0]
+            else:
+                # keep bootstrapsamples
+                res[i] = res[i]
     elif deep == 2:
         # initialize empty arrays
         data_weight = []
@@ -282,8 +298,12 @@ def sys_error(data, pvals, d, lattice, par=0, path="./plots/"):
                 # on the original data and the 16%- or 84%-quantile respectively
                 res_sys[i][j][0] = res[i][j][0] - qlt.weighted_quantile(q[0,par].ravel(), data_weight[i][j].ravel(), 0.16)
                 res_sys[i][j][1] = qlt.weighted_quantile(q[0,par].ravel(), data_weight[i][j].ravel(), 0.84) - res[i][j][0]
-                # keep only the median of the original data
-                res[i][j] = res[i][j][0]
+                if not boot:
+                    # keep only the median of the original data
+                    res[i][j] = res[i][j][0]
+                else:
+                    # keep bootstrapsamples
+                    res[i][j] = res[i][j]
     else:
         print("made for lists of depth < 3")
         os.sys.exit(-10)
