@@ -43,7 +43,8 @@ from matplotlib.backends.backend_pdf import PdfPages
 import analysis as ana
 def main():
 
-  #----------- Define global parameters, like number of ensembles
+  #----------- Define global parameters, like number of ensembles -------------
+  
   # A-ensemble strange quark masses
   amu_s = [0.0185,0.0225,0.02464]
   nb_mu_s = len(amu_s)
@@ -52,28 +53,36 @@ def main():
   # cache path for fit results
   cache_path = "/hiskp2/helmes/k-k-scattering/data/cache/"
 
-  # Numpy array for scattering length (dim: nb_samples, nb_mu_s)
-  ma_kk_sum = np.zeros((1500,3))
+  # Numpy array for mass and scattering length (dim: nb_samples, nb_mu_s)
+  mk_sum = np.zeros((1500,3))
+  ma_kk_sum = np.zeros_like(mk_sum)
   print ma_kk_sum.shape
 
-  #----------- Read in the data we want and resort it  ------------------------
-  for s in range(0,nb_mu_s):
-    # Scattering length input
-    infile_ma_kk = src_path + "scat_length_" + str(amu_s[s])[3:] + ".npy"
+
+  #----------- Read in samples: m_k, a0, mk_a0 --------------------------------
+
+  for s in range(0, nb_mu_s):
+    # mk_a0 input
+    infile_ma_kk = src_path + "mk_a0_" + str(amu_s[s])[3:] + ".npy"
     ma_kk = ana.read_data(infile_ma_kk)
     # Kaon mass input
-    infile_mk = cache_path + "A40.24_" + str(amu_s[s])[3:] +"_k_corr_p0.datgenfit_mass.npz"
-    ranges, mk, chi2_mk, pvals_mk = ana.read_fitresults(infile_mk)
+    infile_mk = src_path + "m_k_" + str(amu_s[s])[3:] +".npy"
+    mk = ana.read_data(infile_mk)
     print mk
 
-    print ma_kk[0,0].shape
-  # Append read in results to array.
-    ma_kk_sum[:,s] = ma_kk[0,0]
+    print ma_kk.shape
+  # Append read in results to arrays.
+    ma_kk_sum[:,s] = ma_kk
+    mk_sum[:,s] = mk
+
+
   #----------- Fits to resorted data (Bootstrapsamplewise) --------------------
-  print ma_kk_sum[0,:]
+
+  print ma_kk_sum[0,:], mk_sum[0,:]
   # Linear interpolation
   # Quadratic interpolation
   # linear fit
+
 
   #----------- Make a nice plot including CHiPT tree level --------------------
 
