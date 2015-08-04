@@ -397,6 +397,75 @@ def calc_scat_length(dE, E, weight_dE, weight_E, L, pars=(1, 0)):
                         weight[_r][_s][_g, _f] = weight_dE[_r][_s][_g,_f] * weight_E[_r][_f]
     return a, weight
 
+def calc_scat_length_bare(dE, E, L):
+    """Finds root of the Energyshift function up to order L^{-5} only applicable
+    in 0 momentum case, effective range not included!
+    Only working for lists of lists.
+
+    Args:
+        dE: the energy shift of the system due to interaction
+        E: the single particle energy
+        L: The spatial lattice extent
+    Returns:
+        a: roots of the function
+    """
+    ncorr_single = len(E)
+    # check if dE has same length
+    if len(dE) is not ncorr_single:
+        print("error in calc_scat_length, data shapes incompatible")
+        print(len(dE), len(E))
+        os.sys.exit(-10)
+    ncorr_ratio = [len(d) for d in dE]
+    print ncorr_ratio
+    # check number of bootstrap samples and fit intervals for single particle
+    for i in xrange(ncorr_single):
+        for j in xrange(ncorr_ratio[i]):
+            print len(dE[0])
+            print E[0].shape, dE[0][0].shape
+            if E[i].shape[0] != dE[i][j].shape[0]:
+                print("number of bootstrap samples is different in calc_scat_length")
+                print(E[i].shape[0], dE[i][j].shape[0])
+                os.sys.exit(-10)
+            if E[i].shape[-1] != dE[i][j].shape[-1]:
+                print("number of fit intervals is different in calc_scat_length")
+                print(E[i].shape[-1], dE[i][j].shape[-1])
+                os.sys.exit(-10)
+    #print("scat length begin")
+    ## number of correlation functions for the single particle energy
+    #print(len(dE), len(E))
+    ## number of correlation functions for the ratio
+    #print(len(dE[0]))
+    ## shape of the fit results
+    #print(dE[0][0].shape, E[0].shape)
+    # coefficients according to Luescher
+    c=[-2.837297, 6.375183, -8.311951]
+    # creating data array from empty array
+    a = []
+    for i in xrange(ncorr_single):
+        a.append([])
+        for j in xrange(ncorr_ratio[i]):
+            a[i].append(np.zeros((1500)))
+    # loop over the correlation functions
+    for _r in xrange(ncorr_single): # single particle
+        for _s in xrange(ncorr_ratio[_r]): # ratio
+            # calculate prefactor
+            # TODO(CJ): can the shape of E[i] change?
+            pre = -4.*np.pi/(E[_r]*float(L*L*L))
+            # loop over bootstrap samples
+            for _b in xrange(E[_r].shape[0]):
+                p = np.asarray((pre[_b]*c[1]/float(L*L), 
+                    pre[_b]*c[0]/float(L), pre[_b],
+                    -1.*dE[_r][_s][_b]))
+                # calculate roots
+                root = np.roots(p)
+                # sort according to absolute value of the imaginary part
+                ind_root = np.argsort(np.fabs(root.imag))
+                if(root[ind_root][0].imag) > 1e-6:
+                    print("imaginary part of root > 1e-6 for c1 %d, c2 %d, f1 %d, f2 %d, b %d" % (_r, _s, _f, _g, _b))
+                # the first entry of the sorted array is the one we want
+                a[_r][_s][_b] = root[ind_root][0].real
+    return a
+
 def multiply(data1, data2, w1, w2, pars=(1, 0)):
     """Multiply a list of lists of numpy arrays with a list of numpy arrays.
     Needed for the calculation of scattering length and single particle mass.

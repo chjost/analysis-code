@@ -203,7 +203,7 @@ def main():
                 ana.write_fitresults(genfit_ratio_cache, ranges1, res_R, chi2_R, pvals_R)
           
             # Reshape res_R and pvals_R for systematic error calculation
-            r = len(ranges[0])*len(ranges1[0]) 
+            #r = len(ranges[0])*len(ranges1[0]) 
             #print res_R.size, pvals_R.size
             #print r, nbsamples 
             #w_res_R = np.reshape(res_R, (nbsamples,2,1,r))
@@ -212,9 +212,10 @@ def main():
             del_E_w, ddel_E_stat, ddel_E_sys , weights_del_E = ana.sys_error(res_R,
                                                                   pvals_R, p_zero,
                                                                   prefix,par=1,
-                                                                  path=tmp_out)
+                                                                  path=tmp_out,
+                                                                  boot = True)
             print("delE +/- d_stat(del_E) + d_sys(del_E) -d_sys(del_E)\n%f +/- %f +%f-%f\n" 
-                %(del_E_w[0][0], ddel_E_stat[0][0], ddel_E_sys[0][0][0], ddel_E_sys[0][0][1]))
+                %(del_E_w[0][0][0], ddel_E_stat[0][0], ddel_E_sys[0][0][0], ddel_E_sys[0][0][1]))
             #print("weights_delE shape is:%d" % weights_m_k.shape)
             
  #           prat.close()
@@ -224,7 +225,7 @@ def main():
           #  #---------------------- Scattering length a_kk --------------------
 
             # calculate Scattering length
-            a_kk, weights_a_kk= ana.calc_scat_length(res_R, res, weights_del_E, weights_m_k, L)
+            a_kk = ana.calc_scat_length_bare(del_E_w, _m_k_w, L)
             # and its median and errors and weights
             # print a_kk.shape, weights_del_E.shape
             # TODO: reshape is nasty but necessary...
@@ -232,8 +233,8 @@ def main():
             #weights_del_E = np.atleast_2d(weights_del_E)
             #weights_del_E.shape = (9,1)
             #a_kk.shape = (1500,1,9)
-            a_kk_w, a_kk_stat, a_kk_sys = ana.sys_error_der(a_kk, weights_a_kk,
-                p_zero,ens[:-1],boot=False)
+            #a_kk_w, a_kk_stat, a_kk_sys = ana.sys_error_der(a_kk, weights_a_kk,
+            #    p_zero,ens[:-1],boot=False)
             #print a_kk_w[0][0], a_kk_stat[0][0], a_kk_sys[0][0][1]
             #print("%f\t%f +/- %f\t%f +/- %f\t%f +/- %f\t%f +/- %e"%(amu_s[s],
             #  m_k_w, dm_stat, dm_sys, del_E_w, ddel_E_stat, ddel_E_sys,
@@ -247,13 +248,12 @@ def main():
             #  a_kk_w[0][0], a_kk_stat[0][0], a_kk_sys[0][0][0], a_kk_sys[0][0][1]))
             
             #------------------------- m_k*a_kk -------------------------------
-            # To match the shapes the tiling is done by the second fit range
-            ma_k , weights_ma_k = ana.multiply(a_kk, res, weights_a_kk,
-                weights_m_k, pars=(None,0))
-            ma_k_w , ma_k_stat, ma_k_sys = ana.sys_error_der(ma_k, weights_ma_k,
-                p_zero, ens[:-1], boot=True)
+            # Using bootstrapped median of a_kk and m_k
+            ma_k = np.multiply(a_kk, _m_k_w)
+            #ma_k_w , ma_k_stat, ma_k_sys = ana.sys_error_der(ma_k, weights_ma_k,
+            #    p_zero, ens[:-1], boot=True)
             scat_length_path = datapath + "scat_length_" + str(amu_s[s])[3:] + ".npy" 
-            ana.write_data(ma_k_w, scat_length_path)
+            ana.write_data(ma_k, scat_length_path)
 
 
             #save_res.write("%f\t%f %f +%f-%f\t%f +/- %f +%f-%f\t%f +/- %f +%f-%f\t%f +/- %f +%f-%f\n"
