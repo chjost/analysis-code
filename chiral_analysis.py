@@ -52,10 +52,12 @@ def main():
   src_path = "/hiskp2/helmes/k-k-scattering/data/A40.24/"
   # cache path for fit results
   cache_path = "/hiskp2/helmes/k-k-scattering/data/cache/"
+  # Path for plots
+  plt_path = "/hiskp2/helmes/k-k-scattering/plots/A40.24/"
 
   # Numpy array for mass and scattering length (dim: nb_samples, nb_mu_s)
-  mk_sum = np.zeros((1500,3))
-  ma_kk_sum = np.zeros_like(mk_sum)
+  mk_sq_sum = np.zeros((1500,3))
+  ma_kk_sum = np.zeros_like(mk_sq_sum)
   print ma_kk_sum.shape
 
 
@@ -73,18 +75,36 @@ def main():
     print ma_kk.shape
   # Append read in results to arrays.
     ma_kk_sum[:,s] = ma_kk
-    mk_sum[:,s] = mk
+    mk_sq_sum[:,s] = np.square(mk)
 
 
   #----------- Fits to resorted data (Bootstrapsamplewise) --------------------
 
-  print ma_kk_sum[0,:], mk_sum[0,:]
+  print ma_kk_sum[0,:], mk_sq_sum[0,:]
   # Linear interpolation
   # Quadratic interpolation
   # linear fit
+  
+  # calculate mean and standard deviation from samples
+  ma_kk_mean, ma_kk_std = ana.calc_error(ma_kk_sum, 0)
+  mk_sq_mean, mk_sq_std = ana.calc_error(mk_sq_sum, 0)
+  print ma_kk_mean, ma_kk_std, mk_sq_mean, mk_sq_std
 
+  #------------------ Plot mk_a0 and mk^2 vs. amu_s ---------------------------
+  
+  # Plot original data together with statistical error
+  # Savepaths
+  pltout_mk_sq = plt_path+"mk_sq_chiral.pdf"
+  pltout_ma_kk = plt_path+"ma_kk_chiral.pdf"
+  # PDFplots
+  pdf_mk = PdfPages(pltout_mk_sq) 
+  pdf_ma_kk = PdfPages(pltout_ma_kk) 
+  # Labels
+  label_mk_sq = [r'Chiral behaviour of $M_K$',r'$a\mu_s$',r'$M_K^2$',r'data']
+  label_ma_kk = [r'Chiral behaviour of $a_0M_K$',r'$a\mu_s$',r'$a_0M_K$',r'data']
+  ana.plot_data(amu_s, mk_sq_sum[0,:], mk_sq_std, pdf_mk, label_mk_sq)
+  ana.plot_data(amu_s, ma_kk_sum[0,:], ma_kk_std, pdf_ma_kk, label_ma_kk)
 
-  #----------- Make a nice plot including CHiPT tree level --------------------
 
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':
