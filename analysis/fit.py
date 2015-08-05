@@ -61,7 +61,6 @@ def fitting(fitfunc, X, Y, start_parm, E_single=None, correlated=True, verbose=T
     else:
         cov = np.cov(Y.T)
     cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
-
     # degrees of freedom
     dof = float(Y.shape[1]-len(start_parm)) 
     # create results arrays
