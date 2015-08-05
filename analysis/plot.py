@@ -39,14 +39,16 @@ def plot_data_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
     if isinstance(plotrange, (np.ndarray, list, tuple)):
         plotrange = np.asarray(plotrange).flatten()
         if plotrange.size < 2:
-            raise IndexError("plotrange has not enough indices")
+            raise IndexError("plotrange is too small")
         else:
             l = int(plotrange[0])
             u = int(plotrange[1])
+        # plot the data
+        p1 = plt.errorbar(X[l:u], Y[l:u], dY[l:u], fmt='x' + 'b', label = label[3])
     else:
-        l = 0
-        u = x.shape[0]
-    p1 = plt.errorbar(X[l:u], Y[l:u], dY[l:u], fmt='x' + 'b', label = label[3])
+        # plot the data
+        p1 = plt.errorbar(X, Y, dY, fmt='x' + 'b', label = label[3])
+
     # plotting the fit function, check for seperate range
     if isinstance(fitrange, (np.ndarray, list, tuple)):
         fitrange = np.asarray(fitrange).flatten()
@@ -109,7 +111,7 @@ def plot_data_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
 #  plt.bar(center, hist, align='center', width=width)
 #  plt.show()
 
-def plot_data(X, Y, dY, pdfplot, plotrange=None, logscale=False, xlim=None, ylim=None):
+def plot_data(X, Y, dY, pdfplot, label, plotrange=None, logscale=False, xlim=None, ylim=None):
     """A function that plots a correlation function.
 
     This function plots the given data points and the fit to the data. The plot
@@ -121,6 +123,7 @@ def plot_data(X, Y, dY, pdfplot, plotrange=None, logscale=False, xlim=None, ylim
         Y: The data for the y axis.
         dY: The error on the y axis data.
         pdfplot: A PdfPages object in which to save the plot.
+        label: label for the plot
         plotrange: A list with two entries, the lower and upper range of the
                    plot.
         logscale: Make the y-scale a logscale.
@@ -134,22 +137,21 @@ def plot_data(X, Y, dY, pdfplot, plotrange=None, logscale=False, xlim=None, ylim
     if isinstance(plotrange, (np.ndarray, list, tuple)):
         plotrange = np.asarray(plotrange).flatten()
         if plotrange.size < 2:
-            raise indexerror("plotrange is too small")
+            raise IndexError("plotrange is too small")
         else:
             l = int(plotrange[0])
             u = int(plotrange[1])
+        # plot the data
+        p1 = plt.errorbar(X[l:u], Y[0,l:u], dY[l:u], fmt='x' + 'b', label=label[3])
     else:
-        l = 0
-        u = x.shape[0]
-
-    # plot the data
-    p1 = plt.errorbar(X[l:u], Y[l:u], dY[l:u], fmt='x' + 'b', label="data")
+        # plot the data
+        p1 = plt.errorbar(X, Y[0], dY, fmt='x' + 'b', label=label[3])
 
     # adjusting the plot style
     plt.grid(True)
-    #plt.xlabel(label[1])
-    #plt.ylabel(label[2])
-    #plt.title(label[0])
+    plt.xlabel(label[1])
+    plt.ylabel(label[2])
+    plt.title(label[0])
     plt.legend()
     if logscale:
         plt.yscale('log')
