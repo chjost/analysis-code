@@ -73,10 +73,12 @@ def plot_data_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
     p2, = plt.plot(x1, y1, color='#2aa198',alpha=0.75, label = label[4])
     # Plotting an additional constant
     if isinstance(hconst, (np.ndarray,list,tuple)):
-        plt.axhline(hconst[0],color='#b58900',label=label[5])
+        plt.axhline(hconst[0],color='#b58900')
+        plt.text(X[0],hconst[0]+X[0]/100.,label[5])
         plt.axhspan(hconst[0]+hconst[1],hconst[0]-hconst[1],alpha=0.35,color='gray')
     if isinstance(vconst, (np.ndarray,list,tuple)):
-        plt.axvline(vconst[0],color='#859900',label=label[6])
+        plt.axvline(vconst[0],color='#859900')
+        plt.text(vconst[0],Y[0],label[6])
         plt.axvspan(vconst[0]+vconst[1],vconst[0]-vconst[1],alpha=0.35,color='gray')
     # adjusting the plot style
     plt.grid(True)

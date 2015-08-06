@@ -529,3 +529,64 @@ def multiply(data1, data2, w1, w2, pars=(1, 0)):
                 a[r][s][:,g] = d1 * d2
                 weight[r][s][g] = w1[r][s][g] * w2[r]
     return a, weight
+
+
+def match_qm(pars, par_match):
+    """ Quark mass matching for a given matching parameter
+
+        Matching the quark mass on nb bootstrapsamples by finding the roots of a
+        given linear function
+
+        Args:
+            pars: dim-d numpy array of parameters (m, b) of bootstrapsamples assuming
+                  linear behaviour (2 coefficients per sample)
+            par_match: the parameter to match to
+
+        Returns:
+            b_roots: The root of m*amu_s+b-par_match for every bootstrapsample
+    """
+    # empty array same size as the parameters
+    b_roots = np.zeros_like(pars[:,0])
+    # Loop over the bootstrapsamples
+    if (pars.shape[1] == 2):
+        for _b in range(pars.shape[0]):
+            p = np.asarray([pars[_b,0],pars[_b,1]-par_match[0]])
+            b_roots[_b] = np.roots(p)
+    elif (pars.shape[1] == 3):
+        for _b in range(pars.shape[0]):
+            p = np.asarray([pars[_b,0],pars[_b,1],pars[_b,2]-par_match[0]])
+            b_roots[_b] = np.roots(p)[1]
+    else:
+        print("Dimension not implemented yet")
+
+    return b_roots
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

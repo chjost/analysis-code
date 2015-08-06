@@ -31,6 +31,7 @@
 # system imports
 import os.path as osp
 from scipy import stats
+from scipy import interpolate as ip
 import numpy as np
 from numpy.polynomial import polynomial as P
 import math
@@ -87,17 +88,50 @@ def main():
   # Quadratic interpolation
   # linear fit
   linfit = lambda p, t: p[0]*t+p[1]
+  # quadratic interpolation
+  sqfit = lambda p, t: p[0]*t**2+p[1]*t+p[2]
   # Fit straigth line to every bootstrapsample
   p_mk_sq, chi2_mk_sq, pvals_mk_sq = ana.fitting(linfit, amu_s, mk_sq_sum, [2.,1.])
+  # match unitary mass to linear fit
+  b_roots_fit = ana.match_qm(p_mk_sq, mk_unit_sq)
+  mean_amu_s, std_amu_s = ana.calc_error(b_roots_fit)
+  print("amu_s from unitary M_K matching\n")
+  print("lin. fit:\t amu_s = %f +/- %f" % (mean_amu_s, std_amu_s))
+
   #TODO: Make this a seperate function
-  # find roots for all bootstrapsamples
-  b_roots = []
+  # Use a bootstrapsamplewise linear, newtonian interpolation 
+  b_m = np.divide((mk_sq_sum[:,2]-mk_sq_sum[:,1]),(amu_s[2]-amu_s[1]))
+  b_b = mk_sq_sum[:,1]-np.multiply(b_m,amu_s[1])
+  interp1 = np.zeros_like(p_mk_sq)
+  interp1[:,0], interp1[:,1] = b_m, b_b
+  b_roots_p1 = ana.match_qm(interp1, mk_unit_sq)
+
+  mean_amu_s_p1, std_amu_s_p1 = ana.calc_error(b_roots_p1)
+  print("lin. i-pol.:\tamu_s = %f +/- %f" % (mean_amu_s_p1, std_amu_s_p1))
+        
+  #TODO: Make this a seperate function
+  # Use a bootstrapsamplewise quadratic interpolation 
+  # result coefficients
+  interp2 = np.zeros_like(mk_sq_sum)
+  # loop over bootstrapsamples
   for _b in range(mk_sq_sum.shape[0]):
-      p = np.asarray([p_mk_sq[_b,0],p_mk_sq[_b,1]-mk_unit_sq[0]])
-      root = np.roots(p)
-      b_roots.append(root)
-  mean_amu_s, std_amu_s = ana.calc_error(b_roots)
-  print mean_amu_s, std_amu_s
+      y = mk_sq_sum[_b,:]
+      b = np.zeros((y.shape[0],y.shape[0])) 
+      mu_sq = np.square(amu_s)
+      #TODO: Have to automate setting somehow
+      b[:,0] = mu_sq
+      b[:,1] = np.asarray(amu_s)
+      b[:,2] = np.asarray((1.,1.,1.))
+      a = np.linalg.solve(b,y)
+      if np.allclose(np.dot(b, a), y) is False:
+          print("solve failed in sample %d" % _b)
+      else:
+          interp2[_b:] = a
+  # Caluclate roots
+  b_roots_p2 = ana.match_qm(interp2, mk_unit_sq)
+  mean_amu_s_p2, std_amu_s_p2 = ana.calc_error(b_roots_p2)
+  print("quadr. i-pol.:\tamu_s = %f +/- %f" % (mean_amu_s_p2, std_amu_s_p2))
+
   #------------------ Plot mk_a0 and mk^2 vs. amu_s ---------------------------
   
   # Get standard deviation for plots
@@ -115,12 +149,23 @@ def main():
   pdf_ma_kk = PdfPages(pltout_ma_kk) 
   # Labels
   label_mk_sq = [r'Chiral behaviour of $M_K$',r'$a\mu_s$',r'$(aM_K)^2$',
-                 r'A40.24',r'linear fit',r'$aM_K^{\mathrm{unit}}$',
+                 r'A40.24',r'linear fit',r'$(aM_K^{\mathrm{unit}})^2$',
                  r'$a\mu_s^{\mathrm{K}}$']
   label_ma_kk = [r'Chiral behaviour of $a_0M_K$',r'$a\mu_s$',r'$a_0M_K$',r'A40.24']
+  # Plot the linear fit with its matched amu_s
   ana.plot_data_with_fit(amu_s, mk_sq_sum[0,:], mk_sq_std, linfit, p_mk_sq[0],
       None, label_mk_sq, pdf_mk, hconst = mk_unit_sq,
       vconst=(mean_amu_s,std_amu_s))
+  # Plot the linear interpolation with its matched amu_s
+  label_mk_sq[4] = r'linear ipol'
+  ana.plot_data_with_fit(amu_s, mk_sq_sum[0,:], mk_sq_std, linfit, interp1[0],
+      None, label_mk_sq, pdf_mk, hconst = mk_unit_sq,
+      vconst=(mean_amu_s_p1,std_amu_s_p1))
+  # Plot the quadratic interpolation with its matched amu_s
+  label_mk_sq[4] = r'quadr. ipol'
+  ana.plot_data_with_fit(amu_s, mk_sq_sum[0,:], mk_sq_std, sqfit, interp2[0],
+      None, label_mk_sq, pdf_mk, hconst = mk_unit_sq,
+      vconst=(mean_amu_s_p2,std_amu_s_p2))
   ana.plot_data(amu_s, ma_kk_sum[0,:], ma_kk_std, pdf_ma_kk, label_ma_kk)
   pdf_mk.close() 
   pdf_ma_kk.close()
