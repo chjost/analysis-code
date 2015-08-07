@@ -92,22 +92,36 @@ def main():
     print("amu_s from unitary M_K matching\n")
     b_roots_fit = ana.match_qm(p_mk_sq, mk_unit_sq)
     mean_amu_s, std_amu_s = ana.calc_error(b_roots_fit)
-    print("lin. fit:\tamu_s = %f +/- %f" % (mean_amu_s, std_amu_s))
+    print("lin. fit:\tamu_s = %f +/- %f" % (b_roots_fit[0], std_amu_s))
   
     # matching to M_K^unit with linear interpolation
     interp1 = ana.ipol_lin(mk_sq_sum[:,1:], amu_s[1:])
     b_roots_p1 = ana.match_qm(interp1, mk_unit_sq)
     mean_amu_s_p1, std_amu_s_p1 = ana.calc_error(b_roots_p1)
-    print("lin. i-pol.:\tamu_s = %f +/- %f" % (mean_amu_s_p1, std_amu_s_p1))
+    print("lin. i-pol.:\tamu_s = %f +/- %f" % (b_roots_p1[0], std_amu_s_p1))
     
     # matching to M_K^unit with quadratic interpolation
     interp2 = ana.ipol_quad(mk_sq_sum,amu_s)
     b_roots_p2 = ana.match_qm(interp2, mk_unit_sq)
     mean_amu_s_p2, std_amu_s_p2 = ana.calc_error(b_roots_p2)
-    print("quadr. i-pol.:\tamu_s = %f +/- %f" % (mean_amu_s_p2, std_amu_s_p2))
- 
+    print("quadr. i-pol.:\tamu_s = %f +/- %f" % (b_roots_p2[0], std_amu_s_p2))
+    
+    #------------------ linear interpolation of M_K*a_kk ----------------------
 
-    #------------------ Plot mk_a0 and mk^2 vs. amu_s ---------------------------
+    print("M_K * a_kk from unitary M_K matching\n")
+    # Linear interpolation
+    a_k_ipol = ana.ipol_lin(ma_kk_sum[:,1:], amu_s[1:])
+    a_kk_unit = ana.eval_lin(a_k_ipol,b_roots_p1) 
+    mean_a_kk_unit, std_a_kk_unit = ana.calc_error(a_kk_unit)
+    print("lin. i-pol.:\tM_K * a_kk = %f +/- %f" % (a_kk_unit[0], std_a_kk_unit))
+    
+    # quadratic interpolation
+    a_k_ipol2 = ana.ipol_quad(ma_kk_sum, amu_s)
+    a_kk_unit_q = ana.eval_quad(a_k_ipol2,b_roots_p2)
+    a_kk_unit_stat = ana.calc_error(a_kk_unit_q)
+    print("quad. i-pol.:\tM_K * a_kk = %f +/- %f" % (a_kk_unit_q[0], a_kk_unit_stat[1]))
+
+    #------------------ Plot mk_a0 and mk^2 vs. amu_s -------------------------
     
     # Get standard deviation for plots
     ma_kk_mean, ma_kk_std = ana.calc_error(ma_kk_sum, 0)
@@ -125,27 +139,37 @@ def main():
     label_mk_sq = [r'Chiral behaviour of $M_K$',r'$a\mu_s$',r'$(aM_K)^2$',
                    r'A40.24',r'linear fit',r'$(aM_K^{\mathrm{unit}})^2$',
                    r'$a\mu_s^{\mathrm{K}}$']
-    label_ma_kk = [r'Chiral behaviour of $a_0M_K$',r'$a\mu_s$',r'$a_0M_K$',r'A40.24']
+    label_ma_kk = [r'Chiral behaviour of $a_0M_K$',r'$a\mu_s$',r'$a_0M_K$',
+                   r'A40.24',r'lin. ipol',r'$a_0M_K$',
+                   r'$a\mu_s^{\mathrm{K}}$']
 
     # Plot the linear fit with its matched amu_s
     ana.plot_data_with_fit(amu_s, mk_sq_sum[0,:], mk_sq_std, linfit, p_mk_sq[0],
         None, label_mk_sq, pdf_mk, hconst = mk_unit_sq,
-        vconst=(mean_amu_s,std_amu_s))
+        vconst=(b_roots_fit[0],std_amu_s))
 
     # Plot the linear interpolation with its matched amu_s
     label_mk_sq[4] = r'linear ipol'
     ana.plot_data_with_fit(amu_s, mk_sq_sum[0,:], mk_sq_std, linfit, interp1[0],
         None, label_mk_sq, pdf_mk, hconst = mk_unit_sq,
-        vconst=(mean_amu_s_p1,std_amu_s_p1))
+        vconst=(b_roots_p1[0],std_amu_s_p1))
 
     # Plot the quadratic interpolation with its matched amu_s
     label_mk_sq[4] = r'quadr. ipol'
     ana.plot_data_with_fit(amu_s, mk_sq_sum[0,:], mk_sq_std, sqfit, interp2[0],
         None, label_mk_sq, pdf_mk, hconst = mk_unit_sq,
-        vconst=(mean_amu_s_p2,std_amu_s_p2))
+        vconst=(b_roots_p2[0],std_amu_s_p2))
 
     # Plot M_K * a_kk vs. amu_s
-    ana.plot_data(amu_s, ma_kk_sum[0,:], ma_kk_std, pdf_ma_kk, label_ma_kk)
+    # linear interpolation
+    ana.plot_data_with_fit(amu_s, ma_kk_sum[0,:], ma_kk_std, linfit,
+        a_k_ipol[0], None, label_ma_kk, pdf_ma_kk,
+        hconst = (a_kk_unit[0],std_a_kk_unit),vconst=(b_roots_p1[0],std_amu_s_p1))
+    # quadratic interpolation
+    label_ma_kk[4] = r'qudr. ipol'
+    ana.plot_data_with_fit(amu_s, ma_kk_sum[0,:], ma_kk_std, sqfit,
+        a_k_ipol2[0], None, label_ma_kk, pdf_ma_kk,
+        hconst = (a_kk_unit_q[0],a_kk_unit_stat[1]),vconst=(b_roots_p2[0],std_amu_s_p2))
     # Close pdf files
     pdf_mk.close() 
     pdf_ma_kk.close()

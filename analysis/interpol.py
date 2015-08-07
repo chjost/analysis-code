@@ -30,7 +30,7 @@ import scipy.stats
 import numpy as np
 import analyze_fcts as af
 
-__all__=["ipol_lin","ipol_quad"]
+__all__=["ipol_lin","ipol_quad","eval_lin","eval_quad"]
 
 def ipol_lin(y_boot,x):
     """ Interpolate bootstrapsamples of data linearly
@@ -91,3 +91,29 @@ def ipol_quad(y_boot, x):
             interpol[_b:] = coeff
 
     return interpol
+
+def eval_lin(lin_coeff, x):
+  """ Evaluates bootstrapsamples of coefficients at bootstraps of x for y =
+      m*x+b
+
+      Args:
+          lin_coeff: (nb_samples,coeff) NumPy array
+          x: Bootstrapsamples of xvalues
+      Returns:
+          eval_boot: The bootstrapsamples of y values
+  """
+  eval_boot = np.multiply(lin_coeff[:,0],x)+lin_coeff[:,1]
+  return eval_boot
+
+def eval_quad(quad_coeff, x):
+  """ Evaluates bootstrapsamples of coefficients at bootstraps of x for y =
+      c0*x^2 + c1*x + c2
+
+      Args:
+          quad_coeff: (nb_samples,coeff) NumPy array
+          x: Bootstrapsamples of xvalues
+      Returns:
+          eval_boot: The bootstrapsamples of y values
+  """
+  eval_boot = np.multiply(quad_coeff[:,0],np.square(x))+ np.multiply(quad_coeff[:,1],x)+quad_coeff[:,2]
+  return eval_boot
