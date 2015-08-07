@@ -237,7 +237,7 @@ def set_fit_interval(_data, lolist, uplist, intervalsize):
 
 def genfit_comb(_data, fitint_data, fitint_par, fitfunc, start_params, 
                 par, par_index=0, olddata=None, verbose=False):
-    """Fit and plot a function. With varying parameter, determined in a previous
+    """Fit a function. With varying parameter, determined in a previous
     fit
     
     Args:
@@ -366,7 +366,7 @@ def genfit_comb(_data, fitint_data, fitint_par, fitfunc, start_params,
     return res, chi2, pval
 
 def genfit(_data, fit_intervals, fitfunc, start_params, olddata=None, verbose=True):
-    """Fit and plot the correlation function.
+    """Fit the correlation function.
     
     Args:
         _data: The correlation functions.

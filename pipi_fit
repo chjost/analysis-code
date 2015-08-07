@@ -165,24 +165,19 @@ def calc_gevp(data, s, tmin, d2, datafolder, lattice, solvenew=True,
 
     return gevp, mgevp, dgevp
 
-def analyse(path, datafolder, plotfolder, lattice="A40.24",
-            d=np.asarray([0., 0., 0.]), L=24, gmax=5, slist=[0, 1]):
+def analyse(ensemble, datafolder, plotfolder):
     """pi-pi scattering analysis for I=2.
 
     Args:
-        path: path to data
+        ensemble: the ensemble to work on
         datafolder: where to store raw data
         plotfolder: where to store the plots
-        lattice: a string with the lattice name.
-        d: A numpy array with the total momentum.
-        L: spatial extent of the lattice
-        gmax: maximal index of the gevp
     """
     ## define main variables
     # flags for the different parts
     readnewdata=False
-    fitsinglepion=True
-    calculategevp=True
+    fitsinglepion=False
+    calculategevp=False
     fitratio=True
     # verbose prints all the shaped of the different arrays
     verbose=False
@@ -191,13 +186,15 @@ def analyse(path, datafolder, plotfolder, lattice="A40.24",
 
     ## other variables
     # total momentum
+    d = ensemble.get_data("d")
     d2 = np.dot(d, d)
-    # time extend of the symmetrized data is T/2+1, where T/2=L
-    T2 = L+1
-    T = 2*L
-    if L == 20:
-        T2 = 25
-        T = 48
+    L = ensemble.L
+    T = ensemble.T
+    T2 = ensemble.T2
+    gmax = ensemble.get_data("gmax")
+    lattice = ensemble.name
+    path = ensemble.get_data("path")
+    slist = ensemble.get_data("s")
     # file list
     pipilist = ["pipi_pipi_A1_corr_TP%d_%d%d" % (d2, x, y) for x in range(gmax)
                 for y in range(gmax)]
@@ -208,26 +205,26 @@ def analyse(path, datafolder, plotfolder, lattice="A40.24",
     ratiofit = lambda p, t, e : p[0]*(np.cosh(p[1]*(t-T-1))+\
                                 np.sinh(p[1]*(t-T2-1))/(np.tanh(2*e*(t-T2-1))))
     # label for the plots
-    label_pion = ["single pion", "time", r"am$_{\pi}$(t)", "data", ""]
+    label_pion = ["single pion", "time", "am$_{\pi}$(t)", "data", ""]
     label_ratio = ["ratio", "time", "R(t)", "data", ""]
     # lower and upper fit ranges for the different correlators
     lo_pion = [8]
     up_pion = [T2]
     if (L == 24) or (L==20):
-        lo_ratio = [8, 10, 4, 4, 4]
-        up_ratio = [16, 18, 7, 7, 7]
+        lo_ratio = [6, 6, 4, 4, 4]
+        up_ratio = [20, 20, 7, 7, 7]
         # minimal number of points in each fit
         fmin = 4
     elif L == 32:
         lo_pion = [10]
-        lo_ratio = [10, 15, 4, 4, 4]
-        up_ratio = [20, 25, 7, 7, 7]
+        lo_ratio = [8, 8, 4, 4, 4]
+        up_ratio = [26, 26, 7, 7, 7]
         # minimal number of points in each fit
         fmin = 6
     elif L == 48:
         lo_pion = [12]
-        lo_ratio = [14, 20, 4, 4, 4]
-        up_ratio = [32, 37, 7, 7, 7]
+        lo_ratio = [10, 16, 4, 4, 4]
+        up_ratio = [40, 37, 7, 7, 7]
         # minimal number of points in each fit
         fmin = 7
     else:
@@ -240,7 +237,7 @@ def analyse(path, datafolder, plotfolder, lattice="A40.24",
     # initial parameters for the fits
     par_mass = [0.2]
     par_pion = [100., 0.2]
-    par_ratio = [2., 0.06]
+    par_ratio = [0.5, 0.01]
 
     ## read in data
     pi_data, pipi_data = read_data(path, pilist, pipilist, datafolder,
@@ -269,7 +266,7 @@ def analyse(path, datafolder, plotfolder, lattice="A40.24",
         piplotname="".join(("pion_mass_", lattice))
     mpi, dmpi_stat, dmpi_syst, weights_mpi = ana.sys_error(pi, pipvals, d, 
                                                  piplotname, path=plotfolder)
-    if verbose:
+    if verbose == False:
         print("single pion")
         print(len(weights_mpi))
         for p in weights_mpi:
@@ -296,6 +293,7 @@ def analyse(path, datafolder, plotfolder, lattice="A40.24",
         ## fit ratio
         print("fitting ratio")
         fname = "%s/fit_ratio_%s_TP%d_s%d.npz" % (datafolder, lattice, d2, s)
+        ensemble.add_data("ratio data file", fname)
         if fitratio:
             ratioranges = ana.set_fit_interval(ratio, lo_ratio, up_ratio, fmin)
             rres, rchi2, rpvals = ana.genfit_comb(ratio, ratioranges, pionranges,
@@ -306,9 +304,9 @@ def analyse(path, datafolder, plotfolder, lattice="A40.24",
                 plotlabel="ratio_s%d" % s, verbose=False)
         else:
             ratioranges, rres, rchi2, rpvals = ana.read_fitresults(fname)
-            ana.genplot_comb(ratio, rpvals, ratioranges, pionranges, ratiofit, 
-                rres, pi, tmin, lattice, label_ratio, path=plotfolder, 
-                plotlabel="ratio_s%d" % s, verbose=False)
+            #ana.genplot_comb(ratio, rpvals, ratioranges, pionranges, ratiofit, 
+            #    rres, pi, tmin, lattice, label_ratio, path=plotfolder, 
+            #    plotlabel="ratio_s%d" % s, verbose=False)
 
         if verbose:
             print("rres")
@@ -389,11 +387,24 @@ def main():
     gmax = [3, 5, 5, 5, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]
     datafolder = "./raw_data/"
     plotfolder = "./plots/"
+    ensembles = []
+    for i, lat in enumerate(lattices):
+        L = int(lat[-2:])
+        T = 2*L
+        if L == 20:
+            T=48
+        ensembles.append(ana.LatticeEnsemble(lat, L, T))
+        ensembles[-1].add_data("path", path[i])
+        ensembles[-1].add_data("gmax", gmax[i])
+        ensembles[-1].add_data("s", [s])
+        ensembles[-1].add_data("d", d0)
+    #print(ensembles)
+    #for e in ensembles:
+    #    print(e)
+    #ensembles[0].get_data("x")
+
     print("calculating %s" % (lattices[ens]))
-    #print(path[ens], datafolder, plotfolder, lattices[ens],
-    #      int(lattices[ens][-2:]), gmax[ens])
-    analyse(path[ens], datafolder, plotfolder, lattice=lattices[ens],
-            L=int(lattices[ens][-2:]), gmax=gmax[ens], slist=[s])
+    analyse(ensembles[ens], datafolder, plotfolder)
     return
 
 # make this script importable, according to the Google Python Style Guide

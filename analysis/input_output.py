@@ -210,7 +210,8 @@ def read_data_w_err_ascii(filename, datacol=(1,), errcol=(2,), verbose=False):
     _data = read_data_ascii(filename, column=cols, verbose=verbose)
     return _data[:,:,:len(datacol)], _data[:,:,len(datacol):]
 
-def write_fitresults(filename, fitint, par, chi2, pvals, verbose=False):
+def write_fitresults(filename, fitint, par, chi2, pvals, fitint2=None,
+    verbose=False):
     """Writes the fitresults to a numpy file.
 
     The function takes lists of numpy arrays and writes them in the npz format.
@@ -221,6 +222,7 @@ def write_fitresults(filename, fitint, par, chi2, pvals, verbose=False):
         par: the results of the fits
         chi2: the chi^2 values of the fit
         pvals: the p-values of the fit.
+        fitint2: save an additional list with fit intervals
         verbose: amount of information written to screen
 
     Returns:
@@ -242,6 +244,8 @@ def write_fitresults(filename, fitint, par, chi2, pvals, verbose=False):
     if d is 1:
         # create a dictionary to pass to savez
         dic = {'fi' : fitint}
+        if fitint2 is not None:
+            dic.update({'fi2' : fitint2})
         dic.update({'pi%02d' % i: p for (i, p) in enumerate(par)})
         dic.update({'ch%02d' % i: p for (i, p) in enumerate(chi2)})
         dic.update({'pv%02d' % i: p for (i, p) in enumerate(pvals)})
@@ -249,6 +253,8 @@ def write_fitresults(filename, fitint, par, chi2, pvals, verbose=False):
     elif d is 2:
         # create a dictionary to pass to savez
         dic = {'fi' : fitint}
+        if fitint2 is not None:
+            dic.update({'fi2' : fitint2})
         dic.update({'pi%02d%02d' % (i, j): p for (i, s) in enumerate(par) for
                    (j, p) in enumerate(s)})
         dic.update({'ch%02d%02d' % (i, j): p for (i, s) in enumerate(chi2) for
@@ -295,6 +301,10 @@ def read_fitresults(filename, verbose=False):
         n = (len(L) - 1) / 3
         if d is 1:
             fitint = f['fi']
+            try:
+                fitint2 = f['fi2']
+            except KeyError:
+                fitint2 = None
             par, chi2, pvals = [], [], []
             for i in range(n):
                 par.append(f['pi%02d' % i])
@@ -302,6 +312,10 @@ def read_fitresults(filename, verbose=False):
                 pvals.append(f['pv%02d' % i])
         elif d is 2:
             fitint = f['fi']
+            try:
+                fitint2 = f['fi2']
+            except KeyError:
+                fitint2 = None
             par, chi2, pvals = [], [], []
             for i in range(n):
                 if 'pi%02d00' % i in L:
@@ -317,7 +331,10 @@ def read_fitresults(filename, verbose=False):
             print("the read function only covers up to two levels if lists")
             print("RETURNING NONE")
             return None
-    return fitint, par, chi2, pvals
+    if fitint2 is None:
+        return fitint, par, chi2, pvals
+    else:
+        return fitint, par, chi2, pvals, fitint2
 
 #TODO(CJ): still needed?
 def extract_bin_corr_fct(name='', start_cfg=0, delta_cfg=0, nb_cfg=0, T=0,

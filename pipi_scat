@@ -36,18 +36,13 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 import analysis as ana
 
-def analyse(path, datafolder, plotfolder, lattice="A40.24",
-            d=np.asarray([0., 0., 0.]), L=24, gmax=3, slist=[0, 1]):
+def analyse(ensemble, datafolder, plotfolder):
     """pi-pi scattering analysis for I=2.
 
     Args:
-        path: path to data
+        ensemble: the ensemble to work on
         datafolder: where to store raw data
         plotfolder: where to store the plots
-        lattice: a string with the lattice name.
-        d: A numpy array with the total momentum.
-        L: spatial extent of the lattice
-        gmax: maximal index of the gevp
     """
     ## define main variables
     calculatea=True
@@ -59,14 +54,14 @@ def analyse(path, datafolder, plotfolder, lattice="A40.24",
 
     ## other variables
     # total momentum
+    d = ensemble.get_data("d")
     d2 = np.dot(d, d)
-    # time extend of the symmetrized data is T/2+1, where T/2=L
-    T2 = L+1
-    T = 2*L
-    # the 20^3 lattices still have T=48
-    if L == 20:
-        T2 = 25
-        T = 48
+    L = ensemble.L
+    T = ensemble.T
+    T2 = ensemble.T2
+    lattice = ensemble.name
+    path = ensemble.get_data("path")
+    slist = ensemble.get_data("s")
 
     ## read pion data
     fname = "%s/fit_results_%s_TP%d.npz" % (datafolder, lattice, d2)
@@ -209,11 +204,24 @@ def main():
     gmax = [3, 5, 5, 5, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]
     datafolder = "./raw_data/"
     plotfolder = "./plots/"
+    ensembles = []
+    for i, lat in enumerate(lattices):
+        L = int(lat[-2:])
+        T = 2*L
+        if L == 20:
+            T=48
+        ensembles.append(ana.LatticeEnsemble(lat, L, T))
+        ensembles[-1].add_data("path", path[i])
+        ensembles[-1].add_data("gmax", gmax[i])
+        ensembles[-1].add_data("s", [s])
+        ensembles[-1].add_data("d", d0)
+    #print(ensembles)
+    #for e in ensembles:
+    #    print(e)
+    #ensembles[0].get_data("x")
+
     print("calculating %s" % (lattices[ens]))
-    #print(path[ens], datafolder, plotfolder, lattices[ens],
-    #      int(lattices[ens][-2:]), gmax[ens])
-    analyse(path[ens], datafolder, plotfolder, lattice=lattices[ens],
-            L=int(lattices[ens][-2:]), gmax=gmax[ens], slist=[s])
+    analyse(ensembles[ens], datafolder, plotfolder)
     return
 
 # make this script importable, according to the Google Python Style Guide

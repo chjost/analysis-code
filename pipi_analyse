@@ -36,6 +36,91 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 import analysis as ana
 
+def scat_length(dE, E, weight_dE, weight_E, L, pars=(1, 0)):
+    """Finds root of the Energyshift function up to order L^{-5} only applicable
+    in 0 momentum case, effective range not included!
+    Only working for lists of lists.
+
+    Args:
+        dE: the energy shift of the system due to interaction
+        E: the single particle energy
+        weights_dE: weights of the energy shift
+        weights_E: weights of the single particle energy
+        L: The spatial lattice extent
+        pars: which fit parameters to use, if None, skip the index
+    Returns:
+        a: roots of the function
+        weights: the weight of a
+    """
+    ncorr_single = len(E)
+    # check if dE has same length
+    if len(dE) is not ncorr_single:
+        print("error in calc_scat_length, data shapes incompatible")
+        print(len(dE), len(E))
+        os.sys.exit(-10)
+    ncorr_ratio = [len(d) for d in dE]
+    # check number of bootstrap samples and fit intervals for single particle
+    for i in xrange(ncorr_single):
+        for j in xrange(ncorr_ratio[i]):
+            if E[i].shape[0] != dE[i][j].shape[0]:
+                print("number of bootstrap samples is different in calc_scat_length")
+                print(E[i].shape[0], dE[i][j].shape[0])
+                os.sys.exit(-10)
+            if E[i].shape[-1] != dE[i][j].shape[-1]:
+                print("number of fit intervals is different in calc_scat_length")
+                print(E[i].shape[-1], dE[i][j].shape[-1])
+                os.sys.exit(-10)
+    #print("scat length begin")
+    ## number of correlation functions for the single particle energy
+    #print(len(dE), len(E))
+    ## number of correlation functions for the ratio
+    #print(len(dE[0]))
+    ## shape of the fit results
+    #print(dE[0][0].shape, E[0].shape)
+    # coefficients according to Luescher
+    c=[-0.061367, -0.354156]
+    # creating data array from empty array
+    a = []
+    weight = []
+    for i in xrange(ncorr_single):
+        a.append([])
+        weight.append([])
+        for j in xrange(ncorr_ratio[i]):
+            a[i].append(np.zeros((E[i].shape[0], dE[i][j].shape[-2], E[i].shape[-1])))
+            weight[i].append(np.zeros((dE[i][j].shape[-2], E[i].shape[-1])))
+    # loop over the correlation functions
+    for _r in xrange(ncorr_single): # single particle
+        for _s in xrange(ncorr_ratio[_r]): # ratio
+            # calculate prefactor
+            # TODO(CJ): can the shape of E[i] change?
+            if pars[1] == None:
+                pre = -12./(E[_r]*float(L*L))
+                pre2 = 4.*np.pi/(E[_r]*float(L*L))
+            else:
+                pre = -12./(E[_r][:,pars[1]]*float(L*L))
+                pre2 = 4.*np.pi/(E[_r][:,pars[1]]*float(L*L))
+            # loop over fitranges
+            for _f in xrange(E[_r].shape[-1]): # single particle
+                for _g in xrange(dE[_r][_s].shape[-2]): # ratio
+                    # loop over bootstrap samples
+                    for _b in xrange(E[_r].shape[0]):
+                        if pars[0] == None:
+                            p = np.asarray((pre[_b,_f]*c[1], pre[_b,_f]*c[0],
+                                pre[_b,_f], pre2[_b,_f] - 1.*dE[_r][_s][_b,_g,_f]))
+                        else:
+                            p = np.asarray((pre[_b,_f]*c[1], pre[_b,_f]*c[0],
+                                pre[_b,_f], pre2[_b,_f] - 1.*dE[_r][_s][_b,pars[0],_g,_f]))
+                        # calculate roots
+                        root = np.roots(p)
+                        # sort according to absolute value of the imaginary part
+                        ind_root = np.argsort(np.fabs(root.imag))
+                        if(root[ind_root][0].imag) > 1e-6:
+                            print("imaginary part of root > 1e-6 for c1 %d, c2 %d, f1 %d, f2 %d, b %d" % (_r, _s, _f, _g, _b))
+                        # the first entry of the sorted array is the one we want
+                        a[_r][_s][_b, _g, _f] = root[ind_root][0].real
+                        weight[_r][_s][_g, _f] = weight_dE[_r][_s][_g,_f] * weight_E[_r][_f]
+    return a, weight
+
 def read_data(path, pilist, pipilist, datafolder, nsamples, lattice, d,
               readnew=True, verbose=False):
     d2 = np.dot(d,d)
@@ -65,19 +150,15 @@ def read_data(path, pilist, pipilist, datafolder, nsamples, lattice, d,
         print(pipi_data.shape)
     return pi_data, pipi_data
 
-def fit_single_pion(pi_data, lo, up, fmin, pars, pionfit, tmin, lattice, d,
-                    label, plotfolder, datafolder, newfit=True, verbose=False):
+def fit_single_pion(ensemble, pi_data, pars, pionfit, label, plotfolder,
+    datafolder, newfit=True, verbose=True):
     """Fit the correlation function for the single pion.
 
     Args:
+        ensemble: the ensemble to fit
         pi_data: the correlation function
-        lo, up: lower and upper bound for the fitranges
-        fmin: minimal number of fitpoints in the fitranges
         pars: the start parameters for the fit
         pionfit: fit function for the correlator
-        tmin: minimum x to plot
-        lattice: the name of the lattice
-        d: the total momentum vector
         label: label for the plots
         plotfolder: path to save the plots
         datafolder: path to save the fit results
@@ -90,31 +171,36 @@ def fit_single_pion(pi_data, lo, up, fmin, pars, pionfit, tmin, lattice, d,
         pvals: the p-values of each fit
         fitranges: the used fitranges
     """
+    d = ensemble.get_data("d")
+    lattice = ensemble.name
     d2 = np.dot(d, d)
+    lo = ensemble.get_data("lo_pion")
+    up = ensemble.get_data("up_pion")
+    fmin = ensemble.get_data("fmin")
     fname = "%s/fit_results_%s_TP%d.npz" % (datafolder, lattice, d2)
     if not verbose:
         print("fitting single pion")
     if newfit:
+        pion_fit = ana.FitResults(ensemble, "single pion")
+        if verbose:
+            pion_fit.toggle_verbose()
         if verbose:
             print("new fit")
             print(pi_data.shape)
-        pionranges = np.asarray(ana.set_fit_interval(pi_data, lo, up, fmin))
-        if verbose:
-            print(pionranges.shape)
-        pi, chi2, pvals = ana.genfit(pi_data, pionranges, pionfit, pars, tmin,
-                                    lattice, d, label, plotfolder, "pion_mass",
-                                    verbose=verbose)
-        ana.write_fitresults(fname, pionranges, pi, chi2, pvals)
+        pion_fit.add_fitrange(ana.set_fit_interval(pi_data, lo, up, fmin))
+        pion_fit.use_old_data(fname)
+        pion_fit.fit(pi_data, pionfit, pars)
+        pion_fit.save(fname)
+        pion_fit.plot(label, plotfolder, "pion_mass")
+        return pion_fit.get_results()
     else:
         if verbose:
             ("reading fit data")
         pionranges, pi, chi2, pvals = ana.read_fitresults(fname)
-
-    if verbose:
-        print("fit infos")
-        for p in pi:
-            print(p.shape)
-    return pi, chi2, pvals, pionranges
+        ana.genplot(pi_data, pi, pvals, pionranges, pionfit, tmin, lattice, d,
+                    label, plotfolder, "pion_mass", verbose=verbose)
+        return pi, chi2, pvals, pionranges
+ 
 
 def calc_gevp(data, s, tmin, d2, datafolder, lattice, solvenew=True, 
               verbose=False):
@@ -135,7 +221,7 @@ def calc_gevp(data, s, tmin, d2, datafolder, lattice, solvenew=True,
         mgevp: mean of the solution of the GEVP
         dgevp: std of the solution of the GEVP
     """
-    fname = "%s/pipi_corr_mat_%s_TP%d_s%d.npy" % (datafolder, lattice, d2, s)
+    fname = "%s/pipi_corr_mat_%s_TP%d_s%d_tmin%d.npy" % (datafolder, lattice, d2, s, tmin)
     if solvenew:
         if verbose:
             print("shift %d" % s)
@@ -162,37 +248,35 @@ def calc_gevp(data, s, tmin, d2, datafolder, lattice, solvenew=True,
 
     return gevp, mgevp, dgevp
 
-def analyse(path, datafolder, plotfolder, lattice="A40.24",
-            d=np.asarray([0., 0., 0.]), L=24, gmax=5, slist=[0, 1]):
+def analyse(ensemble, datafolder, plotfolder):
     """pi-pi scattering analysis for I=2.
 
     Args:
-        path: path to data
+        ensemble: the ensemble to work on
         datafolder: where to store raw data
         plotfolder: where to store the plots
-        lattice: a string with the lattice name.
-        d: A numpy array with the total momentum.
-        L: spatial extent of the lattice
-        gmax: maximal index of the gevp
     """
     ## define main variables
     readnewdata=False
-    fitsinglepion=False
+    fitsinglepion=True
     calculategevp=False
     fitratio=False
-    verbose=True
+    verbose=False
     nsamples = 1500 # number of bootstrap samples
     tmin = 1 # for the GEVP
+    ensemble.add_data("tmin", tmin)
 
     ## other variables
     # total momentum
+    d = ensemble.get_data("d")
     d2 = np.dot(d, d)
-    # time extend of the symmetrized data is T/2+1, where T/2=L
-    T2 = L+1
-    T = 2*L
-    if L == 20:
-        T2 = 25
-        T = 48
+    L = ensemble.L
+    T = ensemble.T
+    T2 = ensemble.T2
+    gmax = ensemble.get_data("gmax")
+    lattice = ensemble.name
+    path = ensemble.get_data("path")
+    slist = ensemble.get_data("s")
     # file list
     pipilist = ["pipi_pipi_A1_corr_TP%d_%d%d" % (d2, x, y) for x in range(gmax)
                 for y in range(gmax)]
@@ -203,7 +287,7 @@ def analyse(path, datafolder, plotfolder, lattice="A40.24",
     ratiofit = lambda p, t, e : p[0]*(np.cosh(p[1]*(t-T-1))+\
                                 np.sinh(p[1]*(t-T2-1))/(np.tanh(2*e*(t-T2-1))))
     # label for the plots
-    label_pion = ["single pion", "time", r"am$_{\pi}$(t)", "data", ""]
+    label_pion = ["single pion", "time", "am$_{\pi}$(t)", "data", ""]
     label_ratio = ["ratio", "time", "R(t)", "data", ""]
     # lower and upper fit ranges for the different correlators
     lo_pion = [8]
@@ -226,11 +310,17 @@ def analyse(path, datafolder, plotfolder, lattice="A40.24",
     else:
         print("no fit ranges given for L = %d" % L)
         sys.exit(-1)
+    if lattice == "A40.24":
+        lo_ratio = [8, 10, 4, 4, 4]
+        up_ratio = [20, 20, 7, 7, 7]
     # minimal number of points in each fit
     fmin = 4
     # initial parameters for the fits
     par_pion = [0.2]
     par_ratio = [2., 0.06]
+    ensemble.add_data("lo_pion", lo_pion)
+    ensemble.add_data("up_pion", up_pion)
+    ensemble.add_data("fmin", fmin)
 
     ## read in data
     pi_data, pipi_data = read_data(path, pilist, pipilist, datafolder,
@@ -239,9 +329,9 @@ def analyse(path, datafolder, plotfolder, lattice="A40.24",
     ## calculate effective mass of the pion
     pimass, pimmass, pidmass = ana.compute_mass(pi_data)
     ## fit single pion effective mass function
-    pi, pichi2, pipvals, pionranges = fit_single_pion(pimass, lo_pion, up_pion, 
-        fmin, par_pion, massfit, tmin, lattice, d, label_pion, plotfolder,
-        datafolder, newfit=fitsinglepion)
+    pi, pichi2, pipvals, pionranges = fit_single_pion(ensemble, pimass,
+        par_pion, massfit, label_pion, plotfolder, datafolder,
+        newfit=fitsinglepion)
     # calculate statistic and systematic error of the pion
     plotname="".join(("pion_", lattice))
     mpi, dmpi_stat, dmpi_syst, weights_mpi = ana.sys_error(pi, pipvals, d, 
@@ -255,22 +345,38 @@ def analyse(path, datafolder, plotfolder, lattice="A40.24",
     for p, dp, ddp in zip(mpi, dmpi_stat, dmpi_syst):
         print("%.5f +- %.5f -%.5f +%.5f" % (p, dp, ddp[0], ddp[1]))
 
+    return
+
+    gevp, mgevp, dgevp = [], [], []
+    mass_gevp, mmass_gevp, dmass_gevp = [], [], []
     for s in slist:
         print("shift %d" % s)
         ## GEVP
-        gevp, mgevp, dgevp=calc_gevp(pipi_data, s, tmin, d2, datafolder, lattice,
+        tgevp, tmgevp, tdgevp=calc_gevp(pipi_data, s, tmin, d2, datafolder, lattice,
                                      solvenew=calculategevp)
+        gevp.append(tgevp)
+        mgevp.append(tmgevp)
+        dgevp.append(tdgevp)
+
+        tmass_gevp, tmmass_gevp, tdmass_gevp = ana.compute_mass(tgevp, usecosh=True)
+        mass_gevp.append(tmass_gevp)
+        mmass_gevp.append(tmmass_gevp)
+        dmass_gevp.append(tdmass_gevp)
+
+        #tlist = np.linspace(0., float(tmass_gevp.shape[1]), float(tmass_gevp.shape[1]), endpoint=False)
+        #for a in range(tgevp.shape[2]):
+        #  ana.plot_data(tlist, tmass_gevp[:,:,a], tdmass_gevp[:,a], gevpplot)
 
         ## build ratio to determine dE
-        print("calculating ratio")
-        ratio, mratio, dratio=ana.simple_ratio_subtract(gevp, pi_data, pi_data)
+        #print("calculating ratio")
+        ratio, mratio, dratio=ana.simple_ratio_subtract(tgevp, pi_data, pi_data)
 
         ## TODO(CJ): ONLY USE 2 LOWEST CORRELATORS ATM
         ratio = ratio[:,:,:2]
         mratio = mratio[:,:2]
         dratio = dratio[:,:2]
 
-        ## fit ratio
+        # fit ratio
         print("fitting ratio")
         fname = "%s/fit_ratio_%s_TP%d_s%d.npz" % (datafolder, lattice, d2, s)
         if fitratio:
@@ -281,47 +387,52 @@ def analyse(path, datafolder, plotfolder, lattice="A40.24",
             ana.write_fitresults(fname, ratioranges, rres, rchi2, rpvals)
         else:
             ratioranges, rres, rchi2, rpvals = ana.read_fitresults(fname)
-        if verbose:
-            print("rres")
-            print(len(rres))
-            for p in rres:
-                print(len(p))
-                for q in p:
-                    print(q.shape)
-            print("rpvals")
-            print(len(rpvals))
-            for p in rpvals:
-                print(len(p))
-                for q in p:
-                    print(q.shape)
+        #if verbose:
+        #    print("rres")
+        #    print(len(rres))
+        #    for p in rres:
+        #        print(len(p))
+        #        for q in p:
+        #            print(q.shape)
+        #    print("rpvals")
+        #    print(len(rpvals))
+        #    for p in rpvals:
+        #        print(len(p))
+        #        for q in p:
+        #            print(q.shape)
 
         # calculate statistic and systematic error for delta E
         plotname = "ratio_s%d_%s" % (s, lattice)
         dE, ddE_stat, ddE_syst, weights_dE = ana.sys_error(rres, rpvals, d, 
             plotname, par=1, path=plotfolder, absolute=True)
 
-        if verbose:
-            print("weights_dE")
-            print(len(weights_dE))
-            for p in weights_dE:
-                print(len(p))
-                for q in p:
-                    print(q.shape)
-            print(len(dE))
-            for p in dE:
-                print(len(p))
-                for q in p:
-                    print(q)
+        #if verbose:
+        #    print("weights_dE")
+        #    print(len(weights_dE))
+        #    for p in weights_dE:
+        #        print(len(p))
+        #        for q in p:
+        #            print(q.shape)
+        #    print(len(dE))
+        #    for p in dE:
+        #        print(len(p))
+        #        for q in p:
+        #            print(q)
         print("dE with errors")
         for p, dp, ddp in zip(dE, ddE_stat, ddE_syst):
             for q, dq, ddq in zip(p, dp, ddp):
                 print("%.4f +- %.4f -%.4f +%.4f" % (q, dq, ddq[0], ddq[1]))
 
-        # calculate scattering length
+        ## calculate scattering length
+        print("calculating scattering length")
         anew = False
-        fname = "%s/scat_len_%s_TP%d_s%d.npz" % (datafolder, lattice, d2, s)
+        mom=True
+        fname = "%s/test_scat_len_%s_TP%d_s%d.npz" % (datafolder, lattice, d2, s)
         if anew:
-            a, weights_a = ana.calc_scat_length(rres, pi, weights_dE, weights_mpi, L)
+            if mom == False:
+                a, weights_a = ana.calc_scat_length(rres, pi, weights_dE, weights_mpi, L)
+            else:
+                a, weights_a = scat_length(rres, pi, weights_dE, weights_mpi, L)
             # since a is a list of lists of arrays, hack the fit results
             # routines to save
             ana.write_fitresults(fname, np.zeros((10,)), a, weights_a, a)
@@ -356,26 +467,46 @@ def analyse(path, datafolder, plotfolder, lattice="A40.24",
                 print(q, dq, ddq)
 
         # calculate mpi * a
-        ampinew = True
-        fname = "%s/ampi_%s_TP%d_s%d.npz" % (datafolder, lattice, d2, s)
-        if ampinew:
-            ampi, weights_ampi = ana.multiply(a, pi, weights_a, weights_mpi, pars=(None, 0))
-            ana.write_fitresults(fname, np.zeros((10,)), ampi, weights_ampi, ampi)
-        else:
-            _u, _ampi, weights_ampi, ampi = ana.read_fitresults(fname)
+        #ampinew = True
+        #fname = "%s/ampi_%s_TP%d_s%d.npz" % (datafolder, lattice, d2, s)
+        #if ampinew:
+        #    ampi, weights_ampi = ana.multiply(a, pi, weights_a, weights_mpi, pars=(None, 0))
+        #    ana.write_fitresults(fname, np.zeros((10,)), ampi, weights_ampi, ampi)
+        #else:
+        #    _u, _ampi, weights_ampi, ampi = ana.read_fitresults(fname)
 
-        # statistical and systematic error for a*mpi
-        am_pipi, dam_stat, dam_syst = ana.sys_error_der(ampi, weights_ampi, d, lattice, path=plotfolder)
+        ## statistical and systematic error for a*mpi
+        #am_pipi, dam_stat, dam_syst = ana.sys_error_der(ampi, weights_ampi, d, lattice, path=plotfolder)
         #print("a_pipi * m_pi")
         #print(len(ampi))
         #for p in ampi:
         #    print(len(p))
         #    for q in p:
         #        print(q.shape)
-        print("a_pipi * m_pi with errors")
-        for p, dp, ddp in zip(am_pipi, dam_stat, dam_syst):
-            for q, dq, ddq in zip(p, dp, ddp):
-                print(q, dq, ddq)
+        #print("a_pipi * m_pi with errors")
+        #for p, dp, ddp in zip(am_pipi, dam_stat, dam_syst):
+        #    for q, dq, ddq in zip(p, dp, ddp):
+        #        print(q, dq, ddq)
+    gevpplot = PdfPages("%s/gevp_check_plots_%s_TP%d_tmin%d.pdf" % (plotfolder, lattice, d2, tmin))
+    for pc in xrange(mass_gevp[0].shape[-1]):
+        p = []
+        test_mpi = np.sqrt(mpi[0]**2 + (2. * np.pi * float(pc) / float(L))**2 )
+        for i in xrange(len(mass_gevp)):
+            da = mass_gevp[i][:,:,pc]
+            dda = dmass_gevp[i][:,pc]
+            tlist = np.linspace(0., float(da.shape[1]), float(da.shape[1]), endpoint=False)
+            p.append(plt.errorbar(tlist, da[0], dda, fmt='x', label="shift %d" % i))
+        x1 = np.linspace(tlist[0], tlist[-1], 1000)
+        y1 = np.ones_like(x1)*2.*test_mpi
+        p.append(plt.plot(x1, y1, "r", label="2m$_{\pi}$ + p$^2$=%d" % pc))
+        plt.grid(True)
+        plt.xlabel("t")
+        plt.ylabel("C(t)")
+        plt.title("pc %d, shift vs non-shift" % pc)
+        plt.legend()
+        gevpplot.savefig()
+        plt.clf()
+    gevpplot.close()
     return
 
 def main():
@@ -420,11 +551,24 @@ def main():
     gmax = [3, 5, 5, 5, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]
     datafolder = "./raw_data/"
     plotfolder = "./plots/"
+    ensembles = []
+    for i, lat in enumerate(lattices):
+        L = int(lat[-2:])
+        T = 2*L
+        if L == 20:
+            T=48
+        ensembles.append(ana.LatticeEnsemble(lat, L, T))
+        ensembles[-1].add_data("path", path[i])
+        ensembles[-1].add_data("gmax", gmax[i])
+        ensembles[-1].add_data("s", [0,1])
+        ensembles[-1].add_data("d", d0)
+    #print(ensembles)
+    #for e in ensembles:
+    #    print(e)
+    #ensembles[0].get_data("x")
+
     print("calculating %s" % (lattices[ens]))
-    #print(path[ens], datafolder, plotfolder, lattices[ens],
-    #      int(lattices[ens][-2:]), gmax[ens])
-    analyse(path[ens], datafolder, plotfolder, lattice=lattices[ens],
-            L=int(lattices[ens][-2:]), gmax=gmax[ens], slist=[s])
+    analyse(ensembles[ens], datafolder, plotfolder)
     return
 
 # make this script importable, according to the Google Python Style Guide

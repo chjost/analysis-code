@@ -201,6 +201,61 @@ def paper_am():
             "D45.32": (0.0011, 0.0120)}
     return p_am, p_dam_stat, p_dam_syst
 
+def paper_cotd():
+    """The values for q*cot(delta) from the paper."""
+    p_cd = {"A30.32": -0.92,
+            "A40.20": -0.71,
+            "A40.24": -0.87,
+            "A40.32": -0.90,
+            "A60.24": -0.79,
+            "A80.24": -0.75,
+            "A100.24": -0.75,
+            "A80.24s": -0.00,
+            "A100.24s": -0.00,
+            "B25.32": -0.00,
+            "B35.48": -0.00,
+            "B35.32": -0.82,
+            "B55.32": -0.71,
+            "B85.24": -0.66,
+            "D15.48": -0.00,
+            "D30.48": -0.00,
+            "D45.32": -0.45}
+    p_dcd_stat = {"A30.32": 0.03,
+            "A40.20": 0.02,
+            "A40.24": 0.03,
+            "A40.32": 0.03,
+            "A60.24": 0.01,
+            "A80.24": 0.01,
+            "A100.24": 0.01,
+            "A80.24s": 0.00,
+            "A100.24s": 0.00,
+            "B25.32": 0.00,
+            "B35.48": 0.00,
+            "B35.32": 0.03,
+            "B55.32": 0.02,
+            "B85.24": 0.01,
+            "D15.48": 0.00,
+            "D30.48": 0.00,
+            "D45.32": 0.01}
+    p_dcd_syst = {"A30.32": (0.05, 0.02),
+            "A40.20": (0.01, 0.01),
+            "A40.24": (0.01, 0.05),
+            "A40.32": (0.02, 0.05),
+            "A60.24": (0.01, 0.01),
+            "A80.24": (0.00, 0.00),
+            "A100.24": (0.01, 0.01),
+            "A80.24s": (0.00, 0.00),
+            "A100.24s": (0.00, 0.00),
+            "B25.32": (0.00, 0.00),
+            "B35.48": (0.00, 0.00),
+            "B35.32": (0.02, 0.02),
+            "B55.32": (0.01, 0.01),
+            "B85.24": (0.01, 0.00),
+            "D15.48": (0.00, 0.00),
+            "D30.48": (0.00, 0.00),
+            "D45.32": (0.02, 0.00)}
+    return p_cd, p_dcd_stat, p_dcd_syst
+
 def print_summary(datafolder, plotfolder, lattices, shift=0, 
                   d=np.asarray([0., 0., 0.])):
     """Print a summary of the lattices given.
@@ -346,15 +401,6 @@ def print_summary(datafolder, plotfolder, lattices, shift=0,
                 print("%8s & $%.3f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%.3f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%+.2f$ \\\\" % 
                       (lat, p_am[lat], p_dam[lat]*1000., p_ddam[lat][1]*1000., p_ddam[lat][0]*1000., q, dq*1000., ddq[1]*1000.,
                       ddq[0]*1000., (q-p_am[lat])/dq))
-
-    # output for latex, second principal correlator
-    print("dE")
-    for i, lat in enumerate(lattices):
-        for p, dp, ddp in zip(summ_dE[i], dsumm_dE[i], ddsumm_dE[i]):
-            for q, dq, ddq in zip(p, dp, ddp):
-                print("%8s & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%+.2f$ \\\\" % 
-                      (lat, (np.sqrt((p_dE[lat]+2.*w_pi[lat])**2-(2.*np.pi/L[lat])**2)-2.*w_pi[lat]), p_ddE[lat]*10000., p_dddE[lat][1]*10000., p_dddE[lat][0]*10000., q, dq*10000., ddq[1]*10000.,
-                      ddq[0]*10000., (q-(np.sqrt((p_dE[lat]+2.*w_pi[lat])**2-(2.*np.pi/L[lat])**2)-2.*w_pi[lat]))/dq))
     return
 
 def main():
@@ -363,13 +409,13 @@ def main():
     #          "A80.24", "A100.24", "B25.32", "B35.32", "B35.48",
     #          "B55.32", "B85.24", "D15.48", "D30.48", "D45.32"]
     lattices=["A30.32", "A40.20", "A40.24", "A40.32", "A60.24",
-              "A80.24", "A100.24", "B25.32", "B35.32", "B55.32",
-              "B85.24", "D45.32"]
+              "A80.24", "A100.24", "B25.32", "B35.32", "B35.48",
+              "B55.32", "B85.24", "D15.48", "D45.32"]
     datafolder = "./raw_data/"
     plotfolder = "./plots/"
     #print(path[ens], datafolder, plotfolder, lattices[ens],
     #      int(lattices[ens][-2:]), gmax[ens])
-    print_summary(datafolder, plotfolder, lattices)
+    print_summary(datafolder, plotfolder, lattices, shift=0)
     return
 
 # make this script importable, according to the Google Python Style Guide
