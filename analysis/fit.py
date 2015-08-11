@@ -347,9 +347,9 @@ def genfit_comb(data, fitint_data, fitint_par, fitfunc, start_params,
                     # plot the original data and the fit for every fit range
                     if verbose:
                         print("plotting")
-                    corr_fct_with_fit(tlist, data[0,:,l], ddata, fitfunc,
+                    plot_data_with_fit(tlist, data[0,:,l], ddata, fitfunc,
                         (mres, par[k][0,0,j]), [tmin,T2], label, corrplot,
-                        logscale=False,fitrange=fitint_data[l][i])
+                        logscale=False,fitrange=fitint_data[l][i],addpars=True)
     corrplot.close()
     return res, chi2, pval
 
@@ -443,7 +443,7 @@ def genfit(_data, fit_intervals, fitfunc, start_params, tmin, lattice, d, label,
             # plot the data and the fit
             if verbose:
                 print("plotting")
-            corr_fct_with_fit(tlist, data[0,:,_l], ddata, fitfunc, mres,
+            plot_data_with_fit(tlist, data[0,:,_l], ddata, fitfunc, mres,
                                    [tmin,T2], label, corrplot, logscale=False,
                                    fitrange=fit_intervals[_l][_i])
     corrplot.close()
