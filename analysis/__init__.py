@@ -14,6 +14,8 @@ from .phaseshift import *
 from .ratio import *
 from ._calc_energies import calc_Ecm, calc_gamma, calc_q2
 from ._quantiles import weighted_quantile
+from .ensemble import LatticeEnsemble
+from .fitresults import FitResults
 
 __all__ = [t for t in dir() if not t.startswith('_')]
 
