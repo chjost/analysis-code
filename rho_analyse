@@ -345,14 +345,23 @@ def setup_lattice(lattice, d):
         L=32
         T=64
         if np.array_equal(d, np.array([0., 0., 0.])):
-            loborder=np.array((9, 11))
-            upborder=np.array((16, 15))
+            loborder=np.array((9, 7))
+#            upborder=np.array((29, 25))
+            upborder=np.array((21, 21))
         elif np.array_equal(d, np.array([0., 0., 1.])):
-            loborder=np.array((11, 11))
-            upborder=np.array((17, 16))
+            loborder=np.array((9, 7))
+#            upborder=np.array((31, 23))
+            upborder=np.array((20, 18))
         elif np.array_equal(d, np.array([1., 1., 0.])):
-            print("not yet looked at")
-            loborder=np.array((9, 10))
+            loborder=np.array((9, 7))
+#            upborder=np.array((24, 20))
+            upborder=np.array((19, 17))
+        elif np.array_equal(d, np.array([1., 1., 1.])):
+            loborder=np.array((8, 6))
+#            upborder=np.array((21, 14))
+            upborder=np.array((18, 14))
+        elif np.array_equal(d, np.array([2., 0., 0.])):
+            loborder=np.array((7, 5))
             upborder=np.array((17, 17))
     elif lattice == "A40.20": #################################################
         mpi=0.14
@@ -360,13 +369,13 @@ def setup_lattice(lattice, d):
         T=48
         if np.array_equal(d, np.array([0., 0., 0.])):
             loborder=np.array((7, 5))
-            upborder=np.array((20, 15))
+            upborder=np.array((16, 15))
         elif np.array_equal(d, np.array([0., 0., 1.])):
             loborder=np.array((7, 5))
-            upborder=np.array((20, 17))
+            upborder=np.array((15, 17))
         elif np.array_equal(d, np.array([1., 1., 0.])):
             loborder=np.array((7, 5))
-            upborder=np.array((18, 12))
+            upborder=np.array((15, 12))
         elif np.array_equal(d, np.array([1., 1., 1.])):
             loborder=np.array((6, 5))
             upborder=np.array((15, 12)) #11
@@ -392,7 +401,7 @@ def setup_lattice(lattice, d):
         elif np.array_equal(d, np.array([1., 1., 1.])):
             loborder=np.array((6, 5))
 #            upborder=np.array((20, 13))
-            upborder=np.array((17, 13))
+            upborder=np.array((17, 14))
         elif np.array_equal(d, np.array([0., 0., 2.])):
             loborder=np.array((5, 5))
             upborder=np.array((16, 14))
@@ -424,73 +433,115 @@ def setup_lattice(lattice, d):
         L=24
         T=48
         if np.array_equal(d, np.array([0., 0., 0.])):
-            print("not yet looked at")
-            loborder=np.array((12, 7))
-            upborder=np.array((16, 17))
+            loborder=np.array((7, 5))
+            upborder=np.array((19, 16))
         elif np.array_equal(d, np.array([0., 0., 1.])):
-            print("not yet looked at")
-            loborder=np.array((12, 7))
-            upborder=np.array((16, 17))
+            loborder=np.array((7, 5))
+            upborder=np.array((18, 15))
         elif np.array_equal(d, np.array([1., 1., 0.])):
-            print("not yet looked at")
-            loborder=np.array((12, 7))
-            upborder=np.array((16, 17))
+            loborder=np.array((7, 5))
+            upborder=np.array((17, 14))
+        elif np.array_equal(d, np.array([1., 1., 1.])):
+            loborder=np.array((6, 5))
+            upborder=np.array((17, 14))
+        elif np.array_equal(d, np.array([0., 0., 2.])):
+            loborder=np.array((5, 5))
+            upborder=np.array((16, 14))
     elif lattice == "A80.24": #################################################
         mpi=0.1993
         L=24
         T=48
         if np.array_equal(d, np.array([0., 0., 0.])):
-            print("not yet looked at")
-            loborder=np.array((12, 7))
-            upborder=np.array((16, 17))
+            loborder=np.array((7, 5))
+            upborder=np.array((19, 16))
         elif np.array_equal(d, np.array([0., 0., 1.])):
-            loborder=np.array((10, 10))
-            upborder=np.array((15, 15))
+            loborder=np.array((7, 5))
+            upborder=np.array((18, 15))
         elif np.array_equal(d, np.array([1., 1., 0.])):
-            print("not yet looked at")
-            loborder=np.array((12, 7))
-            upborder=np.array((16, 17))
-    elif lattice == "A100.24": ################################################
+            loborder=np.array((7, 5))
+            upborder=np.array((17, 14))
+        elif np.array_equal(d, np.array([1., 1., 1.])):
+            loborder=np.array((6, 5))
+            upborder=np.array((17, 14))
+        elif np.array_equal(d, np.array([0., 0., 2.])):
+            loborder=np.array((5, 5))
+            upborder=np.array((16, 14))
+    elif lattice == "A100.24": #################################################
         mpi=0.2224
         L=24
         T=48
         if np.array_equal(d, np.array([0., 0., 0.])):
             loborder=np.array((7, 5))
-            upborder=np.array((20, 17))
+            upborder=np.array((19, 16))
         elif np.array_equal(d, np.array([0., 0., 1.])):
             loborder=np.array((7, 5))
-            upborder=np.array((19, 16))
+            upborder=np.array((18, 15))
         elif np.array_equal(d, np.array([1., 1., 0.])):
             loborder=np.array((7, 5))
-            upborder=np.array((18, 15))
+            upborder=np.array((17, 14))
         elif np.array_equal(d, np.array([1., 1., 1.])):
             loborder=np.array((6, 5))
-            upborder=np.array((17, 13))
+            upborder=np.array((17, 14))
         elif np.array_equal(d, np.array([0., 0., 2.])):
             loborder=np.array((5, 5))
             upborder=np.array((16, 14))
-
-#        if np.array_equal(d, np.array([0., 0., 0.])):
-#            loborder=np.array((10, 9))
-#            upborder=np.array((22, 13))
-#        elif np.array_equal(d, np.array([0., 0., 1.])):
-#            loborder=np.array((12, 10))
-#            upborder=np.array((20, 16))
-#        elif np.array_equal(d, np.array([1., 1., 0.])):
-#            print("not yet looked at")
-#            loborder=np.array((12, 7))
-#            upborder=np.array((16, 17))
+    elif lattice == "B55.32": ##################################################
+        mpi=0.15518
+        L=32
+        T=64
+        if np.array_equal(d, np.array([0., 0., 0.])):
+            loborder=np.array((9, 7))
+#            upborder=np.array((29, 25))
+            upborder=np.array((21, 21))
+        elif np.array_equal(d, np.array([0., 0., 1.])):
+            loborder=np.array((9, 7))
+#            upborder=np.array((31, 23))
+            upborder=np.array((20, 18))
+        elif np.array_equal(d, np.array([1., 1., 0.])):
+            loborder=np.array((9, 7))
+#            upborder=np.array((24, 20))
+            upborder=np.array((19, 17))
+        elif np.array_equal(d, np.array([1., 1., 1.])):
+            loborder=np.array((8, 6))
+#            upborder=np.array((21, 14))
+            upborder=np.array((18, 14))
+        elif np.array_equal(d, np.array([2., 0., 0.])):
+            loborder=np.array((7, 5))
+            upborder=np.array((17, 17))
+    elif lattice == "D45.32": ##################################################
+        mpi=0.12087
+        L=32
+        T=64
+        if np.array_equal(d, np.array([0., 0., 0.])):
+            loborder=np.array((9, 7))
+#            upborder=np.array((29, 25))
+            upborder=np.array((17, 16))
+        elif np.array_equal(d, np.array([0., 0., 1.])):
+            loborder=np.array((9, 7))
+#            upborder=np.array((31, 23))
+            upborder=np.array((17, 16))
+        elif np.array_equal(d, np.array([1., 1., 0.])):
+            loborder=np.array((9, 7))
+#            upborder=np.array((24, 20))
+            upborder=np.array((16, 15))
+        elif np.array_equal(d, np.array([1., 1., 1.])):
+            loborder=np.array((8, 7))
+#            upborder=np.array((21, 14))
+            upborder=np.array((16, 15))
+        elif np.array_equal(d, np.array([2., 0., 0.])):
+            loborder=np.array((7, 7))
+            upborder=np.array((15, 15))
 
     # for testing -> three intervalls on A40.24 TP0
-    loborder = np.array((7,7))
-    upborder = np.array((16, 16))
+#    loborder = np.array((10, 10))
+#    upborder = np.array((20, 20))
 
     return mpi, L, T, loborder, upborder
 
 def analyse(lattice="A40.24", d=np.array([0., 0., 0.]), verbose=True):
     #######################################################
     ## definition of main variables
-    nbsamples = 1500 # number of bootstrap samples
+    nbsamples = 400 # number of bootstrap samples
     tmin=1 # t0 for the GEVP calculation
     #d = np.array([0., 0., 1.]) # total momemtum of the system
     #lattice="A40.24" # lattice to analyse
@@ -565,7 +616,14 @@ def main():
     d3 = np.array([1., 1., 1.]) # total momentum of the system
     d4 = np.array([0., 0., 2.]) # total momentum of the system
     lattices=["A30.32", "A40.20", "A40.24", "A40.32", "A60.24",\
-              "A80.24", "A100.24"]
+              "A80.24", "A100.24", "B55.32", "D45.32"]
+    #A30
+    #analyse(lattices[0], d0) 
+    #analyse(lattices[0], d1)
+    #analyse(lattices[0], d2)
+    #analyse(lattices[0], d3)
+    #analyse(lattices[0], d4)
+
     #A40
     #analyse(lattices[1], d0) 
     #analyse(lattices[1], d1)
@@ -583,12 +641,40 @@ def main():
     #analyse(lattices[3], d3)
     #analyse(lattices[3], d4)
 
+    #A60
+    #analyse(lattices[4], d0)
+    #analyse(lattices[4], d1)
+    #analyse(lattices[4], d2)
+    #analyse(lattices[4], d3)
+    #analyse(lattices[4], d4)
+
+    #A80
+    #analyse(lattices[5], d0)
+    #analyse(lattices[5], d1)
+    #analyse(lattices[5], d2)
+    #analyse(lattices[5], d3)
+    #analyse(lattices[5], d4)
+
     #A100
-    analyse(lattices[6], d0)
+    #analyse(lattices[6], d0)
     #analyse(lattices[6], d1)
-    analyse(lattices[6], d2)
+    #analyse(lattices[6], d2)
     #analyse(lattices[6], d3)
     #analyse(lattices[6], d4)
+
+    #B55 
+    #analyse(lattices[7], d0)
+    #analyse(lattices[7], d1)
+    #analyse(lattices[7], d2)
+    #analyse(lattices[7], d3)
+    #analyse(lattices[7], d4)
+
+    #D45
+    analyse(lattices[8], d0)
+    #analyse(lattices[8], d1)
+    #analyse(lattices[8], d2)
+    #analyse(lattices[8], d3)
+    #analyse(lattices[8], d4)
 
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':
