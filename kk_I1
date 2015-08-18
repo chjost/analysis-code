@@ -55,7 +55,7 @@ def main():
     p_zero = np.asarray([0,0,0])
     amu_s = [0.0185]
     #ensemblelist = ['A60.24/','A80.24/']
-    ensemblelist = ['A100.24/']
+    ensemblelist = ['A40.20/']
     filelist = ['k_corr_p0.dat','kk_A1_TP0_00.dat']
     #filelist = ['C2.dat','kpi_4.dat']
     pathroot ="/hiskp2/helmes/k-k-scattering/"
