@@ -1,4 +1,4 @@
-#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
 ################################################################################
 #
 # Author: Christopher Helmes (helmes@hiskp.uni-bonn.de)
@@ -39,7 +39,7 @@ import matplotlib.cm as cm
 from matplotlib.backends.backend_pdf import PdfPages
 
 # Christian's packages
-import analysis as ana
+#import analysis as ana
 
 def sum_error_sym(meas):
   """gets a n x 3 numpy array holding a value, a statistical and a systematic
@@ -119,13 +119,17 @@ def main():
   dmk_fk_etmc = np.divide(scat_dat2[:,1],scat_dat2[:,2])
   mk_akk_etmc = scat_dat[:,4:]
   # check data
-  print("etmc:\nbmk\tf_k\tmk_akk")
+  label_ens = [r'A40',r'A60',r'A80',r'A100']
+  print("etmc:\nLat\tbmk\tf_k\tmk/fk\tmk_akk")
   #for i in range(len(scat_dat_lst)):
       #for m,a in zip(mk_fk_etmc[i],mk_akk_etmc[i]):
-  for m,a in zip(mk_fk_etmc,mk_akk_etmc):
-      print m,a
+  for ens,m,f,mf,a in zip(label_ens,scat_dat[:,0], scat_dat[:,2], mk_fk_etmc, mk_akk_etmc):
+    print ens, m, f, mf, a
       # print("\n")
 
+  for ens,m,f,mf,a in zip(label_ens,scat_dat2[:,0], scat_dat2[:,2], mk_fk_etmc2, mk_akk_etmc):
+    print ens, m, f, mf, a
+      # print("\n")
   print("\nnpl:\nbmk/fk\tmk_akk")
   for m,a in zip(mk_fk_npl,mk_akk_npl):
       print m, a
@@ -141,18 +145,27 @@ def main():
           r'A, $a\mu_s=0.02464$',
           r'B, $a\mu_s=0.01861$',
           r'B, $a\mu_s=0.021$','NPLQCD (2007)','PACS (2013)']
-  label = [r'$I=1$ $KK$ scattering length',r'$M_K/f_K$',r'$M_K a_{KK}$',lbl3, r'LO $\chi$-PT']
+  label = [r'$I=1$ $KK$ scattering length, $L = 24^3$',r'$M_K/f_K$',r'$M_K a_{KK}$',lbl3, r'LO $\chi$-PT']
+  label_ens = [r'A40',r'A60',r'A80',r'A100']
   ## Open pdf
-  pfit = PdfPages(plotpath+'akk_mkfk_ipol_comp.pdf')
+  pfit = PdfPages(plotpath+'akk_mkfk.pdf')
   tree = lambda p, x : (-1)*x*x/p[0]
   # define colormap
   colors = cm.Dark2(np.linspace(0, 1, 7))
   # A ensembles unitary matching
   #print mpi_r0_sq_etmc
-  p1 = plt.errorbar(mk_fk_etmc, mk_akk_etmc[:,0], mk_akk_etmc[:,1], fmt='o' + 'b',
-                    label = r'A, $a\mu_s^\mathrm{unit}$, fk_ipol',color=colors[0])
-  p1 = plt.errorbar(mk_fk_etmc2, mk_akk_etmc[:,0], mk_akk_etmc[:,1], fmt='o' + 'b',
+  #p1 = plt.errorbar(mk_fk_etmc, mk_akk_etmc[:,0], mk_akk_etmc[:,1], fmt='o' + 'b',
+  #                  label = r'A, $a\mu_s^\mathrm{unit}$, fk_ipol',color=colors[0])
+  #for X, Y,l in zip(mk_fk_etmc,mk_akk_etmc[:,0],label_ens):
+  #                      # Annotate the points 5 _points_ above and to the left
+  #                      # of the vertex
+  #    plt.annotate(l,(X-0.001,Y+0.01))
+  p2 = plt.errorbar(mk_fk_etmc2, mk_akk_etmc[:,0], mk_akk_etmc[:,1], fmt='o' + 'b',
                     label = r'A, $a\mu_s^\mathrm{unit}$',color=colors[1])
+  for X, Y,l in zip(mk_fk_etmc2,mk_akk_etmc[:,0],label_ens):
+                        # Annotate the points 5 _points_ above and to the left
+                        # of the vertex
+      plt.annotate(l,(X-0.001,Y+0.01))
 #  # A ensembles strange mass 0.0225
 #  #print mpi_r0_sq_etmc
 #  p1 = plt.errorbar(mk_fk_etmc[0], mk_akk_etmc[0][:,0], mk_akk_etmc[0][:,1], fmt='o' + 'b',
@@ -173,12 +186,12 @@ def main():
 #                    label = lbl3[3],color=colors[3])
   ## NPLQCD data
   #mk_sq_npl = np.multiply(scat_dat_nplqcd[:,0], scat_dat_nplqcd[:,0])
-  #p1 = plt.errorbar(mk_fk_npl[:,0], mk_akk_npl[:,0], mk_akk_npl[:,1], fmt='o' + 'b',
-  #                  label = lbl3[4],color=colors[4])
+  p1 = plt.errorbar(mk_fk_npl[:,0], mk_akk_npl[:,0], mk_akk_npl[:,1], fmt='o' + 'b',
+                    label = lbl3[4],color=colors[4])
   ## PACS data
   #mk_sq_npl = np.multiply(scat_dat_nplqcd[:,0], scat_dat_nplqcd[:,0])
-  #p1 = plt.errorbar(mk_fk_pacs, mk_akk_pacs[:,0], mk_akk_pacs[:,1], fmt='o' + 'b',
-  #                  label = lbl3[5],color=colors[5])
+  p1 = plt.errorbar(mk_fk_pacs, mk_akk_pacs[:,0], mk_akk_pacs[:,1], fmt='o' + 'b',
+                    label = lbl3[5],color=colors[5])
   ##p1 = plt.errorbar(X, Y, dY, fmt='o' + 'b',
   ##                  label = label[3][_dl],color=next(colors))
   ## plottin the fit function, set fit range
@@ -201,7 +214,7 @@ def main():
   #    [8*math.pi],
   #    [0,5], label, pfit, xlim=[3,4], ylim=[-0.65,-0.25])
   # set the axis ranges
-  plt.xlim([3.0,3.5])
+  plt.xlim([3.2,3.5])
   plt.ylim([-0.65,-0.25])
   # save pdf
   pfit.savefig()
