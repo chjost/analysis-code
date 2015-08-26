@@ -39,32 +39,8 @@ import matplotlib.cm as cm
 from matplotlib.backends.backend_pdf import PdfPages
 
 # Christian's packages
-#import analysis as ana
+import analysis as ana
 
-def sum_error_sym(meas):
-  """gets a n x 3 numpy array holding a value, a statistical and a systematic
-  uncertainty to be added in quadrature
-  returns a n x 2 array holding the value and the combined uncertainty for each
-  row
-  """
-  print meas.shape[0]
-  val_err = np.zeros((meas.shape[0],2))
-  val_err[:,0] = meas[:,0]
-  val_err[:,1] = np.sqrt(np.add(np.square(meas[:,1]),np.square(meas[:,2])))
-  return val_err
-
-def sum_error_asym(meas):
-  """gets a n x 4 numpy array holding a value, a statistical and two systematic
-  uncertainties to be added in quadrature
-  returns a n x 2 array holding the value and the combined uncertainty for each
-  row
-  """
-  print meas.shape[0]
-  val_err = np.zeros((meas.shape[0],2))
-  val_err[:,0] = meas[:,0]
-  sys_err_sum =np.add( np.square(meas[:,2]), np.square(meas[:,3]) )
-  val_err[:,1] = np.sqrt(np.add(np.square(meas[:,1]),sys_err_sum))
-  return val_err
 
 def main():
 
@@ -82,53 +58,29 @@ def main():
   filename_nplqcd = datapath + 'ma_mf_npl.dat'
   filename_pacs = datapath + 'ma_mf_pacs.dat'
 
-  # TODO: Replace txtfile by binary format in future
-  # for plotting r0*Mpi
-  #scat_dat_nplqcd = np.loadtxt(filename_nplqcd,usecols=(1,2,3,4,5,9,15,16,17))
-  #scat_dat_pacs = np.loadtxt(filename_pacs,usecols=(0,1,4,5,6,7))
-  #scat_dat = np.loadtxt(filename_own,usecols=(1,2,3,10,11,12,13))
 
   # for plotting mk/fk
   scat_dat_nplqcd = np.loadtxt(filename_nplqcd,usecols=(9,10,11,15,16,17))
   scat_dat_pacs = np.loadtxt(filename_pacs,usecols=(2,3,4,5,6,7))
-  #scat_dat = np.loadtxt(filename_own,usecols=(4,5,6,7,8,9,14,15,16,17))
   scat_dat = np.loadtxt(filename_own,usecols=(2,3,4,5,6,7))
   scat_dat2 = np.loadtxt(filename_own2,usecols=(2,3,4,5,6,7,8,9))
   print scat_dat2
-  # split arrays
-  #scat_dat_lst = np.split(scat_dat,[4,8,9])
-  #scat_dat_lst.pop()
   # need mk/fk for plot, how to include statistical and systematical uncertainties?
   mk_fk_npl = scat_dat_nplqcd[:,0:3]
   # Overwrite on purpose
   mk_fk_pacs = np.divide(scat_dat_pacs[:,0], scat_dat_pacs[:,2])
   mk_fk_pacs = np.divide(mk_fk_pacs, math.sqrt(2.))
-  # need (mpi*r0)^2 for plot, how to include statistical and systematical uncertainties?
-  #mpi_r0_npl = np.multiply(scat_dat_nplqcd[:,0],np.multiply(1.474,scat_dat_nplqcd[:,3]))
-  #mpi_r0_pacs = np.multiply(scat_dat_pacs[:,0:2],0.5/(0.19733))
-  #mpi_r0_etmc_low = np.multiply(scat_dat[0:4,0],5.31)
-  #mpi_r0_etmc_high = np.multiply(scat_dat[4:8,0],5.31) 
-  #print mpi_r0_etmc_low, mpi_r0_pacs, mpi_r0_npl
-  mk_akk_npl = sum_error_sym(scat_dat_nplqcd[:,3:])
+  mk_akk_npl = ana.sum_error_sym(scat_dat_nplqcd[:,3:])
   mk_akk_pacs = scat_dat_pacs[:,4:6]
   mk_fk_etmc = []
   mk_akk_etmc = []
-  #for i in range(len(scat_dat_lst)):
-  #  mk_fk_etmc.append(np.divide(scat_dat_lst[i][:,0],scat_dat_lst[i][:,2]))
-  #  #mk_akk_etmc.append(sum_error_asym(scat_dat_lst[i][:,6:10]))
-  #  mk_akk_etmc.append(scat_dat_lst[i][:,4:])      
   mk_fk_etmc = np.divide(scat_dat[:,0], scat_dat[:,2])
   mk_fk_etmc2 = scat_dat2[:,4] 
   dmk_fk_etmc = scat_dat2[:,5]
   mk_akk_etmc = scat_dat2[:,6:]
-  #mk_akk_etmc_low = scat_dat[0:4,3:]
-  #print mk_akk_etmc_low
-  #mk_akk_etmc_high = scat_dat[4:8,3:]
   # check data
   label_ens = [r'A40',r'A60',r'A80',r'A100']
   print("etmc:\nLat\tbmk\tf_k\tmk/fk\tmk_akk")
-  #for i in range(len(scat_dat_lst)):
-      #for m,a in zip(mk_fk_etmc[i],mk_akk_etmc[i]):
   for ens,m,f,mf,a in zip(label_ens,scat_dat[:,0], scat_dat[:,2], mk_fk_etmc, mk_akk_etmc):
     print ens, m, f, mf, a
       # print("\n")
@@ -159,7 +111,6 @@ def main():
   # define colormap
   colors = cm.Dark2(np.linspace(0, 1, 7))
   # A ensembles unitary matching
-  #print mpi_r0_sq_etmc
   #p1 = plt.errorbar(mk_fk_etmc, mk_akk_etmc[:,0], mk_akk_etmc[:,1], fmt='o' + 'b',
   #                  label = r'A, $a\mu_s^\mathrm{unit}$, fk_ipol',color=colors[0])
   #for X, Y,l in zip(mk_fk_etmc,mk_akk_etmc[:,0],label_ens):
@@ -168,46 +119,16 @@ def main():
   #    plt.annotate(l,(X-0.001,Y+0.01))
   mkfk = plt.errorbar(mk_fk_etmc2, mk_akk_etmc[:,0], mk_akk_etmc[:,1], fmt='o' + 'b',
                     label = r'A, $a\mu_s^\mathrm{unit}$',color='blue')
-  #mpisq = plt.errorbar(np.square(mpi_r0_etmc_low), mk_akk_etmc_low[:,0], mk_akk_etmc_low[:,1], fmt='o' + 'b',
-  #                  label = r'A, $a\mu_s = 0.0225$',color='blue')
-  #mpisq = plt.errorbar(np.square(mpi_r0_etmc_low), mk_akk_etmc_high[:,0], mk_akk_etmc_high[:,1], fmt='o' + 'b',
-  #                  label = r'A, $a\mu_s = 0.02464$',color='orange')
   for X, Y,l in zip(mk_fk_etmc2,mk_akk_etmc[:,0],label_ens):
                         # Annotate the points 5 _points_ above and to the left
                         # of the vertex
       plt.annotate(l,(X-0.001,Y+0.01))
-#  # A ensembles strange mass 0.0225
-#  #print mpi_r0_sq_etmc
-#  p1 = plt.errorbar(mk_fk_etmc[0], mk_akk_etmc[0][:,0], mk_akk_etmc[0][:,1], fmt='o' + 'b',
-#                    label = lbl3[0],color=colors[0])
-#  # A ensembles strange mass 0.02464
-#  #print mpi_r0_sq_etmc
-#  p1 = plt.errorbar(mk_fk_etmc[1], mk_akk_etmc[1][:,0], mk_akk_etmc[1][:,1], fmt='o' + 'b',
-#                    label = lbl3[1],color=colors[1])
-#  # B ensembles strange mass 0.01861
-#  # define x and y data
-#  #print mpi_r0_sq_etmc
-#  p1 = plt.errorbar(mk_fk_etmc[2], mk_akk_etmc[2][:,0], mk_akk_etmc[2][:,1], fmt='o' + 'b',
-#                    label = lbl3[2],color=colors[2])
-#  # B ensembles strange mass 0.021
-#  # define x and y data
-#  #print mpi_r0_sq_etmc
-#  p1 = plt.errorbar(mk_fk_etmc[3], mk_akk_etmc[3][:,0], mk_akk_etmc[3][:,1], fmt='o' + 'b',
-#                    label = lbl3[3],color=colors[3])
   ## NPLQCD data
-  #mk_sq_npl = np.multiply(scat_dat_nplqcd[:,0], scat_dat_nplqcd[:,0])
   mkfk = plt.errorbar(mk_fk_npl[:,0], mk_akk_npl[:,0], mk_akk_npl[:,1], fmt='x' + 'b',
                     label = lbl3[4],color='green')
-  #mpisq = plt.errorbar(np.square(mpi_r0_npl), mk_akk_npl[:,0], mk_akk_npl[:,1], fmt='x' + 'b',
-  #                  label = lbl3[4],color='green')
   ## PACS data
-  #mk_sq_npl = np.multiply(scat_dat_nplqcd[:,0], scat_dat_nplqcd[:,0])
   mkfk = plt.errorbar(mk_fk_pacs, mk_akk_pacs[:,0], mk_akk_pacs[:,1], fmt='^' + 'b',
                     label = lbl3[5],color='red')
-  #mpisq = plt.errorbar(np.square(mpi_r0_pacs)[:,0], mk_akk_pacs[:,0], mk_akk_pacs[:,1], fmt='^' + 'b',
-  #                  label = lbl3[5],color='red')
-  ##p1 = plt.errorbar(X, Y, dY, fmt='o' + 'b',
-  ##                  label = label[3][_dl],color=next(colors))
   ## plottin the fit function, set fit range
   lfunc = 2
   ufunc = 5

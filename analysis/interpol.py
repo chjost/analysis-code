@@ -30,7 +30,8 @@ import scipy.stats
 import numpy as np
 import analyze_fcts as af
 
-__all__=["ipol_lin","ipol_quad","eval_lin","eval_quad"]
+__all__=["ipol_lin","ipol_quad","eval_lin","eval_quad","err_prop_gauss",
+         "sum_error_sym","sum_error_asym"]
 
 def ipol_lin(y_boot,x):
     """ Interpolate bootstrapsamples of data linearly
@@ -117,3 +118,51 @@ def eval_quad(quad_coeff, x):
   """
   eval_boot = np.multiply(quad_coeff[:,0],np.square(x))+ np.multiply(quad_coeff[:,1],x)+quad_coeff[:,2]
   return eval_boot
+
+def err_prop_gauss(_a,_b,oper='div'):
+  """ Evaluates gaussian propagated error without correlation for different
+      operations
+      Args:
+          a,b: numpy arrays of the values of interest
+          da,db: numpy arrays of the corresponding errors
+          oper: flag to determine derived value (default: a/b)
+      Returns:
+          err_der: a numpy array of the derived errors
+  """
+  a,b = _a[:,0],_b[:,0]
+  da,db = _a[:,1], _b[:,1]
+  if oper == 'div':
+    sq_1 = np.square(np.divide(da,b))
+    tmp_prod = np.multiply(a,db)
+    sq_2 = np.square(np.divide(tmp_prod,np.square(b)))
+    err_der = np.sqrt(np.add(sq_1,sq_2))
+  else:
+    print("Not able to determine error")
+    err_der = 0
+  return err_der
+
+def sum_error_sym(meas):
+  """gets a n x 3 numpy array holding a value, a statistical and a systematic
+  uncertainty to be added in quadrature
+  returns a n x 2 array holding the value and the combined uncertainty for each
+  row
+  """
+  print meas.shape[0]
+  val_err = np.zeros((meas.shape[0],2))
+  val_err[:,0] = meas[:,0]
+  val_err[:,1] = np.sqrt(np.add(np.square(meas[:,1]),np.square(meas[:,2])))
+  return val_err
+
+def sum_error_asym(meas):
+  """gets a n x 4 numpy array holding a value, a statistical and two systematic
+  uncertainties to be added in quadrature
+  returns a n x 2 array holding the value and the combined uncertainty for each
+  row
+  """
+  print meas.shape[0]
+  val_err = np.zeros((meas.shape[0],2))
+  val_err[:,0] = meas[:,0]
+  sys_err_sum =np.add( np.square(meas[:,2]), np.square(meas[:,3]) )
+  val_err[:,1] = np.sqrt(np.add(np.square(meas[:,1]),sys_err_sum))
+  return val_err
+

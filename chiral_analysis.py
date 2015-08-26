@@ -60,8 +60,8 @@ def main():
     # A60.24  0.26695(52) 
     # A80.24  0.27706(61)
     #A100.24  0.28807(34)
-    fk_unit = [[0.0767, 0.00060], [0.0803 ,0.00050],
-               [0.0836 ,0.00049], [0.0861 ,0.00050]]
+    fk_unit = np.array([[0.07432, 0.0057], [0.07699 ,0.0046],
+               [0.07886 ,0.0046], [0.0805 ,0.0051]])
     # transform M_K^phys to lattice units for each ensemble by M_K^lat =
     # M_K^lat = 0.5 fm * a/r_0 * M_K^phys / hc
     r0_a = [[5.178,0.044],[5.209,0.058],
@@ -71,11 +71,15 @@ def main():
     M_K_pdg = [493.677,0.016] 
     mk_phys = np.divide(np.multiply(lat_spac,M_K_pdg),hc)
     print mk_phys
-    mk_unit = [[0.25884,0.00043], [0.26695,0.00052],
-               [0.27706,0.00061], [0.28807,0.00034]]
+    mk_unit = np.array([[0.25884,0.00043], [0.26695,0.00052],
+               [0.27706,0.00061], [0.28807,0.00034]])
 
     nb=[0,1,2,3]
     mk_match = mk_unit
+    rat_mf = np.divide(mk_match[:,0],fk_unit[:,0])
+    drat_mf = ana.err_prop_gauss(mk_match,fk_unit)
+    mk_by_fk = np.column_stack((rat_mf,drat_mf))
+    print mk_by_fk
     # arrayfor final results stores for each ensemble light quark mass, amu_s
     # from matching,unitary mass and mk_akk from interpolation
     amu_s_ipol = np.zeros((4,2)) 
@@ -167,6 +171,13 @@ def main():
         mean_a_kk_match, std_a_kk_match = ana.calc_error(a_kk_match)
         print("lin. i-pol.:\tM_K * a_kk = %f +/- %f" % (a_kk_match[0], std_a_kk_match))
         akk_mk_match[idx] = np.array([a_kk_match[0],std_a_kk_match])
+
+        # Linear fit
+        p_a_k, chi2_a_k, pvals_ak = ana.fitting(linfit, amu_s, ma_kk_sum, [2.,1.],
+            verbose = False)
+        mak_fit = ana.eval_lin(p_a_k,b_roots_fit)
+        mean_ma_k_fit, std_ma_k_fit = ana.calc_error(mak_fit)
+        print("lin. fit:\tM_K * a_kk = %f +/- %f" % (mak_fit[0], std_ma_k_fit))
         
         # quadratic interpolation
         a_k_ipol2 = ana.ipol_quad(ma_kk_sum, amu_s)
@@ -217,6 +228,10 @@ def main():
         ana.plot_data_with_fit(amu_s, ma_kk_sum[0,:], ma_kk_std, linfit,
             a_k_ipol[0], None, label_ma_kk, pdf_ma_kk,
             hconst = (a_kk_match[0],std_a_kk_match),vconst=(b_roots_p1[0],std_amu_s_p1))
+        # Plot the linear fit with its fitted amu_s
+        ana.plot_data_with_fit(amu_s, ma_kk_sum[0,:], std_ma_k_fit,linfit,
+            p_a_k[0],None,label_ma_kk,pdf_ma_kk,
+            hconst=(mak_fit[0],std_ma_k_fit),vconst=(b_roots_fit[0],std_amu_s))
         # quadratic interpolation
         label_ma_kk[4] = r'qudr. ipol'
         ana.plot_data_with_fit(amu_s, ma_kk_sum[0,:], ma_kk_std, sqfit,
@@ -225,9 +240,9 @@ def main():
         # Close pdf files
         pdf_mk.close() 
         pdf_ma_kk.close()
-    res = np.hstack(( amu_s_ipol, mk_match, fk_ipol, akk_mk_match))
+    res = np.hstack(( amu_s_ipol, mk_match, fk_unit, mk_by_fk, akk_mk_match))
     print res
-    np.savetxt(datapath+'ma_mkfk_match.dat',res)
+    np.savetxt(datapath+'ma_mk_match.dat',res)
 
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':
