@@ -27,11 +27,12 @@
 
 from scipy.optimize import leastsq
 import scipy.stats
+import math
 import numpy as np
 import analyze_fcts as af
 
 __all__=["ipol_lin","ipol_quad","eval_lin","eval_quad","err_prop_gauss",
-         "sum_error_sym","sum_error_asym"]
+         "eval_chi_pt_cont","sum_error_sym","sum_error_asym"]
 
 def ipol_lin(y_boot,x):
     """ Interpolate bootstrapsamples of data linearly
@@ -118,6 +119,42 @@ def eval_quad(quad_coeff, x):
   """
   eval_boot = np.multiply(quad_coeff[:,0],np.square(x))+ np.multiply(quad_coeff[:,1],x)+quad_coeff[:,2]
   return eval_boot
+
+def eval_chi_pt_cont(p,mpi):
+  """ Continuum chiral perturbation formula for KK I = 1 scattering
+
+  This function calculates the product MK*akk for a given set of input
+  parameters. This is the continuum extrapolation formula for chi-pt
+  
+  Args:
+    mpi: The pion mass 
+    mk: The kaon mass
+    fk: the kaon decay constant
+    meta: the eta mass
+    ren: the value of the chosen renormalization scale
+    lkk: the counterterm involving the Gasser-Leutwyler coefficients
+
+  Returns:
+    mk*akk: The product of scattering length and Kaon mass at one set of
+    parameters
+  """
+  #mk = p[0], fk = p[1], meta = p[2], ren = p[3], lkk = p[4]
+  mk, fk, meta, ren = p
+  # From pipi analysis
+  lkk = 3.79
+  rat_k = mk/fk
+  pre = -(rat_k**2/(8*math.pi)) 
+  args = np.array([mk/ren, meta/ren])
+  log = np.log(np.square(args))
+  mk_akk = []
+  coeff = np.array([2, 2./3. * mpi**2/(meta**2 - mpi**2),
+                  2./27.*((20.*mk**2 -11.*mpi**2))])
+  log_tmp = np.insert(log,1,np.log(np.square(mpi/ren)))
+  prod = np.multiply(coeff,log_tmp)
+  brac_in = prod[0]- prod[1] + prod[2] - 14./9. - 32.*(4*math.pi)**2*lkk
+  brac_out = 1. + rat_k**2/(4.*math.pi)**2*brac_in
+  mk_akk.append(pre*brac_out)
+  return mk_akk
 
 def err_prop_gauss(_a,_b,oper='div'):
   """ Evaluates gaussian propagated error without correlation for different

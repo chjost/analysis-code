@@ -48,20 +48,40 @@ def main():
 
   #----------- Read in the data we want and resort it  ------------------------
   rootpath = '/hiskp2/helmes/k-k-scattering/plots/overview/light_qmd/'
-  
+  bootpath = '/hiskp2/helmes/k-k-scattering/data/'
   plotpath = rootpath+'plots/'
   datapath = rootpath+'data/'
+  # Ensemble name
+  ensemble = ['A40.24/','A60.24/','A80.24/','A100.24/']
+  # strange quark masses
+  mu_s = ['225','2464']
+  # physical values
+  r0_mpi_ph = 0.3525029
+  boot_input = [bootpath+ens for ens in ensemble]
+  files = ["mk_a0_"+m+".npy" for m in mu_s]
+  a0_mu_hi = [path+"mk_a0_"+mu_s[1]+".npy" for path in boot_input]
+  a0_mu_lo = [path+"mk_a0_"+mu_s[0]+".npy" for path in boot_input]
+  nb_bs = 1500
+  a0_hi = np.zeros((nb_bs,len(a0_mu_hi)))
+  a0_lo = np.zeros_like(a0_hi)
+  for i,(hel,lel) in enumerate(zip(a0_mu_hi, a0_mu_lo)):
+    a0_hi[:,i] = ana.read_data(hel)
+    a0_lo[:,i] = ana.read_data(lel)
   # The file should contain MK*aKK, Mpi and r0 as columns
   filename_own = datapath + 'ma_mpi.dat'
   filename_own2 = datapath + 'ma_mk_match.dat'
   filename_nplqcd = datapath + 'ma_mf_npl.dat'
   filename_pacs = datapath + 'ma_mf_pacs.dat'
-
+  # Get mk_akk bootstrap samples for extrapolation
   # TODO: Replace txtfile by binary format in future
   # for plotting r0*Mpi
   scat_dat_nplqcd = np.loadtxt(filename_nplqcd,usecols=(1,2,3,4,5,9,15,16,17))
   scat_dat_pacs = np.loadtxt(filename_pacs,usecols=(0,1,4,5,6,7))
   scat_dat = np.loadtxt(filename_own,usecols=(1,2,3,10,11,12,13))
+  
+  # load and concatenate bootstrap samples as array of shape ens x samples
+  # extrapolate and fit linearly
+
 
   #split arrays
   #scat_dat_lst = np.split(scat_dat,[4,8,9])
@@ -99,6 +119,44 @@ def main():
   #    print m, a
 
 
+  # -------------- linear extrapolations to (r0*M_pi_phys)^2 ------------------
+  # Interpolate the 2 low lying values for a0_mk  and evaluate at physical point
+  # for both strange quark masses
+  # define a linear function
+  linfit = lambda p, t: p[0]*t+p[1]
+  # mu_s = 0.2464
+  print mu_s[1]
+  coeff_ipol_a0hi = ana.ipol_lin(a0_hi[:,0:2],np.square(mpi_r0_etmc_high)[0:2])
+  a0_mk_hi_ext = ana.eval_lin(coeff_ipol_a0hi,np.square(r0_mpi_ph))
+  mean_a0_hi_ext, std_a0_hi_ext = ana.calc_error(a0_mk_hi_ext)
+  print("lin. ext.-pol.:\ta0 * MK = %f +/- %f" % (a0_mk_hi_ext[0], std_a0_hi_ext))
+
+  # linear fit
+  print a0_hi.shape,  mpi_r0_etmc_high.shape
+  p_a0_mk_hi, chi2_a0_mk_hi, pvals_a0_mk_hi = ana.fitting(ana.chi_pt_cont,
+                                np.square(mpi_r0_etmc_high), a0_hi,
+                                np.array([1.,1.,1.,1.]), verbose=True)
+  a0_mk_hi_fit_ext = np.zeros(1500)
+  for i,a in enumerate(a0_mk_hi_fit_ext):
+    a = ana.eval_chi_pt_cont(p_a0_mk_hi[i],np.square(r0_mpi_ph))
+    print a
+  mean_a0_hi_lin_ext, std_a0_hi_lin_fit =ana.calc_error(a0_mk_hi_fit_ext) 
+  print("ext. lin. fit:\ta0 * MK = %f +/- %f" % (a0_mk_hi_fit_ext[0], std_a0_hi_lin_fit))
+
+  # mu_s = 0.225
+  print mu_s[0]
+  coeff_ipol_a0lo = ana.ipol_lin(a0_lo[:,0:2],np.square(mpi_r0_etmc_low)[0:2])
+  a0_mk_lo_ext = ana.eval_lin(coeff_ipol_a0lo,np.square(r0_mpi_ph))
+  mean_a0_lo_ext, std_a0_lo_ext = ana.calc_error(a0_mk_lo_ext)
+  print("lin. ext.-pol.:\ta0 * MK = %f +/- %f" % (a0_mk_lo_ext[0], std_a0_lo_ext))
+  
+  p_a0_mk_lo, clo2_a0_mk_lo, pvals_a0_mk_lo = ana.fitting(linfit,
+                                np.square(mpi_r0_etmc_low), a0_lo,
+                                [2.,1.], verbose=False)
+  a0_mk_lo_fit_ext = ana.eval_lin(p_a0_mk_lo,np.square(r0_mpi_ph))
+  mean_a0_lo_lin_ext, std_a0_lo_lin_fit =ana.calc_error(a0_mk_lo_fit_ext) 
+  print("ext. lin. fit:\ta0 * MK = %f +/- %f" % (a0_mk_lo_fit_ext[0], std_a0_lo_lin_fit))
+
   #----------- Fit NLO-ChiPT to resorted data ---------------------------------
   #----------- Make a nice plot including CHiPT tree level --------------------
   lbl3 = [r'A, $a\mu_s=0.0225$',
@@ -127,7 +185,21 @@ def main():
   for X, Y,l in zip(np.square(mpi_r0_etmc_low),mk_akk_etmc_high[:,0],label_ens):
                         # Annotate the points 5 _points_ above and to the left
                         # of the vertex
-      plt.annotate(l,(X-0.001,Y+0.01))
+      plt.annotate(l,(X-0.001,Y+0.05))
+# plot extrapolations
+  ## plottin the fit function, set fit range
+  lfunc = 0
+  ufunc = 4
+  x1 = np.linspace(lfunc, ufunc, 1000)
+  y1 = []
+  y2 = []
+  for i in x1:
+    y1.append(linfit(coeff_ipol_a0hi[0,:],i))
+    y2.append(linfit(coeff_ipol_a0lo[0,:],i))
+  y1 = np.asarray(y1)
+  y2 = np.asarray(y2)
+  p2, = plt.plot(x1, y1, color='orange', label = "linear ext.")
+  p2, = plt.plot(x1, y2, color='blue', label = "linear ext.")
 #  # A ensembles strange mass 0.0225
 #  #print mpi_r0_sq_etmc
 #  p1 = plt.errorbar(mk_fk_etmc[0], mk_akk_etmc[0][:,0], mk_akk_etmc[0][:,1], fmt='o' + 'b',
@@ -160,7 +232,7 @@ def main():
   plt.xlabel(label[1])
   plt.ylabel(label[2])
   plt.title(label[0])
-  plt.legend(ncol=1, numpoints=1, loc='best')
+  plt.legend(ncol=1, numpoints=1, loc=1)
   plt.xlim([0.0,3.5])
   plt.ylim([-0.65,-0.25])
   # save pdf

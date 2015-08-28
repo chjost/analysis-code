@@ -5,6 +5,7 @@ analysis package for scattering problems on the lattice
 from .input_output import *
 from .corr_matrix import *
 from .bootstrap import *
+from .chiral_fits import *
 from .analyze_fcts import *
 from .fit import *
 from .interpol import *
