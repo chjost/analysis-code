@@ -89,6 +89,7 @@ def main():
   # need (mpi*r0)^2 for plot, how to include statistical and systematical uncertainties?
   mpi_r0_npl = np.multiply(scat_dat_nplqcd[:,0],np.multiply(1.474,scat_dat_nplqcd[:,3]))
   mpi_r0_pacs = np.multiply(scat_dat_pacs[:,0:2],0.5/(0.19733))
+  mpi_etmc = scat_dat[0:4,0]
   mpi_r0_etmc_low = np.multiply(scat_dat[0:4,0],5.31)
   mpi_r0_etmc_high = np.multiply(scat_dat[4:8,0],5.31) 
   print mpi_r0_etmc_low, mpi_r0_pacs, mpi_r0_npl
@@ -134,8 +135,8 @@ def main():
   # linear fit
   print a0_hi.shape,  mpi_r0_etmc_high.shape
   p_a0_mk_hi, chi2_a0_mk_hi, pvals_a0_mk_hi = ana.fitting(ana.chi_pt_cont,
-                                np.square(mpi_r0_etmc_high), a0_hi,
-                                np.array([1.,1.,1.,1.]), verbose=True)
+                                mpi_etmc, a0_hi,
+                                np.array([1.,1.]), verbose=True)
   a0_mk_hi_fit_ext = np.zeros(1500)
   for i,a in enumerate(a0_mk_hi_fit_ext):
     a = ana.eval_chi_pt_cont(p_a0_mk_hi[i],np.square(r0_mpi_ph))

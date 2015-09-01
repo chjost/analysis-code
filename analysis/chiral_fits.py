@@ -33,6 +33,19 @@ import math
 import numpy as np
 import analyze_fcts as af
 from .plot import *
+def lat_to_phys(q_lat):
+  # Lattice spacing for a ensembles:
+  a = 0.5/5.31
+  hc = 197.97
+  q_phys = np.divide(q_lat,(a*hc))
+  return q_phys
+
+def phys_to_lat(q_phys):
+  # Lattice spacing for a ensembles:
+  a = 0.5/5.31
+  hc = 197.97
+  q_lat = np.multiply(q_phys,(a*hc))
+  return q_lat
 
 def chi_pt_cont(p,mpi):
   """ Continuum chiral perturbation formula for KK I = 1 scattering
@@ -53,16 +66,20 @@ def chi_pt_cont(p,mpi):
     parameters
   """
   #mk = p[0], fk = p[1], meta = p[2], ren = p[3], lkk = p[4]
-  mk, fk, meta, lkk = p
-  ren = 
-  meta = 
+  lkk, meta = p
+  # try fit with physical values (MeV)
+  mk = 497.7
+  fk = 160
+  ren = 130.7
   # From pipi analysis
-  rat_k = mk/fk
+  rat_k = np.divide(mk,fk)
   pre = -(rat_k**2/(8*math.pi)) 
-  args = np.array([mk/ren, meta/ren])
+  args = np.array([np.divide(mk,ren), np.divide(meta,ren)])
   log = np.log(np.square(args))
   mk_akk = []
-  for x in mpi:
+  #convert mpi to phys
+  _mpi = lat_to_phys(mpi)
+  for i,x in enumerate(_mpi):
     coeff = np.array([2, 2./3. * x**2/(meta**2 - x**2),
                     2./27.*((20.*mk**2 -11.*x**2))])
     log_tmp = np.insert(log,1,np.log(np.square(x/ren)))
