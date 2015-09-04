@@ -30,7 +30,7 @@ import scipy.stats
 import math
 import numpy as np
 import analyze_fcts as af
-
+import chiral_fits as chf
 __all__=["ipol_lin","ipol_quad","eval_lin","eval_quad","err_prop_gauss",
          "eval_chi_pt_cont","sum_error_sym","sum_error_asym"]
 
@@ -138,22 +138,28 @@ def eval_chi_pt_cont(p,mpi):
     mk*akk: The product of scattering length and Kaon mass at one set of
     parameters
   """
-  #mk = p[0], fk = p[1], meta = p[2], ren = p[3], lkk = p[4]
-  mk, fk, meta, ren = p
-  # From pipi analysis
-  lkk = 3.79
-  rat_k = mk/fk
-  pre = -(rat_k**2/(8*math.pi)) 
-  args = np.array([mk/ren, meta/ren])
-  log = np.log(np.square(args))
-  mk_akk = []
-  coeff = np.array([2, 2./3. * mpi**2/(meta**2 - mpi**2),
-                  2./27.*((20.*mk**2 -11.*mpi**2))])
-  log_tmp = np.insert(log,1,np.log(np.square(mpi/ren)))
-  prod = np.multiply(coeff,log_tmp)
-  brac_in = prod[0]- prod[1] + prod[2] - 14./9. - 32.*(4*math.pi)**2*lkk
-  brac_out = 1. + rat_k**2/(4.*math.pi)**2*brac_in
-  mk_akk.append(pre*brac_out)
+  lkk, Bms = p
+  # try fit with physical values (MeV)
+  fk = 160
+  ren = fk
+  #ren = 130.7
+  #convert mpi to phys
+  _mpi = chf.lat_to_phys(mpi)
+  # Overall prefactor
+  pre_out = (2.*Bms - _mpi**2)/(16*math.pi*fk**2)
+  # inner prefactor
+  pre_in = (2.*Bms + _mpi**2)/(32*math.pi**2*fk**2)
+  # 3 coefficients to the logarithms
+  coeff = np.array([2, 1./(2.*Bms/_mpi**2-1.), 20./9.*(Bms-_mpi**2)/(2.*Bms-_mpi**2)])
+  # 3 logarithms
+  log = np.log(np.array([(_mpi**2+2.*Bms)/ren**2,_mpi**2/ren**2,(_mpi**2+4.*Bms)/(3.*ren**2)]))
+  # sum_i coeff[i]*log[i]
+  prod = np.multiply(coeff,log)
+  # decorated counterterm
+  count = 14./9. + 32.*(4*math.pi)**2*lkk
+  brac_in = prod[0] - prod[1] + prod[2] - count
+  brac_out = 1. + pre_in*brac_in
+  mk_akk = (pre_out*brac_out)
   return mk_akk
 
 def err_prop_gauss(_a,_b,oper='div'):
@@ -179,9 +185,9 @@ def err_prop_gauss(_a,_b,oper='div'):
   return err_der
 
 def sum_error_sym(meas):
-  """gets a n x 3 numpy array holding a value, a statistical and a systematic
+  """gets a n _mpi 3 numpy array holding a value, a statistical and a systematic
   uncertainty to be added in quadrature
-  returns a n x 2 array holding the value and the combined uncertainty for each
+  returns a n _mpi 2 array holding the value and the combined uncertainty for each
   row
   """
   print meas.shape[0]
@@ -191,9 +197,9 @@ def sum_error_sym(meas):
   return val_err
 
 def sum_error_asym(meas):
-  """gets a n x 4 numpy array holding a value, a statistical and two systematic
+  """gets a n _mpi 4 numpy array holding a value, a statistical and two systematic
   uncertainties to be added in quadrature
-  returns a n x 2 array holding the value and the combined uncertainty for each
+  returns a n _mpi 2 array holding the value and the combined uncertainty for each
   row
   """
   print meas.shape[0]

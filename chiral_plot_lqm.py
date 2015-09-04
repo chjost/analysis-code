@@ -91,7 +91,7 @@ def main():
   mpi_r0_pacs = np.multiply(scat_dat_pacs[:,0:2],0.5/(0.19733))
   mpi_etmc = scat_dat[0:4,0]
   mpi_r0_etmc_low = np.multiply(scat_dat[0:4,0],5.31)
-  mpi_r0_etmc_high = np.multiply(scat_dat[4:8,0],5.31) 
+  mpi_r0_etmc_high = np.multiply(scat_dat[4:8,0],5.31)
   print mpi_r0_etmc_low, mpi_r0_pacs, mpi_r0_npl
   mk_akk_npl = ana.sum_error_sym(scat_dat_nplqcd[:,6:])
   mk_akk_pacs = scat_dat_pacs[:,4:6]
@@ -133,16 +133,23 @@ def main():
   print("lin. ext.-pol.:\ta0 * MK = %f +/- %f" % (a0_mk_hi_ext[0], std_a0_hi_ext))
 
   # linear fit
-  print a0_hi.shape,  mpi_r0_etmc_high.shape
-  p_a0_mk_hi, chi2_a0_mk_hi, pvals_a0_mk_hi = ana.fitting(ana.chi_pt_cont,
-                                mpi_etmc, a0_hi,
-                                np.array([1.,1.]), verbose=True)
-  a0_mk_hi_fit_ext = np.zeros(1500)
-  for i,a in enumerate(a0_mk_hi_fit_ext):
-    a = ana.eval_chi_pt_cont(p_a0_mk_hi[i],np.square(r0_mpi_ph))
-    print a
+  p_a0_mk_hi, clo2_a0_mk_hi, pvals_a0_mk_hi = ana.fitting(linfit,
+                                np.square(mpi_r0_etmc_low), a0_hi,
+                                [2.,1.], verbose=True)
+  a0_mk_hi_fit_ext = ana.eval_lin(p_a0_mk_hi,np.square(r0_mpi_ph))
   mean_a0_hi_lin_ext, std_a0_hi_lin_fit =ana.calc_error(a0_mk_hi_fit_ext) 
   print("ext. lin. fit:\ta0 * MK = %f +/- %f" % (a0_mk_hi_fit_ext[0], std_a0_hi_lin_fit))
+  #print a0_hi.shape,  mpi_r0_etmc_high.shape
+  #p_a0_mk_hi, chi2_a0_mk_hi, pvals_a0_mk_hi = ana.fitting(ana.chi_pt_cont,
+  #                              mpi_etmc, a0_hi,
+  #                              np.array([1.,1.]), verbose=True)
+  #a0_mk_hi_fit_ext = np.zeros(1500)
+  #print p_a0_mk_hi[0]
+  #for i in range(0,1500):
+  #  a0_mk_hi_fit_ext[i] = ana.eval_chi_pt_cont(p_a0_mk_hi[i],ana.phys_to_lat(139.7))
+  #  #print a
+  #mean_a0_hi_lin_ext, std_a0_hi_lin_fit = ana.calc_error(a0_mk_hi_fit_ext) 
+  #print("ext. lin. fit:\ta0 * MK = %f +/- %f" % (a0_mk_hi_fit_ext[0], std_a0_hi_lin_fit))
 
   # mu_s = 0.225
   print mu_s[0]
@@ -153,10 +160,23 @@ def main():
   
   p_a0_mk_lo, clo2_a0_mk_lo, pvals_a0_mk_lo = ana.fitting(linfit,
                                 np.square(mpi_r0_etmc_low), a0_lo,
-                                [2.,1.], verbose=False)
+                                [2.,1.], verbose=True)
   a0_mk_lo_fit_ext = ana.eval_lin(p_a0_mk_lo,np.square(r0_mpi_ph))
   mean_a0_lo_lin_ext, std_a0_lo_lin_fit =ana.calc_error(a0_mk_lo_fit_ext) 
   print("ext. lin. fit:\ta0 * MK = %f +/- %f" % (a0_mk_lo_fit_ext[0], std_a0_lo_lin_fit))
+  # unitary matched case
+  coeff_ipol_a0m = ana.ipol_lin(a0_lo[:,0:2],np.square(mpi_r0_etmc_low)[0:2])
+  a0_mk_lo_ext = ana.eval_lin(coeff_ipol_a0lo,np.square(r0_mpi_ph))
+  mean_a0_lo_ext, std_a0_lo_ext = ana.calc_error(a0_mk_lo_ext)
+  print("lin. ext.-pol.:\ta0 * MK = %f +/- %f" % (a0_mk_lo_ext[0], std_a0_lo_ext))
+  
+  p_a0_mk_lo, clo2_a0_mk_lo, pvals_a0_mk_lo = ana.fitting(linfit,
+                                np.square(mpi_r0_etmc_low), a0_lo,
+                                [2.,1.], verbose=True)
+  a0_mk_lo_fit_ext = ana.eval_lin(p_a0_mk_lo,np.square(r0_mpi_ph))
+  mean_a0_lo_lin_ext, std_a0_lo_lin_fit =ana.calc_error(a0_mk_lo_fit_ext) 
+  print("ext. lin. fit:\ta0 * MK = %f +/- %f" % (a0_mk_lo_fit_ext[0], std_a0_lo_lin_fit))
+
 
   #----------- Fit NLO-ChiPT to resorted data ---------------------------------
   #----------- Make a nice plot including CHiPT tree level --------------------
@@ -179,28 +199,34 @@ def main():
   #                      # Annotate the points 5 _points_ above and to the left
   #                      # of the vertex
   #    plt.annotate(l,(X-0.001,Y+0.01))
+  mpi_etmc_phys=ana.lat_to_phys(mpi_etmc)
+  print mpi_etmc_phys
   mpisq = plt.errorbar(np.square(mpi_r0_etmc_low), mk_akk_etmc_low[:,0], mk_akk_etmc_low[:,1], fmt='o' + 'b',
                     label = r'A, $a\mu_s = 0.0225$',color='blue')
   mpisq = plt.errorbar(np.square(mpi_r0_etmc_low), mk_akk_etmc_high[:,0], mk_akk_etmc_high[:,1], fmt='o' + 'b',
                     label = r'A, $a\mu_s = 0.02464$',color='orange')
-  for X, Y,l in zip(np.square(mpi_r0_etmc_low),mk_akk_etmc_high[:,0],label_ens):
+  for X, Y,l in zip(np.square(mpi_etmc_phys),mk_akk_etmc_high[:,0],label_ens):
                         # Annotate the points 5 _points_ above and to the left
                         # of the vertex
       plt.annotate(l,(X-0.001,Y+0.05))
 # plot extrapolations
   ## plottin the fit function, set fit range
   lfunc = 0
-  ufunc = 4
+  ufunc = 3.5
   x1 = np.linspace(lfunc, ufunc, 1000)
   y1 = []
   y2 = []
+  #y3 = []
   for i in x1:
-    y1.append(linfit(coeff_ipol_a0hi[0,:],i))
-    y2.append(linfit(coeff_ipol_a0lo[0,:],i))
+    y1.append(linfit(p_a0_mk_hi[0,:],i))
+    y2.append(linfit(p_a0_mk_lo[0,:],i))
+    #y3.append(ana.eval_chi_pt_cont(p_a0_mk_hi[0],i))
   y1 = np.asarray(y1)
   y2 = np.asarray(y2)
+  #y3 = np.asarray(y3)
   p2, = plt.plot(x1, y1, color='orange', label = "linear ext.")
   p2, = plt.plot(x1, y2, color='blue', label = "linear ext.")
+  #p2, = plt.plot(x1, y3, color='darkgreen', label = "cont chipt")
 #  # A ensembles strange mass 0.0225
 #  #print mpi_r0_sq_etmc
 #  p1 = plt.errorbar(mk_fk_etmc[0], mk_akk_etmc[0][:,0], mk_akk_etmc[0][:,1], fmt='o' + 'b',

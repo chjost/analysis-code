@@ -35,16 +35,16 @@ import analyze_fcts as af
 from .plot import *
 def lat_to_phys(q_lat):
   # Lattice spacing for a ensembles:
-  a = 0.5/5.31
-  hc = 197.97
-  q_phys = np.divide(q_lat,(a*hc))
+  a =0.5/5.31
+  hc = 197.33
+  q_phys = np.multiply(q_lat,(hc/a))
   return q_phys
 
 def phys_to_lat(q_phys):
   # Lattice spacing for a ensembles:
-  a = 0.5/5.31
-  hc = 197.97
-  q_lat = np.multiply(q_phys,(a*hc))
+  a =0.5/5.31
+  hc = 197.33
+  q_lat = np.multiply(q_phys,(a/hc))
   return q_lat
 
 def chi_pt_cont(p,mpi):
@@ -65,28 +65,30 @@ def chi_pt_cont(p,mpi):
     mk*akk: The product of scattering length and Kaon mass at one set of
     parameters
   """
-  #mk = p[0], fk = p[1], meta = p[2], ren = p[3], lkk = p[4]
-  lkk, meta = p
+  lkk, Bms = p
   # try fit with physical values (MeV)
-  mk = 497.7
   fk = 160
-  ren = 130.7
-  # From pipi analysis
-  rat_k = np.divide(mk,fk)
-  pre = -(rat_k**2/(8*math.pi)) 
-  args = np.array([np.divide(mk,ren), np.divide(meta,ren)])
-  log = np.log(np.square(args))
+  ren = fk
+  #ren = 130.7
   mk_akk = []
   #convert mpi to phys
   _mpi = lat_to_phys(mpi)
   for i,x in enumerate(_mpi):
-    coeff = np.array([2, 2./3. * x**2/(meta**2 - x**2),
-                    2./27.*((20.*mk**2 -11.*x**2))])
-    log_tmp = np.insert(log,1,np.log(np.square(x/ren)))
-    prod = np.multiply(coeff,log_tmp)
-    brac_in = prod[0]- prod[1] + prod[2] - 14./9. - 32.*(4*math.pi)**2*lkk
-    brac_out = 1. + rat_k**2/(4.*math.pi)**2*brac_in
-    mk_akk.append(pre*brac_out)
+    # Overall prefactor
+    pre_out = (2.*Bms - x**2)/(16*math.pi*fk**2)
+    # inner prefactor
+    pre_in = (2.*Bms + x**2)/(32*math.pi**2*fk**2)
+    # 3 coefficients to the logarithms
+    coeff = np.array([2, 1./(2.*Bms/x**2-1.), 20./9.*(Bms-x**2)/(2.*Bms-x**2)])
+    # 3 logarithms
+    log = np.log(np.array([(x**2+2.*Bms)/ren**2,x**2/ren**2,(x**2+4.*Bms)/(3.*ren**2)]))
+    # sum_i coeff[i]*log[i]
+    prod = np.multiply(coeff,log)
+    # decorated counterterm
+    count = 14./9. + 32.*(4*math.pi)**2*lkk
+    brac_in = prod[0] - prod[1] + prod[2] - count
+    brac_out = 1. + pre_in*brac_in
+    mk_akk.append(pre_out*brac_out)
   return mk_akk
 
 def nlo_kk():

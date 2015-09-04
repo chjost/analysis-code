@@ -54,6 +54,7 @@ def main():
     #ensemble = ['A40.24/']
     # A-ensemble strange quark masses
     amu_s = np.asarray([0.0185,0.0225,0.02464])
+    amu_l = np.array([[0.004],[0.006],[0.008],[0.01]])
     nb_mu_s = len(amu_s)
     # unitary kaon masses and decay constants from eta eta` paper
     # A40.24  0.25884(43)
@@ -171,6 +172,7 @@ def main():
         mean_a_kk_match, std_a_kk_match = ana.calc_error(a_kk_match)
         print("lin. i-pol.:\tM_K * a_kk = %f +/- %f" % (a_kk_match[0], std_a_kk_match))
         akk_mk_match[idx] = np.array([a_kk_match[0],std_a_kk_match])
+        ana.write_data(a_kk_match, cache_path+ens[:-1]+'_akk_mk_match.npy')
 
         # Linear fit
         p_a_k, chi2_a_k, pvals_ak = ana.fitting(linfit, amu_s, ma_kk_sum, [2.,1.],
@@ -240,9 +242,11 @@ def main():
         # Close pdf files
         pdf_mk.close() 
         pdf_ma_kk.close()
-    res = np.hstack(( amu_s_ipol, mk_match, fk_unit, mk_by_fk, akk_mk_match))
+    res = np.hstack(( amu_l, amu_s_ipol, mk_match, fk_unit, mk_by_fk, akk_mk_match))
     print res
-    np.savetxt(datapath+'ma_mk_match.dat',res)
+    save_head = 'amu_l\tamu_s_ipol d(amu_s_ipol)\tmk_match d(mk_match)\tfk_unit d(fk_unit)\tmk/fk d(mk/fk)\takk_mk_match d(akk_mk_match)'
+    np.savetxt(datapath+'ma_mk_match.dat',res,fmt='%.4e',header=save_head)
+
 
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':

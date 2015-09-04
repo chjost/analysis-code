@@ -120,7 +120,7 @@ def plot_data_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
 #  plt.bar(center, hist, align='center', width=width)
 #  plt.show()
 
-def plot_data(X, Y, dY, pdfplot, label, plotrange=None, logscale=False, xlim=None, ylim=None):
+def plot_data(X, _Y, dY, pdfplot, label, plotrange=None, logscale=False, xlim=None, ylim=None):
     """A function that plots a correlation function.
 
     This function plots the given data points and the fit to the data. The plot
@@ -142,6 +142,7 @@ def plot_data(X, Y, dY, pdfplot, label, plotrange=None, logscale=False, xlim=Non
     Returns:
         Nothing.
     """
+    Y=np.atleast_2d(_Y)
     # check boundaries for the plot
     if isinstance(plotrange, (np.ndarray, list, tuple)):
         plotrange = np.asarray(plotrange).flatten()
@@ -151,6 +152,7 @@ def plot_data(X, Y, dY, pdfplot, label, plotrange=None, logscale=False, xlim=Non
             l = int(plotrange[0])
             u = int(plotrange[1])
         # plot the data
+        print l,u
         p1 = plt.errorbar(X[l:u], Y[0,l:u], dY[l:u], marker='x', color='teal',linestyle='', label=label[3])
     else:
         # plot the data
