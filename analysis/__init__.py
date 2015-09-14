@@ -16,6 +16,8 @@ from ._calc_energies import calc_Ecm, calc_gamma, calc_q2
 from ._quantiles import weighted_quantile
 from .ensemble import LatticeEnsemble
 from .fitresults import FitResults
+from .module_global import __m, set_cores, get_cores, multiprocess
+from .fitfunc import pion_fit
 
 __all__ = [t for t in dir() if not t.startswith('_')]
 

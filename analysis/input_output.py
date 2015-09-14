@@ -298,7 +298,7 @@ def read_fitresults(filename, verbose=False):
         L = f.files
         Lmax = max([len(s) for s in L])
         d = int((Lmax - 2) / 2)
-        n = (len(L) - 1) / 3
+        n = int(np.floor((len(L) - 1) / 3))
         if d is 1:
             fitint = f['fi']
             try:
@@ -328,13 +328,14 @@ def read_fitresults(filename, verbose=False):
                             chi2[i].append(f['ch%02d%02d' % (i,j)])
                             pvals[i].append(f['pv%02d%02d' % (i,j)])
         else:
+            raise RuntimeError("the read function only covers two-level lists")
             print("the read function only covers up to two levels if lists")
             print("RETURNING NONE")
             return None
     if fitint2 is None:
-        return fitint, par, chi2, pvals
+        return (fitint, par, chi2, pvals)
     else:
-        return fitint, par, chi2, pvals, fitint2
+        return (fitint, par, chi2, pvals, fitint2)
 
 #TODO(CJ): still needed?
 def extract_bin_corr_fct(name='', start_cfg=0, delta_cfg=0, nb_cfg=0, T=0,

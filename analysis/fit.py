@@ -33,6 +33,104 @@ import analyze_fcts as af
 from .plot import *
 from .input_output import read_fitresults, write_fitresults
 
+def fit(fitfunc, X, Y, start_parm, add_parm=None, num=None, correlated=True,
+    verbose=False):
+    """A function that fits the fitfunc to the data.
+
+    This function fits the given function fitfunc to the data given in X and Y.
+    The function needs some start values, given in start_parm, and can use a
+    correlated or an uncorrelated fit. Optionally an additional parameter can
+    be given to the function using add_parm.
+
+    Parameters
+    ----------
+    fitfunc: callable
+        The function to fit to the data.
+    X: array_like
+        The x data.
+    Y: array_like
+        The bootstrap samples of the data. Needs two dimensions.
+    start_parm: array_like
+        The starting parameters for the fit.
+    add_parm: array_like or tuple
+        Additional parameters, first dimension has to be same as Y.
+    num: integer
+        A number that is returned if given.
+    correlated: boolean
+        Flag to use a correlated or uncorrelated fit.
+    verbose: boolean
+        Controls the amount of information written to the screen.
+
+    Returns
+    -------
+    num: integer
+        If given, the number and the rest is returned as tuple.
+    res: ndarray
+        The fit results.
+    chisquare: ndarray
+        The chi^2 results of the fits.
+    pvals: ndarray
+        The p-values of the fits.
+    """
+    import numpy as np
+    from scipy.optimize import leastsq
+    print("%d\tdefine function" % num)
+    # define the error function to use with scipy.optimize.leastsq
+    if add_parm is None:
+        errfunc = lambda p, x, y, error: np.dot(error, (y-fitfunc(p,x)).T)
+    else:
+        errfunc = lambda p, x, y, e, error: np.dot(error, (y-fitfunc(p,x,e)).T)
+    # compute inverse, cholesky decomposed covariance matrix
+    print("%d\tcompute cov" % num)
+    if not correlated:
+      cov = np.diag(np.diagonal(np.cov(Y[:,:].T)))
+    else:
+      cov = np.cov(Y[:,:].T)
+    cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
+    # degrees of freedom
+    dof = float(Y.shape[1]-len(start_parm)) 
+    print("%d\tcreate array" % num)
+    # create results arrays
+    res = np.zeros((Y.shape[0], len(start_parm)))
+    chisquare = np.zeros(Y.shape[0])
+    # The FIT to the boostrap samples
+    if add_parm is None:
+        for b in range(0, Y.shape[0]):
+            p,cov1,infodict,mesg,ier = leastsq(errfunc, start_parm,
+                args=(X, Y[b,:], cov), full_output=1, factor=0.1)
+            chisquare[b] = float(sum(infodict['fvec']**2.))
+            res[b] = np.array(p)
+    else:
+        print(num, Y.shape, len(add_parm))
+        for b in range(0, Y.shape[0]):
+            p,cov1,infodict,mesg,ier = leastsq(errfunc, start_parm,
+                                       args=(X, Y[b,:], add_parm[b], cov),
+                                       full_output=1, factor=0.1)
+            chisquare[b] = float(sum(infodict['fvec']**2.))
+            res[b] = np.array(p)
+    # p-value calculated
+    pvals = 1. - scipy.stats.chi2.cdf(chisquare, dof)
+    # writing results to screen
+    if verbose:
+        if correlated:
+            print("fit results for a correlated fit:")
+        else:
+            print("fit results for an uncorrelated fit:")
+        print("degrees of freedom: %f\n" % dof)
+
+        print("original data fit:")
+        for rm, rs in zip(res[0], res_std):
+            print("  %.6e +/- %.6e" % (rm, rs))
+        print("Chi^2/dof: %.6e +/- %.6e" % (chisquare[0]/dof, np.std(chisquare)
+              /dof))
+        print("p-value: %lf" % pvals[0]) 
+    print("%d job finished" % num)
+    # if num was given, it is returned with the rest as a tuple.
+    if num is None:
+        return res, chisquare, pvals
+    else:
+        return (num, res, chisquare, pvals)
+
 def fitting(fitfunc, X, Y, start_parm, E_single=None, correlated=True, verbose=True):
     """A function that fits a correlation function.
 
@@ -200,7 +298,7 @@ def quantile_1D(data, weights, quantile):
 #
 #    return
 
-def set_fit_interval(_data, lolist, uplist, intervalsize):
+def set_fit_interval(_data, lolist, uplist, intervalsize, skip=1):
     """Initialize intervals to fit in with borders given for every principal
     correlator
 
@@ -211,6 +309,7 @@ def set_fit_interval(_data, lolist, uplist, intervalsize):
         uplist: List of upper interval borders for every gevp-eigenvalue.
         intervallsize: Minimal number of points to be contained in the 
                 interval
+        skip: stepping of the for loops
 
     Returns:
         fit_intervals: list of tuples (lo, up) for every gevp-eigenvalue.
@@ -224,8 +323,8 @@ def set_fit_interval(_data, lolist, uplist, intervalsize):
             print("upper bound for fit greater than time extent of data")
             print("using data time extend!")
             uplist[_l] = data.shape[1] - 1
-        for lo in range(lolist[_l], uplist[_l] + 1):
-            for up in range(lolist[_l], uplist[_l] + 1):
+        for lo in range(lolist[_l], uplist[_l] + 1, skip):
+            for up in range(lolist[_l], uplist[_l] + 1, skip):
                 # the +2 comes from the fact that the interval contains one
                 # more number than the difference between the boundaries and
                 # because python would exclude the upper boundary but we

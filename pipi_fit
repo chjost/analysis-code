@@ -218,7 +218,7 @@ def analyse(ensemble, datafolder, plotfolder):
     elif L == 32:
         lo_pion = [10]
         lo_ratio = [8, 8, 4, 4, 4]
-        up_ratio = [26, 26, 7, 7, 7]
+        up_ratio = [20, 20, 7, 7, 7]
         # minimal number of points in each fit
         fmin = 6
     elif L == 48:
@@ -283,7 +283,10 @@ def analyse(ensemble, datafolder, plotfolder):
 
         ## build ratio to determine dE
         print("calculating ratio")
-        ratio, mratio, dratio=ana.simple_ratio_subtract(gevp, pi_data, pi_data)
+        if s == 0:
+            ratio, mratio, dratio=ana.simple_ratio_subtract(gevp, pi_data, pi_data)
+        else:
+            ratio, mratio, dratio=ana.ratio_shift(gevp, pi_data, pi_data, s)
 
         ## TODO(CJ): ONLY USE 2 LOWEST CORRELATORS ATM
         ratio = ratio[:,:,:2]
@@ -297,13 +300,14 @@ def analyse(ensemble, datafolder, plotfolder):
         if fitratio:
             ratioranges = ana.set_fit_interval(ratio, lo_ratio, up_ratio, fmin)
             rres, rchi2, rpvals = ana.genfit_comb(ratio, ratioranges, pionranges,
-                ratiofit, par_ratio, pi, olddata=fname, verbose=False)
-            ana.write_fitresults(fname, ratioranges, rres, rchi2, rpvals)
+                #ratiofit, par_ratio, pi, olddata=fname, verbose=False)
+                ratiofit, par_ratio, pi, verbose=False)
+            ana.write_fitresults(fname, ratioranges, rres, rchi2, rpvals, fitint2=pionranges)
             ana.genplot_comb(ratio, rpvals, ratioranges, pionranges, ratiofit, 
                 rres, pi, tmin, lattice, label_ratio, path=plotfolder, 
                 plotlabel="ratio_s%d" % s, verbose=False)
         else:
-            ratioranges, rres, rchi2, rpvals = ana.read_fitresults(fname)
+            ratioranges, rres, rchi2, rpvals, _tmp= ana.read_fitresults(fname)
             #ana.genplot_comb(ratio, rpvals, ratioranges, pionranges, ratiofit, 
             #    rres, pi, tmin, lattice, label_ratio, path=plotfolder, 
             #    plotlabel="ratio_s%d" % s, verbose=False)
@@ -369,21 +373,21 @@ def main():
         print("shift of %d does not make sense" % (sys.argv[2]))
         sys.exit(-11)
 
-    path = ["/hiskp2/correlators/A30.32_L32_T64_beta190_mul0030_musig150_mudel190_kappa1632720/ev220/liuming/",
-            "/hiskp2/correlators/A40.20_L20_T48_beta190_mul0040_musig150_mudel190_kappa1632700/ev066/liuming/",
-            "/hiskp2/correlators/A40.24_L24_T48_beta190_mul0040_musig150_mudel190_kappa1632700/ev120/liuming/",
-            "/hiskp2/correlators/A40.32_L32_T64_beta190_mul0040_musig150_mudel190_kappa1632700/liuming/",
-            "/hiskp2/correlators/A60.24_L24_T48_beta190_mul0060_musig150_mudel190_kappa1632650/ev120/liuming/",
-            "/hiskp2/correlators/A80.24_L24_T48_beta190_mul0080_musig150_mudel190_kappa1632600/ev120/liuming/",
-            "/hiskp2/correlators/A100.24_L24_T48_beta190_mul0100_musig150_mudel190_kappa1632550/ev120/liuming/",
-            "/hiskp2/correlators/B25.32/christopher/",
-            "/hiskp2/correlators/B35.32/liuming/",
-            "/hiskp2/correlators/B35.48/liuming/",
-            "/hiskp2/correlators/B55.32_L32_T64_beta195_mul0055_musig135_mudel170_kappa1612360/ev220/liuming/",
-            "/hiskp2/correlators/B85.24/liuming/",
-            "/hiskp2/correlators/D15.48/liuming/",
-            "", # D30.48 not calculated yet
-            "/hiskp2/correlators/D45.32_L32_T64_beta210_mul0045_musig0937_mudel1077_kappa1563150/ev220/liuming/"]
+    path = ["/hiskp2/correlators/A30.32_L32_T64_beta190_mul0030_musig150_mudel190_kappa1632720/ev220/liuming/", #0
+            "/hiskp2/correlators/A40.20_L20_T48_beta190_mul0040_musig150_mudel190_kappa1632700/ev066/liuming/", #1
+            "/hiskp2/correlators/A40.24_L24_T48_beta190_mul0040_musig150_mudel190_kappa1632700/ev120/liuming/", #2
+            "/hiskp2/correlators/A40.32_L32_T64_beta190_mul0040_musig150_mudel190_kappa1632700/liuming/", #3
+            "/hiskp2/correlators/A60.24_L24_T48_beta190_mul0060_musig150_mudel190_kappa1632650/ev120/liuming/", #4
+            "/hiskp2/correlators/A80.24_L24_T48_beta190_mul0080_musig150_mudel190_kappa1632600/ev120/liuming/", #5
+            "/hiskp2/correlators/A100.24_L24_T48_beta190_mul0100_musig150_mudel190_kappa1632550/ev120/liuming/", #6
+            "/hiskp2/correlators/B25.32/christopher/", #7
+            "/hiskp2/correlators/B35.32/liuming/", #8
+            "/hiskp2/correlators/B35.48/sum_final/", #9
+            "/hiskp2/correlators/B55.32_L32_T64_beta195_mul0055_musig135_mudel170_kappa1612360/ev220/liuming/", #10
+            "/hiskp2/correlators/B85.24/liuming/", #11
+            "/hiskp2/correlators/D15.48/liuming/", #12
+            "", # D30.48 not calculated yet #13
+            "/hiskp2/correlators/D45.32_L32_T64_beta210_mul0045_musig0937_mudel1077_kappa1563150/ev220/liuming/"] #14
     gmax = [3, 5, 5, 5, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]
     datafolder = "./raw_data/"
     plotfolder = "./plots/"

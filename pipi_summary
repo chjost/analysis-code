@@ -415,7 +415,7 @@ def main():
     plotfolder = "./plots/"
     #print(path[ens], datafolder, plotfolder, lattices[ens],
     #      int(lattices[ens][-2:]), gmax[ens])
-    print_summary(datafolder, plotfolder, lattices, shift=0)
+    print_summary(datafolder, plotfolder, lattices, shift=1)
     return
 
 # make this script importable, according to the Google Python Style Guide

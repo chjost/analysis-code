@@ -80,16 +80,25 @@ def analyse(ensemble, datafolder, plotfolder):
         ## read ratio fit data
         fname = "%s/fit_ratio_%s_TP%d_s%d.npz" % (datafolder, lattice, d2, s)
         ratioranges, rres, rchi2, rpvals = ana.read_fitresults(fname)
+        mrres, drres = ana.calc_error(rres, axis=2)
 
         # calculate statistic and systematic error for delta E
         plotname = "ratio_s%d_%s" % (s, lattice)
         dE, ddE_stat, ddE_syst, weights_dE = ana.sys_error(rres, rpvals, d, 
             plotname, par=1, path=plotfolder, absolute=True)
+        # calculate statistic and systematic error for the amplitude
+        plotname = "ampl_s%d_%s" % (s, lattice)
+        dR, ddR_stat, ddR_syst, weights_dR = ana.sys_error(rres, rpvals, d, 
+            plotname, par=0, path=plotfolder, absolute=True)
 
         print("dE with errors")
         for p, dp, ddp in zip(dE, ddE_stat, ddE_syst):
             for q, dq, ddq in zip(p, dp, ddp):
                 print("%.4f +- %.4f -%.4f +%.4f" % (q, dq, ddq[0], ddq[1]))
+        print("dR with errors")
+        for p, dp, ddp in zip(dR, ddR_stat, ddR_syst):
+            for q, dq, ddq in zip(p, dp, ddp):
+                print("%.4e +- %.4e -%.4e +%.4e" % (q, dq, ddq[0], ddq[1]))
 
         # calculate scattering length
         print("calculate scattering length")
