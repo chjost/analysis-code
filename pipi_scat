@@ -45,21 +45,19 @@ def analyse(ensemble, datafolder, plotfolder):
         plotfolder: where to store the plots
     """
     ## define main variables
-    calculatea=True
-    calculateampi=True
+    calculatea=False
+    calculateampi=False
     # verbose prints all the shapes of the different arrays
     verbose=False
-    nsamples = 1500 # number of bootstrap samples
-    tmin = 1 # for the GEVP
 
     ## other variables
-    # total momentum
+    lattice = ensemble.get_data("name")
     d = ensemble.get_data("d")
+    d2 = ensemble.get_data("d2")
     d2 = np.dot(d, d)
-    L = ensemble.L
-    T = ensemble.T
-    T2 = ensemble.T2
-    lattice = ensemble.name
+    L = ensemble.get_data("L")
+    T = ensemble.get_data("T")
+    T2 = ensemble.get_data("T2")
     path = ensemble.get_data("path")
     slist = ensemble.get_data("s")
 
@@ -80,7 +78,7 @@ def analyse(ensemble, datafolder, plotfolder):
         ## read ratio fit data
         fname = "%s/fit_ratio_%s_TP%d_s%d.npz" % (datafolder, lattice, d2, s)
         ratioranges, rres, rchi2, rpvals = ana.read_fitresults(fname)
-        mrres, drres = ana.calc_error(rres, axis=2)
+        #ratioranges, rres, rchi2, rpvalsi, _tmp = ana.read_fitresults(fname)
 
         # calculate statistic and systematic error for delta E
         plotname = "ratio_s%d_%s" % (s, lattice)
@@ -129,6 +127,11 @@ def analyse(ensemble, datafolder, plotfolder):
         plotname = "scatlen_s%d_%s" % (s, lattice)
         a_pipi, da_stat, da_syst = ana.sys_error_der(a, weights_a, d, plotname,
                                                      path=plotfolder, absolute=False)
+
+        ensemble.add_data("a_pipi I=2, s%d" % s, a_pipi)
+        ensemble.add_data("da_pipi_stat I=2, s%d" % s, da_stat)
+        ensemble.add_data("da_pipi_syst I=2, s%d" % s, da_syst)
+
         if verbose:
             print("a_pipi")
             print(len(a_pipi))
@@ -156,8 +159,10 @@ def analyse(ensemble, datafolder, plotfolder):
         # statistical and systematic error for a*mpi
         plotname = "ampi_s%d_%s" % (s, lattice)
         am_pipi, dam_stat, dam_syst = ana.sys_error_der(ampi, weights_ampi, d,
-                                                        plotname, path=plotfolder,
-                                                        absolute=False)
+            plotname, path=plotfolder, absolute=False)
+        ensemble.add_data("m*a_pipi I=2, s%d" % s, am_pipi)
+        ensemble.add_data("dm*a_pipi_stat I=2, s%d" % s, dam_stat)
+        ensemble.add_data("dm*a_pipi_syst I=2, s%d" % s, dam_syst)
         if verbose:
             print("a_pipi * m_pi")
             print(len(ampi))
@@ -172,7 +177,6 @@ def analyse(ensemble, datafolder, plotfolder):
     return
 
 def main():
-    d0 = np.array([0., 0., 0.]) # total momentum of the system
     lattices=["A30.32", "A40.20", "A40.24", "A40.32", "A60.24",
               "A80.24", "A100.24", "B25.32", "B35.32", "B35.48",
               "B55.32", "B85.24", "D15.48", "D30.48", "D45.32"]
@@ -194,43 +198,18 @@ def main():
     else:
         print("shift of %d does not make sense" % (sys.argv[2]))
         sys.exit(-11)
-
-    path = ["/hiskp2/correlators/A30.32_L32_T64_beta190_mul0030_musig150_mudel190_kappa1632720/ev220/liuming/",
-            "/hiskp2/correlators/A40.20_L20_T48_beta190_mul0040_musig150_mudel190_kappa1632700/ev066/liuming/",
-            "/hiskp2/correlators/A40.24_L24_T48_beta190_mul0040_musig150_mudel190_kappa1632700/ev120/liuming/",
-            "/hiskp2/correlators/A40.32_L32_T64_beta190_mul0040_musig150_mudel190_kappa1632700/liuming/",
-            "/hiskp2/correlators/A60.24_L24_T48_beta190_mul0060_musig150_mudel190_kappa1632650/ev120/liuming/",
-            "/hiskp2/correlators/A80.24_L24_T48_beta190_mul0080_musig150_mudel190_kappa1632600/ev120/liuming/",
-            "/hiskp2/correlators/A100.24_L24_T48_beta190_mul0100_musig150_mudel190_kappa1632550/ev120/liuming/",
-            "/hiskp2/correlators/B25.32/christopher/",
-            "/hiskp2/correlators/B35.32/liuming/",
-            "/hiskp2/correlators/B35.48/liuming/",
-            "/hiskp2/correlators/B55.32_L32_T64_beta195_mul0055_musig135_mudel170_kappa1612360/ev220/liuming/",
-            "/hiskp2/correlators/B85.24/liuming/",
-            "/hiskp2/correlators/D15.48/liuming/",
-            "", # D30.48 not calculated yet
-            "/hiskp2/correlators/D45.32_L32_T64_beta210_mul0045_musig0937_mudel1077_kappa1563150/ev220/liuming/"]
-    gmax = [3, 5, 5, 5, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]
     datafolder = "./raw_data/"
     plotfolder = "./plots/"
-    ensembles = []
-    for i, lat in enumerate(lattices):
-        L = int(lat[-2:])
-        T = 2*L
-        if L == 20:
-            T=48
-        ensembles.append(ana.LatticeEnsemble(lat, L, T))
-        ensembles[-1].add_data("path", path[i])
-        ensembles[-1].add_data("gmax", gmax[i])
-        ensembles[-1].add_data("s", [s])
-        ensembles[-1].add_data("d", d0)
-    #print(ensembles)
-    #for e in ensembles:
-    #    print(e)
-    #ensembles[0].get_data("x")
 
+    # read lattice ensemble
+    filename = "%s/%s_TP%d_s%d_data" % (datafolder, lattices[ens], 0., s)
+    ensemble = ana.LatticeEnsemble.from_file(filename)
+
+    # calculate lattice ensemble
     print("calculating %s" % (lattices[ens]))
-    analyse(ensembles[ens], datafolder, plotfolder)
+    analyse(ensemble, datafolder, plotfolder)
+    # save lattice ensemble
+    ensemble.save(filename)
     return
 
 # make this script importable, according to the Google Python Style Guide

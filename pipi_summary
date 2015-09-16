@@ -256,93 +256,47 @@ def paper_cotd():
             "D45.32": (0.02, 0.00)}
     return p_cd, p_dcd_stat, p_dcd_syst
 
-def print_summary(datafolder, plotfolder, lattices, shift=0, 
-                  d=np.asarray([0., 0., 0.])):
+def print_summary(datafolder, plotfolder, ensembles):
     """Print a summary of the lattices given.
 
     Args:
         datafolder: where the raw data is stored
         plotfolder: where to store the plots
-        lattices: a list with the lattice name.
-        d: A numpy array with the total momentum.
+        ensembles: list of ensembles to work on
     """
     verbose=False
     ## other variables
     # total momentum
-    d2 = np.dot(d, d)
-    L = {x: int(x[-2:]) for x in lattices}
 
     summ_mpi, dsumm_mpi, ddsumm_mpi = [], [], []
     summ_dE, dsumm_dE, ddsumm_dE = [], [], []
     summ_a, dsumm_a, ddsumm_a = [], [], []
     summ_ampi, dsumm_ampi, ddsumm_ampi = [], [], []
-    for lat in lattices:
-        if verbose:
-            print("reading %s data" % (lat))
-        ## read pion data
-        if verbose:
-            print("reading pion data")
-        fname = "%s/fit_results_%s_TP%d.npz" % (datafolder, lat, d2)
-        pionranges, pi, pichi2, pipvals = ana.read_fitresults(fname)
-        # calculate statistic and systematic error of the pion
-        plotname="".join(("pion_", lat))
-        mpi, dmpi_stat, dmpi_syst, weights_mpi = ana.sys_error(pi, pipvals, d, 
-                                                     plotname, path=plotfolder)
-        # append to global list
-        summ_mpi.append(mpi)
-        dsumm_mpi.append(dmpi_stat)
-        ddsumm_mpi.append(dmpi_syst)
+    for ens in ensembles:
+        s = ens.get_data("s")[0]
+        # get pion mass
+        summ_mpi.append(ens.get_data("mpi"))
+        dsumm_mpi.append(ens.get_data("dmpi_stat"))
+        ddsumm_mpi.append(ens.get_data("dmpi_syst"))
+        
+        # get delta_E data
+        summ_dE.append(ens.get_data("dE, s%d" % s))
+        dsumm_dE.append(ens.get_data("ddE_stat, s%d" % s))
+        ddsumm_dE.append(ens.get_data("ddE_syst, s%d" % s))
+        
+        # get scattering length
+        summ_a.append(ens.get_data("a_pipi I=2, s%d" % s))
+        dsumm_a.append(ens.get_data("da_pipi_stat I=2, s%d" % s))
+        ddsumm_a.append(ens.get_data("da_pipi_syst I=2, s%d" % s))
 
-        ## read ratio fit data
-        if verbose:
-            print("reading dE data")
-        fname = "%s/fit_ratio_%s_TP%d_s%d.npz" % (datafolder, lat, d2, shift)
-        ratioranges, rres, rchi2, rpvals = ana.read_fitresults(fname)
-        # calculate statistic and systematic error for delta E
-        plotname = "ratio_s%d_%s" % (shift, lat)
-        dE, ddE_stat, ddE_syst, weights_dE = ana.sys_error(rres, rpvals, d, 
-            plotname, par=1, path=plotfolder, absolute=True)
-
-        # append to global list
-        summ_dE.append(dE)
-        dsumm_dE.append(ddE_stat)
-        ddsumm_dE.append(ddE_syst)
-
-        # calculate scattering length
-        if verbose:
-            print("reading scattering length data")
-        fname = "%s/scat_len_%s_TP%d_s%d.npz" % (datafolder, lat, d2, shift)
-        _u, _a, weights_a, a = ana.read_fitresults(fname)
-        # statistical error for scattering length
-        plotname = "scatlen_s%d_%s" % (shift, lat)
-        a_pipi, da_stat, da_syst = ana.sys_error_der(a, weights_a, d, plotname,
-                                                     path=plotfolder, absolute=False)
-
-        # append to global list
-        summ_a.append(a_pipi)
-        dsumm_a.append(da_stat)
-        ddsumm_a.append(da_syst)
-
-        # calculate mpi * a
-        if verbose:
-            print("reading a * mpi data")
-        fname = "%s/ampi_%s_TP%d_s%d.npz" % (datafolder, lat, d2, shift)
-        _u, _ampi, weights_ampi, ampi = ana.read_fitresults(fname)
-
-        # statistical and systematic error for a*mpi
-        plotname = "ampi_s%d_%s" % (shift, lat)
-        am_pipi, dam_stat, dam_syst = ana.sys_error_der(ampi, weights_ampi, d,
-                                                        plotname, path=plotfolder,
-                                                        absolute=False)
-
-        # append to global list
-        summ_ampi.append(am_pipi)
-        dsumm_ampi.append(dam_stat)
-        ddsumm_ampi.append(dam_syst)
+        summ_ampi.append(ens.get_data("m*a_pipi I=2, s%d" % s))
+        dsumm_ampi.append(ens.get_data("dm*a_pipi_stat I=2, s%d" % s))
+        ddsumm_ampi.append(ens.get_data("dm*a_pipi_syst I=2, s%d" % s))
 
     w_pi, w_dpi, w_ddpi = wiki_dict()
     print("mpi")
-    for i, lat in enumerate(lattices):
+    for i, ens in enumerate(ensembles):
+        lat = ens.get_data("name")
         for p, dp, ddp in zip(summ_mpi[i], dsumm_mpi[i], ddsumm_mpi[i]):
             print("%8s: %.4f +- %.4f +%.4f -%.4f\t%.4f +- %.4f +%.4f -%.4f\t%+.2f  %+.2f" % 
                   (lat, p, dp, ddp[1], ddp[0], w_pi[lat], w_dpi[lat], w_ddpi[lat], w_ddpi[lat],
@@ -350,7 +304,8 @@ def print_summary(datafolder, plotfolder, lattices, shift=0,
 
     p_dE, p_ddE, p_dddE = paper_dE()
     print("dE")
-    for i, lat in enumerate(lattices):
+    for i, ens in enumerate(ensembles):
+        lat = ens.get_data("name")
         for p, dp, ddp in zip(summ_dE[i], dsumm_dE[i], ddsumm_dE[i]):
             for q, dq, ddq in zip(p, dp, ddp):
                 print("%8s: %.4f +- %.4f +%.4f -%.4f\t%.4f +- %.4f +%.4f -%.4f\t%+.2f  %+.2f" %
@@ -358,14 +313,16 @@ def print_summary(datafolder, plotfolder, lattices, shift=0,
                       (q-p_dE[lat])/dq, (q-p_dE[lat])/p_ddE[lat]))
 
     print("a")
-    for i, lat in enumerate(lattices):
+    for i, ens in enumerate(ensembles):
+        lat = ens.get_data("name")
         for p, dp, ddp in zip(summ_a[i], dsumm_a[i], ddsumm_a[i]):
             for q, dq, ddq in zip(p, dp, ddp):
                 print("%8s: %5.2f +- %.2f +%.2f -%.2f" % (lat, q, dq, ddq[1], ddq[0]))
 
     p_am, p_dam, p_ddam = paper_am()
     print("a * mpi")
-    for i, lat in enumerate(lattices):
+    for i, ens in enumerate(ensembles):
+        lat = ens.get_data("name")
         for p, dp, ddp in zip(summ_ampi[i], dsumm_ampi[i], ddsumm_ampi[i]):
             for q, dq, ddq in zip(p, dp, ddp):
                 print("%8s: %.3f +- %.3f +%.3f -%.3f\t%.3f +- %.3f +%.3f -%.3f\t%+.2f  %+.2f" %
@@ -374,14 +331,16 @@ def print_summary(datafolder, plotfolder, lattices, shift=0,
 
     # output for latex
     print("mpi")
-    for i, lat in enumerate(lattices):
+    for i, ens in enumerate(ensembles):
+        lat = ens.get_data("name")
         for p, dp, ddp in zip(summ_mpi[i], dsumm_mpi[i], ddsumm_mpi[i]):
             print("%8s & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%+.2f$ \\\\" % 
                   (lat, w_pi[lat], w_dpi[lat]*10000., w_ddpi[lat]*10000., w_ddpi[lat]*10000., p, dp*10000., ddp[1]*10000.,
                   ddp[0]*10000., (p-w_pi[lat])/dp))
 
     print("dE")
-    for i, lat in enumerate(lattices):
+    for i, ens in enumerate(ensembles):
+        lat = ens.get_data("name")
         for p, dp, ddp in zip(summ_dE[i], dsumm_dE[i], ddsumm_dE[i]):
             for q, dq, ddq in zip(p, dp, ddp):
                 print("%8s & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%+.2f$ \\\\" % 
@@ -389,13 +348,15 @@ def print_summary(datafolder, plotfolder, lattices, shift=0,
                       ddq[0]*10000., (q-p_dE[lat])/dq))
 
     print("a")
-    for i, lat in enumerate(lattices):
+    for i, ens in enumerate(ensembles):
+        lat = ens.get_data("name")
         for p, dp, ddp in zip(summ_a[i], dsumm_a[i], ddsumm_a[i]):
             for q, dq, ddq in zip(p, dp, ddp):
                 print("%8s & $%.2f(%1.0f)(^{+%1.0f}_{-%1.0f})$ \\\\" % (lat, q, dq*100., ddq[1]*100., ddq[0]*100.))
 
     print("a * mpi")
-    for i, lat in enumerate(lattices):
+    for i, ens in enumerate(ensembles):
+        lat = ens.get_data("name")
         for p, dp, ddp in zip(summ_ampi[i], dsumm_ampi[i], ddsumm_ampi[i]):
             for q, dq, ddq in zip(p, dp, ddp):
                 print("%8s & $%.3f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%.3f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%+.2f$ \\\\" % 
@@ -405,6 +366,7 @@ def print_summary(datafolder, plotfolder, lattices, shift=0,
 
 def main():
     d0 = np.array([0., 0., 0.]) # total momentum of the system
+    s = 1
     #lattices=["A30.32", "A40.20", "A40.24", "A40.32", "A60.24",
     #          "A80.24", "A100.24", "B25.32", "B35.32", "B35.48",
     #          "B55.32", "B85.24", "D15.48", "D30.48", "D45.32"]
@@ -413,9 +375,13 @@ def main():
               "B55.32", "B85.24", "D15.48", "D45.32"]
     datafolder = "./raw_data/"
     plotfolder = "./plots/"
+    ensembles = []
+    for lat in lattices:
+        filename = "%s/%s_TP%d_s%d_data" % (datafolder, lat, 0., s)
+        ensembles.append(ana.LatticeEnsemble.from_file(filename))
     #print(path[ens], datafolder, plotfolder, lattices[ens],
     #      int(lattices[ens][-2:]), gmax[ens])
-    print_summary(datafolder, plotfolder, lattices, shift=1)
+    print_summary(datafolder, plotfolder, ensembles)
     return
 
 # make this script importable, according to the Google Python Style Guide
