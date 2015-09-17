@@ -6,22 +6,31 @@ import os
 
 import numpy as np
 
+import in_out as io
+import bootstrap as boot
+import gevp
+
 class Correlators(object):
     """Correlation function class.
     """
 
-    def __init__(self, filename, column=(1,), skip=1, debug=0):
+    def __init__(self, filename=None, column=(1,), skip=1, debug=0):
         """Reads in data from an ascii file.
 
         The file is assumed to have in the first line the number of
-        data sets, the length of each dataset and three furthe numbers
+        data sets, the length of each dataset and three further numbers
         not used here. This info is used to shape the data accordingly.
+
+        If a sequence of strings is used for filenames, a correlation
+        function matrix is created, otherwise a single correlation
+        function is created. This has implications for some of the
+        class functions.
 
         Parameters
         ----------
-        filename : str
+        filename : str or sequence of str, optional
             The filename of the file.
-        column : sequence
+        column : sequence, optional
             The columns that are read.
         skip : int, optional
             The number of header lines that are skipped.
@@ -32,103 +41,170 @@ class Correlators(object):
         ------
         IOError
             If the directory of the file or the file is not found.
+        ValueError
+            If skip < 1 or a non-existing column is read
         """
-        self.column = column
         if skip < 1:
             raise ValueError("File is assumed to have info in first line")
         else:
             self.skip = skip
         self.debug = debug
-        try:
-            self._check_file_exists(filename)
-        except IOError as e:
-            raise e
+        self.data = None
+        self.matrix = None
+
+        if filename is not None:
+            if isinstance(filename, (list, tuple)):
+                self.data = io.read_matrix(filename, column, skip, debug)
+                self.matrix = True
+            else:
+                self.data = io.read_single(filename, column, skip, debug)
+                self.matrix = False
+
+        if self.data is not None:
+            self.shape = self.data.shape
         else:
-            self.read_data_from_file(filename)
+            self.shape = None
 
-    def _check_file_exists(self, filename):
-        """Check whether a file exists.
+    @classmethod
+    def read(cls, filename, debug=0):
+        """Reads data in numpy format.
 
-        The function first checks for the directory to exist and
-        afterwards if the file exists. Raises and IOError on failure.
-        """
-        # get path
-        _dir = os.path.dirname(filename)
-        # check if path exists, if not raise an error
-        if _dir and not os.path.exists(_dir):
-            raise IOError("directory %s not found" % _dir)
-        # check whether file exists
-        if not os.path.isfile(filename):
-            raise IOError("file %s not found" % os.path.basename(filename))
+        If the last two axis have the same extent, it is assumed a
+        correlation function matrix is read, otherwise a single
+        correlation function is assumed. This has implications on some
+        class functions.
 
-    def _read_header(self, filename):
-        """Parses the first line of the file.
-    
-        Reads 5 numbers in the first line of the file. The first
-        corresponds to the number of data sets, the second to the
-        length of the data sets.
-    
         Parameters
         ----------
         filename : str
-            The name of the file.
-    
+            The name of the data file.
+        debug : int, optional
+            The amount of debug information printed.
+
+        Raises
+        ------
+        IOError
+            If file or folder not found.
+        """
+        data = io.read_data(filename)
+        # set the data directly
+        tmp = cls()
+        tmp.data = data
+        tmp.shape = data.shape
+        if data.shape[-2] != data.shape[-1]:
+            tmp.matrix = False
+        else:
+            tmp.matrix = True
+        return tmp
+
+    def save(self, filename, asascii=False):
+        """Saves the data to disk.
+        
+        The data can be saved in numpy format or plain ascii.
+
+        Parameters
+        ----------
+        filename : str
+            The name of the file to write to.
+        asascii : bool, optional
+            Toggle numpy format or ascii.
+        """
+        verbose = (self.debug > 0) and True or False
+        if asascii:
+            io.write_data_ascii(self.data, filename, verbose)
+        else:
+            io.write_data(self.data, filename, verbose)
+
+    def symmetrize(self):
+        """Symmetrizes the data around the second axis.
+        """
+        self.data = boot.sym(self.data)
+        self.shape = self.data.shape
+
+    def bootstrap(self, nsamples):
+        """Creates bootstrap samples of the data.
+
+        Parameters
+        ----------
+        nsamples : int
+            The number of bootstrap samples to be calculated.
+        """
+        self.data = boot.bootstrap(self.data, nsamples)
+        self.shape = self.data.shape
+
+    def sym_and_boot(self, nsamples):
+        """Symmetrizes the data around the second axis and then
+        create bootstrap samples of the data
+
+        Parameters
+        ----------
+        nsamples : int
+            The number of bootstrap samples to be calculated.
+        """
+        self.data = boot.sym_and_boot(self.data, nsamples)
+        self.shape = self.data.shape
+
+    def shift(self, dt, dE=None, shift=1):
+        """Shift and weight the data.
+
+        This function only works with matrices.
+
+        Two shifts are implemented and can be selected using the flag
+        shift.
+        The first is due to Dudek et al, Phys.Rev. D86, 034031 (2012).
+        The second is due to Feng et al, Phys.Rev. D91, 054504 (2015).
+        For the second dE must be given.
+
+        Parameters
+        ----------
+        dt : int
+            The amount to shift.
+        dE : {None, float}, optional
+            The weight factor.
+        shift : {1, 2}
+            Which shift to use, see above.
+        """
+        # if the data is not a matrix, do nothing
+        if not self.matrix:
+            return
+
+        if shift == 1:
+            self.data = gevp.gevp_shift_1(self.data, dt, dE, 1, self.debug)
+        elif dE is None:
+            raise ValueError("dE is mandatory for the second implemented shift")
+        else:
+            self.data = gevp.gevp_shift_1(self.data, dt, dE, 1, self.debug)
+        self.shape = self.data.shape
+
+    def gevp(self, t0):
+        """Calculate the GEVP of the matrix.
+
+        This function only works with matrices.
+
+        Parameters
+        ----------
+        t0 : int
+            The index of the inverted matrix.
+        """
+        if not self.matrix:
+            return
+
+        self.data = gevp.calculate_gevp(self.data, t0)
+        self.shape = self.data.shape
+        self.matrix = False
+
+    def mass(self, usecosh=True):
+        pass
+
+    def get_data(self):
+        """Returns a copy of the data.
+        
         Returns
         -------
-        tuple of int
-            tuple of the 5 numbers of the first line.
+        ndarray
+            Returns the saved data.
         """
-        with open(filename, "r") as _f:
-            _data = _f.readline().split()
-        ret = (int(_data[0]), int(_data[1]), int(_data[2]), int(_data[3]),
-               int(_data[4]))
-        if self.debug > 0:
-            print("number of samples: %i" % ret[0])
-            print("time extent:       %i" % ret[1])
-            print("spatial extent:    %i" % ret[3])
-            print("number 3:          %i" % ret[2])
-            print("number 5:          %i" % ret[4])
-        return ret
-
-    def _read_data_from_file(self, filename):
-        """Reads in data from an ascii file.
-
-        The file is assumed to have in the first line the number of
-        data sets, the length of each dataset and three furthe numbers
-        not used here. This info is used to shape the data accordingly.
-
-        Args:
-            filename: The filename of the file.
-            column: Which column is read.
-            noheader: Skips reading of the header.
-            verbose: The amount of info shown.
-
-        Returns:
-            A numpy array. In case one column is read, the array is 2D, otherwise
-            the array is three dimensional.
-        """
-
-        if self.debug > 0:
-            print("reading from file " + str(filename))
-
-        # open the file to read first line
-        var = read_header(filename)
-        # read in data from file, skipping the header if needed
-        self.data = np.genfromtxt(filename, skip_header=self.skip,
-                                  usecols=self.column)
-        # casting the array into the right shape, sample number as first index,
-        # time index as second index
-        # if more than one column is read, the third axis reflects this
-        if nbcol is 1:
-            self.data.shape = (var[0],var[1])
-        else:
-            self.data.shape = (var[0],var[1], -1)
-
-        if self.debug < 2:
-            print("data shape:")
-            print(self.data.shape)
-
+        return np.copy(self.data)
 
 if __name__ == "main":
-    import unittest
     pass
