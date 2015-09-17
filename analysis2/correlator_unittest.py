@@ -135,7 +135,6 @@ class CorrFunc_Test(unittest.TestCase):
         self.assertEqual(self.corr.shape, before.shape)
         self.assertTrue(np.array_equal(before, self.corr.data))
 
-    @unittest.expectedFailure
     def test_mass_acosh(self):
         self.corr.symmetrize()
         self.corr.mass()
@@ -143,7 +142,6 @@ class CorrFunc_Test(unittest.TestCase):
         # TODO: get data to check against
         #self.assertAlmostEqual()
 
-    @unittest.expectedFailure
     def test_mass_log(self):
         self.corr.symmetrize()
         self.corr.mass(False)
@@ -213,7 +211,6 @@ class CorrMatrix_test(unittest.TestCase):
         self.corr.symmetrize()
         self.assertRaises(ValueError, self.corr.shift, 1, shift=2)
 
-    @unittest.expectedFailure
     def test_mass_acosh(self):
         self.corr.symmetrize()
         self.corr.mass()
@@ -221,7 +218,6 @@ class CorrMatrix_test(unittest.TestCase):
         # TODO: get data to check against
         #self.assertAlmostEqual()
 
-    @unittest.expectedFailure
     def test_mass_log(self):
         self.corr.symmetrize()
         self.corr.mass(False)

@@ -4,20 +4,169 @@ Lattice Ensemble Class.
 
 import numpy as np
 
+from in_out import check_read, check_write
+
 class LatticeEnsemble(object):
-    def __init__(self):
-        pass
+    """A class for the ensemble data.
+
+    Create with LatticeEnsemble(name, L, T). Contains a dictionary data
+    which can hold arbitrary data.
+
+    Nothing is immutable, so be careful!
+    """
+    def __init__(self, name, L, T):
+        """Creates a LatticeEnsemble.
+
+        Parameters
+        ----------
+        name : str
+            Identifier of the LatticeEnsemble.
+        L : int
+            The spatial extent of the lattice.
+        T : int
+            The temporal extent of the lattice.
+        """
+        self.data = {}
+        self.data["name"] = name
+        self.data["L"] = int(L)
+        self.data["T"] = int(T)
+        self.data["T2"] = int(self.data["T"]/2)+1
 
     @classmethod
-    def read(self, fname):
-        pass
+    def read(cls, _filename):
+        """Read LatticeEnsemble from file.
 
-    def save(self, fname):
-        pass
+        Parameters
+        ----------
+        _filename : str
+            The name of the file.
 
-    def add_data(self, name, data):
-        pass
+        Raises
+        ------
+        IOError
+            If file or directory not found.
+        """
+        # check suffix of the filename
+        if not _filename.endswith(".pkl"):
+            filename = "".join((_filename, ".pkl"))
+        else:
+            filename = _filename
 
-    def add_dict(self, name, dic):
-        pass
+        # check if folder and/or file exists
+        try:
+            check_read(filename)
+        except IOError as e:
+            raise e
+        # pickle the dictionary
+        else:
+            with open(filename, "r") as f: 
+                data = pickle.load(f)
 
+        # create class
+        tmp = cls(data["name"], data["L"], data["T"])
+        tmp.data = data
+        return tmp
+
+    def save(self, _filename):
+        """Save the LatticeEnsemble to disk.
+
+        Parameters
+        ----------
+        _filename : str
+            The name of the file.
+        """
+        # check suffix of the filename
+        if not _filename.endswith(".pkl"):
+            filename = "".join((_filename, ".pkl"))
+        else:
+            filename = _filename
+
+        # check if folder and/or file exists
+        check_write(filename)
+        # pickle the dictionary
+
+        with open(filename, "w") as f: 
+            pickle.dump(self.data, f)
+
+    def name(self):
+        """Returns name of the LatticeEnsemble.
+
+        Returns
+        -------
+        str
+            The identifier of the LatticeEnsemble.
+        """
+        return self.data["name"]
+
+    def L(self):
+        """Returns spatial extend of the LatticeEnsemble.
+
+        Returns
+        -------
+        int
+            The spatial extent of the LatticeEnsemble.
+        """
+        return int(self.data["L"])
+
+    def T(self):
+        """Returns temporal extend of the LatticeEnsemble.
+
+        Returns
+        -------
+        int
+            The temporal extent of the LatticeEnsemble.
+        """
+        return int(self.data["T"])
+
+    def add_data(self, key, data):
+        """Add data to the dictionary.
+
+        Parameters
+        ----------
+        key : anything
+            The key for the dictionary.
+        data : anything
+            The data to be saved in the dictionary.
+        """
+        # the check is only to print a warning if key already exists
+        #if key in self.data:
+        #    print("Key already in data, overwritting")
+        self.data[key]=data
+
+    def get_data(self, key):
+        """Get data from the dictionary.
+
+        Parameters
+        ----------
+        key : anything
+            The key for the dictionary.
+
+        Returns
+        -------
+        data : anything
+            The data to be saved in the dictionary.
+        
+        Raises
+        ------
+        KeyError
+            If key not in dictionary.
+        """
+        if key not in self.data:
+            raise KeyError("Ensemble %s has no key '%s'" % (self.name(), key))
+        return self.data[key]
+
+    def __str__(self):
+        restring = "Ensemble %s with L=%d, T=%d" % (self.name(), self.L(),
+                self.T())
+        if self.data:
+            restring = "\n".join((restring,"Data:\n"))
+            for key in self.data:
+                if key in ["name", "L", "T", "T2"]:
+                    continue
+                restring = "".join((restring, "\t%s: " % (str(key)),
+                               str(self.data[key]), "\n"))
+        return restring
+
+    def __repr__(self):
+        return "[ Ensemble %s with L=%d, T=%d and %d data ]" % ( self.name(),
+                self.L(), self.T(), len(self.data)-4)

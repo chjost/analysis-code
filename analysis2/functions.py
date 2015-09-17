@@ -48,6 +48,8 @@ def compute_eff_mass(data, usecosh=True):
     ----------
     data : ndarray
         The data.
+    usecosh : bool
+        Toggle between the two implemented methods.
 
     Returns
     -------

@@ -6,9 +6,10 @@ import os
 
 import numpy as np
 
-import in_out as io
+import in_out
 import bootstrap as boot
 import gevp
+import functions as func
 
 class Correlators(object):
     """Correlation function class.
@@ -54,10 +55,10 @@ class Correlators(object):
 
         if filename is not None:
             if isinstance(filename, (list, tuple)):
-                self.data = io.read_matrix(filename, column, skip, debug)
+                self.data = in_out.read_matrix(filename, column, skip, debug)
                 self.matrix = True
             else:
-                self.data = io.read_single(filename, column, skip, debug)
+                self.data = in_out.read_single(filename, column, skip, debug)
                 self.matrix = False
 
         if self.data is not None:
@@ -86,7 +87,7 @@ class Correlators(object):
         IOError
             If file or folder not found.
         """
-        data = io.read_data(filename)
+        data = in_out.read_data(filename)
         # set the data directly
         tmp = cls()
         tmp.data = data
@@ -111,9 +112,9 @@ class Correlators(object):
         """
         verbose = (self.debug > 0) and True or False
         if asascii:
-            io.write_data_ascii(self.data, filename, verbose)
+            in_out.write_data_ascii(self.data, filename, verbose)
         else:
-            io.write_data(self.data, filename, verbose)
+            in_out.write_data(self.data, filename, verbose)
 
     def symmetrize(self):
         """Symmetrizes the data around the second axis.
@@ -194,7 +195,18 @@ class Correlators(object):
         self.matrix = False
 
     def mass(self, usecosh=True):
-        pass
+        """Computes the effective mass.
+
+        Two formulas are implemented. The standard formula is based on the
+        cosh function, the alternative is based on the log function.
+
+        Parameters
+        ----------
+        usecosh : bool
+            Toggle between the two implemented methods.
+        """
+        self.data = func.compute_eff_mass(self.data, usecosh)
+        self.shape = self.data.shape
 
     def get_data(self):
         """Returns a copy of the data.
