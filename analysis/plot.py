@@ -149,6 +149,7 @@ def plot_data(X, Y, dY, pdfplot, label, plotrange=None, logscale=False, xlim=Non
 
     # adjusting the plot style
     plt.grid(True)
+    plt.ticklabel_format(style='sci', axis='y')
     plt.xlabel(label[1])
     plt.ylabel(label[2])
     plt.title(label[0])

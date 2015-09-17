@@ -1,4 +1,5 @@
-#!/usr/bin/python
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+##!/usr/bin/python
 ################################################################################
 #
 # Author: Christian Jost (jost@hiskp.uni-bonn.de)
@@ -26,96 +27,204 @@
 #
 ################################################################################
 
+import sys
+import numpy as np
 import matplotlib
-matplotlib.use('QT4Agg') # has to be imported before the next lines
+matplotlib.use('Agg') # has to be imported before the next lines
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-import numpy as np
 
 import analysis as ana
 
+def fit_single_pion(ensemble, pi_data, pars, pionfit, label, plotfolder,
+    datafolder, newfit=True, verbose=True):
+    """Fit the correlation function for the single pion.
+
+    Args:
+        ensemble: the ensemble on which to fit
+        pi_data: the correlation function
+        pars: the start parameters for the fit
+        pionfit: fit function for the correlator
+        label: label for the plots
+        plotfolder: path to save the plots
+        datafolder: path to save the fit results
+        newfit: do the fit, if false read data from disk
+        verbose: amount of information written on screen
+
+    Returns:
+        pi: the resulting parameters from the fit
+        chi2: the chi^2 of each fit
+        pvals: the p-values of each fit
+        fitranges: the used fitranges
+    """
+    # get data from ensemble
+    d = ensemble.get_data("d")
+    d2 = np.dot(d, d)
+    lattice = ensemble.name
+    lo, up, fmin = ensemble.get_data("fit parameters")
+    fname = "%s/pi_fit_%s_TP%d.npz" % (datafolder, lattice, d2)
+    # init fitresults
+    if newfit:
+        pifit = ana.FitResults(ensemble, "pion fit with P^2=%d" % d2)
+        pionranges = np.asarray(ana.set_fit_interval(pi_data, lo, up, fmin))
+        pifit.add_fitrange(pionranges)
+        pifit.do_fit(pi_data, pionfit, pars)
+        pifit.save()
+        pi, chi2, pvals, pionranges = pifit.get_results()
+        #ana.genplot(pi_data, pi, pvals, pionranges, pionfit, 1, lattice, d,
+        #            label, plotfolder, "pion_mass", verbose=verbose)
+    else:
+        if verbose:
+            ("reading fit data")
+        pionranges, pi, chi2, pvals = ana.read_fitresults(fname)
+        ana.genplot(pi_data, pi, pvals, pionranges, spionfit, 1, lattice, d,
+                    label, plotfolder, "pion_mass", verbose=verbose)
+    if verbose:
+        print("fit infos")
+        for p in pi:
+            print(p.shape)
+    return pi, chi2, pvals, pionranges
+
+def analyse(ensemble, datafolder, plotfolder):
+    """pi-pi scattering analysis for I=2.
+
+    Args:
+        ensemble: the ensemble to work on
+        datafolder: where to store raw data
+        plotfolder: where to store the plots
+    """
+    ## define main variables
+    # flags for the different parts
+    readnewdata=True
+    fitsinglepion=True
+    # verbose prints all the shaped of the different arrays
+    verbose=False
+    nsamples = 1500 # number of bootstrap samples
+
+    ## other variables
+    # total momentum
+    d = ensemble.get_data("d")
+    d2 = np.dot(d, d)
+    L = ensemble.L
+    T = ensemble.T
+    T2 = ensemble.T2
+    lattice = ensemble.name
+    path = ensemble.get_data("path")
+    # file list
+    pilist = ["pi_corr_p%d.dat" % d2 ]
+    # fit functions
+    massfit = lambda p,t : p
+    pionfit = lambda p, t: 0.5*p[0]*p[0]*(np.exp(-p[1]*t)+np.exp(-p[1]*(T2-t)))
+    # label for the plots
+    label_pion = ["single pion", "time", "am$_{\pi}$(t)", "data", ""]
+    # lower and upper fit ranges
+    lo_pion = [8]
+    up_pion = [T2]
+    fmin=4
+    ensemble.add_data("fit parameters", (lo_pion, up_pion, fmin))
+    # start parameter
+    par_mass = [0.2]
+    par_pion = [100., 0.2]
+    # other variables
+    suffix="%s_TP%d.npy" % (lattice, d2)
+
+    if readnewdata:
+        if verbose:
+            print("reading files:")
+            for f in pilist:
+                print(f)
+        corr = ana.read_data_ascii("".join((path, pilist[0])))
+        pi_data = ana.sym_and_boot(corr, nsamples)
+        ana.write_data(pi_data, "%s/pi_data_%s" % (datafolder, suffix))
+    else:
+        if verbose:
+            print("reading numpy data")
+        pi_data = ana.read_data("%s/pi_data_%s" % (datafolder, suffix))
+    if verbose:
+        print("data shapes")
+        print(pi_data.shape)
+    # fit the correlator
+    fitcorr=False
+    if fitcorr:
+        # fit pion correlator
+        pi, pichi2, pipvals, pionranges = fit_single_pion(ensemble, pi_data, par_pion, pionfit, label_pion, plotfolder, datafolder, newfit=fitsinglepion)
+        piplotname="".join(("pion_corr_", lattice))
+    # else fit the mass
+    else:
+        ## calculate effective mass of the pion
+        pimass, pimmass, pidmass = ana.compute_mass(pi_data)
+        lab = lattice
+        # fit single pion effective mass function
+        pi, pichi2, pipvals, pionranges = fit_single_pion(ensemble, pimass, par_mass, massfit, label_pion, plotfolder, datafolder, newfit=fitsinglepion)
+        piplotname="".join(("pion_mass_", lattice))
+    # calculate statistic and systematic error of the pion
+    mpi, dmpi_stat, dmpi_syst, weights_mpi = ana.sys_error(pi, pipvals, d, 
+                                                 piplotname, path=plotfolder)
+
 def main():
-    ## definition of some variables
-    nbsamples = 1500
-    #inputpath="/hiskp2/helmes/contractions/A40.24/kaon/strange_225/merged/"
-    #outputpath="/hiskp2/helmes/contractions/A40.24/kaon/strange_225/merged/scratch/"
-    #inputpath="/hiskp2/helmes/contractions/A60.24/k-k/strange_185/merged"
-    #outputpath="/hiskp2/helmes/contractions/A60.24/k-k/strange_185/merged/scratch"
-    #suffix="k_corr_p0.dat"
-    #suffix1="k_p0_average.dat"
-    #suffix2="k_p0_mass.dat"
-    #inputlist=[""]
-    inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/"
-    outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_all/"
-    suffix="pi_corr_p0.dat"
-    suffix1="pi_corr_average.dat"
-    suffix2="pi_corr_mass.dat"
-    inputlist=["D15_all/"]
-    #inputlist=["D15_new/", "D15_old/", "D15_combined/"]
+    ana.set_cores(4)
+    # total momentum of the system
+    d = [np.array([0., 0., 0.]), np.array([0., 0., 1.]),
+        np.array([1., 1., 0.])]
+    lattices=["A30.32", "A40.20", "A40.24", "A40.32", "A60.24",
+              "A80.24", "A100.24", "B25.32", "B35.32", "B35.48",
+              "B55.32", "B85.24", "D15.48", "D30.48", "D45.32"]
+    if len(sys.argv) < 2:
+        ens = 2
+    elif int(sys.argv[1]) >= len(lattices):
+        print("ensemble not known, the following are known.")
+        print(lattices)
+        sys.exit(-11)
+    else:
+        ens = int(sys.argv[1])
+        if lattices[ens] == "D30.48":
+            print("D30.48 not calculated yet")
+            sys.exit(-11)
+    if len(sys.argv) < 3:
+        s = 0
+    elif int(sys.argv[2]) < 3:
+        s = int(sys.argv[2])
+    else:
+        print("total momentum %d not implemented" % (sys.argv[2]))
+        sys.exit(-11)
 
-    # get mass from correlation function
-    #fitfunc = lambda p,t: p[0]*np.cosh((T/2.0-t)*p[1])
-    fitfunc = lambda p,t: 0.5*p[0]*p[0]*(np.exp(-p[1]*t) + np.exp(-p[1]*(T-t)))
-    massfunc = lambda p,t: p
-    for _i in inputlist:
-        #pfit = PdfPages("./plots/%s_plot.pdf" % (_i[:-1]))
-        pfit = PdfPages("%sm_eff_plot.pdf" % outputpath)
-        # read in data
-        print("".join((inputpath, inputlist[0], suffix)))
-        corrs = ana.read_data_ascii("".join((inputpath, _i, suffix)))
-        T = corrs.shape[1]
-        nbcfg = corrs.shape[0]
-        T2=int(T/2)+1
-        #average = af.average_corr_fct(corrs, nbcfg, T)
-        #for t in range(T):
-        #    print(corrs[t*nbcfg:(t+1)*nbcfg])
-        tlist = np.linspace(0., float(T2), float(T2), endpoint=False)
-        # create bootstrap samples
-        bsamples = ana.sym_and_boot(corrs, nbsamples)
-        mdata, ddata = ana.calc_error(bsamples)
-        #print(bsamples.shape)
-        #for t in range(bsamples.shape[1]):
-        #    print(bsamples[:,t])
-        #for s in range(bsamples.shape[0]):
-        #    print(bsamples[s])
-        #print(bsamples.shape)
-        # choose fitrange
+    path = ["/hiskp2/correlators/A30.32_L32_T64_beta190_mul0030_musig150_mudel190_kappa1632720/ev220/liuming/", #0
+            "/hiskp2/correlators/A40.20_L20_T48_beta190_mul0040_musig150_mudel190_kappa1632700/ev066/liuming/", #1
+            "/hiskp2/correlators/A40.24_L24_T48_beta190_mul0040_musig150_mudel190_kappa1632700/ev120/liuming/", #2
+            "/hiskp2/correlators/A40.32_L32_T64_beta190_mul0040_musig150_mudel190_kappa1632700/liuming/", #3
+            "/hiskp2/correlators/A60.24_L24_T48_beta190_mul0060_musig150_mudel190_kappa1632650/ev120/liuming/", #4
+            "/hiskp2/correlators/A80.24_L24_T48_beta190_mul0080_musig150_mudel190_kappa1632600/ev120/liuming/", #5
+            "/hiskp2/correlators/A100.24_L24_T48_beta190_mul0100_musig150_mudel190_kappa1632550/ev120/liuming/", #6
+            "/hiskp2/correlators/B25.32/christopher/", #7
+            "/hiskp2/correlators/B35.32/liuming/", #8
+            "/hiskp2/correlators/B35.48/liuming/", #9
+            "/hiskp2/correlators/B55.32_L32_T64_beta195_mul0055_musig135_mudel170_kappa1612360/ev220/liuming/", #10
+            "/hiskp2/correlators/B85.24/liuming/", #11
+            "/hiskp2/correlators/D15.48/liuming/", #12
+            "", # D30.48 not calculated yet #13
+            "/hiskp2/correlators/D45.32_L32_T64_beta210_mul0045_musig0937_mudel1077_kappa1563150/ev220/liuming/"] #14
+    gmax = [3, 5, 5, 5, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]
+    datafolder = "./raw_data/"
+    plotfolder = "./plots/"
+    ensembles = []
+    for i, lat in enumerate(lattices):
+        L = int(lat[-2:])
+        T = 2*L
+        if L == 20:
+            T=48
+        ensembles.append(ana.LatticeEnsemble(lat, L, T))
+        ensembles[-1].add_data("path", path[i])
+        ensembles[-1].add_data("gmax", gmax[i])
+        ensembles[-1].add_data("d", d[s])
+    #print(ensembles)
+    #for e in ensembles:
+    #    print(e)
+    #ensembles[0].get_data("x")
 
-        # single pi
-        label = ["single pion, D15", "time", "C(t)", "data", ""]
-        #for lo in range(14, bsamples.shape[1]-5):
-        #    for up in range(lo+3, bsamples.shape[1]-1):
-        #        res, chi2, pval = ana.fitting(fitfunc, tlist[lo:up], bsamples[:,lo:up], [1., 0.07], verbose=0)
-        #        print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, E %.7lf" % (lo, up, pval[0], chi2[0]/(len(tlist[lo:up])-2), res[0,1]))
-        #        fitlabel = "fit %d:%d" % (lo, up-1)
-        #        label[3] = fitlabel
-        #        ana.corr_fct_with_fit(tlist, bsamples[0], ddata, fitfunc, res[0],
-        #                               [1,T2], label, pfit, True)
-        lo, up = 14, 36
-        res, chi2, pval = ana.fitting(fitfunc, tlist[lo:up], bsamples[:,lo:up], [1., 0.07], verbose=0)
-        fitlabel = "fit %d:%d" % (lo, up-1)
-        label[3] = fitlabel
-        print(bsamples[0].shape, ddata.shape, len(tlist))
-        ana.corr_fct_with_fit(tlist, bsamples[0], ddata, fitfunc, res[0], [1,T2], label, pfit, True)
-        mass, mmass, dmass = ana.compute_mass(bsamples, True)
-        ana.corr_fct_with_fit(tlist[:-2], mmass, dmass, massfunc, res[0,1],
-                              [1,T2-2], label, pfit, False)
-
-        # single kaon
-        #label = ["single kaon, A40.24", "time", "C(t)", "data", ""]
-        #up=T2-1
-        #for lo in range(12, bsamples.shape[1]-11):
-        #    #for up in range(lo+5, bsamples.shape[1]):
-        #    res, chi2, pval = ana.fitting(fitfunc, tlist[lo:up], bsamples[:,lo:up], [1., 1.], verbose=1)
-        #    print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, E %.7lf" % (lo, up, pval[0], chi2[0]/(len(tlist[lo:up])-2), res[0,1]))
-        #    fitlabel = "fit %d:%d" % (lo, up-1)
-        #    label[3] = fitlabel
-        #    ana.corr_fct_with_fit(tlist, bsamples[0], ddata, fitfunc, res[0],
-        #                               [1,T2-2], label, pfit, True, True, [lo,up])
-        #mass, mmass, dmass = ana.compute_mass(bsamples, True)
-        #ana.corr_fct_with_fit(tlist[:-2], mmass, dmass, massfunc, res[0,1],
-        #                      [1,T2], label, pfit, False, False)
-        pfit.close()
+    print("calculating %s" % (lattices[ens]))
+    print("cores: %d" % ana.get_cores())
+    analyse(ensembles[ens], datafolder, plotfolder)
+    return
 
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':

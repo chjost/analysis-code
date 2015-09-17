@@ -16,11 +16,41 @@ def simple_ratio(d1, d2, d3):
         The ratio, its mean and its standard deviation.
     """
     # create array from dimensions of the data
-    ratio = np.zeros((d1.shape[0], d1.shape[1]))
-    for _s in range(d1.shape[0]):
-        for _t in range(d1.shape[1]):
+    rshape = list(d1.shape)
+    ratio = np.zeros(rshape)
+    for _s in range(rshape[0]):
+        for _t in range(rshape[1]):
             # calculate ratio
             ratio[_s,_t] = d1[_s,_t]/(d2[_s,_t]*d3[_s,_t])
+    # TODO(CJ): test if the following give the same result
+    # ratio = d1/(d2*d3)
+    # get mean and standard deviation
+    mean, err = calc_error(ratio)
+    return ratio, mean, err
+
+def ratio_shift(d1, d2, d3, shift=1):
+    """Calculates a simple ratio of three data sets.
+
+    Calculates d1(t)/(d2(t)*d3(t)).
+    Assumes that all data sets are numpy arrays with two axis, the first being
+    the bootstrap number and the second being the time.
+    
+    Args:
+        d1, d2, d3: The three data sets.
+
+    Returns:
+        The ratio, its mean and its standard deviation.
+    """
+    # create array from dimensions of the data
+    rshape = list(d1.shape)
+    if (d2.shape[1] - shift) > rshape[1]:
+        raise RuntimeError("The ratio with shift %d cannot be computed" % shift)
+    ratio = np.zeros(rshape)
+    for _s in range(rshape[0]):
+        for _t in range(rshape[1]):
+            # calculate ratio
+            ratio[_s,_t] = d1[_s,_t] / (d2[_s,_t]*d3[_s,_t] -
+                d2[_s,_t+shift]*d3[_s,_t+shift])
     # TODO(CJ): test if the following give the same result
     # ratio = d1/(d2*d3)
     # get mean and standard deviation
