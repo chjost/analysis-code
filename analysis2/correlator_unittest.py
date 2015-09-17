@@ -60,7 +60,7 @@ class CorBase_Test(unittest.TestCase):
 
     def test_read_matrix(self):
         fnames = ["./test_data/corr_test_mat_short_%d%d.txt" % (s,t) \
-            for s in xrange(3) for t in xrange(3)]
+            for s in range(3) for t in range(3)]
         corr = Correlators(fnames)
         self.assertEqual(self.mat[:,:,1].shape, corr.shape)
         self.assertTrue(np.allclose(self.mat[:,:,1], corr.data))
@@ -68,7 +68,7 @@ class CorBase_Test(unittest.TestCase):
     def test_read_matrix_columns(self):
         # the file has 3 columns, 2nd column read by default
         fnames = ["./test_data/corr_test_mat_short_%d%d.txt" % (s,t) \
-            for s in xrange(3) for t in xrange(3)]
+            for s in range(3) for t in range(3)]
         corr = Correlators(fnames, column=(0,1))
         self.assertEqual(self.mat[:,:,:2].shape, corr.shape)
         self.assertTrue(np.allclose(self.mat[:,:,:2], corr.data))
@@ -156,7 +156,7 @@ class CorrMatrix_test(unittest.TestCase):
     def setUp(self):
         # read in data
         fnames = ["./test_data/corr_test_mat_%d%d.txt" % (s,t) \
-            for s in xrange(3) for t in xrange(3)]
+            for s in range(3) for t in range(3)]
         self.corr = Correlators(fnames)
 
     def test_write_data(self):

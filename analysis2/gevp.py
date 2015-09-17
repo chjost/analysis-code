@@ -41,7 +41,7 @@ def gevp_shift_1(data, dt, dE=None, axis=1, debug=0):
 
     # weighting of the matrix
     if dE:
-        for t in xrange(data.shape[axis]):
+        for t in range(data.shape[axis]):
             data[:,t] = np.exp(dE*t) * data[:,t]
 
     # if dt is zero, don't shift
@@ -52,7 +52,7 @@ def gevp_shift_1(data, dt, dE=None, axis=1, debug=0):
     sdata = np.zeros(dshape)
 
     # fill the new array
-    for i in xrange(dshape[axis]):
+    for i in range(dshape[axis]):
         sdata[:,i] = data[:,i] - data[:,i+dt]
 
     # return shifted matrix
@@ -100,7 +100,7 @@ def gevp_shift_2(data, dt, dE, axis=1, debug=0):
     sdata = np.zeros(dshape)
 
     # fill the new array
-    for i in xrange(dshape[axis]):
+    for i in range(dshape[axis]):
         sdata[:,i] = data[:,i] - data[:,i+dt] * (np.cosh(dE*(T-i)) /
             np.cosh(dE*(T-i+dt)))
 
@@ -274,7 +274,7 @@ def calculate_gevp(data, t0=1):
     # Initialize the eigenvalue array
     values_array = np.zeros(dshape[:-1])
     # iterate over the bootstrap samples
-    for _samples in xrange(data.shape[0]):
+    for _samples in range(data.shape[0]):
         # iterate over the eigensystems
         for eigenvalues, _eigenvectors, _t in solve_gevp_gen(data[_samples], t0):
             # save the eigenvalues to the array
