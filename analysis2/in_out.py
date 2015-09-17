@@ -48,7 +48,7 @@ def read_matrix(fname, column, skip, debug):
     """
     verbose = (debug > 0) and True or False
     # check length of the sequence gives a nxn matrix
-    _n = np.floor(np.sqrt(len(fname)))
+    _n = int(np.floor(np.sqrt(len(fname))))
     if _n*_n != len(fname):
         raise RuntimeError("Wrong number of files for matrix")
 
