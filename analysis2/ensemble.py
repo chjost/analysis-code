@@ -60,7 +60,7 @@ class LatticeEnsemble(object):
             raise e
         # pickle the dictionary
         else:
-            with open(filename, "r") as f: 
+            with open(filename, "rb") as f: 
                 data = pickle.load(f)
 
         # create class
@@ -86,7 +86,7 @@ class LatticeEnsemble(object):
         check_write(filename)
         # pickle the dictionary
 
-        with open(filename, "w") as f: 
+        with open(filename, "wb") as f: 
             pickle.dump(self.data, f)
 
     def name(self):

@@ -15,13 +15,13 @@ class EnsBase_Test(unittest.TestCase):
         self.ens = LatticeEnsemble(self.dic["name"], self.dic["L"], self.dic["T"])
 
     def test_init(self):
-        self.assertDictContainsSubset(self.dic, self.ens.data)
+        self.assertEqual(self.dic, self.ens.data)
 
     def test_save(self):
         fname = "./test_data/test_dict.pkl"
         self.ens.save(fname)
         self.assertTrue(os.path.isfile(fname))
-        with open(fname, "r") as f:
+        with open(fname, "rb") as f:
             data = pickle.load(f)
         self.assertEqual(self.ens.data, data)
 
@@ -46,13 +46,17 @@ class EnsBase_Test(unittest.TestCase):
     def test_add_data(self):
         newdata = {"test": 10.}
         self.ens.add_data("test", 10.)
-        self.assertDictContainsSubset(newdata, self.ens.data)
+        tmp = self.extractDictAFromB(newdata, self.ens.data)
+        self.assertEqual(newdata, tmp)
 
     def test_get_data(self):
         newdata = {"test": 10.}
         self.ens.add_data("test", 10.)
         tmp = self.ens.get_data("test")
         self.assertEqual(tmp, newdata["test"])
+
+    def extractDictAFromB(self,A,B):
+        return dict([(k,B[k]) for k in A.keys() if k in B.keys()])
 
 if __name__ == "__main__":
     unittest.main()
