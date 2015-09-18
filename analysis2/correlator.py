@@ -58,7 +58,8 @@ class Correlators(object):
                 self.data = in_out.read_matrix(filename, column, skip, debug)
                 self.matrix = True
             else:
-                self.data = in_out.read_single(filename, column, skip, debug)
+                tmp = in_out.read_single(filename, column, skip, debug)
+                self.data = np.atleast_3d(tmp)
                 self.matrix = False
 
         if self.data is not None:

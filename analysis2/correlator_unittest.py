@@ -11,7 +11,7 @@ class CorBase_Test(unittest.TestCase):
     def setUp(self):
         # read in data to check against
         fname = "./test_data/corr_test_real_short.npy"
-        self.data = np.load(fname)
+        self.data = np.atleast_3d(np.load(fname))
         fname = "./test_data/corr_test_mat_short_sym.npy"
         self.mat = np.load(fname)
     
@@ -29,34 +29,33 @@ class CorBase_Test(unittest.TestCase):
         # test the reading of a file
         fname = "./test_data/corr_test_real_short.txt"
         corr = Correlators(fname)
-        self.assertTrue(np.all(corr.data == self.data[:,:,1]))
+        self.assertTrue(np.all(corr.data == np.atleast_3d(self.data[:,:,1])))
 
         # read data with comments
         fname = "./test_data/corr_test_real_comments.txt"
         corr = Correlators(fname)
-        self.assertTrue(np.all(corr.data == self.data[:,:,1]))
+        self.assertTrue(np.all(corr.data == np.atleast_3d(self.data[:,:,1])))
 
     def test_arg_column(self):
         # file has 3 columns, the second column is read by default
         # read colums 0 and 1
-        fname1 = "./test_data/corr_test_real_short.txt"
-        corr = Correlators(fname1, column=(0,1))
+        fname = "./test_data/corr_test_real_short.txt"
+        corr = Correlators(fname, column=(0,1))
         self.assertTrue(np.all(corr.data == self.data[:,:,:2]))
 
         # read non-existing column
-        fname2 = "./test_data/corr_test_real_short.txt"
-        self.assertRaises(ValueError, Correlators, fname2, column=(3,))
+        self.assertRaises(ValueError, Correlators, fname, column=(3,))
 
     def test_arg_skip(self):
         # skip is 1 by default
         # set skip < 1
-        fname = "./test_data/corr_test_real.txt"
+        fname = "./test_data/corr_test_real_short.txt"
         self.assertRaises(ValueError, Correlators, fname, skip=0)
 
         # skip bigger header
         fname = "./test_data/corr_test_real_header.txt"
         corr = Correlators(fname, skip=5)
-        self.assertTrue(np.all(corr.data == self.data[:,:,1]))
+        self.assertTrue(np.all(corr.data == np.atleast_3d(self.data[:,:,1])))
 
     def test_read_matrix(self):
         fnames = ["./test_data/corr_test_mat_short_%d%d.txt" % (s,t) \
@@ -88,23 +87,23 @@ class CorrFunc_Test(unittest.TestCase):
 
     def test_shape(self):
         data = np.load("./test_data/corr_test_real.npy")
-        self.assertEqual(self.corr.shape, data.shape)
+        self.assertEqual(self.corr.shape, data.shape + (1,))
 
     def test_symmetrize(self):
         self.corr.symmetrize()
-        self.assertEqual(self.corr.shape, (404, 25))
+        self.assertEqual(self.corr.shape, (404, 25, 1))
         # TODO: get data to check against
         #self.assertAlmostEqual()
 
     def test_bootstrap(self):
         self.corr.bootstrap(100)
-        self.assertEqual(self.corr.shape, (100, 48))
+        self.assertEqual(self.corr.shape, (100, 48, 1))
         # TODO: get data to check against
         #self.assertAlmostEqual()
 
     def test_sym_and_boot(self):
         self.corr.sym_and_boot(100)
-        self.assertEqual(self.corr.shape, (100, 25))
+        self.assertEqual(self.corr.shape, (100, 25, 1))
         # TODO: get data to check against
         #self.assertAlmostEqual()
 
@@ -138,14 +137,14 @@ class CorrFunc_Test(unittest.TestCase):
     def test_mass_acosh(self):
         self.corr.symmetrize()
         self.corr.mass()
-        self.assertEqual(self.corr.shape, (404, 23))
+        self.assertEqual(self.corr.shape, (404, 23, 1))
         # TODO: get data to check against
         #self.assertAlmostEqual()
 
     def test_mass_log(self):
         self.corr.symmetrize()
         self.corr.mass(False)
-        self.assertEqual(self.corr.shape, (404, 24))
+        self.assertEqual(self.corr.shape, (404, 24, 1))
         # TODO: get data to check against
         #self.assertAlmostEqual()
 

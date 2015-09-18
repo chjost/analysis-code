@@ -3,6 +3,7 @@ Lattice Ensemble Class.
 """
 
 import numpy as np
+import pickle
 
 from in_out import check_read, check_write
 
@@ -117,6 +118,16 @@ class LatticeEnsemble(object):
             The temporal extent of the LatticeEnsemble.
         """
         return int(self.data["T"])
+
+    def T2(self):
+        """Returns temporal extend of the symmetrized LatticeEnsemble.
+
+        Returns
+        -------
+        int
+            The temporal extent of the symmetrized LatticeEnsemble.
+        """
+        return int(self.data["T2"])
 
     def add_data(self, key, data):
         """Add data to the dictionary.
