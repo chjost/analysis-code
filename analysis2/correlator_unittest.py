@@ -224,6 +224,11 @@ class CorrMatrix_test(unittest.TestCase):
         # TODO: get data to check against
         #self.assertAlmostEqual()
 
+    def test_gevp(self):
+        self.corr.symmetrize()
+        self.corr.gevp(1)
+        self.assertEqual(self.corr.shape, (404, 25, 3))
+
 if __name__ == "__main__":
     unittest.main()
 

@@ -9,7 +9,7 @@ import scipy.stats
 import numpy as np
 
 from functions import compute_error
-from fit import FitResult
+import fit
 
 def fit(fitfunc, start, corr, ranges):
     """Fits fitfunc to a Correlators object.
@@ -31,24 +31,23 @@ def fit(fitfunc, start, corr, ranges):
         The ranges in which to fit, either one range for all or
         one range for each data set in corr.
     """
-    if isinstance(ranges[0], (tuple, list)):
-        raise NotImplementedError("different ranges for different correlators")
     shape = corr.shape
+    ncorr = shape[-1]
     # calculate the fit ranges
-    fit_ranges = calculate_ranges(ranges, shape)
-    nranges = [len(ran) for ran in fit_ranges]
-    ncorr = len(nranges)
+    fit_ranges, fit_shape = calculate_ranges(ranges, shape)
+    if len(fit_ranges) != ncorr:
+        raise RuntimeError("Something went wrong in 'fit'")
     # prepare X data
     X = np.linspace(0., float(shape[1]), shape[1], endpoint=False)
 
     # prepare storage for results
-    fitres = FitResult()
-    fitres.set_ranges(fit_ranges)
+    fitres = fit.FitResult()
+    fitres.set_ranges(fit_ranges, fit_shape)
     # generate the shapes for the fit results
-    fit_shapes = [(shape[0], len(start), nran) for nran in nranges]
-    chi_shapes = [(shape[0], nran) for nran in nranges]
+    fit_shapes = [(shape[0], len(start), fit_shape[0][i]) for i in range(ncorr)]
+    chi_shapes = [(shape[0], fit_shape[0][i]) for i in range(ncorr)]
     fitres.create_empty(fit_shapes, chi_shapes, ncorr)
-
+    return fit_shapes, chi_shapes, fitres
 
 def fit_comb(self, fitfunc, start, corr, ranges, oldfit, oldfitpar=None):
     """Fits fitfunc to a Correlators object.
@@ -105,49 +104,43 @@ def calculate_ranges(ranges, shape, oldshape=None, step=2, min_size=4):
     # check if ranges makes sense
     if isinstance(ranges[0], int):
         # assume one range for every correlator
-        r_tmp = []
         # check if we exceed the time extent
         if ranges[1] > shape[1] - 1:
             ranges[1] = shape[1] - 1
-        for lo in range(ranges[0], ranges[1]+1, step):
-            for up in range(ranges[0], ranges[1]+1, step):
-                # the +2 comes from the fact that the interval contains one
-                # more number than the difference between the boundaries and
-                # because python would exclude the upper boundary but we
-                # include it explicitly
-                if (up - lo + 2) > min_size:
-                    r_tmp.append((lo, up))
+        r_tmp = get_ranges(ranges[0], ranges[1], step, min_size)
         fit_ranges = [r_tmp for i in range(ncorr)]
-        shape = [[len(r_tmp)] * ncorr]
+        shape = [[r_tmp.shape[0]] * ncorr]
     else:
         # one fitrange for every correlator
         if len(ranges) != ncorr:
             raise ValueError("number of ranges and correlators is incompatible")
         fit_ranges = []
         for ran in ranges:
-            fit_ranges.append([])
             # check if we exceed the time extent
             if ran[1] > shape[1] - 1:
                 ran[1] = shape[1] - 1
-            for lo in range(ran[0], ran[1]+1, step):
-                for up in range(ran[0], ran[1]+1, step):
-                    # the +2 comes from the fact that the interval contains one
-                    # more number than the difference between the boundaries and
-                    # because python would exclude the upper boundary but we
-                    # include it explicitly
-                    if (up - lo + 2) > min_size:
-                        fit_ranges[-1].append((lo, up))
-        shape = [[len(ran) for ran in fit_ranges]]
+            fit_ranges.append(get_ranges(ran[0], ran[1], step, min_size))
+        shape = [[ran.shape[0] for ran in fit_ranges]]
     if oldshape is not None:
-        r_tmp = []
-        for item in itertools.product(*oldshape):
-            r_tmp.append([])
-            comb = [[x for x in range(n)] for n in item]
-            for i in itertools.product(*comb):
-                r_tmp[-1].append(fit_ranges)
         shape = oldshape + shape
-        fit_ranges = r_tmp
+    #print(shape)
+    #print(fit_ranges)
     return fit_ranges, shape
+
+def get_ranges(lower, upper, step, minsize):
+    """Get the intervals given a lower and upper bound, step size and
+    the minimal size of the interval.
+    """
+    ran = []
+    for lo in range(lower, upper+1, step):
+        for up in range(lower, upper+1, step):
+            if (up - lo + 2) > minsize:
+                # the +2 comes from the fact that the interval contains one
+                # more number than the difference between the boundaries and
+                # because python would exclude the upper boundary but we
+                # include it explicitly
+                ran.append((lo, up))
+    return np.asarray(ran)
 
 def fitting(fitfunc, X, Y, start, add=None, correlated=True, verbose=True):
     """A function that fits a correlation function.

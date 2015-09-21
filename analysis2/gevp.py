@@ -186,7 +186,7 @@ def reorder_by_ev(ev1, ev2, B):
 
 def solve_gevp_gen(data, t0):
     """Generator that returns the eigenvalues for t_0 -> t where t is in
-    (t_0, t_max].
+    (t0, t_max].
        
     Calculate the eigenvalues of the generalised eigenvalue problem
     using the scipy.linalg.eigh solver.
@@ -207,8 +207,8 @@ def solve_gevp_gen(data, t0):
     int
         The time.
     """
-    # B is the matrix at t=t_0
-    B = data[t_0]
+    # B is the matrix at t=t0
+    B = data[t0]
     # define the eigensystem solver function as a lambda function
     try:
         f = lambda A: spla.eigh(b=B, a=A)
@@ -219,7 +219,7 @@ def solve_gevp_gen(data, t0):
     eigenvectors = None
     count = 0
 
-    # calculate the eigensystem for t in (t_0, T/2+1)
+    # calculate the eigensystem for t in (t0, T/2+1)
     for j in range(t0 + 1, data.shape[0]):
         try:
             # calculate the eigensystems
@@ -272,7 +272,7 @@ def calculate_gevp(data, t0=1):
         is filled with zeros.
     """
     # Initialize the eigenvalue array
-    values_array = np.zeros(dshape[:-1])
+    values_array = np.zeros(data.shape[:-1])
     # iterate over the bootstrap samples
     for _samples in range(data.shape[0]):
         # iterate over the eigensystems

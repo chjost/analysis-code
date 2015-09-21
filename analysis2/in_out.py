@@ -296,7 +296,7 @@ def read_data_w_err_ascii(filename, datacol=(1,), errcol=(2,), verbose=False):
     _data = read_data_ascii(filename, column=cols, verbose=verbose)
     return _data[:,:,:len(datacol)], _data[:,:,len(datacol):]
 
-def write_fitresults(filename, fitint, par, chi2, pvals, fitint2=None,
+def write_fitresults(filename, fitint, par, chi2, pvals, label,
     verbose=False):
     """Writes the fitresults to a numpy file.
 
@@ -315,8 +315,8 @@ def write_fitresults(filename, fitint, par, chi2, pvals, fitint2=None,
         The chi^2 values of the fit.
     pvals : ndarray
         The p-values of the fit
-    fitint2 : ndarray, optional
-        Additional fit ranges.
+    label : ndarray
+        The labels of the fit.
     verbose : bool
         Toggle info output
     """
@@ -324,40 +324,18 @@ def write_fitresults(filename, fitint, par, chi2, pvals, fitint2=None,
     check_write(filename)
     if verbose:
         print("saving to file " + str(filename))
-    # check the depth of the lists
-    depth = lambda L: isinstance(L, list) and max(map(depth, L))+1
-    d = depth(par)
     # NOTE: The dictionary building is necessary to recover the data with the
     # corresponding read function. Furthermore the read function needs to know
     # the level of recursion to build. Thus it is necessary that all labels
     # except for the fit intervals are 2 characters plus their two digit index 
     # for each level of recursion. The name of the fit intervals is chosen to
     # be always shorter than the other names.
-    if d is 1:
-        # create a dictionary to pass to savez
-        dic = {'fi' : fitint}
-        if fitint2 is not None:
-            dic.update({'fi2' : fitint2})
-        dic.update({'pi%02d' % i: p for (i, p) in enumerate(par)})
-        dic.update({'ch%02d' % i: p for (i, p) in enumerate(chi2)})
-        dic.update({'pv%02d' % i: p for (i, p) in enumerate(pvals)})
-        np.savez(filename, **dic)
-    elif d is 2:
-        # create a dictionary to pass to savez
-        dic = {'fi' : fitint}
-        if fitint2 is not None:
-            dic.update({'fi2' : fitint2})
-        dic.update({'pi%02d%02d' % (i, j): p for (i, s) in enumerate(par) for
-                   (j, p) in enumerate(s)})
-        dic.update({'ch%02d%02d' % (i, j): p for (i, s) in enumerate(chi2) for
-                   (j, p) in enumerate(s)})
-        dic.update({'pv%02d%02d' % (i, j): p for (i, s) in enumerate(pvals) for
-                   (j, p) in enumerate(s)})
-        np.savez(filename, **dic)
-    else:
-        print("the write function only covers two levels of lists.")
-        print("NOTHING IS SAVED!")
-    return
+    dic = {'fi' : fitint}
+    dic.update({'pi%02d' % i: p for (i, p) in enumerate(par)})
+    dic.update({'ch%02d' % i: p for (i, p) in enumerate(chi2)})
+    dic.update({'pv%02d' % i: p for (i, p) in enumerate(pvals)})
+    dic.update({'la%02d' % i: p for (i, p) in enumerate(label)})
+    np.savez(filename, **dic)
 
 def read_fitresults(filename, verbose=False):
     """Reads the fit results from file.
@@ -398,45 +376,15 @@ def read_fitresults(filename, verbose=False):
         if verbose:
             print("reading %d items" % len(f.files))
         L = f.files
-        Lmax = max([len(s) for s in L])
-        d = int((Lmax - 2) / 2)
-        n = (len(L) - 1) / 3
-        if d is 1:
-            fitint = f['fi']
-            try:
-                fitint2 = f['fi2']
-            except KeyError:
-                fitint2 = None
-            par, chi2, pvals = [], [], []
-            for i in range(n):
-                par.append(f['pi%02d' % i])
-                chi2.append(f['ch%02d' % i])
-                pvals.append(f['pv%02d' % i])
-        elif d is 2:
-            fitint = f['fi']
-            try:
-                fitint2 = f['fi2']
-            except KeyError:
-                fitint2 = None
-            par, chi2, pvals = [], [], []
-            for i in range(n):
-                if 'pi%02d00' % i in L:
-                    par.append([])
-                    chi2.append([])
-                    pvals.append([])
-                    for j in range(n):
-                        if 'pi%02d%02d' % (i,j) in L:
-                            par[i].append(f['pi%02d%02d' % (i,j)])
-                            chi2[i].append(f['ch%02d%02d' % (i,j)])
-                            pvals[i].append(f['pv%02d%02d' % (i,j)])
-        else:
-            print("the read function only covers up to two levels if lists")
-            print("RETURNING NONE")
-            return None
-    if fitint2 is None:
-        return fitint, par, chi2, pvals
-    else:
-        return fitint, par, chi2, pvals, fitint2
+        n = (len(L) - 1) / 4
+        fitint = f['fi']
+        par, chi2, pvals, label = [], [], [], []
+        for i in range(n):
+            par.append(f['pi%02d' % i])
+            chi2.append(f['ch%02d' % i])
+            pvals.append(f['pv%02d' % i])
+            label.append(f['la%02d' % i])
+    return fitint, par, chi2, pvals, label
 
 def read_header(filename, verbose=False):
     """Parses the first line of the data format of L. Liu.

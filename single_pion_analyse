@@ -60,7 +60,7 @@ def fit_single_pion(ensemble, pi_data, pars, pionfit, label, plotfolder,
     # get data from ensemble
     d = ensemble.get_data("d")
     d2 = np.dot(d, d)
-    lattice = ensemble.name
+    lattice = ensemble.get_data("name")
     lo, up, fmin = ensemble.get_data("fit parameters")
     fname = "%s/pi_fit_%s_TP%d.npz" % (datafolder, lattice, d2)
     # init fitresults
@@ -105,10 +105,10 @@ def analyse(ensemble, datafolder, plotfolder):
     # total momentum
     d = ensemble.get_data("d")
     d2 = np.dot(d, d)
-    L = ensemble.L
-    T = ensemble.T
-    T2 = ensemble.T2
-    lattice = ensemble.name
+    L = ensemble.get_data("L")
+    T = ensemble.get_data("T")
+    T2 = ensemble.get_data("T2")
+    lattice = ensemble.get_data("name")
     path = ensemble.get_data("path")
     # file list
     pilist = ["pi_corr_p%d.dat" % d2 ]
@@ -118,8 +118,8 @@ def analyse(ensemble, datafolder, plotfolder):
     # label for the plots
     label_pion = ["single pion", "time", "am$_{\pi}$(t)", "data", ""]
     # lower and upper fit ranges
-    lo_pion = [8]
-    up_pion = [T2]
+    lo_pion = [10]
+    up_pion = [15]
     fmin=4
     ensemble.add_data("fit parameters", (lo_pion, up_pion, fmin))
     # start parameter

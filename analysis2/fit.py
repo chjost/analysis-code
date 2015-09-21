@@ -6,13 +6,30 @@ import itertools
 import numpy as np
 
 import fit_routines as fr
+import in_out
 from functions import func_single_corr, func_ratio, func_const
 
 class LatticeFit(object):
-    def __init__(self, verbose=False):
-        self.verbose = verbose
+    def __init__(self, fitfunc, verbose=False):
+        """Create a class for fitting fitfunc.
 
-    def fit(self, fitfunc, start, corr, ranges, oldfit=None, oldfitpar=None):
+        Parameters
+        ----------
+        fitfunc : {0, 1, 2, callable}
+            Choose between three predefined functions or an own
+            fit function.
+        """
+        self.verbose = verbose
+        # chose the correct function if using predefined function
+        if isinstance(fitfunc, int):
+            if fitfunc > 2:
+                raise ValueError("No fit function choosen")
+            functions = {0: func_single_corr, 1: func_ratio, 2: func_const}
+            self.fitfunc = functions.get(fitfunc)
+        else:
+            self.fitfunc = fitfunc
+
+    def fit(self, start, corr, ranges, oldfit=None, oldfitpar=None):
         """Fits fitfunc to a Correlators object.
 
         The predefined functions describe a single particle correlation
@@ -21,9 +38,6 @@ class LatticeFit(object):
 
         Parameters
         ----------
-        fitfunc : {0, 1, 2, callable}
-            Choose between three predefined functions or an own
-            fit function.
         start : float or sequence of floats
             The start parameters for the fit.
         corr : Correlators
@@ -43,18 +57,12 @@ class LatticeFit(object):
         FitResult
             A class that holds all results.
         """
-        # chose the correct function if using predefined function
-        if isinstance(fitfunc, int):
-            if fitfunc > 2:
-                raise ValueError("No fit function choosen")
-            functions = {0: func_single_corr, 1: func_ratio, 2: func_const}
-            fitfunc = functions.get(fitfunc)
-
         # check if old data is reused
         if oldfit is None:
-            fr.fit(fitfunc, start, corr, ranges)
+            res = fr.fit(fitfunc, start, corr, ranges)
         else:
-            fr.fit_comb(fitfunc, start, corr, ranges, oldfit, oldfitpar)
+            res = fr.fit_comb(fitfunc, start, corr, ranges, oldfit, oldfitpar)
+        return res
 
 class FitResult(object):
     """Class to hold the results of a fit.
@@ -79,32 +87,53 @@ class FitResult(object):
         corr_id : str
             The identifier of the fit results.
         """
-        self.data = []
-        self.pval = []
-        self.chi2 = []
-        self.label = []
+        self.data = None
+        self.pval = None
+        self.chi2 = None
+        self.label = None
         self.corr_id = corr_id
         self.fit_ranges = None
         self.fit_ranges_shape = None
 
-    def add_data(self, data, chi2, corr_id):
+    @classmethod
+    def read(cls, filename):
+        """Read data from file.
+        """
+        obj = cls()
+        tmp = in_out.read_fitresults(filename)
+        obj.fit_ranges = tmp[0]
+        obj.data = tmp[1]
+        obj.chi2 = tmp[2]
+        obj.pval = tmp[3]
+        obj.label = tmp[4]
+
+    def save(self, filename):
+        """Save data to disk.
+
+        Parameters
+        ----------
+        filename : str
+            The name of the file.
+        """
+        in_out.write_fitresults(filename, self.fit_ranges, self.data, self.chi2,
+            self.pval, self.label, False)
+
+    def add_data(self, index, data, chi2, pval):
         """Add data to FitResult.
 
         Parameters
         ----------
-        data : ndarray or sequence of ndarrays
-            The data to add.
-        chi2 : ndarray or sequence of ndarraysi, optional
-            The chi2 to the fits
+        index : tuple of int
+            The index where to save the data
+        data : ndarray
+            The fit data to add.
+        chi2 : ndarray
+            The chi^2 of the data.
+        pval : ndarray
+            The p-values of the data.
         """
-        if isinstance(data, (tuple, list)):
-            for num, d in enumerate(data):
-                self.data.append(data)
-                self.chi2.append(chi2[num])
-                self.label.append(self._get_label(corr_id, num))
-        else:
-            self.data.append(data)
-            self.label.append(self._get_label(corr_id, 0))
+        if self.data is None:
+            raise RuntimeError("No place to store data, call create_empty first")
 
     def create_empty(self, shape1, shape2, corr_num):
         """Create empty data structures.
@@ -126,7 +155,10 @@ class FitResult(object):
         ValueError
             If shape and corr_num are incompatible.
         """
-        # check if shape and corr_num are compatible
+        self.data = []
+        self.pval = []
+        self.chi2 = []
+        self.label = []
         if isinstance(corr_num, (tuple, list)):
             # prepare a combination of all possible correlators using
             # list comprehension and itertools

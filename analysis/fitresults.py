@@ -30,7 +30,7 @@ class FitResults(object):
                 (type(ensemble)))
         # always needed
         self.ensemble = ensemble
-        self.name = ensemble.name
+        self.name = ensemble.get_data("name")
         self.label = label
         self.depth = 0
         self.fitranges = []
@@ -135,29 +135,29 @@ class FitResults(object):
         else:
             self.data = np.atleast_3d(_data)
         # init variables
-        nboot = data.shape[0]
-        T2 = data.shape[1]
-        ncorr = data.shape[2]
+        nboot = self.data.shape[0]
+        T2 = self.data.shape[1]
+        ncorr = self.data.shape[2]
         npar = len(start_params)
         ninter = [len(fitint) for fitint in self.fitranges[0]]
         # set fit data
         tlist = np.linspace(0., float(T2), float(T2), endpoint=False)
         # initialize empty arrays
-        res = []
-        chi2 = []
-        pval = []
+        self.res = []
+        self.chi2 = []
+        self.pval = []
         func_args = []
         func_kwargs = []
         # initialize array for every principal correlator
         for _l in range(ncorr):
-            res.append(np.zeros((nboot, npar, ninter[_l])))
-            chi2.append(np.zeros((nboot, ninter[_l])))
-            pval.append(np.zeros((nboot, ninter[_l])))
+            self.res.append(np.zeros((nboot, npar, ninter[_l])))
+            self.chi2.append(np.zeros((nboot, ninter[_l])))
+            self.pval.append(np.zeros((nboot, ninter[_l])))
         def ffunc(args, kwargs):
             return fit1(fitfunc, args, kwargs)
         for _l in range(ncorr):
             # setup
-            mdata, ddata = calc_error(data[:,:,_l])
+            #mdata, ddata = calc_error(data[:,:,_l])
             for _i in range(ninter[_l]):
                 lo, up = self.fitranges[0][_l][_i]
                 if self.verbose:
@@ -168,7 +168,7 @@ class FitResults(object):
                 if self.verbose:
                     print("fitting correlation function")
                     print(tlist[lo:up+1])
-                func_args.append((tlist[lo:up+1], data[:,lo:up+1,_l], start_params))
+                func_args.append((tlist[lo:up+1], self.data[:,lo:up+1,_l], start_params))
                 y=len(func_kwargs)
                 func_kwargs.append({"num":y, "verbose":False})
                 #res[_l][:,:,_i], chi2[_l][:,_i], pval[_l][:,_i] = fitting(fitfunc, 

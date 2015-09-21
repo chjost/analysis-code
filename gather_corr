@@ -35,8 +35,8 @@ def main():
     # needed variables
     #inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/sum/pi_corr_p0.conf"
     #outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/pi_corr_p0"
-    inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_all/sum/"
-    outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_all/"
+    inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_6rnd/sum/"
+    outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_6rnd/"
     filelist = ["pi_corr_p%d" % (x) for x in xrange(4)]
     filelist += ["pipi_pipi_A1_corr_TP0_%02d" % (x) for x in [00, 01, 02, 10, 11, 12, 20, 21, 22]]
     filelist += ["pipi_pipi_A1_corr_TP1_%02d" % (x) for x in [00, 01, 10, 11]]
@@ -50,17 +50,18 @@ def main():
     #    filelist += ["pipi_pipi_A1_corr_TP%01d_%02d" % (p,x) for x in 
     #                 [00, 01, 02, 10, 11, 12, 20, 21, 22]]
     suffix=".dat"
-    missing = [292, 328, 388, 444, 516, 524, 556]
-    missing += [40, 48, 56, 64, 80, 88]
+    #missing = [292, 328, 388, 444, 516, 524, 556]
+    #missing += [40, 48, 56, 64, 80, 88]
+    missing = [354, 358]
     inputlist = []
-    for i in range(4, 641, 4):
+    for i in range(202, 639, 4):
         if i in missing:
             continue
         inputlist.append(".conf%04d" % i)
-    for i in range(90, 160, 4):
-        if i in missing:
-            continue
-        inputlist.append(".conf%04d" % i)
+    #for i in range(90, 160, 4):
+    #    if i in missing:
+    #        continue
+    #    inputlist.append(".conf%04d" % i)
     #inputlist = []
     #for i in range(600, 3104, 8):
     #    if i in missing:
