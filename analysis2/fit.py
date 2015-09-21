@@ -5,7 +5,7 @@ The class for fitting.
 import itertools
 import numpy as np
 
-from fit_routines import fit, fit_comb
+import fit_routines as fr
 from functions import func_single_corr, func_ratio, func_const
 
 class LatticeFit(object):
@@ -52,9 +52,9 @@ class LatticeFit(object):
 
         # check if old data is reused
         if oldfit is None:
-            fit(fitfunc, start, corr, ranges)
+            fr.fit(fitfunc, start, corr, ranges)
         else:
-            fit_comb(fitfunc, start, corr, ranges, oldfit, oldfitpar)
+            fr.fit_comb(fitfunc, start, corr, ranges, oldfit, oldfitpar)
 
 class FitResult(object):
     """Class to hold the results of a fit.
@@ -71,12 +71,21 @@ class FitResult(object):
     Next to the data the chi^2 data and the p-values of the fit are
     saved.
     """
-    def __init__(self):
+    def __init__(self, corr_id=None):
+        """Create FitResults with given identifier.
+
+        Parameters
+        ----------
+        corr_id : str
+            The identifier of the fit results.
+        """
         self.data = []
-        self.pvals = []
+        self.pval = []
         self.chi2 = []
         self.label = []
+        self.corr_id = corr_id
         self.fit_ranges = None
+        self.fit_ranges_shape = None
 
     def add_data(self, data, chi2, corr_id):
         """Add data to FitResult.
@@ -97,26 +106,90 @@ class FitResult(object):
             self.data.append(data)
             self.label.append(self._get_label(corr_id, 0))
 
-    def get_empty(self, shape, corr_id, corr_num):
-        if len(corr_id) != len(corr_num):
-            raise ValueError("corr_id and corr_num are not of the same length")
-        data = []
-        label = []
-        comb = [[x for x in range(n)] for n in corr_num]
-        for item in itertools.product(*comb):
-            data.append(np.zeros(shape))
-            label.append(self._get_label(corr_id, item))
-        return None
+    def create_empty(self, shape1, shape2, corr_num):
+        """Create empty data structures.
+
+        If corr_num is a sequence of ints then shape can be a tuple,
+        assuming the same shape for all correlators or a sequence,
+        assuming different shapes for every correlator.
+
+        Parameters
+        ----------
+        shape1, shape2 : tuple of ints or sequence of tuples of ints
+            Shape of the data structures, where shape1 has an axis for
+            the parameters and shape2 not.
+        corr_num : int of sequence of ints.
+            Number of correlators.
+
+        Raises
+        ------
+        ValueError
+            If shape and corr_num are incompatible.
+        """
+        # check if shape and corr_num are compatible
+        if isinstance(corr_num, (tuple, list)):
+            # prepare a combination of all possible correlators using
+            # list comprehension and itertools
+            comb = [[x for x in range(n)] for n in corr_num]
+            if isinstance(shape1[0], int):
+                # one shape for all correlators
+                if len(shape1) != (len(shape2) + 1):
+                    raise ValueError("shape1 and shape2 incompatible")
+                # iterate over all correlator combinations
+                for item in itertools.product(*comb):
+                    self.data.append(np.zeros(shape1))
+                    self.chi2.append(np.zeros(shape2))
+                    self.pval.append(np.zeros(shape2))
+                    self.label.append(np.asarray(item))
+            else:
+                # one shape for every correlator combination
+                if len(shape1) != len(shape2):
+                    raise ValueError("shape1 and shape2 incompatible")
+                if len(shape1) != np.prod(np.asarray(corr_num)):
+                    raise ValueError("number of shapes and correlators"\
+                            + "incompatible")
+                # initialize arrays
+                for s1, item in zip(shape1, shape2, itertools.product(*comb)):
+                    self.data.append(np.zeros(s1))
+                    self.chi2.append(np.zeros(s2))
+                    self.pval.append(np.zeros(s2))
+                    self.label.append(np.asarray(item))
+        # corr_num is an int
+        else:
+            if isinstance(shape1[0], int):
+                if len(shape1) != (len(shape2) + 1):
+                    raise ValueError("shape1 and shape2 incompatible")
+                # one shape for all correlators
+                for i in range(corr_int):
+                    self.data.append(np.zeros(shape1))
+                    self.chi2.append(np.zeros(shape2))
+                    self.pval.append(np.zeros(shape2))
+                    self.label.append(np.asarray(i))
+            else:
+                # one shape for every correlator combination
+                if len(shape1) != corr_num:
+                    raise ValueError("number of shapes and correlators"\
+                            + "incompatible")
+                # initialize arrays
+                for s1, s2, i in zip(shape1, shape2, range(corr_num)):
+                    self.data.append(np.zeros(s1))
+                    self.chi2.append(np.zeros(s2))
+                    self.pval.append(np.zeros(s2))
+                    self.label.append(np.asarray(i))
 
     def _get_label(self, c_id, c_num):
         tmp = np.ndarray((2,), dtype=object)
         tmp[0] = c_id
         tmp[1] = c_num
         return tmp
+    
+    def set_ranges(self, ranges, shape):
+        self.fit_ranges = ranges
+        self.fit_ranges_shape = shape
 
     def get_ranges(self):
         """Returns the fit ranges."""
-        return self.fit_ranges
+        return self.fit_ranges, self.fit_ranges_shape
 
 class FitArray(np.ndarray):
     """Subclass of numpy array."""

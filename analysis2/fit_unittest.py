@@ -35,15 +35,15 @@ class FitResult_Test(unittest.TestCase):
         chi2 = [c for i in range(5)]
         fr.add_data(data, chi2, ["multiple"])
 
-    def test_get_empty(self):
+    def test_create_empty(self):
         fr = FitResult()
-        self.assertRaises(ValueError, fr.get_empty, (10, 25, 30), ["d"], [1,2])
-        tmp = fr.get_empty((10, 25, 30), ["a", "b"], [1, 5])
+        self.assertRaises(ValueError, fr.create_empty, (10, 25, 4), (10, 25, 4), 1)
+        fr.create_empty((10, 25, 4), (10, 4), [2, 3])
 
     def test_get_fit_ranges(self):
         fr = FitResult()
         tmp = fr.get_ranges()
-        self.assertIsNone(tmp)
+        self.assertEqual(tmp, (None, None))
         
     def test_save(self):
         pass
