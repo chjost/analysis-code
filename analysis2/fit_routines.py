@@ -11,7 +11,7 @@ import numpy as np
 from functions import compute_error
 import fit as fitter
 
-def fit(fitfunc, start, corr, ranges, corr_id="", debug=0):
+def fit(fitfunc, start, corr, ranges, add=None, corr_id="", debug=0):
     """Fits fitfunc to a Correlators object.
 
     The predefined functions describe a single particle correlation
@@ -62,7 +62,7 @@ def fit(fitfunc, start, corr, ranges, corr_id="", debug=0):
     for n in range(ncorr):
         for i, r in enumerate(franges[n]):
             res, chi, pva = fitting(fitfunc, X[r[0]:r[1]],
-                corr.data[:,r[0]:r[1],n], start, correlated=True,
+                corr.data[:,r[0]:r[1],n], start, add = add, correlated=True,
                 debug=debug)
             fitres.add_data((n, i), res, chi, pva)
     return fitres

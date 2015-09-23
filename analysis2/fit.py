@@ -7,7 +7,7 @@ import numpy as np
 
 import fit_routines as fr
 import in_out
-from functions import func_single_corr, func_ratio, func_const
+from functions import func_single_corr, func_ratio, func_const, compute_error
 
 class LatticeFit(object):
     def __init__(self, fitfunc, verbose=False):
@@ -29,7 +29,7 @@ class LatticeFit(object):
         else:
             self.fitfunc = fitfunc
 
-    def fit(self, start, corr, ranges, oldfit=None, oldfitpar=None):
+    def fit(self, start, corr, ranges, add=None, oldfit=None, oldfitpar=None):
         """Fits fitfunc to a Correlators object.
 
         The predefined functions describe a single particle correlation
@@ -59,9 +59,9 @@ class LatticeFit(object):
         """
         # check if old data is reused
         if oldfit is None:
-            res = fr.fit(fitfunc, start, corr, ranges)
+            res = fr.fit(self.fitfunc, start, corr, ranges, add=add)
         else:
-            res = fr.fit_comb(fitfunc, start, corr, ranges, oldfit, oldfitpar)
+            res = fr.fit_comb(self.fitfunc, start, corr, ranges, add, oldfit, oldfitpar)
         return res
 
 class FitResult(object):
@@ -280,6 +280,14 @@ class FitResult(object):
     def get_ranges(self):
         """Returns the fit ranges."""
         return self.fit_ranges, self.fit_ranges_shape
+
+    def print_data(self):
+        for d, c, p in zip(self.data, self.chi2, self.pval):
+            mean, std = compute_error(d)
+            print(mean[1])
+            print(std[1])
+            print(c[0])
+            print(p[0])
 
 class FitArray(np.ndarray):
     """Subclass of numpy array."""

@@ -11,9 +11,13 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-.. autoclass:: correlator
+.. automodule:: analysis2
+
+.. automodule:: analysis2.correlators
    :members:
 
+.. automodule:: analysis2.fit
+   :members:
 
 Indices and tables
 ==================
