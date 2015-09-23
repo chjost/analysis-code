@@ -77,31 +77,39 @@ class FitRoutinesBase_Test(unittest.TestCase):
         self.assertIsInstance(ranges, list)
         self.assertEqual(s2[-1], len(ranges))
 
-class FitRoutines_Test(unittest.TestCase):
-    def setUp(self):
-        self.r1 = [4, 10]
-        self.r2 = [4, 12]
-        self.corr = Correlators("./test_data/corr_test_real.txt")
-        fnames = ["./test_data/corr_test_mat_%d%d.txt" % (s,t) \
-            for s in range(3) for t in range(3)]
-        self.corr1 = Correlators(fnames)
-        self.corr1.gevp(1)
+class FitRoutinesSingle_Test(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.r1 = [4, 10]
+        cls.r2 = [4, 12]
+        cls.corr = Correlators("./test_data/corr_test_real.txt")
 
     def test_fit_shapes_ncorr1(self):
-        fit, chi, res= fr.fit(f1, [1.], self.corr, self.r1)
-        print(fit)
-        self.assertEqual(len(fit), 1)
-        self.assertEqual(fit, [(404, 1, 3)])
-        self.assertEqual(len(chi), 1)
-        self.assertEqual(chi, [(404, 3)])
+        fitres = fr.fit(f1, [1.], self.corr, self.r1)
+        self.assertIsNotNone(fitres)
 
-    def test_fit_shapes_ncorr2(self):
-        fit, chi, res = fr.fit(f1, [1.], self.corr1, self.r1)
-        print(fit)
-        self.assertEqual(len(fit), 3)
-        self.assertEqual(fit, [(404, 1, 3),] * 3)
-        self.assertEqual(len(chi), 3)
-        self.assertEqual(chi, [(404, 3),] * 3)
+class FitRoutinesMulti_Test(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.r1 = [4, 10]
+        cls.r2 = [4, 12]
+        fnames = ["./test_data/corr_test_mat_%d%d.txt" % (s,t) \
+            for s in range(3) for t in range(3)]
+        corr = Correlators(fnames)
+        corr.gevp(1)
+        cls.corr = corr
+
+    def test_fit_1_range(self):
+        fitres = fr.fit(f1, [1.], self.corr, self.r1)
+        self.assertIsNotNone(fitres)
+
+    def test_fit_1_range_multi(self):
+        fitres = fr.fit(f1, [1.], self.corr, [self.r1, self.r1, self.r1])
+        self.assertIsNotNone(fitres)
+
+    def test_fit_2_range(self):
+        fitres = fr.fit(f1, [1.], self.corr, [self.r1, self.r2, self.r1])
+        self.assertIsNotNone(fitres)
 
 if __name__ == "__main__":
     unittest.main()

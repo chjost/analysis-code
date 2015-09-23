@@ -45,8 +45,8 @@ def analyse(ensemble, datafolder, plotfolder):
         plotfolder: where to store the plots
     """
     ## define main variables
-    calculatea=False
-    calculateampi=False
+    calculatea=True
+    calculateampi=True
     # verbose prints all the shapes of the different arrays
     verbose=False
 
@@ -78,7 +78,7 @@ def analyse(ensemble, datafolder, plotfolder):
         ## read ratio fit data
         fname = "%s/fit_ratio_%s_TP%d_s%d.npz" % (datafolder, lattice, d2, s)
         ratioranges, rres, rchi2, rpvals = ana.read_fitresults(fname)
-        #ratioranges, rres, rchi2, rpvalsi, _tmp = ana.read_fitresults(fname)
+        #ratioranges, rres, rchi2, rpvals, _tmp = ana.read_fitresults(fname)
 
         # calculate statistic and systematic error for delta E
         plotname = "ratio_s%d_%s" % (s, lattice)

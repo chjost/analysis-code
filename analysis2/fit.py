@@ -79,7 +79,7 @@ class FitResult(object):
     Next to the data the chi^2 data and the p-values of the fit are
     saved.
     """
-    def __init__(self, corr_id=None):
+    def __init__(self, corr_id):
         """Create FitResults with given identifier.
 
         Parameters
@@ -92,11 +92,12 @@ class FitResult(object):
         self.chi2 = None
         self.label = None
         self.corr_id = corr_id
+        self.corr_num = None
         self.fit_ranges = None
         self.fit_ranges_shape = None
 
     @classmethod
-    def read(cls, filename):
+    def read(cls, filename, corr_id):
         """Read data from file.
         """
         obj = cls()
@@ -121,6 +122,9 @@ class FitResult(object):
     def add_data(self, index, data, chi2, pval):
         """Add data to FitResult.
 
+        The index contains first the indices of the correlators
+        and then the indices of the fit ranges.
+
         Parameters
         ----------
         index : tuple of int
@@ -131,9 +135,62 @@ class FitResult(object):
             The chi^2 of the data.
         pval : ndarray
             The p-values of the data.
+
+        Raises
+        ------
+        ValueError
+            If Index cannot be calculated.
+        RuntimeError
+            If FitResult object is not initialized.
         """
         if self.data is None:
             raise RuntimeError("No place to store data, call create_empty first")
+        if isinstance(self.corr_num, int):
+            if len(index) != 2:
+                raise ValueError("Index has wrong length")
+            lindex = self._get_index(index[0])
+            self.data[lindex][:,:,index[1]] = data
+            self.chi2[lindex][:,index[1]] = chi2
+            self.pval[lindex][:,index[1]] = pval
+        else:
+            if len(index) != 2*len(self.corr_num):
+                raise ValueError("Index has wrong length")
+            lindex = self._get_index(index[:len(self.corr_num)])
+            rindex = [slice(None), slice(None)] + [slice(x, x+1) for x in index[len(self.corr_num):]]
+            self.data[lindex][rindex] = data
+            rindex = [slice(None)] + [slice(x, x+1) for x in index[len(self.corr_num):]]
+            self.chi2[lindex][rindex] = chi2
+            self.pval[lindex][rindex] = pval
+
+
+    def _get_index(self, index):
+        """Linearize index.
+
+        Parameters
+        ----------
+        index : int or tuple of ints
+            The index to linearize.
+
+        Returns
+        -------
+        int
+            The linearized index.
+
+        Raises
+        ------
+        ValueError
+            If Index cannot be calculated.
+        RuntimeError
+            If FitResult object is not initialized.
+        """
+        if self.corr_num is None:
+            raise RuntimeError("No place to store data, call create_empty first")
+
+        for n, la in enumerate(self.label):
+            if np.array_equal(np.asarray(index), la):
+                return n
+        else:
+            raise ValueError("Index cannot be calculated")
 
     def create_empty(self, shape1, shape2, corr_num):
         """Create empty data structures.
@@ -159,6 +216,7 @@ class FitResult(object):
         self.pval = []
         self.chi2 = []
         self.label = []
+        self.corr_num = corr_num
         if isinstance(corr_num, (tuple, list)):
             # prepare a combination of all possible correlators using
             # list comprehension and itertools
@@ -192,7 +250,7 @@ class FitResult(object):
                 if len(shape1) != (len(shape2) + 1):
                     raise ValueError("shape1 and shape2 incompatible")
                 # one shape for all correlators
-                for i in range(corr_int):
+                for i in range(corr_num):
                     self.data.append(np.zeros(shape1))
                     self.chi2.append(np.zeros(shape2))
                     self.pval.append(np.zeros(shape2))

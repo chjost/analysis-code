@@ -146,7 +146,7 @@ def func_ratio(p, t, o):
     return p[0]*(np.cosh(p[1]*(t-o[0]-1.))+np.sinh(p[1]*(t-o[0]/2.))/
             (np.tanh(2.*o[1]*(t-o[0]/2.))))
 
-def func_const(p, t, o):
+def func_const(p, t):
     """A constant function.
 
     The function is given by p.
@@ -158,8 +158,6 @@ def func_const(p, t, o):
     p : float
         The parameter of the function
     t : float
-        Not used, but needed.
-    o : float
         Not used, but needed.
 
     Returns

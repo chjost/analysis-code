@@ -9,9 +9,9 @@ import scipy.stats
 import numpy as np
 
 from functions import compute_error
-import fit
+import fit as fitter
 
-def fit(fitfunc, start, corr, ranges):
+def fit(fitfunc, start, corr, ranges, corr_id="", debug=0):
     """Fits fitfunc to a Correlators object.
 
     The predefined functions describe a single particle correlation
@@ -30,24 +30,42 @@ def fit(fitfunc, start, corr, ranges):
     ranges : sequence of ints or sequence of sequences of int
         The ranges in which to fit, either one range for all or
         one range for each data set in corr.
+    corr_id : str
+        Identifier for the fit results.
+    debug : int
+        The amount of info printed.
     """
-    shape = corr.shape
-    ncorr = shape[-1]
+    dshape = corr.shape
+    ncorr = dshape[-1]
     # calculate the fit ranges
-    fit_ranges, fit_shape = calculate_ranges(ranges, shape)
-    if len(fit_ranges) != ncorr:
+    if debug > 0:
+        print("Get fit ranges")
+    franges, fshape = calculate_ranges(ranges, dshape)
+    if len(franges) != ncorr:
         raise RuntimeError("Something went wrong in 'fit'")
     # prepare X data
-    X = np.linspace(0., float(shape[1]), shape[1], endpoint=False)
+    if debug > 0:
+        print("Get X data")
+    X = np.linspace(0., float(dshape[1]), dshape[1], endpoint=False)
 
     # prepare storage for results
-    fitres = fit.FitResult()
-    fitres.set_ranges(fit_ranges, fit_shape)
+    if debug > 0:
+        print("Preparing data storage")
+    fitres = fitter.FitResult(corr_id)
+    fitres.set_ranges(franges, fshape)
     # generate the shapes for the fit results
-    fit_shapes = [(shape[0], len(start), fit_shape[0][i]) for i in range(ncorr)]
-    chi_shapes = [(shape[0], fit_shape[0][i]) for i in range(ncorr)]
-    fitres.create_empty(fit_shapes, chi_shapes, ncorr)
-    return fit_shapes, chi_shapes, fitres
+    shapes_data = [(dshape[0], len(start), fshape[0][i]) for i in range(ncorr)]
+    shapes_other = [(dshape[0], fshape[0][i]) for i in range(ncorr)]
+    fitres.create_empty(shapes_data, shapes_other, ncorr)
+    if debug > 0:
+        print("fitting the data")
+    for n in range(ncorr):
+        for i, r in enumerate(franges[n]):
+            res, chi, pva = fitting(fitfunc, X[r[0]:r[1]],
+                corr.data[:,r[0]:r[1],n], start, correlated=True,
+                debug=debug)
+            fitres.add_data((n, i), res, chi, pva)
+    return fitres
 
 def fit_comb(self, fitfunc, start, corr, ranges, oldfit, oldfitpar=None):
     """Fits fitfunc to a Correlators object.
@@ -142,7 +160,7 @@ def get_ranges(lower, upper, step, minsize):
                 ran.append((lo, up))
     return np.asarray(ran)
 
-def fitting(fitfunc, X, Y, start, add=None, correlated=True, verbose=True):
+def fitting(fitfunc, X, Y, start, add=None, correlated=True, debug=0):
     """A function that fits a correlation function.
 
     This function fits the given function fitfunc to the data given in
@@ -161,8 +179,8 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, verbose=True):
         The additional parameters for the fit.
     correlated : bool
         Flag to use a correlated or uncorrelated fit.
-    verbose : bool
-        Controls the amount of information written to the screen.
+    debug : int
+        The amount of info printed.
 
     Returns
     -------
@@ -174,6 +192,8 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, verbose=True):
         The p-values of the fit
     """
     # define error function
+    if debug > 1:
+        print("defining errfunc and computing covariance matrix")
     if add is None:
         errfunc = lambda p, x, y, error: np.dot(error, (y-fitfunc(p,x)).T)
     else:
@@ -193,6 +213,8 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, verbose=True):
     res = np.zeros((samples, len(start)))
     chisquare = np.zeros(samples)
     # The FIT to the boostrap samples
+    if debug > 1:
+        print("fitting the data")
     if add is None:
         for b in range(samples):
             p,cov1,infodict,mesg,ier = leastsq(errfunc, start, args=(X, Y[b],
@@ -211,7 +233,7 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, verbose=True):
     pvals = 1. - scipy.stats.chi2.cdf(chisquare, dof)
 
     # writing summary to screen
-    if verbose:
+    if debug > 0:
         if correlated:
             print("fit results for a correlated fit:")
         else:
