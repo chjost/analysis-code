@@ -29,6 +29,7 @@
 
 import os
 import numpy as np
+import sys
 
 import analysis as ana
 
@@ -112,9 +113,9 @@ def fit_corr_ranges(data, loborder, upborder, intervallsize, fitfunc,
     # TODO: change res to list of np-array with an array for every principal 
     # correlator
     fit_intervalls = ana.set_fit_interval(data, loborder, upborder, intervallsize)
-    res, chi2, pval = ana.genfit(data, fit_intervalls, fitfunc, start_params, 
-                                 tmin, lattice, d, label, path, plotlabel, 
-                                 verbose)
+    res, chi2, pval = ana.genfit(data, fit_intervalls, fitfunc, start_params)
+#                                 tmin, lattice, d, label, path, plotlabel, 
+#                                 verbose)
 #    cm.write_corr_matrix(res, "./raw_data/corr_fit_res_rho_%s_TP%d.npy" % (
 #                   lattice, d2))
 #    cm.write_corr_matrix(chi2, "./raw_data/corr_fit_chi2_rho_%s_TP%d.npy" % (
@@ -533,12 +534,13 @@ def setup_lattice(lattice, d):
             upborder=np.array((15, 15))
 
     # for testing -> three intervalls on A40.24 TP0
-#    loborder = np.array((10, 10))
-#    upborder = np.array((20, 20))
+    loborder = np.array((10, 10))
+    upborder = np.array((14, 14))
 
     return mpi, L, T, loborder, upborder
 
-def analyse(lattice="A40.24", d=np.array([0., 0., 0.]), verbose=True):
+#def analyse(lattice="A40.24", d=np.array([0., 0., 0.]), verbose=True):
+def analyse(ensemble, datafolder, plotfolder):
     #######################################################
     ## definition of main variables
     nbsamples = 400 # number of bootstrap samples
@@ -547,8 +549,13 @@ def analyse(lattice="A40.24", d=np.array([0., 0., 0.]), verbose=True):
     #lattice="A40.24" # lattice to analyse
     #######################################################
     # these variables are overwritten
-    T=48
-    L=24
+#    T = ensemble.get_data("T")
+#    L = ensemble.get_data("L")
+    T = ensemble.T
+    L = ensemble.L
+
+#    T=48
+#    L=24
     mpi=0.14463 # A40.24 from Carstens pipi I=2 analysis
     #######################################################
     ## define the fit function and start parameters
@@ -564,9 +571,13 @@ def analyse(lattice="A40.24", d=np.array([0., 0., 0.]), verbose=True):
     mass_sparams = [0.5]
     #######################################################
     ## setting variables
+    d = ensemble.get_data("d")
+    print d
     d2 = np.dot(d, d)
-    #path="".join(("/hiskp2/jost/data/rho_analyse/", lattice, "/"))
-    path="".join(("/hiskp2/werner/analyse/" + lattice + "_mv%d" % d2 + "/Analysis/"))
+
+    lattice = ensemble.name
+    path = ensemble.get_data("path")
+
     filelist = ["rho_corr_TP%d_00" % d2, "rho_corr_TP%d_01" % d2,\
                 "rho_corr_TP%d_01" % d2, "rho_corr_TP%d_11" % d2]
     #filelist = ["rho_corr_TP%d_00" % d2]
@@ -586,7 +597,8 @@ def analyse(lattice="A40.24", d=np.array([0., 0., 0.]), verbose=True):
     # for the lower ones before running into exponential error growth.
     # use 7 for 20 and 24 TP0-2, 6 TP3-4, 9 for 32 TP0-2, 8 TP3-4
     res, chi2, pvals = fit_corr_ranges(gevp_mat, loborder, upborder, 
-                                       7-np.sqrt(d2).astype(int), fitfunc, 
+#                                       7-np.sqrt(d2).astype(int), fitfunc, 
+                                       4, fitfunc, 
                                        start_params, tmin, lattice, d, True)
     #res, chi2, pvals = read_fit_corr(lattice, d)
     #return
@@ -610,13 +622,44 @@ def analyse(lattice="A40.24", d=np.array([0., 0., 0.]), verbose=True):
     return
 
 def main():
-    d0 = np.array([0., 0., 0.]) # total momentum of the system
-    d1 = np.array([0., 0., 1.]) # total momentum of the system
-    d2 = np.array([1., 1., 0.]) # total momentum of the system
-    d3 = np.array([1., 1., 1.]) # total momentum of the system
-    d4 = np.array([0., 0., 2.]) # total momentum of the system
-    lattices=["A30.32", "A40.20", "A40.24", "A40.32", "A60.24",\
-              "A80.24", "A100.24", "B55.32", "D45.32"]
+#    d0 = np.array([0., 0., 0.]) # total momentum of the system
+#    d1 = np.array([0., 0., 1.]) # total momentum of the system
+#    d2 = np.array([1., 1., 0.]) # total momentum of the system
+#    d3 = np.array([1., 1., 1.]) # total momentum of the system
+#    d4 = np.array([0., 0., 2.]) # total momentum of the system
+
+    momenta=[np.array([0., 0., 0.]), np.array([0., 0., 1.]), 
+             np.array([1., 1., 0.]), np.array([1., 1., 1.]),
+             np.array([0., 0., 2.])]
+
+    lattices=["A30.32", "A40.20", "A40.24", "A40.32", "A60.24",
+              "A80.24", "A100.24", "B25.32", "B35.32", "B35.48",
+              "B55.32", "B85.24", "D15.48", "D30.48", "D45.32"]
+
+    if len(sys.argv) < 2:
+        ens = 2
+    elif int(sys.argv[1]) >= len(lattices):
+        print("ensemble not known, the following are known.")
+        print(lattices)
+        sys.exit(-11)
+    else:
+        ens = int(sys.argv[1])
+
+#    if lattices[ens] == "D30.48":
+#        print("D30.48 not calculated yet")
+#        sys.exit(-11)
+
+    if len(sys.argv) < 3:
+        s = momenta[0]
+    elif int(sys.argv[2]) < 4:
+        s = momenta[int(sys.argv[2])]
+    else:
+        print("shift of %d does not make sense" % (sys.argv[2]))
+        sys.exit(-11)
+
+    s2 = np.dot(s,s)
+
+
     #A30
     #analyse(lattices[0], d0) 
     #analyse(lattices[0], d1)
@@ -630,11 +673,13 @@ def main():
     #analyse(lattices[1], d2)
     #analyse(lattices[1], d3)
     #analyse(lattices[1], d4)
+
     #analyse(lattices[2], d0)
     #analyse(lattices[2], d1)
     #analyse(lattices[2], d2)
     #analyse(lattices[2], d3)
     #analyse(lattices[2], d4)
+
     #analyse(lattices[3], d0)
     #analyse(lattices[3], d1)
     #analyse(lattices[3], d2)
@@ -670,11 +715,41 @@ def main():
     #analyse(lattices[7], d4)
 
     #D45
-    analyse(lattices[8], d0)
+    #analyse(lattices[8], d0)
     #analyse(lattices[8], d1)
     #analyse(lattices[8], d2)
     #analyse(lattices[8], d3)
     #analyse(lattices[8], d4)
+
+    #path="".join(("/hiskp2/jost/data/rho_analyse/", lattice, "/"))
+
+    datafolder = "./raw_data/"
+    plotfolder = "./plots/"
+    gmax = [3, 5, 5, 5, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]
+    ensembles = []
+    for i, lat in enumerate(lattices):
+        L = int(lattices[ens][-2:])
+        T = 2*L
+        if L == 20:
+            T=48
+        path="".join(("/hiskp2/werner/analyse/" + lat + "_mv%d" % s2 + "/Analysis/"))
+    
+        ensembles.append(ana.LatticeEnsemble(lat, L, T))
+        ensembles[-1].add_data("path", path)
+        ensembles[-1].add_data("gmax", gmax[i])
+        ensembles[-1].add_data("s", [0,1])
+        ensembles[-1].add_data("d", s)
+
+#    print(ensembles)
+#    for e in ensembles:
+#        print(e)
+#        ensembles[2].get_data("x")
+    print ensembles[2]
+
+    print("calculating %s" % (lattices[ens]))
+    analyse(ensembles[ens], datafolder, plotfolder)
+    
+    return
 
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':
