@@ -2,23 +2,25 @@
 Unit tests for the fit class.
 """
 
+from __future__ import with_statement
+
 import os
 import unittest
 import numpy as np
 
-import fit
+from fit import LatticeFit, FitResult
 from functions import func_const as f1
 
 class Fit_Test(unittest.TestCase):
 
     def test_fit(self):
-        fitter = fit.LatticeFit(f1)
+        fitter = LatticeFit(f1)
         self.assertIsNotNone(fitter)
 
 class FitResult_Test(unittest.TestCase):
 
     def test_add_data_single(self):
-        fr = fit.FitResult("")
+        fr = FitResult("")
         res = np.ones((10, 25))
         chi2 = np.ones((10,))
         pval = np.ones((10,))
@@ -35,7 +37,7 @@ class FitResult_Test(unittest.TestCase):
         self.assertTrue(np.array_equal(fr.chi2[0][:,3], np.ones((10,))))
 
     #def test_add_data_multi(self):
-    #    fr = fit.FitResult("")
+    #    fr = FitResult("")
     #    res = np.ones((10, 25))
     #    chi2 = np.ones((10,))
     #    pval = np.ones((10,))
@@ -58,7 +60,7 @@ class FitResult_Test(unittest.TestCase):
     #    self.assertTrue(np.array_equal(fr.chi2[5][:,3], np.ones((10,))))
 
     def test_get_index_len1(self):
-        fr = fit.FitResult("")
+        fr = FitResult("")
         self.assertRaises(RuntimeError, fr._get_index, (1,))
         fr.create_empty((10, 25, 4), (10, 4), 3)
         self.assertRaises(ValueError, fr._get_index, (1,2))
@@ -68,7 +70,7 @@ class FitResult_Test(unittest.TestCase):
         self.assertRaises(ValueError, fr._get_index, (3,))
 
     def test_get_index_len2(self):
-        fr = fit.FitResult("")
+        fr = FitResult("")
         fr.create_empty((10, 25, 4), (10, 4), [2, 3])
         self.assertEqual(fr._get_index((0, 0)), 0)
         self.assertEqual(fr._get_index((0, 1)), 1)
@@ -78,7 +80,7 @@ class FitResult_Test(unittest.TestCase):
         self.assertEqual(fr._get_index((1, 2)), 5)
 
     def test_get_index_len3(self):
-        fr = fit.FitResult("")
+        fr = FitResult("")
         fr.create_empty((10, 25, 4), (10, 4), [2, 3, 4])
         self.assertEqual(fr._get_index((0, 0, 0)), 0)
         self.assertEqual(fr._get_index((0, 0, 1)), 1)
@@ -106,18 +108,18 @@ class FitResult_Test(unittest.TestCase):
         self.assertEqual(fr._get_index((1, 2, 3)), 23)
 
     def test_create_empty(self):
-        fr = fit.FitResult("")
+        fr = FitResult("")
         self.assertRaises(ValueError, fr.create_empty, (10, 25, 4), (10, 25, 4), 1)
         fr.create_empty((10, 25, 4), (10, 4), [2, 3])
         self.assertIsNotNone(fr.data)
 
     def test_get_ranges(self):
-        fr = fit.FitResult("")
+        fr = FitResult("")
         tmp = fr.get_ranges()
         self.assertEqual(tmp, (None, None))
 
     def test_set_ranges(self):
-        fr = fit.FitResult("")
+        fr = FitResult("")
         ran = np.ones((100, 25, 3))
         shape = (100, 25, 3)
         fr.set_ranges(ran, shape)
@@ -125,7 +127,7 @@ class FitResult_Test(unittest.TestCase):
         self.assertTrue(np.array_equal(shape, fr.fit_ranges_shape))
 
     def test_save(self):
-        fr = fit.FitResult("")
+        fr = FitResult("")
         ran = np.ones((100, 25, 3))
         shape = (100, 25, 3)
         fr.set_ranges(ran, shape)

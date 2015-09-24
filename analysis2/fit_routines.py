@@ -11,7 +11,7 @@ import numpy as np
 from functions import compute_error
 import fit as fitter
 
-def fit(fitfunc, start, corr, ranges, add=None, corr_id="", debug=0):
+def fit_single(fitfunc, start, corr, ranges, add=None, corr_id="", debug=0):
     """Fits fitfunc to a Correlators object.
 
     The predefined functions describe a single particle correlation

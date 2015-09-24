@@ -1,12 +1,16 @@
-#!/usr/bin/python2
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+##!/usr/bin/python2
 
 import numpy as np
 
 import analysis2 as ana
 
 def main():
-    files = ["/home/chris/Work/data/pi_corr_p%d.dat" % d for d in range(3)]
+    #prefix = "/home/chris/Work/data/"
+    prefix = "/hiskp2/correlators/A40.24_L24_T48_beta190_mul0040_musig150_mudel190_kappa1632700/ev120/liuming/"
+    files = ["%s/pi_corr_p%d.dat" % (prefix, d) for d in range(3)]
     nboot = 1500
+    datadir = "./data/"
 
     # prepare the fitting of data
     # 0 is single partivle correlation function
@@ -29,7 +33,7 @@ def main():
 
         print("save")
         # save the fit result
-        fitres.save("./data/fit_pi_p%d.npz" % i)
+        fitres.save("%s/fit_pi_p%d.npz" % (datadir, i))
         fitres.print_data()
 
 if __name__ == '__main__':

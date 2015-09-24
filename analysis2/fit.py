@@ -2,11 +2,12 @@
 The class for fitting.
 """
 
+
 import itertools
 import numpy as np
 
-import fit_routines as fr
-import in_out
+from fit_routines import fit_comb, fit_single
+from in_out import read_fitresults, write_fitresults
 from functions import func_single_corr, func_ratio, func_const, compute_error
 
 class LatticeFit(object):
@@ -59,9 +60,9 @@ class LatticeFit(object):
         """
         # check if old data is reused
         if oldfit is None:
-            res = fr.fit(self.fitfunc, start, corr, ranges, add=add)
+            res = fit_single(self.fitfunc, start, corr, ranges, add=add)
         else:
-            res = fr.fit_comb(self.fitfunc, start, corr, ranges, add, oldfit, oldfitpar)
+            res = fit_comb(self.fitfunc, start, corr, ranges, add, oldfit, oldfitpar)
         return res
 
 class FitResult(object):
@@ -101,7 +102,7 @@ class FitResult(object):
         """Read data from file.
         """
         obj = cls()
-        tmp = in_out.read_fitresults(filename)
+        tmp = read_fitresults(filename)
         obj.fit_ranges = tmp[0]
         obj.data = tmp[1]
         obj.chi2 = tmp[2]
@@ -116,7 +117,7 @@ class FitResult(object):
         filename : str
             The name of the file.
         """
-        in_out.write_fitresults(filename, self.fit_ranges, self.data, self.chi2,
+        write_fitresults(filename, self.fit_ranges, self.data, self.chi2,
             self.pval, self.label, False)
 
     def add_data(self, index, data, chi2, pval):
