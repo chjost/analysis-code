@@ -8,37 +8,42 @@ import analysis2 as ana
 def main():
     prefix = "/home/chris/Work/data/"
     #prefix = "/hiskp2/correlators/A40.24_L24_T48_beta190_mul0040_musig150_mudel190_kappa1632700/ev120/liuming/"
-    files = ["%s/pi_corr_p%d.dat" % (prefix, d) for d in range(3)]
+    gmax = 3
+    #files = ["%s/pi_corr_p%d.dat" % (prefix, d) for d in range(3)]
+    files = ["%s/pipi_pipi_A1_corr_TP0_%d%d.dat" % (prefix, i, j) for i in range(gmax) for j in range(gmax)]
     nboot = 1500
     datadir = "./data/"
+
+    # read pion data
+    pifit = ana.FitResult.read("%s/fit_pi.npz" % (datadir), "pi")
 
     # prepare the fitting of data
     # 0 is single partivle correlation function
     # 1 is ratio fit
     # 2 is constant fit
     print("prepare fit")
-    fitter = ana.LatticeFit(0, True)
+    fitter = ana.LatticeFit(1, True)
     start = [1., 0.3]
 
-    readsingle=True
-    if readsingle == False:
-        corr = ana.Correlators(files, matrix=False)
+    print("prepare ratio")
+    readratio=True
+    if readratio == False:
+        corr = ana.Correlators(files)
         corr.sym_and_boot(nboot)
-        corr.save("%s/corr_pi.npy" % (datadir))
+        corr.shift(1)
+        corr.gevp(1)
+        corr.save("%s/corr_pipi.npy" % (datadir))
     else:
-        corr = ana.Correlators.read("%s/corr_pi.npy" % (datadir))
+        corr = ana.Correlators.read("%s/corr_pipi.npy" % (datadir))
     add = np.ones((1500,)) * corr.shape[1]
 
     print("fitting")
-    fitres = fitter.fit(start, corr, [8, 14], add=add)
+    fitres = fitter.fit(start, corr, [8, 16], add=add, oldfit=pifit, oldfitpar=(1,))
 
     print("save")
     # save the fit result
-    fitres.save("%s/fit_pi.npz" % (datadir))
+    fitres.save("%s/fit_pipi.npz" % (datadir))
     fitres.print_data()
-
-    #print(fitres.fit_ranges)
-    #print(fitres.fit_ranges_shape)
 
 if __name__ == '__main__':
     try:

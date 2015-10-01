@@ -15,7 +15,7 @@ class Correlators(object):
     """Correlation function class.
     """
 
-    def __init__(self, filename=None, column=(1,), skip=1, debug=0):
+    def __init__(self, filename=None, column=(1,), matrix=True, skip=1, debug=0):
         """Reads in data from an ascii file.
 
         The file is assumed to have in the first line the number of
@@ -33,6 +33,8 @@ class Correlators(object):
             The filename of the file.
         column : sequence, optional
             The columns that are read.
+        matrix : bool, optional
+            Read data as matrix or not
         skip : int, optional
             The number of header lines that are skipped.
         debug : int, optional
@@ -55,8 +57,12 @@ class Correlators(object):
 
         if filename is not None:
             if isinstance(filename, (list, tuple)):
-                self.data = in_out.read_matrix(filename, column, skip, debug)
-                self.matrix = True
+                if matrix:
+                    self.data = in_out.read_matrix(filename, column, skip, debug)
+                    self.matrix = True
+                else:
+                    self.data = in_out.read_vector(filename, column, skip, debug)
+                    self.matrix = False
             else:
                 tmp = in_out.read_single(filename, column, skip, debug)
                 self.data = np.atleast_3d(tmp)
@@ -175,7 +181,7 @@ class Correlators(object):
         elif dE is None:
             raise ValueError("dE is mandatory for the second implemented shift")
         else:
-            self.data = gevp.gevp_shift_1(self.data, dt, dE, 1, self.debug)
+            self.data = gevp.gevp_shift_2(self.data, dt, dE, 1, self.debug)
         self.shape = self.data.shape
 
     def gevp(self, t0):
@@ -218,6 +224,24 @@ class Correlators(object):
             Returns the saved data.
         """
         return np.copy(self.data)
+
+    def ratio(self, single_corr, ratio=0):
+        """Calculates the ratio and returns a new Correlator object.
+
+        Parameters
+        ----------
+        single_corr : Correlators
+            The single particle correlators used for the ratio.
+        ratio : int
+            Chose the ratio to use.
+        
+        Returns
+        -------
+        Correlators
+            The ratio.
+        """
+        if self.matrix or single_corr.matrix:
+            raise RuntimeError("cannot do ratio with a matrix")
 
 if __name__ == "main":
     pass

@@ -27,6 +27,48 @@ def read_single(fname, column, skip, debug):
     verbose = (debug > 0) and True or False
     return read_data_ascii(fname, column, False, skip, verbose)
 
+def read_vector(fname, column, skip, debug):
+    """Read a correlation function matrix from files.
+
+    Parameters
+    ----------
+    filename : sequence of str
+        The filenames of the files.
+    column : sequence, optional
+        The columns that are read.
+    skip : int, optional
+        The number of header lines that are skipped.
+    debug : int, optional
+        The amount of debug information printed.
+
+    Returns
+    -------
+    data : ndarray
+        The correlation function
+    """
+    verbose = (debug > 0) and True or False
+    # check length of the sequence gives a nxn matrix
+    _n = len(fname)
+
+    # read in all data
+    data = []
+    for f in fname:
+        data.append(read_data_ascii(f, column, False, skip, verbose))
+    
+    # check if shape of all arrays is the same
+    _rshape = data[0].shape
+    for d in data:
+        if d.shape != _rshape:
+            raise ValueError("Some correlation functions are not compatible")
+    # allocate numpy array for vector
+    _rshape = data[0].shape + (_n,)
+    vector = np.zeros(_rshape, dtype=float)
+    # sort the data into a matrix
+    for _i, d in enumerate(data):
+        vector[..., _i] = d
+
+    return vector
+
 def read_matrix(fname, column, skip, debug):
     """Read a correlation function matrix from files.
 
@@ -376,7 +418,7 @@ def read_fitresults(filename, verbose=False):
         if verbose:
             print("reading %d items" % len(f.files))
         L = f.files
-        n = (len(L) - 1) / 4
+        n = int((len(L) - 1) / 4)
         fitint = f['fi']
         par, chi2, pvals, label = [], [], [], []
         for i in range(n):

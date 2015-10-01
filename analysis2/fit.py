@@ -6,7 +6,7 @@ The class for fitting.
 import itertools
 import numpy as np
 
-from fit_routines import fit_comb, fit_single
+from fit_routines import fit_comb, fit_single, calculate_ranges
 from in_out import read_fitresults, write_fitresults
 from functions import func_single_corr, func_ratio, func_const, compute_error
 
@@ -30,7 +30,7 @@ class LatticeFit(object):
         else:
             self.fitfunc = fitfunc
 
-    def fit(self, start, corr, ranges, add=None, oldfit=None, oldfitpar=None):
+    def fit(self, start, corr, ranges, corrid = "", add=None, oldfit=None, oldfitpar=None):
         """Fits fitfunc to a Correlators object.
 
         The predefined functions describe a single particle correlation
@@ -49,6 +49,10 @@ class LatticeFit(object):
             lower and an upper bound.
         oldfit : None or FitResult, optional
             Reuse the fit results of an old fit for the new fit.
+        corrid : str, optional
+            Identifier of the fit result.
+        add : None or ndarray, optional
+            Additional parameters for the fit function.
         oldfitpar : None, int or sequence of int, optional
             Which parameter of the old fit to use, if there is more
             than one.
@@ -58,12 +62,65 @@ class LatticeFit(object):
         FitResult
             A class that holds all results.
         """
-        # check if old data is reused
+        # check if it is a combined fit or not
         if oldfit is None:
-            res = fit_single(self.fitfunc, start, corr, ranges, add=add)
+            # no combined fit
+            # get the fitranges
+            dshape = corr.shape
+            ncorr = dshape[-1]
+            franges, fshape = calculate_ranges(ranges, dshape)
+
+            # prepare storage
+            fitres = FitResult(corr_id)
+            fitres.set_ranges(franges, fshape)
+            shapes_data = [(dshape[0], len(start), fshape[0][i]) for i in range(ncorr)]
+            shapes_other = [(dshape[0], fshape[0][i]) for i in range(ncorr)]
+            fitres.create_empty(shapes_data, shapes_other, ncorr)
+            del shapes_data, shapes_other
+
+            # do the fitting
+            if add is None:
+                for res in fit_single(self.fitfunc, start, corr, franges):
+                    fitres.add_data(*res)
+            else:
+                for res in fit_single(self.fitfunc, start, corr, franges, add):
+                    fitres.add_data(*res)
         else:
-            res = fit_comb(self.fitfunc, start, corr, ranges, add, oldfit, oldfitpar)
-        return res
+            # handle the fitranges
+            dshape = corr.shape
+            oldranges, oldshape = oldfit.get_ranges()
+            franges, fshape = calculate_ranges(ranges, dshape, oldshape)
+
+            # generate the shapes for the data
+            shapes_data = []
+            shapes_other = []
+            # iterate over the correlation functions
+            ncorr = [len(s) for s in fshape]
+            ncorriter = [[x for x in range(n)] for n in ncorr]
+            for item in itertools.product(*ncorriter):
+                # create the iterator over the fit ranges
+                tmp = [fshape[i][x] for i,x in enumerate(item)]
+                shapes_data.append(tuple([dshape[0], len(start)] + tmp))
+                shapes_other.append(tuple([dshape[0]] + tmp))
+
+            print(shapes_data)
+            # prepare storage
+            fitres = FitResult(corrid)
+            fitres.set_ranges(franges, fshape)
+            fitres.create_empty(shapes_data, shapes_other, ncorr)
+            del shapes_data, shapes_other
+
+            # do the fitting
+            if add is None:
+                for res in fit_comb(self.fitfunc, start, corr, franges, fshape,
+                        oldfit, oldfitpar):
+                    fitres.add_data(*res)
+            else:
+                for res in fit_comb(self.fitfunc, start, corr, franges, fshape,
+                        oldfit, add, oldfitpar):
+                    fitres.add_data(*res)
+
+        return fitres
 
 class FitResult(object):
     """Class to hold the results of a fit.
@@ -101,13 +158,19 @@ class FitResult(object):
     def read(cls, filename, corr_id):
         """Read data from file.
         """
-        obj = cls()
+        obj = cls(corr_id)
         tmp = read_fitresults(filename)
         obj.fit_ranges = tmp[0]
+        obj.fit_ranges_shape = [[ran.shape[0] for ran in tmp[0]]]
         obj.data = tmp[1]
         obj.chi2 = tmp[2]
         obj.pval = tmp[3]
         obj.label = tmp[4]
+        if len(obj.fit_ranges_shape) == 1:
+            obj.corr_num = len(obj.fit_ranges_shape[0])
+        else:
+            obj.corr_num = [len(s) for s in obj.fit_ranges_shape]
+        return obj
 
     def save(self, filename):
         """Save data to disk.
@@ -119,6 +182,33 @@ class FitResult(object):
         """
         write_fitresults(filename, self.fit_ranges, self.data, self.chi2,
             self.pval, self.label, False)
+
+    def get_data(self, index):
+        """Returns the data at the index.
+
+        Parameters
+        ----------
+        index : tuple of int
+            The index of the data.
+
+        Returns
+        -------
+        ndarray
+            The data.
+        """
+        if self.data is None:
+            raise RuntimeError("No data stored, add data first")
+        if isinstance(self.corr_num, int):
+            if len(index) != 2:
+                raise ValueError("Index has wrong length")
+            lindex = self._get_index(index[0])
+            return self.data[lindex][:,:,index[1]]
+        else:
+            if len(index) != 2*len(self.corr_num):
+                raise ValueError("Index has wrong length")
+            lindex = self._get_index(index[:len(self.corr_num)])
+            rindex = [slice(None), slice(None)] + [slice(x, x+1) for x in index[len(self.corr_num):]]
+            return self.data[lindex][rindex]
 
     def add_data(self, index, data, chi2, pval):
         """Add data to FitResult.
@@ -157,12 +247,11 @@ class FitResult(object):
             if len(index) != 2*len(self.corr_num):
                 raise ValueError("Index has wrong length")
             lindex = self._get_index(index[:len(self.corr_num)])
-            rindex = [slice(None), slice(None)] + [slice(x, x+1) for x in index[len(self.corr_num):]]
+            rindex = [slice(None), slice(None)] + [x for x in index[len(self.corr_num):]]
             self.data[lindex][rindex] = data
-            rindex = [slice(None)] + [slice(x, x+1) for x in index[len(self.corr_num):]]
+            rindex = [slice(None)] + [x for x in index[len(self.corr_num):]]
             self.chi2[lindex][rindex] = chi2
             self.pval[lindex][rindex] = pval
-
 
     def _get_index(self, index):
         """Linearize index.
@@ -240,7 +329,7 @@ class FitResult(object):
                     raise ValueError("number of shapes and correlators"\
                             + "incompatible")
                 # initialize arrays
-                for s1, item in zip(shape1, shape2, itertools.product(*comb)):
+                for s1, s2, item in zip(shape1, shape2, itertools.product(*comb)):
                     self.data.append(np.zeros(s1))
                     self.chi2.append(np.zeros(s2))
                     self.pval.append(np.zeros(s2))
