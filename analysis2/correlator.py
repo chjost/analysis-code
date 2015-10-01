@@ -10,6 +10,7 @@ import in_out
 import bootstrap as boot
 import gevp
 import functions as func
+from ratio import simple_ratio, ratio_shift, simple_ratio_subtract
 
 class Correlators(object):
     """Correlation function class.
@@ -225,8 +226,17 @@ class Correlators(object):
         """
         return np.copy(self.data)
 
-    def ratio(self, single_corr, ratio=0):
+    def ratio(self, single_corr, ratio=0, shift=1, single_corr1=None):
         """Calculates the ratio and returns a new Correlator object.
+
+        The implemented ratios are:
+        * corr/(single_corr^2)
+        * corr(t)/(single_corr(t)^2 - single_corr(t+shift)^2)
+        * (corr(t)-corr(t+1))/(single_corr(t)^2 - single_corr(t+1)^2)
+        where shift is an additional parameter.
+
+        If single_corr1 is given, single_corr^2 becomes
+        single_corr*single_corr1.
 
         Parameters
         ----------
@@ -234,14 +244,38 @@ class Correlators(object):
             The single particle correlators used for the ratio.
         ratio : int
             Chose the ratio to use.
+        shift : int
+            Additional parameter for the second ratio.
+        single_corr1 : Correlators
+            The single particle correlators used for the ratio.
         
         Returns
         -------
         Correlators
             The ratio.
         """
+        # if any correlator is a matrix, raise an error
         if self.matrix or single_corr.matrix:
             raise RuntimeError("cannot do ratio with a matrix")
+        if single_corr1 is not None and single_corr1.matrix:
+            raise RuntimeError("cannot do ratio with a matrix")
+
+        # get the actual ratio being calculated
+        # TODO check ratio 4 implementation
+        functions = {0: simple_ratio, 1: ratio_shift, 2: simple_ratio_subtract}
+        #functions = {0: ratio.simple_ratio, 1: ratio.ratio_shift,
+        #        2: ratio.simple_ratio_subtract, 3: ratio.ratio}
+        ratiofunc = functions.get(ratio)
+
+        if single_corr1 is None:
+            obj = Correlators(debug=self.debug)
+            obj.data = ratiofunc(self.data, single_corr.data, single_corr.data)
+            obj.shape = obj.data.shape
+        else:
+            obj = Correlators(debug=self.debug)
+            obj.data = ratiofunc(self.data, single_corr.data, single_corr1.data)
+            obj.shape = obj.data.shape
+        return obj
 
 if __name__ == "main":
     pass

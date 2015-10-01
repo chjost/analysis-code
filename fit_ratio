@@ -15,6 +15,7 @@ def main():
     datadir = "./data/"
 
     # read pion data
+    pi = ana.Correlators.read("%s/corr_pi.npy" % (datadir))
     pifit = ana.FitResult.read("%s/fit_pi.npz" % (datadir), "pi")
 
     # prepare the fitting of data
@@ -35,10 +36,12 @@ def main():
         corr.save("%s/corr_pipi.npy" % (datadir))
     else:
         corr = ana.Correlators.read("%s/corr_pipi.npy" % (datadir))
+
+    ratio = corr.ratio(pi, 1)
     add = np.ones((1500,)) * corr.shape[1]
 
     print("fitting")
-    fitres = fitter.fit(start, corr, [8, 16], add=add, oldfit=pifit, oldfitpar=(1,))
+    fitres = fitter.fit(start, ratio, [8, 13], add=add, oldfit=pifit, oldfitpar=(1,))
 
     print("save")
     # save the fit result

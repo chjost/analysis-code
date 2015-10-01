@@ -161,15 +161,17 @@ class FitResult(object):
         obj = cls(corr_id)
         tmp = read_fitresults(filename)
         obj.fit_ranges = tmp[0]
-        obj.fit_ranges_shape = [[ran.shape[0] for ran in tmp[0]]]
+        if tmp[0] is not None:
+            obj.fit_ranges_shape = [[ran.shape[0] for ran in tmp[0]]]
         obj.data = tmp[1]
         obj.chi2 = tmp[2]
         obj.pval = tmp[3]
         obj.label = tmp[4]
-        if len(obj.fit_ranges_shape) == 1:
-            obj.corr_num = len(obj.fit_ranges_shape[0])
-        else:
-            obj.corr_num = [len(s) for s in obj.fit_ranges_shape]
+        if tmp[0] is not None:
+            if len(obj.fit_ranges_shape) == 1:
+                obj.corr_num = len(obj.fit_ranges_shape[0])
+            else:
+                obj.corr_num = [len(s) for s in obj.fit_ranges_shape]
         return obj
 
     def save(self, filename):
@@ -180,6 +182,8 @@ class FitResult(object):
         filename : str
             The name of the file.
         """
+        #if self.fit_ranges is None:
+        #    raise RuntimeWarning("No fit_ranges set")
         write_fitresults(filename, self.fit_ranges, self.data, self.chi2,
             self.pval, self.label, False)
 
