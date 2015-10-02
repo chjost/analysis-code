@@ -338,7 +338,7 @@ def read_data_w_err_ascii(filename, datacol=(1,), errcol=(2,), verbose=False):
     _data = read_data_ascii(filename, column=cols, verbose=verbose)
     return _data[:,:,:len(datacol)], _data[:,:,len(datacol):]
 
-def write_fitresults(filename, fitint, par, chi2, pvals, label,
+def write_fitresults(filename, data, fitint, par, chi2, pvals, label,
     verbose=False):
     """Writes the fitresults to a numpy file.
 
@@ -349,6 +349,8 @@ def write_fitresults(filename, fitint, par, chi2, pvals, label,
     ----------
     filename : str
         The name of the file.
+    data : ndarray
+        Additional info about the fit.
     fitint : ndarray
         The fit intervals used.
     par : ndarray
@@ -372,7 +374,8 @@ def write_fitresults(filename, fitint, par, chi2, pvals, label,
     # except for the fit intervals are 2 characters plus their two digit index 
     # for each level of recursion. The name of the fit intervals is chosen to
     # be always shorter than the other names.
-    dic = {'fi' : fitint}
+    dic = {"data": data}
+    dic.update({'fi': fitint})
     dic.update({'pi%02d' % i: p for (i, p) in enumerate(par)})
     dic.update({'ch%02d' % i: p for (i, p) in enumerate(chi2)})
     dic.update({'pv%02d' % i: p for (i, p) in enumerate(pvals)})
@@ -391,6 +394,8 @@ def read_fitresults(filename, verbose=False):
     
     Returns
     -------
+    data : ndarray
+        Additional info about the fit.
     fitint : ndarray
         The fit intervals used.
     par : ndarray
@@ -418,15 +423,18 @@ def read_fitresults(filename, verbose=False):
         if verbose:
             print("reading %d items" % len(f.files))
         L = f.files
-        n = int((len(L) - 1) / 4)
+        n = (len(L) - 2) // 4
+        par, chi2, pvals = [], [], []
+        fitint, label = [], []
+        label = []
+        data = f['data']
         fitint = f['fi']
-        par, chi2, pvals, label = [], [], [], []
         for i in range(n):
             par.append(f['pi%02d' % i])
             chi2.append(f['ch%02d' % i])
             pvals.append(f['pv%02d' % i])
             label.append(f['la%02d' % i])
-    return fitint, par, chi2, pvals, label
+    return data, fitint, par, chi2, pvals, label
 
 def read_header(filename, verbose=False):
     """Parses the first line of the data format of L. Liu.

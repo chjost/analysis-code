@@ -8,7 +8,7 @@ from scipy.optimize import leastsq
 import scipy.stats
 import numpy as np
 
-from functions import compute_error
+from statistics import compute_error
 
 def fit_single(fitfunc, start, corr, franges, add=None, debug=0):
     """Fits fitfunc to a Correlators object.
@@ -176,6 +176,7 @@ def calculate_ranges(ranges, shape, oldshape=None, step=2, min_size=4, debug=0):
         shape = [[ran.shape[0] for ran in fit_ranges]]
     if oldshape is not None:
         shape = oldshape + shape
+    fit_ranges = np.asarray(fit_ranges)
     return fit_ranges, shape
 
 def get_ranges(lower, upper, step, minsize):

@@ -30,12 +30,12 @@ def main():
     add = np.ones((1500,)) * corr.shape[1]
 
     print("fitting")
-    fitres = fitter.fit(start, corr, [8, 14], add=add)
+    fitres = fitter.fit(start, corr, [8, 14], corrid="epi", add=add)
 
     print("save")
     # save the fit result
     fitres.save("%s/fit_pi.npz" % (datadir))
-    fitres.print_data()
+    fitres.print_data(1)
 
     #print(fitres.fit_ranges)
     #print(fitres.fit_ranges_shape)

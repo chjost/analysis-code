@@ -119,12 +119,12 @@ class FitResult_Test(unittest.TestCase):
         if fexists:
             with np.load(fname) as f:
                 L = f.files
-                self.assertEqual(len(L), 6*4+1)
+                self.assertEqual(len(L), 6*4+2)
                 tmp = f['pi00']
                 self.assertTrue(np.array_equal(np.zeros((10, 25, 4)), tmp))
 
     def test_read(self):
-        fr = FitResult("")
+        fr = FitResult("test")
         res = np.ones((10, 25))
         chi2 = np.ones((10,))
         pval = np.ones((10,))
@@ -137,7 +137,7 @@ class FitResult_Test(unittest.TestCase):
         fr.save(fname)
         fexists = os.path.isfile(fname)
         if fexists:
-            fr1 = FitResult.read(fname, "")
+            fr1 = FitResult.read(fname)
             self.assertTrue(np.array_equal(fr1.data[0][:,:,0], res))
             self.assertTrue(np.array_equal(fr1.chi2[0][:,0], chi2))
             self.assertTrue(np.array_equal(fr1.pval[0][:,0], pval))
@@ -147,6 +147,7 @@ class FitResult_Test(unittest.TestCase):
             self.assertTrue(np.array_equal(fr1.data[0][:,:,3], res))
             self.assertTrue(np.array_equal(fr1.chi2[0][:,3], chi2))
             self.assertTrue(np.array_equal(fr1.pval[0][:,3], pval))
+            self.assertEqual(fr1.corr_id, "test")
     
     def test_get_data(self):
         fr = FitResult("")

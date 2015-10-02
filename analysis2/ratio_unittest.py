@@ -10,3 +10,7 @@ import ratio
 class Ratio_Test(unittest.TestCase):
     def test_ratio(self):
         pass
+
+if __name__ == "__main__":
+    unittest.main()
+

@@ -8,7 +8,8 @@ import numpy as np
 
 from fit_routines import fit_comb, fit_single, calculate_ranges
 from in_out import read_fitresults, write_fitresults
-from functions import func_single_corr, func_ratio, func_const, compute_error
+from functions import func_single_corr, func_ratio, func_const
+from statistics import compute_error, sys_error
 
 class LatticeFit(object):
     def __init__(self, fitfunc, verbose=False):
@@ -71,7 +72,7 @@ class LatticeFit(object):
             franges, fshape = calculate_ranges(ranges, dshape)
 
             # prepare storage
-            fitres = FitResult(corr_id)
+            fitres = FitResult(corrid)
             fitres.set_ranges(franges, fshape)
             shapes_data = [(dshape[0], len(start), fshape[0][i]) for i in range(ncorr)]
             shapes_other = [(dshape[0], fshape[0][i]) for i in range(ncorr)]
@@ -103,7 +104,6 @@ class LatticeFit(object):
                 shapes_data.append(tuple([dshape[0], len(start)] + tmp))
                 shapes_other.append(tuple([dshape[0]] + tmp))
 
-            print(shapes_data)
             # prepare storage
             fitres = FitResult(corrid)
             fitres.set_ranges(franges, fshape)
@@ -153,25 +153,22 @@ class FitResult(object):
         self.corr_num = None
         self.fit_ranges = None
         self.fit_ranges_shape = None
+        self.derived = False
 
     @classmethod
-    def read(cls, filename, corr_id):
+    def read(cls, filename):
         """Read data from file.
         """
-        obj = cls(corr_id)
         tmp = read_fitresults(filename)
-        obj.fit_ranges = tmp[0]
-        if tmp[0] is not None:
-            obj.fit_ranges_shape = [[ran.shape[0] for ran in tmp[0]]]
-        obj.data = tmp[1]
-        obj.chi2 = tmp[2]
-        obj.pval = tmp[3]
-        obj.label = tmp[4]
-        if tmp[0] is not None:
-            if len(obj.fit_ranges_shape) == 1:
-                obj.corr_num = len(obj.fit_ranges_shape[0])
-            else:
-                obj.corr_num = [len(s) for s in obj.fit_ranges_shape]
+        obj = cls(tmp[0][0])
+        obj.fit_ranges = tmp[1]
+        obj.data = tmp[2]
+        obj.chi2 = tmp[3]
+        obj.pval = tmp[4]
+        obj.label = tmp[5]
+        obj.corr_num = tmp[0][1]
+        obj.fit_ranges_shape = tmp[0][2]
+        obj.derived = tmp[0][3]
         return obj
 
     def save(self, filename):
@@ -182,9 +179,12 @@ class FitResult(object):
         filename : str
             The name of the file.
         """
-        #if self.fit_ranges is None:
-        #    raise RuntimeWarning("No fit_ranges set")
-        write_fitresults(filename, self.fit_ranges, self.data, self.chi2,
+        tmp = np.empty((4,), dtype=object)
+        tmp[0] = self.corr_id
+        tmp[1] = self.corr_num
+        tmp[2] = self.fit_ranges_shape
+        tmp[3] = self.derived
+        write_fitresults(filename, tmp, self.fit_ranges, self.data, self.chi2,
             self.pval, self.label, False)
 
     def get_data(self, index):
@@ -306,6 +306,8 @@ class FitResult(object):
         ValueError
             If shape and corr_num are incompatible.
         """
+        if self.data is not None:
+            raise RuntimeError("already initialized!")
         self.data = []
         self.pval = []
         self.chi2 = []
@@ -375,13 +377,13 @@ class FitResult(object):
         """Returns the fit ranges."""
         return self.fit_ranges, self.fit_ranges_shape
 
-    def print_data(self):
-        for d, c, p in zip(self.data, self.chi2, self.pval):
-            mean, std = compute_error(d)
-            print(mean[1])
-            print(std[1])
-            print(c[0])
-            print(p[0])
+    def print_data(self, par=0):
+        """Prints the errors etc of the data."""
+        res, res_std, res_syst, weight = sys_error(self.data, self.pval, par)
+        print(self.corr_id)
+        for tmp in zip(res, res_std, res_syst, self.label):
+            print(tmp[-1])
+            print("%.5f +- %.5f -%.5f +%.5f" % (tmp[0], tmp[1], tmp[2][0], tmp[2][1]))
 
 class FitArray(np.ndarray):
     """Subclass of numpy array."""

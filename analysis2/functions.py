@@ -71,25 +71,6 @@ def compute_eff_mass(data, usecosh=True):
                mass[b, t] = np.log(row[t]/row[t+1])
     return mass
 
-def compute_error(data, axis=0):
-    """Calculates the mean and standard deviation of the data.
-
-    Parameters
-    ----------
-    data : ndarray
-        The data.
-    axis : int
-        The axis along which both is calculated.
-
-    Returns
-    -------
-    ndarray
-        The mean of the data.
-    ndarray
-        The standard deviation of the data.
-    """
-    return np.mean(data, axis), np.std(data, axis)
-
 def func_single_corr(p, t, T2):
     """A function that describes two point correlation functions.
 
@@ -166,3 +147,29 @@ def func_const(p, t):
         The result.
     """
     return p
+
+def compute_weight(corr, pvals, par=1):
+    """compute the weights for the histogram
+
+    Parameters
+    ----------
+    corr : ndarray
+        the correlation functions.
+    pvals : ndarray
+        The p-values for each correlation function.
+    par : int
+        The parameter for which to calculate the weight.
+
+    Returns
+    -------
+    list
+        The calculated weights.
+    """
+    errors = np.std(corr, axis=1)
+    max_err = np.amax(errors)
+    weights = []
+    if len(pvals) != 0:
+        for i in range(pvals.shape[0]):
+            w = (1.-2*abs(pvals[i,par]-0.5))*max_err/errors[i]
+            weights.append(w**2)
+    return weigths

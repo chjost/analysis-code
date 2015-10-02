@@ -16,7 +16,7 @@ def main():
 
     # read pion data
     pi = ana.Correlators.read("%s/corr_pi.npy" % (datadir))
-    pifit = ana.FitResult.read("%s/fit_pi.npz" % (datadir), "pi")
+    pifit = ana.FitResult.read("%s/fit_pi.npz" % (datadir))
 
     # prepare the fitting of data
     # 0 is single partivle correlation function
@@ -41,12 +41,12 @@ def main():
     add = np.ones((1500,)) * corr.shape[1]
 
     print("fitting")
-    fitres = fitter.fit(start, ratio, [8, 13], add=add, oldfit=pifit, oldfitpar=(1,))
+    fitres = fitter.fit(start, ratio, [8, 13], corrid="de", add=add, oldfit=pifit, oldfitpar=(1,))
 
     print("save")
     # save the fit result
     fitres.save("%s/fit_pipi.npz" % (datadir))
-    fitres.print_data()
+    #fitres.print_data()
 
 if __name__ == '__main__':
     try:
