@@ -283,3 +283,6 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, debug=0):
         print("p-value: %lf" % pvals[0]) 
 
     return res, chisquare, pvals
+
+if __name__ == "__main__":
+    pass

@@ -90,6 +90,8 @@ class FitResult_Test(unittest.TestCase):
     def test_create_empty(self):
         fr = FitResult("")
         self.assertRaises(ValueError, fr.create_empty, (10, 25, 4), (10, 25, 4), 1)
+        self.assertRaises(RuntimeError, fr.create_empty, (10, 25, 4), (10, 25, 4), 1)
+        fr = FitResult("")
         fr.create_empty((10, 25, 4), (10, 4), [2, 3])
         self.assertIsNotNone(fr.data)
 

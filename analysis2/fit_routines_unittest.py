@@ -17,7 +17,7 @@ class FitRoutinesBase_Test(unittest.TestCase):
         s1 = (100, 25, 1)
         ranges, shape = fr.calculate_ranges(r1, s1)
         self.assertEqual(shape, [[3]])
-        self.assertIsInstance(ranges, list)
+        self.assertIsInstance(ranges, np.ndarray)
         self.assertEqual(s1[-1], len(ranges))
 
     def test_range_ncorr2(self):
@@ -27,7 +27,7 @@ class FitRoutinesBase_Test(unittest.TestCase):
         ranges, shape = fr.calculate_ranges([r1, r2], s1)
         self.assertEqual(shape, [[3, 6]])
         self.assertNotEqual(shape, [3, 6])
-        self.assertIsInstance(ranges, list)
+        self.assertIsInstance(ranges, np.ndarray)
         self.assertEqual(s1[-1], len(ranges))
 
     def test_range_ncorr10(self):
@@ -35,7 +35,7 @@ class FitRoutinesBase_Test(unittest.TestCase):
         s1 = (100, 25, 10)
         ranges, shape = fr.calculate_ranges(r1, s1)
         self.assertEqual(shape, [[3]*10])
-        self.assertIsInstance(ranges, list)
+        self.assertIsInstance(ranges, np.ndarray)
         self.assertEqual(s1[-1], len(ranges))
 
     def test_range_seq_ncorr1(self):
@@ -43,11 +43,11 @@ class FitRoutinesBase_Test(unittest.TestCase):
         s1 = (100, 25, 1)
         ranges, shape = fr.calculate_ranges(r1, s1)
         self.assertEqual(shape, [[3]])
-        self.assertIsInstance(ranges, list)
+        self.assertIsInstance(ranges, np.ndarray)
         self.assertEqual(s1[-1], len(ranges))
         ranges, shape = fr.calculate_ranges(r1, s1, oldshape=shape)
         self.assertEqual(shape, [[3], [3]])
-        self.assertIsInstance(ranges, list)
+        self.assertIsInstance(ranges, np.ndarray)
         self.assertEqual(s1[-1], len(ranges))
 
     def test_range_seq_ncorr2(self):
@@ -56,11 +56,11 @@ class FitRoutinesBase_Test(unittest.TestCase):
         s1 = (100, 25, 2)
         ranges, shape = fr.calculate_ranges([r1, r2], s1)
         self.assertEqual(shape, [[3, 6]])
-        self.assertIsInstance(ranges, list)
+        self.assertIsInstance(ranges, np.ndarray)
         self.assertEqual(s1[-1], len(ranges))
         ranges, shape = fr.calculate_ranges([r1, r2], s1, oldshape=shape)
         self.assertEqual(shape, [[3, 6], [3, 6]])
-        self.assertIsInstance(ranges, list)
+        self.assertIsInstance(ranges, np.ndarray)
         self.assertEqual(s1[-1], len(ranges))
 
     def test_range_seq_ncorr1_2(self):
@@ -70,11 +70,11 @@ class FitRoutinesBase_Test(unittest.TestCase):
         s2 = (100, 25, 2)
         ranges, shape = fr.calculate_ranges(r1, s1)
         self.assertEqual(shape, [[3]])
-        self.assertIsInstance(ranges, list)
+        self.assertIsInstance(ranges, np.ndarray)
         self.assertEqual(s1[-1], len(ranges))
         ranges, shape = fr.calculate_ranges(r2, s2, oldshape=shape)
         self.assertEqual(shape, [[3], [6, 6]])
-        self.assertIsInstance(ranges, list)
+        self.assertIsInstance(ranges, np.ndarray)
         self.assertEqual(s2[-1], len(ranges))
 
 #class FitRoutinesSingle_Test(unittest.TestCase):

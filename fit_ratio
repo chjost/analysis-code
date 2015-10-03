@@ -41,7 +41,7 @@ def main():
     add = np.ones((1500,)) * corr.shape[1]
 
     print("fitting")
-    fitres = fitter.fit(start, ratio, [8, 13], corrid="de", add=add, oldfit=pifit, oldfitpar=(1,))
+    fitres = fitter.fit(start, ratio, [10, 16], corrid="de", add=add, oldfit=pifit, oldfitpar=(1,))
 
     print("save")
     # save the fit result

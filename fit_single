@@ -17,8 +17,9 @@ def main():
     # 1 is ratio fit
     # 2 is constant fit
     print("prepare fit")
-    fitter = ana.LatticeFit(0, True)
-    start = [1., 0.3]
+    fitter = ana.LatticeFit(2, True)
+    start = [0.3]
+    #start = [1., 0.3]
 
     readsingle=True
     if readsingle == False:
@@ -27,15 +28,24 @@ def main():
         corr.save("%s/corr_pi.npy" % (datadir))
     else:
         corr = ana.Correlators.read("%s/corr_pi.npy" % (datadir))
+    corr.mass()
     add = np.ones((1500,)) * corr.shape[1]
 
     print("fitting")
-    fitres = fitter.fit(start, corr, [8, 14], corrid="epi", add=add)
+    fitres = fitter.fit(start, corr, [10, 16], corrid="epi")
+    #fitres = fitter.fit(start, corr, [10, 16], corrid="epi", add=add)
 
     print("save")
     # save the fit result
     fitres.save("%s/fit_pi.npz" % (datadir))
-    fitres.print_data(1)
+    fitres.print_data(0)
+    #fitres.print_data(1)
+
+    # plot the result
+    plotter = ana.LatticePlot("test.pdf")
+    label = ["title", "x-axis", "y-axis", "pion"]
+    plotter.genplot(corr, fitres, fitter, label)
+    plotter.save()
 
     #print(fitres.fit_ranges)
     #print(fitres.fit_ranges_shape)

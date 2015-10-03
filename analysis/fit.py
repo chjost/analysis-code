@@ -108,6 +108,8 @@ def fit(fitfunc, X, Y, start_parm, add_parm=None, num=None, correlated=True,
                                        full_output=1, factor=0.1)
             chisquare[b] = float(sum(infodict['fvec']**2.))
             res[b] = np.array(p)
+    # calculate mean and standard deviation
+    res_mean, res_std = compute_error(res)
     # p-value calculated
     pvals = 1. - scipy.stats.chi2.cdf(chisquare, dof)
     # writing results to screen

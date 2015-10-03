@@ -31,7 +31,8 @@ class LatticeFit(object):
         else:
             self.fitfunc = fitfunc
 
-    def fit(self, start, corr, ranges, corrid = "", add=None, oldfit=None, oldfitpar=None):
+    def fit(self, start, corr, ranges, corrid="", add=None, oldfit=None,
+            oldfitpar=None):
         """Fits fitfunc to a Correlators object.
 
         The predefined functions describe a single particle correlation
@@ -379,7 +380,13 @@ class FitResult(object):
 
     def print_data(self, par=0):
         """Prints the errors etc of the data."""
-        res, res_std, res_syst, weight = sys_error(self.data, self.pval, par)
+        if self.derived:
+            res, res_std, res_syst = sys_error_der(self.data, self.weight)
+        else:
+            res, res_std, res_syst, weight = sys_error(self.data, self.pval, par)
+        self.error = (res, res_std, res_syst)
+        self.weight = weight
+
         print(self.corr_id)
         for tmp in zip(res, res_std, res_syst, self.label):
             print(tmp[-1])
