@@ -38,8 +38,6 @@
 #
 ################################################################################
 
-__all__ = ["Z"]
-
 import os
 import math
 import cmath
@@ -47,19 +45,21 @@ import numpy as np
 import scipy.special
 import scipy.integrate
 
-from _zeta_memoize import memoize
+from ._zeta_memoize import memoize
+#import create_momentum_array as cma
+from .create_momentum_array import main as cmamain
 
 def zeta_n(function):
     path = "./momenta.npy"
     if not os.path.isfile(path):
-        import create_momentum_array as cma
-        cma.main()
+        #import .create_momentum_array as cma
+        cmamain()
     try:
         _mem = np.load(path)
         #print("reading n in wrapper")
     except (IOError, UnicodeDecodeError):
-        import create_momentum_array as cma
-        cma.main()
+        #import .create_momentum_array as cma
+        cmamain()
         _mem = np.load(path)
         #print("error and reading n in wrapper")
 

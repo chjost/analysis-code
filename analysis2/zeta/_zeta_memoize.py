@@ -2,9 +2,11 @@
 memoize wrapper for functions.
 """
 
-__all__ = ["memoize"]
-
-import cPickle
+import sys
+if sys.version_info.major == 2:
+    import cPickle
+else:
+    import pickle as cPickle
 
 def memoize(function, limit=None):
     """Function decorator for caching results.

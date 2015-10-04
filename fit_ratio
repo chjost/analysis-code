@@ -40,13 +40,20 @@ def main():
     ratio = corr.ratio(pi, 1)
     add = np.ones((1500,)) * corr.shape[1]
 
-    print("fitting")
-    fitres = fitter.fit(start, ratio, [10, 16], corrid="de", add=add, oldfit=pifit, oldfitpar=(1,))
+    #print("fitting")
+    #fitres = fitter.fit(start, ratio, [10, 16], corrid="dE", add=add, oldfit=pifit)
 
-    print("save")
-    # save the fit result
-    fitres.save("%s/fit_pipi.npz" % (datadir))
-    #fitres.print_data()
+    #print("save")
+    ## save the fit result
+    #fitres.save("%s/fit_pipi.npz" % (datadir))
+    fitres = ana.FitResult.read("%s/fit_pipi.npz" % (datadir))
+    fitres.print_data(0)
+    fitres.print_data(1)
+
+    # plot the result
+    plotter = ana.LatticePlot("test_ratio.pdf")
+    label = ["ratio", "x-axis", "y-axis", "ratio"]
+    plotter.plot(ratio, fitres, fitter, label, oldfit=pifit, add=add)
 
 if __name__ == '__main__':
     try:

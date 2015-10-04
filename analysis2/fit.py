@@ -212,7 +212,7 @@ class FitResult(object):
             if len(index) != 2*len(self.corr_num):
                 raise ValueError("Index has wrong length")
             lindex = self._get_index(index[:len(self.corr_num)])
-            rindex = [slice(None), slice(None)] + [slice(x, x+1) for x in index[len(self.corr_num):]]
+            rindex = [slice(None), slice(None)] + [x for x in index[len(self.corr_num):]]
             return self.data[lindex][rindex]
 
     def add_data(self, index, data, chi2, pval):

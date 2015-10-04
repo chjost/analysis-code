@@ -3,6 +3,7 @@ The class for fitting.
 """
 
 import numpy as np
+import itertools
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
@@ -24,9 +25,17 @@ class LatticePlot(object):
         self.p = []
 
     def __del__(self):
-        if self.p:
-            self.save()
+        #if plt.get_fignums() > 0:
+        #    print(plt.get_fignums())
+        #    print("saving at last")
+        #    self.save()
         self.plotfile.close()
+
+    def save(self):
+        if plt.get_fignums() > 0:
+            for i in plt.get_fignums():
+                self.plotfile.savefig(plt.figure(i))
+        plt.clf()
 
     def set_title(self, title, axis):
         """Set the title and axis labels of the plot.
@@ -75,27 +84,18 @@ class LatticePlot(object):
         pval : float, optional
             write the p-value in the plot if given
         """
-        # check boundaries for the plot
-        if isinstance(plotrange, (np.ndarray, list, tuple)):
-            plotrange = np.asarray(plotrange).flatten()
-            if plotrange.size < 2:
-                raise IndexError("plotrange is too small")
-            else:
-                l = int(plotrange[0])
-                u = int(plotrange[1])
-            # plot the data
-            self.p.append(plt.errorbar(X[l:u], Y[l:u], dY[l:u], fmt='x' + 'b',
-                label = label[0]))
-        else:
-            # plot the data
-            self.p.append(plt.errorbar(X, Y, dY, fmt='x' + 'b', label=label[0]))
+        # plot the data
+        self.plot_data(X, Y, dY, label[0], plotrange=plotrange, logscale=logscale,
+                xlim=xlim, ylim=ylim)
 
         # plot the function
-        self.plot_function(fitfunc, X, args, addpars, fitrange, label[1])
+        self.plot_function(fitfunc, X, args, label[1], addpars, fitrange)
 
         # adjusting the plot style
         plt.grid(True)
         plt.legend()
+
+        # print label if available
         if pval is not None:
             # x and y position of the label
             x = np.max(X) * 0.7
@@ -107,15 +107,25 @@ class LatticePlot(object):
             except TypeError:
                 datalabel = "".join((datalabel, "\npar = %.4e" % (args[0])))
             plt.text(x, y, datalabel)
-        if logscale:
-            plt.yscale("log")
-        # set the axis ranges
-        if xlim:
-            plt.xlim(xlim)
-        if ylim:
-            plt.ylim(ylim)
 
-    def plot_function(self, func, X, args, add=None, plotrange=None, label=""):
+    def plot_function(self, func, X, args, label, add=None, plotrange=None):
+        """A function that plots a function.
+
+        Parameters
+        ----------
+        func : callable
+            The function to plot.
+        Y : ndarray
+            The data for the y axis.
+        args : ndarray
+            The arguments to the function.
+        label : list of str
+            A list with labels for data and fit.
+        add : ndarray, optional
+            Additional arguments to the fit function.
+        plotrange : list of ints, optional
+            The lower and upper range of the plot.
+        """
         # plotting the fit function, check for seperate range
         if isinstance(plotrange, (np.ndarray, list, tuple)):
             plotrange = np.asarray(plotrange).flatten()
@@ -128,16 +138,17 @@ class LatticePlot(object):
             lfunc = X[0]
             ufunc = X[-1]
         x1 = np.linspace(lfunc, ufunc, 1000)
-        if add:
-            y1 = func(args, x1, add)
+        if add is not None:
+            y1 = []
+            for j, x in enumerate(x1):
+                y1.append(func(args, x, add[j]))
+            y1 = np.asarray(y1)
         else:
             y1 = []
             for x in x1:
                 y1.append(func(args, x))
             y1 = np.asarray(y1)
-            #y1 = func(args, x1)
-        self.p.append(plt.plot(x1, y1, "r", label=label))
-        plt.grid(True)
+        plt.plot(x1, y1, "r", label=label)
 
     def plot_data(self, X, Y, dY, label, plotrange=None, logscale=False,
             xlim=None, ylim=None):
@@ -170,10 +181,10 @@ class LatticePlot(object):
                 u = int(plotrange[1])
             # plot the data
             self.p.append(plt.errorbar(X[l:u], Y[l:u], dY[l:u], fmt='x' + 'b',
-                label = label[0]))
+                label = label))
         else:
             # plot the data
-            self.p.append(plt.errorbar(X, Y, dY, fmt='x' + 'b', label=label[0]))
+            self.p.append(plt.errorbar(X, Y, dY, fmt='x' + 'b', label=label))
 
         # adjusting the plot style
         plt.grid(True)
@@ -186,7 +197,7 @@ class LatticePlot(object):
         if ylim:
             plt.ylim(ylim)
 
-    def plot_histogram(data, data_weight, label, bug=0):
+    def plot_histogram(data, data_weight, label, debug=0):
         """Plots histograms for the given data set.
     
         The function plots the weighted distribution of the data, the unweighted
@@ -254,17 +265,8 @@ class LatticePlot(object):
         # save and clear
         self.save()
 
-    def save(self):
-        #print(plt.get_fignums())
-        for i in plt.get_fignums():
-            self.plotfile.savefig(plt.figure(i))
-        #if self.p:
-        #    for x in self.p:
-        #        self.plotfile.savefig(x)
-        plt.clf()
-        self.p = []
-
-    def genplot(self, corr, fitresult, fitfunc, label, add=None):
+    def _genplot_single(self, corr, fitresult, fitfunc, label, add=None,
+            debug=0):
         """Plot the data of a Correlators object and a FitResult object
         together.
 
@@ -278,6 +280,11 @@ class LatticePlot(object):
             The fit function.
         label : list of strs
             The title of the plot, the x- and y-axis titles, and the data label.
+        add : ndarray, optional
+            Additional arguments to the fit function. This is stacked along
+            the third dimenstion to the oldfit data.
+        debug : int, optional
+            The amount of info printed.
         """
         if len(label) < 4:
             raise RuntimeError("not enough labels")
@@ -313,6 +320,124 @@ class LatticePlot(object):
                 self.save()
 
         label[0] = label_save
+
+    def _genplot_comb(self, corr, fitresult, fitfunc, label, oldfit, add=None,
+            oldfitpar=None, debug=0):
+        """Plot the data of a Correlators object and a FitResult object
+        together.
+
+        Parameters
+        ----------
+        corr : Correlators
+            The correlation function data.
+        fitresult : FitResult
+            The fit data.
+        fitfunc : LatticeFit
+            The fit function.
+        label : list of strs
+            The title of the plot, the x- and y-axis titles, and the data label.
+        oldfit : None or FitResult, optional
+            Reuse the fit results of an old fit for the new fit.
+        add : ndarray, optional
+            Additional arguments to the fit function. This is stacked along
+        oldfitpar : None, int or sequence of int, optional
+            Which parameter of the old fit to use, if there is more than one.
+                the third dimenstion to the oldfit data.
+        debug : int, optional
+            The amount of info printed.
+        """
+        if len(label) < 4:
+            raise RuntimeError("not enough labels")
+        if len(label) < 5:
+            label.append("")
+        if corr.matrix:
+            raise RuntimeError("Cannot plot correlation function matrix")
+        # get needed data
+        ncorrs = fitresult.corr_num
+        X = np.linspace(0., float(corr.shape[1]), corr.shape[1], endpoint=False)
+        label_save = label[0]
+        T = corr.shape[1]
+        franges = fitresult.fit_ranges
+        fshape = fitresult.fit_ranges_shape
+
+        # iterate over correlation functions
+        ncorriter = [[x for x in range(n)] for n in ncorrs]
+        for item in itertools.product(*ncorriter):
+            if debug > 1:
+                print("fitting correlators %s" % str(item))
+            n = item[-1]
+            mdata, ddata = compute_error(corr.data[:,:,n])
+            # create the iterator over the fit ranges
+            tmp = [fshape[i][x] for i,x in enumerate(item)]
+            rangesiter = [[x for x in range(m)] for m in tmp]
+            # iterate over the fit ranges
+            for ritem in itertools.product(*rangesiter):
+                if debug > 1:
+                    print("fitting fit ranges %s" % str(ritem))
+                r = ritem[-1]
+                # get fit interval
+                fi = franges[n][r]
+                _par = fitresult.get_data(item + ritem)
+                mpar, dpar = compute_error(_par)
+
+                # set up labels
+                label[0] = "%s, pc %d (%s)" % (label_save, n, str(item[:-1]))
+                self.set_title(label[0], label[1:3])
+                label[4] = "fit [%d, %d]" % (fi[0], fi[1])
+
+                # get old data
+                add_data = oldfit.get_data(item[:-1] + ritem[:-1]) 
+                # get only the wanted parameter if oldfitpar is given
+                if oldfitpar is not None:
+                    add_data = add_data[:,oldfitpar]
+                # if there is additional stuff needed for the fit
+                # function add it to the old data
+                if add is not None:
+                    # get the shape right, atleast_2d adds the dimension
+                    # in front, we need it in the end
+                    if add.ndim == 1:
+                        add.shape = (-1, 1)
+                    if add_data.ndim == 1:
+                        add_data.shape = (-1, 1)
+                    add_data = np.hstack((add_data, add))
+
+                # plot
+                self.plot_data_with_fit(X, corr.data[0,:,n], ddata,
+                        fitfunc.fitfunc, mpar, label[3:], logscale=False,
+                        plotrange=[1,T], addpars=add_data, fitrange=fi)
+                self.save()
+
+    def plot(self, corr, fitresult, fitfunc, label, oldfit=None, add=None,
+            oldfitpar=None, debug=0):
+        """Plot the data of a Correlators object and a FitResult object
+        together.
+
+        Parameters
+        ----------
+        corr : Correlators
+            The correlation function data.
+        fitresult : FitResult
+            The fit data.
+        fitfunc : LatticeFit
+            The fit function.
+        label : list of strs
+            The title of the plot, the x- and y-axis titles, and the data label.
+        oldfit : None or FitResult, optional
+            Reuse the fit results of an old fit for the new fit.
+        add : ndarray, optional
+            Additional arguments to the fit function. This is stacked along
+        oldfitpar : None, int or sequence of int, optional
+            Which parameter of the old fit to use, if there is more than one.
+                the third dimenstion to the oldfit data.
+        debug : int, optional
+            The amount of info printed.
+        """
+        if oldfit is None:
+            self._genplot_single(corr, fitresult, fitfunc, label, add=add,
+                    debug=debug)
+        else:
+            self._genplot_comb(corr, fitresult, fitfunc, label, oldfit, add,
+                    oldfitpar, debug)
 
 if __name__ == "__main__":
     pass

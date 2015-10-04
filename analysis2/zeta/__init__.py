@@ -1,5 +1,2 @@
-from zeta import *
+from .zeta import Z
 
-__all__ = [t for t in dir() if not t.startswith('_')]
-
-del t

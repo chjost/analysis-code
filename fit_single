@@ -44,8 +44,7 @@ def main():
     # plot the result
     plotter = ana.LatticePlot("test.pdf")
     label = ["title", "x-axis", "y-axis", "pion"]
-    plotter.genplot(corr, fitres, fitter, label)
-    plotter.save()
+    plotter.plot(corr, fitres, fitter, label)
 
     #print(fitres.fit_ranges)
     #print(fitres.fit_ranges_shape)

@@ -23,7 +23,7 @@ def cartesian(arrays, out=None):
     out[:,0] = np.repeat(arrays[0], m)
     if arrays[1:]:
         cartesian(arrays[1:], out=out[0:m,1:])
-        for j in xrange(1, arrays[0].size):
+        for j in range(1, arrays[0].size):
             out[j*m:(j+1)*m,1:] = out[0:m,1:]
     return out
 
@@ -38,7 +38,7 @@ def create_momentum_array(p):
   if p in exclude:
     return [], p
   i = int(math.sqrt(p)+1)
-  n = [j for j in xrange(-i,i+1)]
+  n = [j for j in range(-i,i+1)]
   r = cartesian((n, n, n))
   out = []
   for rr in r:
@@ -55,7 +55,7 @@ def create_momentum_array(p):
 ################################################################################
 def main():
   r = create_momentum_array(0)
-  for i in xrange(1, 302):
+  for i in range(1, 302):
     r = np.vstack((r, create_momentum_array(i)))
   ensure_dir("./momenta")
   np.save("./momenta", r)

@@ -97,11 +97,15 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
     # iterate over the correlation functions
     ncorriter = [[x for x in range(n)] for n in ncorrs]
     for item in itertools.product(*ncorriter):
+        if debug > 1:
+            print("fitting correlators %s" % str(item))
         # create the iterator over the fit ranges
         tmp = [fshape[i][x] for i,x in enumerate(item)]
         rangesiter = [[x for x in range(n)] for n in tmp]
         # iterate over the fit ranges
         for ritem in itertools.product(*rangesiter):
+            if debug > 1:
+                print("fitting fit ranges %s" % str(ritem))
             # get fit interval
             r = franges[item[-1]][ritem[-1]]
             # get old data
@@ -109,7 +113,6 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
             # get only the wanted parameter if oldfitpar is given
             if oldfitpar is not None:
                 add_data = add_data[:,oldfitpar]
-
             # if there is additional stuff needed for the fit
             # function add it to the old data
             if add is not None:
@@ -119,7 +122,7 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
                     add.shape = (-1, 1)
                 if add_data.ndim == 1:
                     add_data.shape = (-1, 1)
-                add_data = np.hstack((add, add_data))
+                add_data = np.hstack((add_data, add))
             res, chi, pva = fitting(fitfunc, X[r[0]:r[1]],
                     corr.data[:,r[0]:r[1],item[-1]], start, add=add_data,
                     correlated=True, debug=debug)
