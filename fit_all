@@ -1,0 +1,84 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+##!/usr/bin/python2
+
+import sys
+import numpy as np
+
+import analysis2 as ana
+
+def main():
+    # parse the input file
+    if len(sys.argv) < 2:
+        ens = ana.LatticeEnsemble.parse("A40.24.ini")
+    else:
+        ens = ana.LatticeEnsemble.parse(sys.argv[1])
+
+    # read settings
+    readsingle = True
+    readratio = False
+
+    # get data from input file
+    prefix = ens.get_data("path")
+    nboot = int(ens.get_data("nboot"))
+    datadir = ens.get_data("datadir")
+    plotdir = ens.get_data("plotdir")
+    gmax = int(ens.get_data("gmax"))
+
+    # single particle correlator
+    print("read single particle corrs")
+    files = ["%s/pi_corr_p%d.dat" % (prefix, d) for d in range(3)]
+    if readsingle == False:
+        picorr = ana.Correlators(files, matrix=False)
+        picorr.sym_and_boot(nboot)
+        picorr.save("%s/corr_pi.npy" % (datadir))
+    else:
+        picorr = ana.Correlators.read("%s/corr_pi.npy" % (datadir))
+    picorr.mass()
+
+    # single particle correlator
+    print("read two particle corrs")
+    if readratio == False:
+        pipicorr = ana.Correlators(files)
+        pipicorr.sym_and_boot(nboot)
+        pipicorr.shift(1)
+        pipicorr.gevp(1)
+        pipicorr.save("%s/corr_pipi.npy" % (datadir))
+        ratio = corr.ratio(picorr, 1)
+        ratio.save("%s/ratio_pipi.npy" % (datadir))
+    else:
+        pipicorr = ana.Correlators.read("%s/corr_pipi.npy" % (datadir))
+        ratio = ana.Correlators.read("%s/ratio_pipi.npy" % (datadir))
+    add = np.ones((1500,)) * corr.shape[1]
+
+    # prepare the fitting of data
+    print("prepare fit")
+    fit_single = ana.LatticeFit(2, True)
+    start_single = [0.3]
+    fit_ratio = ana.LatticeFit(1, True)
+    start_ratio = [1., 0.3]
+
+    print("fitting")
+    pifit = fit_single.fit(start, corr, [[10,22], [10,20], [10,18]], corrid="epi")
+    pipifit = fit_ratio.fit(start, ratio, [10, 24], corrid="dE", add=add,
+        oldfit=pifit)
+
+    print("save")
+    # save the fit result
+    pifit.save("%s/fit_pi.npz" % (datadir))
+    pipires.save("%s/fit_pipi.npz" % (datadir))
+    pifit.print_data(0)
+    pipifit.print_data(1)
+
+    # plot the result
+    print("plotting")
+    plotter = ana.LatticePlot("%s/fit_pi.pdf")
+    histo = ana.LatticePlot("%s/hist_fit_pi.pdf")
+    label = ["single particle", "t/a", "C(t)", "pion"]
+    plotter.plot(picorr, pifit, fit_single, label)
+
+if __name__ == '__main__':
+    try:
+        print("starting")
+        main()
+    except KeyboardInterrupt:
+        pass

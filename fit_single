@@ -1,16 +1,26 @@
-#!/usr/bin/python2
-##!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+##!/usr/bin/python2
 
+import sys
 import numpy as np
 
 import analysis2 as ana
 
 def main():
-    prefix = "/home/chris/Work/data/"
-    #prefix = "/hiskp2/correlators/A40.24_L24_T48_beta190_mul0040_musig150_mudel190_kappa1632700/ev120/liuming/"
+    # parse the input file
+    if len(sys.argv) < 2:
+        ens = ana.LatticeEnsemble.parse("A40.24.ini")
+    else:
+        ens = ana.LatticeEnsemble.parse(sys.argv[1])
+
+    # read settings
+    readsingle = True
+
+    # get data from input file
+    prefix = ens.get_data("path")
+    nboot = int(ens.get_data("nboot"))
+    datadir = ens.get_data("datadir")
     files = ["%s/pi_corr_p%d.dat" % (prefix, d) for d in range(3)]
-    nboot = 1500
-    datadir = "./data/"
 
     # prepare the fitting of data
     # 0 is single partivle correlation function
@@ -19,9 +29,7 @@ def main():
     print("prepare fit")
     fitter = ana.LatticeFit(2, True)
     start = [0.3]
-    #start = [1., 0.3]
 
-    readsingle=True
     if readsingle == False:
         corr = ana.Correlators(files, matrix=False)
         corr.sym_and_boot(nboot)
@@ -29,11 +37,9 @@ def main():
     else:
         corr = ana.Correlators.read("%s/corr_pi.npy" % (datadir))
     corr.mass()
-    add = np.ones((1500,)) * corr.shape[1]
 
     print("fitting")
-    fitres = fitter.fit(start, corr, [10, 16], corrid="epi")
-    #fitres = fitter.fit(start, corr, [10, 16], corrid="epi", add=add)
+    fitres = fitter.fit(start, corr, [[10,22], [10,20], [10,18]], corrid="epi")
 
     print("save")
     # save the fit result
@@ -45,9 +51,6 @@ def main():
     plotter = ana.LatticePlot("test.pdf")
     label = ["title", "x-axis", "y-axis", "pion"]
     plotter.plot(corr, fitres, fitter, label)
-
-    #print(fitres.fit_ranges)
-    #print(fitres.fit_ranges_shape)
 
 if __name__ == '__main__':
     try:

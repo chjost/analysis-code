@@ -226,7 +226,7 @@ class Correlators(object):
         """
         return np.copy(self.data)
 
-    def ratio(self, single_corr, ratio=0, shift=1, single_corr1=None):
+    def ratio(self, single_corr, ratio=0, shift=1, single_corr1=None, useall=False):
         """Calculates the ratio and returns a new Correlator object.
 
         The implemented ratios are:
@@ -248,6 +248,9 @@ class Correlators(object):
             Additional parameter for the second ratio.
         single_corr1 : Correlators
             The single particle correlators used for the ratio.
+        useall : bool
+            Using all correlators in the single particle correlator or
+            use just the lowest.
         
         Returns
         -------
@@ -269,11 +272,13 @@ class Correlators(object):
 
         if single_corr1 is None:
             obj = Correlators(debug=self.debug)
-            obj.data = ratiofunc(self.data, single_corr.data, single_corr.data)
+            obj.data = ratiofunc(self.data, single_corr.data, single_corr.data,
+                shift, useall)
             obj.shape = obj.data.shape
         else:
             obj = Correlators(debug=self.debug)
-            obj.data = ratiofunc(self.data, single_corr.data, single_corr1.data)
+            obj.data = ratiofunc(self.data, single_corr.data, single_corr1.data,
+                shift, useall)
             obj.shape = obj.data.shape
         return obj
 

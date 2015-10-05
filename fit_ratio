@@ -1,18 +1,27 @@
-#!/usr/bin/python2
-##!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+##!/usr/bin/python2
 
+import sys
 import numpy as np
 
 import analysis2 as ana
 
 def main():
-    prefix = "/home/chris/Work/data/"
-    #prefix = "/hiskp2/correlators/A40.24_L24_T48_beta190_mul0040_musig150_mudel190_kappa1632700/ev120/liuming/"
-    gmax = 3
-    #files = ["%s/pi_corr_p%d.dat" % (prefix, d) for d in range(3)]
+    # parse the input file
+    if len(sys.argv) < 2:
+        ens = ana.LatticeEnsemble.parse("A40.24.ini")
+    else:
+        ens = ana.LatticeEnsemble.parse(sys.argv[1])
+
+    # read settings
+    readratio = False
+
+    # get data from input file
+    prefix = ens.get_data("path")
+    nboot = int(ens.get_data("nboot"))
+    datadir = ens.get_data("datadir")
+    gmax = int(ens.get_data("gmax"))
     files = ["%s/pipi_pipi_A1_corr_TP0_%d%d.dat" % (prefix, i, j) for i in range(gmax) for j in range(gmax)]
-    nboot = 1500
-    datadir = "./data/"
 
     # read pion data
     pi = ana.Correlators.read("%s/corr_pi.npy" % (datadir))
@@ -27,27 +36,27 @@ def main():
     start = [1., 0.3]
 
     print("prepare ratio")
-    readratio=True
     if readratio == False:
         corr = ana.Correlators(files)
         corr.sym_and_boot(nboot)
         corr.shift(1)
         corr.gevp(1)
         corr.save("%s/corr_pipi.npy" % (datadir))
+        ratio = corr.ratio(pi, 1)
+        ratio.save("%s/ratio_pipi.npy" % (datadir))
     else:
         corr = ana.Correlators.read("%s/corr_pipi.npy" % (datadir))
-
-    ratio = corr.ratio(pi, 1)
+        ratio = ana.Correlators.read("%s/ratio_pipi.npy" % (datadir))
     add = np.ones((1500,)) * corr.shape[1]
 
-    #print("fitting")
-    #fitres = fitter.fit(start, ratio, [10, 16], corrid="dE", add=add, oldfit=pifit)
+    print("fitting")
+    fitres = fitter.fit(start, ratio, [10, 16], corrid="dE", add=add, oldfit=pifit)
 
-    #print("save")
-    ## save the fit result
-    #fitres.save("%s/fit_pipi.npz" % (datadir))
-    fitres = ana.FitResult.read("%s/fit_pipi.npz" % (datadir))
-    fitres.print_data(0)
+    print("save")
+    # save the fit result
+    fitres.save("%s/fit_pipi.npz" % (datadir))
+    #fitres = ana.FitResult.read("%s/fit_pipi.npz" % (datadir))
+    #fitres.print_data(0)
     fitres.print_data(1)
 
     # plot the result
@@ -57,7 +66,6 @@ def main():
 
 if __name__ == '__main__':
     try:
-        print("starting")
         main()
     except KeyboardInterrupt:
         pass

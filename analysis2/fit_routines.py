@@ -53,7 +53,7 @@ def fit_single(fitfunc, start, corr, franges, add=None, debug=0):
     #return fitres
 
 def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
-        oldfitpar=None, debug=0):
+        oldfitpar=None, useall=False, debug=0):
     """Fits fitfunc to a Correlators object.
 
     The predefined functions describe a single particle correlation
@@ -80,11 +80,16 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
         the third dimenstion to the oldfit data.
     oldfitpar : None, int or sequence of int, optional
         Which parameter of the old fit to use, if there is more than one.
+    useall : bool
+        Using all correlators in the single particle correlator or
+        use just the lowest.
     debug : int, optional
         The amount of info printed.
     """
     dshape = corr.shape
     ncorrs = [len(s) for s in fshape]
+    if not useall:
+        ncorrs[-2] = 1
     if ncorrs[-1] != dshape[-1]:
         raise RuntimeError("something wrong in fit_comb")
     # prepare X data
@@ -270,7 +275,7 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, debug=0):
     pvals = 1. - scipy.stats.chi2.cdf(chisquare, dof)
 
     # writing summary to screen
-    if debug > 0:
+    if debug > 3:
         if correlated:
             print("fit results for a correlated fit:")
         else:

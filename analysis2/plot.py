@@ -5,6 +5,7 @@ The class for fitting.
 import numpy as np
 import itertools
 import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
@@ -22,17 +23,19 @@ class LatticePlot(object):
             The filename of the plot.
         """
         self.plotfile = PdfPages(filename)
-        self.p = []
 
     def __del__(self):
-        #if plt.get_fignums() > 0:
-        #    print(plt.get_fignums())
-        #    print("saving at last")
-        #    self.save()
         self.plotfile.close()
 
+    def new_file(self, filename):
+      """Open a new plot file.
+      """
+      self.plotfile.close()
+      plt.clf()
+      self.plotfile = PdfPages(filename)
+
     def save(self):
-        if plt.get_fignums() > 0:
+        if plt.get_fignums():
             for i in plt.get_fignums():
                 self.plotfile.savefig(plt.figure(i))
         plt.clf()
@@ -180,11 +183,10 @@ class LatticePlot(object):
                 l = int(plotrange[0])
                 u = int(plotrange[1])
             # plot the data
-            self.p.append(plt.errorbar(X[l:u], Y[l:u], dY[l:u], fmt='x' + 'b',
-                label = label))
+            plt.errorbar(X[l:u], Y[l:u], dY[l:u], fmt='x' + 'b', label = label)
         else:
             # plot the data
-            self.p.append(plt.errorbar(X, Y, dY, fmt='x' + 'b', label=label))
+            plt.errorbar(X, Y, dY, fmt='x' + 'b', label=label)
 
         # adjusting the plot style
         plt.grid(True)
@@ -316,7 +318,7 @@ class LatticePlot(object):
                 # plot
                 self.plot_data_with_fit(X, corr.data[0,:,n], ddata,
                         fitfunc.fitfunc, mpar, label[3:], logscale=False,
-                        plotrange=[1,23], addpars=add)
+                        plotrange=[1,23], addpars=add, fitrange=fi)
                 self.save()
 
         label[0] = label_save
@@ -364,7 +366,7 @@ class LatticePlot(object):
         ncorriter = [[x for x in range(n)] for n in ncorrs]
         for item in itertools.product(*ncorriter):
             if debug > 1:
-                print("fitting correlators %s" % str(item))
+                print("plotting correlators %s" % str(item))
             n = item[-1]
             mdata, ddata = compute_error(corr.data[:,:,n])
             # create the iterator over the fit ranges
@@ -373,7 +375,7 @@ class LatticePlot(object):
             # iterate over the fit ranges
             for ritem in itertools.product(*rangesiter):
                 if debug > 1:
-                    print("fitting fit ranges %s" % str(ritem))
+                    print("plotting fit ranges %s" % str(ritem))
                 r = ritem[-1]
                 # get fit interval
                 fi = franges[n][r]
@@ -383,7 +385,7 @@ class LatticePlot(object):
                 # set up labels
                 label[0] = "%s, pc %d (%s)" % (label_save, n, str(item[:-1]))
                 self.set_title(label[0], label[1:3])
-                label[4] = "fit [%d, %d]" % (fi[0], fi[1])
+                label[4] = "fit [%d, %d]\nold %s" % (fi[0], fi[1], str(ritem[:-1]))
 
                 # get old data
                 add_data = oldfit.get_data(item[:-1] + ritem[:-1]) 
@@ -438,6 +440,10 @@ class LatticePlot(object):
         else:
             self._genplot_comb(corr, fitresult, fitfunc, label, oldfit, add,
                     oldfitpar, debug)
+
+    def histogram(self, corr, fitresult, label):
+        """Plot the histograms.
+        """
 
 if __name__ == "__main__":
     pass

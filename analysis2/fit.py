@@ -32,7 +32,7 @@ class LatticeFit(object):
             self.fitfunc = fitfunc
 
     def fit(self, start, corr, ranges, corrid="", add=None, oldfit=None,
-            oldfitpar=None):
+            oldfitpar=None, useall=False, debug=0):
         """Fits fitfunc to a Correlators object.
 
         The predefined functions describe a single particle correlation
@@ -58,6 +58,11 @@ class LatticeFit(object):
         oldfitpar : None, int or sequence of int, optional
             Which parameter of the old fit to use, if there is more
             than one.
+        useall : bool
+            Using all correlators in the single particle correlator or
+            use just the lowest.
+        debug : int, optional
+            The amount of info printed.
 
         Returns
         -------
@@ -82,10 +87,12 @@ class LatticeFit(object):
 
             # do the fitting
             if add is None:
-                for res in fit_single(self.fitfunc, start, corr, franges):
+                for res in fit_single(self.fitfunc, start, corr, franges,
+                        debug=debug):
                     fitres.add_data(*res)
             else:
-                for res in fit_single(self.fitfunc, start, corr, franges, add):
+                for res in fit_single(self.fitfunc, start, corr, franges, add,
+                        debug):
                     fitres.add_data(*res)
         else:
             # handle the fitranges
@@ -98,6 +105,9 @@ class LatticeFit(object):
             shapes_other = []
             # iterate over the correlation functions
             ncorr = [len(s) for s in fshape]
+            if not useall:
+                ncorr[-2] = 1
+
             ncorriter = [[x for x in range(n)] for n in ncorr]
             for item in itertools.product(*ncorriter):
                 # create the iterator over the fit ranges
@@ -114,11 +124,11 @@ class LatticeFit(object):
             # do the fitting
             if add is None:
                 for res in fit_comb(self.fitfunc, start, corr, franges, fshape,
-                        oldfit, oldfitpar):
+                        oldfit, oldfitpar, debug=debug):
                     fitres.add_data(*res)
             else:
                 for res in fit_comb(self.fitfunc, start, corr, franges, fshape,
-                        oldfit, add, oldfitpar):
+                        oldfit, add, oldfitpar, debug=debug):
                     fitres.add_data(*res)
 
         return fitres
@@ -155,6 +165,8 @@ class FitResult(object):
         self.fit_ranges = None
         self.fit_ranges_shape = None
         self.derived = False
+        self.error = None
+        self.weight = None
 
     @classmethod
     def read(cls, filename):
@@ -378,8 +390,8 @@ class FitResult(object):
         """Returns the fit ranges."""
         return self.fit_ranges, self.fit_ranges_shape
 
-    def print_data(self, par=0):
-        """Prints the errors etc of the data."""
+    def _calc_error(self, par=0):
+        """Calculates the error and weight of data."""
         if self.derived:
             res, res_std, res_syst = sys_error_der(self.data, self.weight)
         else:
@@ -387,10 +399,16 @@ class FitResult(object):
         self.error = (res, res_std, res_syst)
         self.weight = weight
 
-        print(self.corr_id)
-        for tmp in zip(res, res_std, res_syst, self.label):
-            print(tmp[-1])
-            print("%.5f +- %.5f -%.5f +%.5f" % (tmp[0], tmp[1], tmp[2][0], tmp[2][1]))
+    def print_data(self, par=0):
+        """Prints the errors etc of the data."""
+        self._calc_error(par)
+        res, res_std, res_syst = self.error
+
+        print("summary for %s" % self.corr_id)
+        print(self.fit_ranges_shape)
+        for i, tmp in enumerate(zip(res, res_std, res_syst, self.label)):
+            print("correlator %s" %(str(tmp[-1])))
+            print("%.5f +- %.5f -%.5f +%.5f" % (tmp[0],tmp[1],tmp[2][0],tmp[2][1]))
 
 class FitArray(np.ndarray):
     """Subclass of numpy array."""

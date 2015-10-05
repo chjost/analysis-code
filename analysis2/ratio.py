@@ -28,18 +28,28 @@ def simple_ratio(d1, d2, d3):
     # ratio = d1/(d2*d3)
     return ratio
 
-def ratio_shift(d1, d2, d3, shift=1):
+def ratio_shift(d1, d2, d3, shift=1, useall=False):
     """Calculates a simple ratio of three data sets.
 
     Calculates d1(t)/(d2(t)*d3(t) - d2(t+shift)*d3(t+shift)).
     Assumes that all data sets are numpy arrays with two axis, the first being
     the bootstrap number and the second being the time.
     
-    Args:
-        d1, d2, d3: The three data sets.
+    Parameters
+    ----------
+    d1 : ndarray
+        The numerator of the ratio, at least 3D.
+    d2, d3 : ndarray
+        The denominator of the ratio, at least 3D.
+    shift : int, optional
+        The number of slices that d2 and d3 are shifted.
+    useall : bool, optional
+        Use all correlators of d2 and d3 or just the first.
 
-    Returns:
-        The ratio, its mean and its standard deviation.
+    Returns
+    -------
+    ndarray:
+        The calculated ratio.
     """
     # create array from dimensions of the data
     rshape = list(d1.shape)
@@ -49,8 +59,12 @@ def ratio_shift(d1, d2, d3, shift=1):
     for _s in range(rshape[0]):
         for _t in range(rshape[1]):
             # calculate ratio
-            ratio[_s,_t] = d1[_s,_t] / (d2[_s,_t]*d3[_s,_t] -
-                d2[_s,_t+shift]*d3[_s,_t+shift])
+            if useall:
+                ratio[_s,_t] = d1[_s,_t] / (d2[_s,_t]*d3[_s,_t] -
+                    d2[_s,_t+shift]*d3[_s,_t+shift])
+            else:
+                ratio[_s,_t] = d1[_s,_t] / (d2[_s,_t,0]*d3[_s,_t,0] -
+                    d2[_s,_t+shift,0]*d3[_s,_t+shift,0])
     return ratio
 
 def simple_ratio_subtract(d1, d2, d3):

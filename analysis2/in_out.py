@@ -2,6 +2,8 @@
 Functions for in and output
 """
 
+from __future__ import with_statement
+
 import os
 import numpy as np
 
@@ -415,25 +417,27 @@ def read_fitresults(filename, verbose=False):
 
     if verbose:
         print("reading from file " + str(filename))
-    with np.load(filename) as f:
-        # check the number of levels to build
-        # The array names are  2 characters plus the two digit index of the
-        # for each level. The name of the fit intervals is only 2 characters
-        # to be able to treat it different to the rest
-        if verbose:
-            print("reading %d items" % len(f.files))
-        L = f.files
-        n = (len(L) - 2) // 4
-        par, chi2, pvals = [], [], []
-        fitint, label = [], []
-        label = []
-        data = f['data']
-        fitint = f['fi']
-        for i in range(n):
-            par.append(f['pi%02d' % i])
-            chi2.append(f['ch%02d' % i])
-            pvals.append(f['pv%02d' % i])
-            label.append(f['la%02d' % i])
+    f = np.load(filename)
+    #with np.load(filename) as f:
+    # check the number of levels to build
+    # The array names are  2 characters plus the two digit index of the
+    # for each level. The name of the fit intervals is only 2 characters
+    # to be able to treat it different to the rest
+    if verbose:
+        print("reading %d items" % len(f.files))
+    L = f.files
+    n = (len(L) - 2) // 4
+    par, chi2, pvals = [], [], []
+    fitint, label = [], []
+    label = []
+    data = f['data']
+    fitint = f['fi']
+    for i in range(n):
+        par.append(f['pi%02d' % i])
+        chi2.append(f['ch%02d' % i])
+        pvals.append(f['pv%02d' % i])
+        label.append(f['la%02d' % i])
+    f.close()
     return data, fitint, par, chi2, pvals, label
 
 def read_header(filename, verbose=False):

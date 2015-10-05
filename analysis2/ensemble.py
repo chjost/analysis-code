@@ -4,6 +4,7 @@ Lattice Ensemble Class.
 
 import numpy as np
 import pickle
+import ConfigParser
 
 from in_out import check_read, check_write
 
@@ -32,6 +33,44 @@ class LatticeEnsemble(object):
         self.data["L"] = int(L)
         self.data["T"] = int(T)
         self.data["T2"] = int(self.data["T"]/2)+1
+
+    @classmethod
+    def parse(cls, filename, verbose=False):
+        """Parse an input file.
+        Parameters
+        ----------
+
+        filename : str
+            The name of the file.
+        """
+        if verbose:
+            print("reading %s" % filename)
+        config = ConfigParser.SafeConfigParser()
+        config.read(filename)
+        name = config.get("main", "name")
+        T = config.getint("main", "T")
+        L = config.getint("main", "L")
+        if verbose:
+            print("reading ensemble %s" % name)
+            print("L = %d, T = %d" % (L, T))
+        if config.getboolean("main", "readold"):
+            oldname = config.get("main", "olddata")
+            if verbose:
+                print("reading old data from %s" % oldname)
+            obj = cls.read(oldname)
+            obj.data["name"] = name
+            obj.data["T"] = T
+            obj.data["T2"] = int(T//2+1)
+            obj.data["L"] = L
+        else:
+            obj = cls(name, L, T)
+        if config.has_section("other"):
+            for item in config.items("other"):
+                if verbose:
+                    print(item)
+                obj.data.update({item[0]: item[1]})
+            #obj.data.update(config.sections("other"))
+        return obj
 
     @classmethod
     def read(cls, _filename):
