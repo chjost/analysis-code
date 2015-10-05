@@ -565,12 +565,14 @@ def analyse(ensemble, datafolder, plotfolder):
     #start_params = [1.0, 0.5]
     #fitfunc = lambda p,t: np.exp(-p[0]*t)
     #start_params = [0.5]
-    fitfunc = lambda p,t: 10e6 if p[1] < 0. else 0.5*p[0]*p[0]*(np.exp(-p[1]*t) + np.exp(-p[1]*(T-t)))
+    fitfunc = lambda p,t: 10e6 if p[1] < 0. else \
+              0.5*p[0]*p[0]*(np.exp(-p[1]*t) + np.exp(-p[1]*(T-t)))
     start_params = [1, 0.5]
     massfunc = lambda p, t: p
     mass_sparams = [0.5]
     #######################################################
     ## setting variables
+    # TODO: error messages if something is ill-defined -> unit test?
     d = ensemble.get_data("d")
     print d
     d2 = np.dot(d, d)
@@ -649,6 +651,7 @@ def main():
 #        print("D30.48 not calculated yet")
 #        sys.exit(-11)
 
+    #TODO: s is a terrible name for a 3-momentum
     if len(sys.argv) < 3:
         s = momenta[0]
     elif int(sys.argv[2]) < 4:
@@ -725,26 +728,34 @@ def main():
 
     datafolder = "./raw_data/"
     plotfolder = "./plots/"
+
+    # t_min for gevp
     gmax = [3, 5, 5, 5, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]
+
     ensembles = []
     for i, lat in enumerate(lattices):
+        #cut lattice size from lattice name
         L = int(lattices[ens][-2:])
         T = 2*L
         if L == 20:
             T=48
-        path="".join(("/hiskp2/werner/analyse/" + lat + "_mv%d" % s2 + "/Analysis/"))
+        path="".join(("/hiskp2/werner/analyse/" + lat + "_mv%d" % s2 + 
+                      "/Analysis/"))
     
+        # init lattice data structure. reference lattice name, L and T by 
+        # ensembles.name, ensembles.L, ensembles.T
         ensembles.append(ana.LatticeEnsemble(lat, L, T))
+        # write path into ensemble. reference by ensemble.get_data("path")
         ensembles[-1].add_data("path", path)
+        # write gmax into ensemble. reference by ensemble.get_data("gmax")
         ensembles[-1].add_data("gmax", gmax[i])
+        #TODO: ask Christian what s is
+        # write ? into ensemble. reference by ensemble.get_data("s")
         ensembles[-1].add_data("s", [0,1])
+        # write momentum into ensemble. reference by ensemble.get_data("d")
         ensembles[-1].add_data("d", s)
 
-#    print(ensembles)
-#    for e in ensembles:
-#        print(e)
-#        ensembles[2].get_data("x")
-    print ensembles[2]
+#    print ensembles[2]
 
     print("calculating %s" % (lattices[ens]))
     analyse(ensembles[ens], datafolder, plotfolder)
