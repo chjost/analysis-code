@@ -44,7 +44,11 @@ def fit_single(fitfunc, start, corr, franges, add=None, debug=0):
     if debug > 0:
         print("fitting the data")
     for n in range(ncorr):
+        if debug > 1:
+            print("fitting correlator %d" % (n))
         for i, r in enumerate(franges[n]):
+            if debug > 1:
+                print("fitting interval %d" % (i))
             res, chi, pva = fitting(fitfunc, X[r[0]:r[1]],
                 corr.data[:,r[0]:r[1],n], start, add = add, correlated=True,
                 debug=debug)

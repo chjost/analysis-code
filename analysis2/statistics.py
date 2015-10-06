@@ -57,7 +57,7 @@ def sys_error(data, pvals, par=0):
 
     Parameters
     ----------
-    data : ndarray
+    data : list of ndarrays
         The data for which to compute the errors. Assumes at least
         three dimensions.
     pvals : ndarray

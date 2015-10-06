@@ -23,6 +23,13 @@ class LatticePlot(object):
             The filename of the plot.
         """
         self.plotfile = PdfPages(filename)
+        # plot environment variables
+        self.xlog=False
+        self.ylog=False
+        self.xlim=None
+        self.ylim=None
+        self.grid=True
+        self.legend=True
 
     def __del__(self):
         self.plotfile.close()
@@ -40,6 +47,26 @@ class LatticePlot(object):
                 self.plotfile.savefig(plt.figure(i))
         plt.clf()
 
+    def _set_env_normal(self):
+        plt.grid(self.grid)
+        # set the axis to log scale
+        if self.xlog:
+            plt.xscale("log")
+        if self.ylog:
+            plt.yscale("log")
+        # set the axis ranges
+        if self.xlim:
+            plt.xlim(self.xlim)
+        if self.ylim:
+            plt.ylim(self.ylim)
+        if self.legend:
+            plt.legend()
+
+    def _est_env_hist(self):
+        plt.grid(self.grid)
+        if self.legend:
+            plt.legend()
+
     def set_title(self, title, axis):
         """Set the title and axis labels of the plot.
 
@@ -55,8 +82,7 @@ class LatticePlot(object):
         plt.ylabel(axis[1])
 
     def plot_data_with_fit(self, X, Y, dY, fitfunc, args, label, plotrange=None,
-                       logscale=False, xlim=None, ylim=None, fitrange=None,
-                       addpars=None, pval=None):
+                       fitrange=None, addpars=None, pval=None):
         """A function that plots data and the fit to the data.
 
         Parameters
@@ -75,10 +101,6 @@ class LatticePlot(object):
             A list with labels for data and fit.
         plotrange : list of ints, optional
             The lower and upper range of the plot.
-        logscale : bool, optional
-            Make the y-scale a logscale.
-        xlim, ylim : list of ints, optional
-            Limits for the x and y axis, respectively
         fitrange : list of ints, optional
             A list with two entries, bounds of the fitted function.
         addpars : bool, optional
@@ -88,14 +110,12 @@ class LatticePlot(object):
             write the p-value in the plot if given
         """
         # plot the data
-        self.plot_data(X, Y, dY, label[0], plotrange=plotrange, logscale=logscale,
-                xlim=xlim, ylim=ylim)
+        self.plot_data(X, Y, dY, label[0], plotrange=plotrange)
 
         # plot the function
         self.plot_function(fitfunc, X, args, label[1], addpars, fitrange)
 
         # adjusting the plot style
-        plt.grid(True)
         plt.legend()
 
         # print label if available
@@ -110,6 +130,10 @@ class LatticePlot(object):
             except TypeError:
                 datalabel = "".join((datalabel, "\npar = %.4e" % (args[0])))
             plt.text(x, y, datalabel)
+    def _print_label(self, keys, vals, xpos=0.7, ypos=0.8):
+        """Print a label in the plot.
+
+        """
 
     def plot_function(self, func, X, args, label, add=None, plotrange=None):
         """A function that plots a function.
@@ -153,8 +177,7 @@ class LatticePlot(object):
             y1 = np.asarray(y1)
         plt.plot(x1, y1, "r", label=label)
 
-    def plot_data(self, X, Y, dY, label, plotrange=None, logscale=False,
-            xlim=None, ylim=None):
+    def plot_data(self, X, Y, dY, label, plotrange=None):
         """A function that plots data.
 
         Parameters
@@ -169,10 +192,6 @@ class LatticePlot(object):
             A list with labels for data and fit.
         plotrange : list of ints, optional
             The lower and upper range of the plot.
-        logscale : bool, optional
-            Make the y-scale a logscale.
-        xlim, ylim : list of ints, optional
-            Limits for the x and y axis, respectively
         """
         # check boundaries for the plot
         if isinstance(plotrange, (np.ndarray, list, tuple)):
@@ -187,25 +206,15 @@ class LatticePlot(object):
         else:
             # plot the data
             plt.errorbar(X, Y, dY, fmt='x' + 'b', label=label)
-
-        # adjusting the plot style
-        plt.grid(True)
         plt.legend()
-        if logscale:
-            plt.yscale("log")
-        # set the axis ranges
-        if xlim:
-            plt.xlim(xlim)
-        if ylim:
-            plt.ylim(ylim)
 
-    def plot_histogram(data, data_weight, label, debug=0):
+    def plot_histogram(self, data, data_weight, label, debug=0):
         """Plots histograms for the given data set.
-    
+
         The function plots the weighted distribution of the data, the unweighted
         distribution and a plot containing both the weighted and the unweighted
         distribution.
-    
+
         Parameters
         ----------
         data : ndarray
@@ -224,10 +233,25 @@ class LatticePlot(object):
         uhist, ubins = np.histogram(data, 20, weights=np.ones_like(data_weight),
                                     density=True)
     
-        # prepare the plot for the weighted histogram
+        # prepare the plot
         width = 0.7 * (bins[1] - bins[0])
         center = (bins[:-1] + bins[1:]) / 2
     
+        # plot both histograms in same plot
+        plt.title(label[0])
+        plt.xlabel(label[1])
+        plt.ylabel("".join(("distribution of ", label[2])))
+        plt.grid(True)
+        # plot
+        plt.bar(center, hist, align='center', width=width, color='r', alpha=0.5,
+                label='weighted data')
+        plt.bar(center, uhist, align='center', width=width, color='b', alpha=0.5,
+                label='unweighted data')
+        plt.legend()
+        # save and clear
+        self.save()
+
+        # plot the weighted histogram
         # set labels for axis
         plt.title(label[0])
         plt.xlabel(label[1])
@@ -240,7 +264,7 @@ class LatticePlot(object):
         # save and clear
         self.save()
     
-        # prepare plot for unweighted histogram
+        # plot the unweighted histogram
         # the center and width stays the same for comparison
         plt.title(label[0])
         plt.xlabel(label[1])
@@ -249,20 +273,6 @@ class LatticePlot(object):
         # plot
         plt.bar(center, uhist, align='center', width=width, color='b', alpha=0.5,
                 label=label[2])
-        plt.legend()
-        # save and clear
-        self.save()
-    
-        # plot both histograms in same plot
-        plt.title(label[0])
-        plt.xlabel(label[1])
-        plt.ylabel(label[2])
-        plt.grid(True)
-        # plot
-        plt.bar(center, hist, align='center', width=width, color='r', alpha=0.5,
-                label='weighted data')
-        plt.bar(center, uhist, align='center', width=width, color='b', alpha=0.5,
-                label='unweighted data')
         plt.legend()
         # save and clear
         self.save()
@@ -296,6 +306,7 @@ class LatticePlot(object):
             raise RuntimeError("Cannot plot correlation function matrix")
         # get needed data
         ncorr = corr.shape[-1]
+        T = corr.shape[1]
         ranges = fitresult.fit_ranges
         shape = fitresult.fit_ranges_shape
         X = np.linspace(0., float(corr.shape[1]), corr.shape[1], endpoint=False)
@@ -303,10 +314,14 @@ class LatticePlot(object):
 
         # iterate over correlation functions
         for n in range(ncorr):
+            if debug > 1:
+                print("plotting correlators %d" % (n))
             mdata, ddata = compute_error(corr.data[:,:,n])
             
             # iterate over fit intervals
             for r in range(shape[0][n]):
+                if debug > 1:
+                    print("plotting fit ranges %s" % str(r))
                 fi = ranges[n][r]
                 mpar, dpar = compute_error(fitresult.data[n][:,:,r])
 
@@ -316,9 +331,10 @@ class LatticePlot(object):
                 label[4] = "fit [%d, %d]" % (fi[0], fi[1])
 
                 # plot
+                self._set_env_normal()
                 self.plot_data_with_fit(X, corr.data[0,:,n], ddata,
-                        fitfunc.fitfunc, mpar, label[3:], logscale=False,
-                        plotrange=[1,23], addpars=add, fitrange=fi)
+                        fitfunc.fitfunc, mpar, label[3:], plotrange=[1,T],
+                        addpars=add, fitrange=fi)
                 self.save()
 
         label[0] = label_save
@@ -404,9 +420,10 @@ class LatticePlot(object):
                     add_data = np.hstack((add_data, add))
 
                 # plot
+                self._set_end_normal()
                 self.plot_data_with_fit(X, corr.data[0,:,n], ddata,
-                        fitfunc.fitfunc, mpar, label[3:], logscale=False,
-                        plotrange=[1,T], addpars=add_data, fitrange=fi)
+                        fitfunc.fitfunc, mpar, label[3:], plotrange=[1,T],
+                        addpars=add_data, fitrange=fi)
                 self.save()
 
     def plot(self, corr, fitresult, fitfunc, label, oldfit=None, add=None,
@@ -441,9 +458,49 @@ class LatticePlot(object):
             self._genplot_comb(corr, fitresult, fitfunc, label, oldfit, add,
                     oldfitpar, debug)
 
-    def histogram(self, corr, fitresult, label):
+    def histogram(self, fitresult, label, par=None):
         """Plot the histograms.
+
+        Parameters
+        ----------
+        fitresult : FitResult
+            The fit data.
+        label : list of strs
+            The title of the plots, the x-axis label and the label of the data.
+        par : int, optional
+            For which parameter the histogram is plotted.
         """
+        fitresult.calc_error()
+        label_save = label[0]
+        if par is None:
+            for p, w in enumerate(fitresult.weight):
+                for i, d in enumerate(fitresult.data):
+                    label[0] = " ".join((label_save, str(fitresult.label[i])))
+                    self.plot_histogram(d[0,p], w[i], label)
+        else:
+            w = fitresult.weight[par]
+            for i, d in enumerate(fitresult.data):
+                label[0] = " ".join((label_save, str(fitresult.label[i])))
+                self.plot_histogram(d[0,par], w[i], label)
+        label[0] = label_save
+
+    def set_env(self, xlog=False, ylog=False, xlim=None, ylim=None, grid=True):
+        """Set different environment variables for the plot.
+        
+        Parameters
+        ----------
+        xlog, ylog : bool, optional
+            Make the respective axis log scale.
+        xlim, ylim : list of ints, optional
+            Limits for the x and y axis, respectively
+        grid : bool, optional
+            Plot the grid.
+        """
+        self.xlog=xlog
+        self.ylog=ylog
+        self.xlim=xlim
+        self.ylim=ylim
+        self.grid=grid
 
 if __name__ == "__main__":
     pass

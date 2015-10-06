@@ -64,12 +64,27 @@ class LatticeEnsemble(object):
             obj.data["L"] = L
         else:
             obj = cls(name, L, T)
-        if config.has_section("other"):
-            for item in config.items("other"):
-                if verbose:
-                    print(item)
-                obj.data.update({item[0]: item[1]})
-            #obj.data.update(config.sections("other"))
+        # get all other options
+        if config.has_section("strings"):
+            for opt in config.options("strings"):
+                obj.data.update({opt: config.get("strings", opt)}) 
+        if config.has_section("ints"):
+            for opt in config.options("ints"):
+                obj.data.update({opt: config.getint("ints", opt)}) 
+        if config.has_section("floats"):
+            for opt in config.options("floats"):
+                obj.data.update({opt: config.getfloat("floats", opt)}) 
+        if config.has_section("bools"):
+            for opt in config.options("bools"):
+                obj.data.update({opt: config.getbool("bools", opt)}) 
+        if config.has_section("lists"):
+            for opt in config.options("lists"):
+                li = config.get("lists", opt).split(",")
+                obj.data.update({opt: li}) 
+        if config.has_section("ndarrays"):
+            for opt in config.options("ndarrays"):
+                li = config.get("ndarrays", opt).split(",")
+                obj.data.update({opt: np.asarray(li, dtype=float)}) 
         return obj
 
     @classmethod

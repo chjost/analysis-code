@@ -390,25 +390,30 @@ class FitResult(object):
         """Returns the fit ranges."""
         return self.fit_ranges, self.fit_ranges_shape
 
-    def _calc_error(self, par=0):
+    def calc_error(self):
         """Calculates the error and weight of data."""
-        if self.derived:
-            res, res_std, res_syst = sys_error_der(self.data, self.weight)
-        else:
-            res, res_std, res_syst, weight = sys_error(self.data, self.pval, par)
-        self.error = (res, res_std, res_syst)
-        self.weight = weight
+        if self.error is None:
+            npar = self.data[0].shape[1]
+            self.error = []
+            self.weight = []
+            nfits = [d[0,0].size for d in self.data]
+            for i in range(npar):
+                if self.derived:
+                    r, r_std, r_syst, w = sys_error_der(self.data, self.weight, i)
+                else:
+                    r, r_std, r_syst, w = sys_error(self.data, self.pval, i)
+                self.error.append((r, r_std, r_syst, nfits))
+                self.weight.append(w)
 
     def print_data(self, par=0):
         """Prints the errors etc of the data."""
-        self._calc_error(par)
-        res, res_std, res_syst = self.error
+        self.calc_error()
 
         print("summary for %s" % self.corr_id)
-        print(self.fit_ranges_shape)
-        for i, tmp in enumerate(zip(res, res_std, res_syst, self.label)):
-            print("correlator %s" %(str(tmp[-1])))
-            print("%.5f +- %.5f -%.5f +%.5f" % (tmp[0],tmp[1],tmp[2][0],tmp[2][1]))
+        r, rstd, rsys, nfits = self.error[par]
+        for i, lab in enumerate(self.label):
+            print("correlator %s, %d fits" %(str(lab), nfits[i]))
+            print("%.5f +- %.5f -%.5f +%.5f" % (r[i], rstd[i], rsys[i][0], rsys[i][1]))
 
 class FitArray(np.ndarray):
     """Subclass of numpy array."""
