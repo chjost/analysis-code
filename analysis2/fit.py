@@ -293,6 +293,8 @@ class FitResult(object):
         if self.corr_num is None:
             raise RuntimeError("No place to store data, call create_empty first")
 
+        if len(index) == 1:
+            index = index[0]
         for n, la in enumerate(self.label):
             if np.array_equal(np.asarray(index), la):
                 return n
@@ -376,12 +378,6 @@ class FitResult(object):
                     self.pval.append(np.zeros(s2))
                     self.label.append(np.asarray(i))
 
-    def _get_label(self, c_id, c_num):
-        tmp = np.ndarray((2,), dtype=object)
-        tmp[0] = c_id
-        tmp[1] = c_num
-        return tmp
-    
     def set_ranges(self, ranges, shape):
         self.fit_ranges = ranges
         self.fit_ranges_shape = shape
@@ -399,6 +395,7 @@ class FitResult(object):
             nfits = [d[0,0].size for d in self.data]
             for i in range(npar):
                 if self.derived:
+                    pass
                     r, r_std, r_syst, w = sys_error_der(self.data, self.weight, i)
                 else:
                     r, r_std, r_syst, w = sys_error(self.data, self.pval, i)
@@ -414,6 +411,50 @@ class FitResult(object):
         for i, lab in enumerate(self.label):
             print("correlator %s, %d fits" %(str(lab), nfits[i]))
             print("%.5f +- %.5f -%.5f +%.5f" % (r[i], rstd[i], rsys[i][0], rsys[i][1]))
+
+    def _setup_new(self, other):
+        # check whether the two objects have the same number of samples
+        nsam = self.data[0].shape[0]
+        # new object
+        obj = FitResult(self.corr_id + other.corr_id)
+        obj.derived=True
+        # get length of new object
+        lc = []
+        try:
+            lc.append(len(self.corr_num))
+            corr_num = self.corr_num
+        except TypeError:
+            lc.append(1)
+            corr_num = [self.corr_num]
+        try:
+            lc.append(len(other.corr_num))
+            corr_num = corr_num + other.corr_num
+        except TypeError:
+            lc.append(1)
+            corr_num.append(other.corr_num)
+        corriter = [[n for n in range(m)] for m in corr_num]
+        # create the shape of new object
+        dshape = []
+        oshape = []
+        for item in itertools.product(*corriter):
+            shape1 = self.data[self._get_index(item[:lc[0]])].shape
+            shape2 = other.data[other._get_index(item[lc[0]:])].shape
+            dshape.append((nsam, 1) + shape1[2:] + shape2[2:])
+            oshape.append((nsam,) + shape1[2:] + shape2[2:])
+        obj.create_empty(dshape, oshape, corr_num)
+        return obj
+
+    def _setup_new_comb(self, other):
+        pass
+
+    def __mul__(self, other, par1=0, par2=0):
+        if self.corr_id in other.corr_id:
+            # i don't know
+            pass
+            obj = self._setup_new_comb(other)
+        else:
+            obj = self._setup_new(other)
+        return obj
 
 class FitArray(np.ndarray):
     """Subclass of numpy array."""

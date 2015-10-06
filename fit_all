@@ -1,4 +1,5 @@
-#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+#!/usr/bin/python2
+##!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
 ##!/usr/bin/python2
 
 import sys
@@ -16,8 +17,10 @@ def main():
     # read settings
     readsingledata = True
     readsinglefit = True
+    plotsingle = False
     readtwodata = True
-    readtwofit = False
+    readtwofit = True
+    plottwo = False
 
     # get data from input file
     prefix = ens.get_data("path")
@@ -45,26 +48,27 @@ def main():
     start_single = [1., 0.3]
     if readsinglefit == False:
         print("fitting")
-        pifit = fit_single.fit(start_single, picorr, [5,24], corrid="epi", add=addT)
+        pifit = fit_single.fit(start_single, picorr, [6,24], corrid="epi", add=addT)
         pifit.save("%s/fit_pi_%s.npz" % (datadir, lat))
     else:
         pifit = ana.FitResult.read("%s/fit_pi_%s.npz" % (datadir, lat))
     pifit.print_data(1)
 
     # plot the result
-    #print("plotting")
-    #plotter = ana.LatticePlot("%s/fit_pi_%s.pdf" % (plotdir, lat))
-    #plotter.set_env(ylog=True)
-    #histo = ana.LatticePlot("%s/hist_fit_pi_%s.pdf" % (plotdir, lat))
-    #label = ["single particle", "t", "C(t)", "pion"]
-    #plotter.plot(picorr, pifit, fit_single, label, add=addT)
-    #label = ["pion energy", "E$_\pi$/a", "E$_\pi$"]
-    #histo.histogram(pifit, label, 1)
-    #del plotter, histo
+    if plotsingle:
+        print("plotting")
+        plotter = ana.LatticePlot("%s/fit_pi_%s.pdf" % (plotdir, lat))
+        plotter.set_env(ylog=True)
+        histo = ana.LatticePlot("%s/hist_fit_pi_%s.pdf" % (plotdir, lat))
+        label = ["single particle", "t", "C(t)", "pion"]
+        plotter.plot(picorr, label, pifit, fit_single, add=addT)
+        label = ["pion energy", "E$_\pi$/a", "E$_\pi$"]
+        histo.histogram(pifit, label, 1)
+        del plotter, histo
 
     # two particle correlator
     print("read two particle corrs")
-    files = ["%s/pipi_pipi_A1_corr_TP%d_%d%d.dat" % (prefix, i, j, d2) for i in\
+    files = ["%s/pipi_pipi_A1_corr_TP%d_%d%d.dat" % (prefix, d2, i, j) for i in\
         range(gmax) for j in range(gmax)]
     if readtwodata == False:
         pipicorr = ana.Correlators(files, matrix=True)
@@ -77,21 +81,27 @@ def main():
     print("prepare fit")
     if readtwofit == False:
         print("fitting")
-        pipifit = fit_single.fit(start_single, pipicorr, [10,18],
-            corrid="epipi", add=addT, debug=2)
+        pipifit = fit_single.fit(start_single, pipicorr, [[6,20], [6,18], [5,15]],
+            corrid="epipi", add=addT, debug=0)
         pipifit.save("%s/fit_pipi_TP%d_%s.npz" % (datadir, d2, lat))
     else:
         pipifit = ana.FitResult.read("%s/fit_pipi_TP%d_%s.npz" % (datadir, d2, lat))
     pipifit.print_data(1)
 
-    print("plotting")
-    plotter = ana.LatticePlot("%s/fit_pipi_TP%d_%s.pdf" % (plotdir, d2, lat))
-    histo = ana.LatticePlot("%s/hist_fit_pipi_TP%d_%s.pdf" % (plotdir, d2, lat))
-    label = ["two particle", "t", "C(t)", "2 $\pi$"]
-    plotter.plot(picorr, pifit, fit_single, label, add=addT)
-    label = ["pi-pi energy", "E$_{\pi\pi}$/a", "E$_{\pi\pi}$"]
-    histo.histogram(pifit, label, 1)
-    del plotter, histo
+    if plottwo:
+        print("plotting")
+        plotter = ana.LatticePlot("%s/fit_pipi_TP%d_%s.pdf" % (plotdir, d2, lat))
+        plotter.set_env(ylog=True)
+        histo = ana.LatticePlot("%s/hist_fit_pipi_TP%d_%s.pdf" % (plotdir, d2, lat))
+        label = ["two particle", "t", "C(t)", "pipi"]
+        plotter.plot(pipicorr, label, pipifit, fit_single, add=addT)
+        label = ["pi-pi energy", "E$_{\pi\pi}$/a", "E$_{\pi\pi}$"]
+        histo.histogram(pipifit, label, 1)
+        del plotter, histo
+
+    diff = pipifit * pifit
+    for d in diff.data:
+        print(d.shape)
 
 if __name__ == '__main__':
     try:

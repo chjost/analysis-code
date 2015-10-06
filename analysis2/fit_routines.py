@@ -53,8 +53,6 @@ def fit_single(fitfunc, start, corr, franges, add=None, debug=0):
                 corr.data[:,r[0]:r[1],n], start, add = add, correlated=True,
                 debug=debug)
             yield (n, i), res, chi, pva
-    #        fitres.add_data((n, i), res, chi, pva)
-    #return fitres
 
 def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
         oldfitpar=None, useall=False, debug=0):

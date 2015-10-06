@@ -1,4 +1,5 @@
-#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+#!/usr/bin/python2
+##!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
 ##!/usr/bin/python2
 
 import sys
@@ -24,8 +25,8 @@ def main():
     files = ["%s/pipi_pipi_A1_corr_TP0_%d%d.dat" % (prefix, i, j) for i in range(gmax) for j in range(gmax)]
 
     # read pion data
-    pi = ana.Correlators.read("%s/corr_pi.npy" % (datadir))
-    pifit = ana.FitResult.read("%s/fit_pi.npz" % (datadir))
+    pi = ana.Correlators.read("%s/corr_pi_A40.24.npy" % (datadir))
+    pifit = ana.FitResult.read("%s/fit_pi_A40.24.npz" % (datadir))
 
     # prepare the fitting of data
     # 0 is single partivle correlation function
@@ -50,12 +51,12 @@ def main():
     add = np.ones((1500,)) * corr.shape[1]
 
     print("fitting")
-    fitres = fitter.fit(start, ratio, [10, 16], corrid="dE", add=add, oldfit=pifit)
+    #fitres = fitter.fit(start, ratio, [10, 16], corrid="dE", add=add, oldfit=pifit)
 
     print("save")
     # save the fit result
-    fitres.save("%s/fit_pipi.npz" % (datadir))
-    #fitres = ana.FitResult.read("%s/fit_pipi.npz" % (datadir))
+    #fitres.save("%s/fit_pipi.npz" % (datadir))
+    fitres = ana.FitResult.read("%s/fit_pipi.npz" % (datadir))
     #fitres.print_data(0)
     fitres.print_data(1)
 
