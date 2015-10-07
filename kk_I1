@@ -40,7 +40,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 import analysis as ana
 def main():
     # number of bootstrap samples
-    nbsamples = 1500
+    nbsamples = 500
     # temporal lattice extent
     tmin = 1
     T = 48
@@ -53,31 +53,34 @@ def main():
     #B-ensemble strange quark masses
     #amu_s = [0.016, 0.01861, 0.021]
     p_zero = np.asarray([0,0,0])
-    amu_s = [0.0185]
+    amu_s = [0.0225]
     #ensemblelist = ['A60.24/','A80.24/']
-    ensemblelist = ['A40.20/']
+    ensemblelist = ['A40.24/']
     filelist = ['k_corr_p0.dat','kk_A1_TP0_00.dat']
     #filelist = ['C2.dat','kpi_4.dat']
-    pathroot ="/hiskp2/helmes/k-k-scattering/"
+    pathroot = "/hiskp2/helmes/k-k-scattering/tests/3_rnd_vec/"
+    #pathroot ="/hiskp2/helmes/k-k-scattering/"
     for ens in ensemblelist:
-        datapath = pathroot+"data/"+ens
-        cachepath = pathroot+"data/cache/"
+        datapath = pathroot+ens+"data/"
+        cachepath = pathroot+ens+"cache/"
         #print datapath
         #Numpy array to hold all data at end
         m_k_dat = [] #np.zeros((len(amu_s), nbsamples))
         a_k_dat = [] #np.zeros((len(amu_s), nbsamples))
-        m_k_unit =[] # np.zeros(nbsamples)
         save_res=open(datapath+"res.dat","w")
         save_res.write("amu_s\tm_k d_stat(m_k) +d_sys(m_k) -d_sys(m_k)\t delE d_stat(delE) +d_sys(delE) -d_sys(delE)\ta_kk d_stat(a_kk) +d_sys(a_kk) -d_sys(a_kk)\tm_k*a_kk d_stat(m_k*a_kk) +d_sys(m_k*a_kk) -dsys(m_k*a_kk)\n") 
         for s in range(0,len(amu_s)):
             # need two cachepaths
-            name_cache_k = cachepath+ens[:-1]+"_"+str(amu_s[s])[3:]+"_"+filelist[0]
-            name_cache_kk = cachepath+ens[:-1]+"_"+str(amu_s[s])[3:]+"_"+filelist[1]
+            name_cache_k = cachepath
+            name_cache_kk = cachepath
+            #name_cache_k = cachepath+ens[:-1]+"_"+str(amu_s[s])[3:]+"_"+filelist[0]
+            #name_cache_kk = cachepath+ens[:-1]+"_"+str(amu_s[s])[3:]+"_"+filelist[1]
             #set up paths for data read in and result storage
-            path = datapath+"amu_s_"+str(amu_s[s])[3:]+"/"
+            #path = datapath+"amu_s_"+str(amu_s[s])[3:]+"/"
+            path = datapath
             print path
             #tmp_out = pathroot+"plots/"+ens+"amu_s_"+str(amu_s[s])[3:]
-            tmp_out = pathroot+"plots/"
+            tmp_out = pathroot+ens+"plots/"
             # start with usual analysis (thermal states contamination expected)
             fitfunc = lambda p,t: 10e6 if p[1] < 0.0 else 0.5*p[0]*p[0]*(np.exp(-p[1]*t) + np.exp(-p[1]*(T-t)))
             par_mass = [1.]
@@ -120,12 +123,12 @@ def main():
             #------------------- m_k from bsamples_k --------------------------
 
             label = ["Kaon m_eff", "time", "C(t)", "data", ""]
-            up=23
+            up=T/2-1
             # due to small variance changes can fit single correlators to the end
             mass, mmass, dmass = ana.compute_mass(bsamples_k, True)
             # ana.scan_fit_range(massfunc, tlist_corr,mass, par_mass)
             # TODO: set two points more than wanted for upper limit
-            ranges = ana.set_fit_interval(mass, [9], [24], 7)
+            ranges = ana.set_fit_interval(mass, [9], [30], 7)
             
             # For mass use one parameter fit
             # res has shape (nb_samples, nb_pars, ncorr, nb_fitranges)
@@ -186,7 +189,7 @@ def main():
               # define fit ranges
                 # res_R has shape (nb_samples, nb_pars, n_corr, nb_ranges1 *
                 # nb_ranges2)
-                ranges1 = ana.set_fit_interval(R_boot,[13],[23],8)
+                ranges1 = ana.set_fit_interval(R_boot,[13],[31],8)
                 res_R, chi2_R, pvals_R = ana.genfit_comb(R_boot,ranges1,ranges,
                     ratio,par_ratio,res,
                     1,ens[:-1],label,tmp_out,

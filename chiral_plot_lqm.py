@@ -51,22 +51,31 @@ def main():
   bootpath = '/hiskp2/helmes/k-k-scattering/data/'
   plotpath = rootpath+'plots/'
   datapath = rootpath+'data/'
+
   # Ensemble name
   ensemble = ['A40.24/','A60.24/','A80.24/','A100.24/']
+
   # strange quark masses
   mu_s = ['225','2464']
+
   # physical values
   r0_mpi_ph = 0.3525029
+
+  # Load Bootstrap samples
   boot_input = [bootpath+ens for ens in ensemble]
   files = ["mk_a0_"+m+".npy" for m in mu_s]
   a0_mu_hi = [path+"mk_a0_"+mu_s[1]+".npy" for path in boot_input]
   a0_mu_lo = [path+"mk_a0_"+mu_s[0]+".npy" for path in boot_input]
+  a0_mu_m = [bootpath+"cache/"+ens[:-1]+"_akk_mk_match.npy" for ens in ensemble]
   nb_bs = 1500
   a0_hi = np.zeros((nb_bs,len(a0_mu_hi)))
   a0_lo = np.zeros_like(a0_hi)
-  for i,(hel,lel) in enumerate(zip(a0_mu_hi, a0_mu_lo)):
+  a0_m = np.zeros_like(a0_hi)
+  for i,(hel,lel, mel) in enumerate(zip(a0_mu_hi, a0_mu_lo, a0_mu_m)):
     a0_hi[:,i] = ana.read_data(hel)
     a0_lo[:,i] = ana.read_data(lel)
+    a0_m[:,i] = ana.read_data(mel)
+
   # The file should contain MK*aKK, Mpi and r0 as columns
   filename_own = datapath + 'ma_mpi.dat'
   filename_own2 = datapath + 'ma_mk_match.dat'
@@ -78,6 +87,7 @@ def main():
   scat_dat_nplqcd = np.loadtxt(filename_nplqcd,usecols=(1,2,3,4,5,9,15,16,17))
   scat_dat_pacs = np.loadtxt(filename_pacs,usecols=(0,1,4,5,6,7))
   scat_dat = np.loadtxt(filename_own,usecols=(1,2,3,10,11,12,13))
+  scat_dat_match = np.loadtxt(filename_own2,usecols=(9,10))
   
   # load and concatenate bootstrap samples as array of shape ens x samples
   # extrapolate and fit linearly
@@ -95,7 +105,7 @@ def main():
   print mpi_r0_etmc_low, mpi_r0_pacs, mpi_r0_npl
   mk_akk_npl = ana.sum_error_sym(scat_dat_nplqcd[:,6:])
   mk_akk_pacs = scat_dat_pacs[:,4:6]
-  mk_akk_etmc = []
+  mk_akk_etmc = scat_dat_match
   mk_akk_etmc_low = scat_dat[0:4,3:]
   print mk_akk_etmc_low
   mk_akk_etmc_high = scat_dat[4:8,3:]
@@ -151,7 +161,7 @@ def main():
   #mean_a0_hi_lin_ext, std_a0_hi_lin_fit = ana.calc_error(a0_mk_hi_fit_ext) 
   #print("ext. lin. fit:\ta0 * MK = %f +/- %f" % (a0_mk_hi_fit_ext[0], std_a0_hi_lin_fit))
 
-  # mu_s = 0.225
+  # extrapoate data for mu_s = 0.225
   print mu_s[0]
   coeff_ipol_a0lo = ana.ipol_lin(a0_lo[:,0:2],np.square(mpi_r0_etmc_low)[0:2])
   a0_mk_lo_ext = ana.eval_lin(coeff_ipol_a0lo,np.square(r0_mpi_ph))
@@ -164,7 +174,7 @@ def main():
   a0_mk_lo_fit_ext = ana.eval_lin(p_a0_mk_lo,np.square(r0_mpi_ph))
   mean_a0_lo_lin_ext, std_a0_lo_lin_fit =ana.calc_error(a0_mk_lo_fit_ext) 
   print("ext. lin. fit:\ta0 * MK = %f +/- %f" % (a0_mk_lo_fit_ext[0], std_a0_lo_lin_fit))
-  # unitary matched case
+  # extrapolate data for mu_s = 0.2464
   coeff_ipol_a0m = ana.ipol_lin(a0_lo[:,0:2],np.square(mpi_r0_etmc_low)[0:2])
   a0_mk_lo_ext = ana.eval_lin(coeff_ipol_a0lo,np.square(r0_mpi_ph))
   mean_a0_lo_ext, std_a0_lo_ext = ana.calc_error(a0_mk_lo_ext)
@@ -176,6 +186,18 @@ def main():
   a0_mk_lo_fit_ext = ana.eval_lin(p_a0_mk_lo,np.square(r0_mpi_ph))
   mean_a0_lo_lin_ext, std_a0_lo_lin_fit =ana.calc_error(a0_mk_lo_fit_ext) 
   print("ext. lin. fit:\ta0 * MK = %f +/- %f" % (a0_mk_lo_fit_ext[0], std_a0_lo_lin_fit))
+  # extrapolate unitary matched case
+  coeff_ipol_a0m = ana.ipol_lin(a0_m[:,0:2],np.square(mpi_r0_etmc_low)[0:2])
+  a0_mk_m_ext = ana.eval_lin(coeff_ipol_a0m,np.square(r0_mpi_ph))
+  mean_a0_m_ext, std_a0_m_ext = ana.calc_error(a0_mk_m_ext)
+  print("lin. ext.-pol.:\ta0 * MK = %f +/- %f" % (a0_mk_m_ext[0], std_a0_m_ext))
+  
+  p_a0_mk_m, clo2_a0_mk_m, pvals_a0_mk_m = ana.fitting(linfit,
+                                np.square(mpi_r0_etmc_low), a0_m,
+                                [2.,1.], verbose=True)
+  a0_mk_m_fit_ext = ana.eval_lin(p_a0_mk_m,np.square(r0_mpi_ph))
+  mean_a0_m_lin_ext, std_a0_m_lin_fit =ana.calc_error(a0_mk_lo_fit_ext) 
+  print("ext. lin. fit:\ta0 * MK = %f +/- %f" % (a0_mk_m_fit_ext[0], std_a0_m_lin_fit))
 
 
   #----------- Fit NLO-ChiPT to resorted data ---------------------------------
@@ -201,10 +223,12 @@ def main():
   #    plt.annotate(l,(X-0.001,Y+0.01))
   mpi_etmc_phys=ana.lat_to_phys(mpi_etmc)
   print mpi_etmc_phys
-  mpisq = plt.errorbar(np.square(mpi_r0_etmc_low), mk_akk_etmc_low[:,0], mk_akk_etmc_low[:,1], fmt='o' + 'b',
-                    label = r'A, $a\mu_s = 0.0225$',color='blue')
-  mpisq = plt.errorbar(np.square(mpi_r0_etmc_low), mk_akk_etmc_high[:,0], mk_akk_etmc_high[:,1], fmt='o' + 'b',
-                    label = r'A, $a\mu_s = 0.02464$',color='orange')
+  mpisq = plt.errorbar(np.square(mpi_r0_etmc_low), mk_akk_etmc_low[:,0], mk_akk_etmc[:,1], fmt='o' + 'b',
+                    label = r'A, unit. match',color='blue')
+  #mpisq = plt.errorbar(np.square(mpi_r0_etmc_low), mk_akk_etmc_low[:,0], mk_akk_etmc_low[:,1], fmt='o' + 'b',
+  #                  label = r'A, $a\mu_s = 0.0225$',color='blue')
+  #mpisq = plt.errorbar(np.square(mpi_r0_etmc_low), mk_akk_etmc_high[:,0], mk_akk_etmc_high[:,1], fmt='o' + 'b',
+  #                  label = r'A, $a\mu_s = 0.02464$',color='orange')
   for X, Y,l in zip(np.square(mpi_etmc_phys),mk_akk_etmc_high[:,0],label_ens):
                         # Annotate the points 5 _points_ above and to the left
                         # of the vertex
@@ -216,16 +240,16 @@ def main():
   x1 = np.linspace(lfunc, ufunc, 1000)
   y1 = []
   y2 = []
-  #y3 = []
+  y3 = []
   for i in x1:
-    y1.append(linfit(p_a0_mk_hi[0,:],i))
-    y2.append(linfit(p_a0_mk_lo[0,:],i))
-    #y3.append(ana.eval_chi_pt_cont(p_a0_mk_hi[0],i))
-  y1 = np.asarray(y1)
-  y2 = np.asarray(y2)
-  #y3 = np.asarray(y3)
-  p2, = plt.plot(x1, y1, color='orange', label = "linear ext.")
-  p2, = plt.plot(x1, y2, color='blue', label = "linear ext.")
+    #y1.append(linfit(p_a0_mk_hi[0,:],i))
+    #y2.append(linfit(p_a0_mk_lo[0,:],i))
+    y3.append(linfit(p_a0_mk_m[0,:],i))
+  #y1 = np.asarray(y1)
+  #y2 = np.asarray(y2)
+  y3 = np.asarray(y3)
+  #p2, = plt.plot(x1, y1, color='orange', label = "linear ext.")
+  p2, = plt.plot(x1, y3, color='blue', label = "linear ext.")
   #p2, = plt.plot(x1, y3, color='darkgreen', label = "cont chipt")
 #  # A ensembles strange mass 0.0225
 #  #print mpi_r0_sq_etmc

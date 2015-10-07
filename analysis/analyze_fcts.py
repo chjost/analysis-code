@@ -410,12 +410,14 @@ def calc_scat_length_bare(dE, E, L):
         a: roots of the function
     """
     ncorr_single = len(E)
+    print len(E)
     # check if dE has same length
     if len(dE) is not ncorr_single:
         print("error in calc_scat_length, data shapes incompatible")
         print(len(dE), len(E))
         os.sys.exit(-10)
     ncorr_ratio = [len(d) for d in dE]
+    print "ncorr_ratio:\n" 
     print ncorr_ratio
     # check number of bootstrap samples and fit intervals for single particle
     for i in xrange(ncorr_single):
@@ -440,11 +442,7 @@ def calc_scat_length_bare(dE, E, L):
     # coefficients according to Luescher
     c=[-2.837297, 6.375183, -8.311951]
     # creating data array from empty array
-    a = []
-    for i in xrange(ncorr_single):
-        a.append([])
-        for j in xrange(ncorr_ratio[i]):
-            a[i].append(np.zeros((1500)))
+    a = [[[ 0 for b in range(E[0].shape[0])] for s in range(len(dE))] for r in range(len(E))]
     # loop over the correlation functions
     for _r in xrange(ncorr_single): # single particle
         for _s in xrange(ncorr_ratio[_r]): # ratio
@@ -452,6 +450,7 @@ def calc_scat_length_bare(dE, E, L):
             # TODO(CJ): can the shape of E[i] change?
             pre = -4.*np.pi/(E[_r]*float(L*L*L))
             # loop over bootstrap samples
+            print "delta E is %f" %dE[_r][_s][0]
             for _b in xrange(E[_r].shape[0]):
                 p = np.asarray((pre[_b]*c[1]/float(L*L), 
                     pre[_b]*c[0]/float(L), pre[_b],

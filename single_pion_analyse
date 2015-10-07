@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
 ################################################################################
 #
 # Author: Christian Jost (jost@hiskp.uni-bonn.de)
@@ -36,14 +36,14 @@ import analysis as ana
 
 def main():
     ## definition of some variables
-    nbsamples = 250
+    nbsamples = 100
     #inputpath="/hiskp2/helmes/contractions/A40.24/kaon/strange_225/merged/"
     #outputpath="/hiskp2/helmes/contractions/A40.24/kaon/strange_225/merged/scratch/"
-    inputpath="/hiskp2/helmes/contractions/B85.24/charm_test/merged/"
-    outputpath="/hiskp2/helmes/contractions/B85.24/charm_test/merged/scratch/"
-    suffix="eta_c_ps.dat"
-    suffix1="eta_c_p0_average.dat"
-    suffix2="eta_c_p0_mass.dat"
+    inputpath="/hiskp2/helmes/contractions/B55.32/pi_single/merged/"
+    outputpath = inputpath + "scratch/"
+    suffix="pi_corr_p0.dat"
+    suffix1="pi_p0_average.dat"
+    suffix2="pi_p0_mass.dat"
     inputlist=[""]
     #inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/"
     #outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/"
@@ -96,20 +96,20 @@ def main():
         #                      [1,T2-2], label, pfit, False)
 
         # single kaon
-        label = ["single eta_c, B85.24", "time", "C(t)", "data", ""]
+        label = ["single pion, B55.32", "time", "C(t)", "data", ""]
         up=T2-1
         for lo in range(12, bsamples.shape[1]-11):
             #for up in range(lo+5, bsamples.shape[1]):
-            res, chi2, pval = ana.fitting(fitfunc, tlist[lo:up], bsamples[:,lo:up], [2., 2.], verbose=1)
+            res, chi2, pval = ana.fitting(fitfunc, tlist[lo:up], bsamples[:,lo:up], [1., 1.], verbose=1)
             print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, E %.7lf" % (lo, up, pval[0], chi2[0]/(len(tlist[lo:up])-2), res[0,1]))
             fitlabel = "fit %d:%d" % (lo, up-1)
             label[3]
             print res[0].shape
-            ana.corr_fct_with_fit(tlist, mdata, ddata , fitfunc, res[0],
+            ana.plot_data_with_fit(tlist, mdata, ddata , fitfunc, res[0],
                                        [1,T2-2], label, pfit, True, True,
                                        fitrange=[lo,up])
         mass, mmass, dmass = ana.compute_mass(bsamples, True)
-        ana.corr_fct_with_fit(tlist[:-2], mmass, dmass, massfunc, res[0,1],
+        ana.plot_data_with_fit(tlist[:-2], mmass, dmass, massfunc, res[0,1],
                               [1,T2], label, pfit, False, False)
         pfit.close()
 
