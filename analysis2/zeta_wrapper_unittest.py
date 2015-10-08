@@ -1,5 +1,5 @@
 """
-Unit tests for the plot class.
+Unit tests for the zeta function wrappers.
 """
 
 import unittest
