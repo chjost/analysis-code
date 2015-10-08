@@ -19,14 +19,19 @@ def main():
 
     # get data from input file
     prefix = ens.get_data("path")
+    lat = ens.name()
     nboot = int(ens.get_data("nboot"))
     datadir = ens.get_data("datadir")
     gmax = int(ens.get_data("gmax"))
+    plotdir = ens.get_data("plotdir")
+    d2 = ens.get_data("d2")
+    T = ens.T()
     files = ["%s/pipi_pipi_A1_corr_TP0_%d%d.dat" % (prefix, i, j) for i in range(gmax) for j in range(gmax)]
+    addT = np.ones((nboot,)) * T
 
     # read pion data
-    pi = ana.Correlators.read("%s/corr_pi_A40.24.npy" % (datadir))
-    pifit = ana.FitResult.read("%s/fit_pi_A40.24.npz" % (datadir))
+    pi = ana.Correlators.read("%s/corr_pi_%s.npy" % (datadir, lat))
+    pifit = ana.FitResult.read("%s/fit_pi_%s.npz" % (datadir, lat))
 
     # prepare the fitting of data
     # 0 is single partivle correlation function
@@ -42,28 +47,27 @@ def main():
         corr.sym_and_boot(nboot)
         corr.shift(1)
         corr.gevp(1)
-        corr.save("%s/corr_pipi.npy" % (datadir))
+        corr.save("%s/corr_pipi_TP%d_%s.npy" % (datadir, d2, lat))
         ratio = corr.ratio(pi, 1)
-        ratio.save("%s/ratio_pipi.npy" % (datadir))
+        ratio.save("%s/ratio_pipi_TP%d_%s.npy" % (datadir, d2, lat))
     else:
-        corr = ana.Correlators.read("%s/corr_pipi.npy" % (datadir))
-        ratio = ana.Correlators.read("%s/ratio_pipi.npy" % (datadir))
-    add = np.ones((1500,)) * corr.shape[1]
+        corr = ana.Correlators.read("%s/corr_pipi_TP%d_%s.npy" % (datadir, d2, lat))
+        ratio = ana.Correlators.read("%s/ratio_pipi_TP%d_%s.npy" % (datadir, d2, lat))
 
     print("fitting")
-    #fitres = fitter.fit(start, ratio, [10, 16], corrid="dE", add=add, oldfit=pifit)
+    fitres = fitter.fit(start, ratio, [10, 16], corrid="dE", add=addT, oldfit=pifit)
 
     print("save")
     # save the fit result
-    #fitres.save("%s/fit_pipi.npz" % (datadir))
-    fitres = ana.FitResult.read("%s/fit_pipi.npz" % (datadir))
+    fitres.save("%s/fit_pipi_TP%d_%s.npz" % (datadir, d2, lat))
+    #fitres = ana.FitResult.read("%s/fit_pipi_TP%d_%s.npz" % (datadir, d2, lat))
     #fitres.print_data(0)
     fitres.print_data(1)
 
     # plot the result
     plotter = ana.LatticePlot("test_ratio.pdf")
     label = ["ratio", "x-axis", "y-axis", "ratio"]
-    plotter.plot(ratio, fitres, fitter, label, oldfit=pifit, add=add)
+    plotter.plot(ratio, label, fitres, fitter, oldfit=pifit, add=addT)
 
 if __name__ == '__main__':
     try:

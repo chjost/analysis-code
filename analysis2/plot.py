@@ -193,7 +193,7 @@ class LatticePlot(object):
             y1 = np.asarray(y1)
         plt.plot(x1, y1, "r", label=label)
 
-    def plot_data(self, X, Y, dY, label, plotrange=None):
+    def plot_data(self, X, Y, dY, label, plotrange=None, fmt="xb"):
         """A function that plots data.
 
         Parameters
@@ -218,10 +218,10 @@ class LatticePlot(object):
                 l = int(plotrange[0])
                 u = int(plotrange[1])
             # plot the data
-            plt.errorbar(X[l:u], Y[l:u], dY[l:u], fmt='x' + 'b', label = label)
+            plt.errorbar(X[l:u], Y[l:u], dY[l:u], fmt=fmt, label=label)
         else:
             # plot the data
-            plt.errorbar(X, Y, dY, fmt='x' + 'b', label=label)
+            plt.errorbar(X, Y, dY, fmt=fmt, label=label)
         plt.legend()
 
     def plot_histogram(self, data, data_weight, label, debug=0):

@@ -1,5 +1,4 @@
-#!/usr/bin/python2
-##!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
 ##!/usr/bin/python2
 
 import sys
@@ -18,9 +17,9 @@ def main():
     readsingledata = True
     readsinglefit = True
     plotsingle = False
-    readtwodata = True
-    readtwofit = True
-    plottwo = False
+    readtwodata = False
+    readtwofit = False
+    plottwo = True
 
     # get data from input file
     prefix = ens.get_data("path")
@@ -73,7 +72,12 @@ def main():
     if readtwodata == False:
         pipicorr = ana.Correlators(files, matrix=True)
         pipicorr.sym_and_boot(nboot)
-        pipicorr.shift(1)
+        if d2 != 0:
+            dE = pifit.error[1][0][1] - pifit.error[1][0][0]
+            print(dE)
+            pipicorr.shift(1, dE=dE)
+        else:
+            pipicorr.shift(1)
         pipicorr.gevp(1)
         pipicorr.save("%s/corr_pipi_TP%d_%s.npy" % (datadir, d2, lat))
     else:
@@ -99,9 +103,9 @@ def main():
         histo.histogram(pipifit, label, 1)
         del plotter, histo
 
-    diff = pipifit * pifit
-    for d in diff.data:
-        print(d.shape)
+    #diff = pipifit * pifit
+    #for d in diff.data:
+    #    print(d.shape)
 
 if __name__ == '__main__':
     try:

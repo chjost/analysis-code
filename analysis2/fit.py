@@ -293,8 +293,11 @@ class FitResult(object):
         if self.corr_num is None:
             raise RuntimeError("No place to store data, call create_empty first")
 
-        if len(index) == 1:
-            index = index[0]
+        try:
+            if len(index) == 1:
+                index = index[0]
+        except TypeError:
+            pass
         for n, la in enumerate(self.label):
             if np.array_equal(np.asarray(index), la):
                 return n

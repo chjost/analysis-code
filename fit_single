@@ -14,43 +14,51 @@ def main():
         ens = ana.LatticeEnsemble.parse(sys.argv[1])
 
     # read settings
-    readsingle = True
+    readsingle = False
 
     # get data from input file
     prefix = ens.get_data("path")
+    lat = ens.name()
     nboot = int(ens.get_data("nboot"))
     datadir = ens.get_data("datadir")
+    plotdir = ens.get_data("plotdir")
+    T = ens.T()
     files = ["%s/pi_corr_p%d.dat" % (prefix, d) for d in range(3)]
+    addT = np.ones((nboot,)) * T
 
     # prepare the fitting of data
     # 0 is single partivle correlation function
     # 1 is ratio fit
     # 2 is constant fit
     print("prepare fit")
-    fitter = ana.LatticeFit(2, True)
-    start = [0.3]
+    fitter = ana.LatticeFit(0, True)
+    start = [1., 0.3]
 
     if readsingle == False:
         corr = ana.Correlators(files, matrix=False)
         corr.sym_and_boot(nboot)
-        corr.save("%s/corr_pi.npy" % (datadir))
+        corr.save("%s/corr_pi_%s.npy" % (datadir, lat))
     else:
-        corr = ana.Correlators.read("%s/corr_pi.npy" % (datadir))
-    corr.mass()
+        corr = ana.Correlators.read("%s/corr_pi_%s.npy" % (datadir, lat))
 
     print("fitting")
-    fitres = fitter.fit(start, corr, [[10,22], [10,20], [10,18]], corrid="epi")
+    fitres = fitter.fit(start, corr, [20, 30], corrid="epi", add=addT)
 
     print("save")
     # save the fit result
     fitres.save("%s/fit_pi.npz" % (datadir))
-    fitres.print_data(0)
-    #fitres.print_data(1)
+    #fitres.print_data(0)
+    fitres.print_data(1)
 
     # plot the result
-    plotter = ana.LatticePlot("test.pdf")
-    label = ["title", "x-axis", "y-axis", "pion"]
-    plotter.plot(corr, fitres, fitter, label)
+    plotter = ana.LatticePlot("%s/fit_pi_%s.pdf" % (plotdir, lat))
+    plotter.set_env(ylog=True)
+    label = ["single particle", "t", "C(t)", "pion"]
+    plotter.plot(corr, label, fitres, fitter, add=addT)
+    histo = ana.LatticePlot("%s/hist_fit_pi_%s.pdf" % (plotdir, lat))
+    label = ["pion energy", "E$_\pi$/a", "E$_\pi$"]
+    histo.histogram(fitres, label, 1)
+    del plotter, histo
 
 if __name__ == '__main__':
     try:
