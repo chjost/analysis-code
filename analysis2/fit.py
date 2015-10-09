@@ -9,7 +9,7 @@ import numpy as np
 from fit_routines import fit_comb, fit_single, calculate_ranges
 from in_out import read_fitresults, write_fitresults
 from functions import func_single_corr, func_ratio, func_const
-from statistics import compute_error, sys_error
+from statistics import compute_error, sys_error, sys_error_der
 
 class LatticeFit(object):
     def __init__(self, fitfunc, verbose=False):
@@ -415,95 +415,132 @@ class FitResult(object):
             print("correlator %s, %d fits" %(str(lab), nfits[i]))
             print("%.5f +- %.5f -%.5f +%.5f" % (r[i], rstd[i], rsys[i][0], rsys[i][1]))
 
-    def _setup_new(self, other):
-        # check whether the two objects have the same number of samples
-        nsam = self.data[0].shape[0]
-        # new object
-        obj = FitResult(self.corr_id + other.corr_id)
-        obj.derived=True
-        # get length of new object
-        lc = []
-        try:
-            lc.append(len(self.corr_num))
-            corr_num = self.corr_num
-        except TypeError:
-            lc.append(1)
-            corr_num = [self.corr_num]
-        try:
-            lc.append(len(other.corr_num))
-            corr_num = corr_num + other.corr_num
-        except TypeError:
-            lc.append(1)
-            corr_num.append(other.corr_num)
-        corriter = [[n for n in range(m)] for m in corr_num]
-        # create the shape of new object
-        dshape = []
-        oshape = []
-        for item in itertools.product(*corriter):
-            shape1 = self.data[self._get_index(item[:lc[0]])].shape
-            shape2 = other.data[other._get_index(item[lc[0]:])].shape
-            dshape.append((nsam, 1) + shape1[2:] + shape2[2:])
-            oshape.append((nsam,) + shape1[2:] + shape2[2:])
-        obj.create_empty(dshape, oshape, corr_num)
-        return obj
+    def calc_cot_delta(self, mass, parself=0, parmass=0):
+        """Calculate the cotangent of the scattering phase.
 
-    def _setup_new_comb(self, other):
-        pass
-
-    def __mul__(self, other, par1=0, par2=0):
-        if self.corr_id in other.corr_id:
-            # i don't know
-            pass
-            obj = self._setup_new_comb(other)
-        else:
-            obj = self._setup_new(other)
-        return obj
-
-class FitArray(np.ndarray):
-    """Subclass of numpy array."""
-    def __new__(subtype, shape, dtype=float, buffer=None, offset=0,
-          strides=None, order=None, corr_id=[], corr_num=[]):
-        """Creats a numpy array with two additional attributes.
-
-        For details on parameters not presented here, see numpy
-        documentation.
+        Warning
+        -------
+        This overwrites the data, so be careful to save the data before.
 
         Parameters
         ----------
-        shape : int of sequence of ints
-            The shape of the new array.
-        corr_id : sequence of str
-            Identifiers of the correlators already used.
-        corr_num : sequence of int
-            The number of the correlators used.
-
-        Returns
-        -------
-        obj : FitArray
-            The new array.
+        mass : FitResult
+            The masses of the single particles.
+        parself, parmass : int, optional
+            The parameters for which to do this.
         """
-        obj = np.ndarray.__new__(subtype, shape, dtype, buffer, offset, strides,
-                         order)
+        pass
 
-        obj.corr_id = corr_id
-        obj.corr_num = corr_num
+    def calc_scattering_length(self, mass, parself=0, parmass=0, L=24,
+            isratio=False):
+        """Calculate the scattering length.
+        This only makes sense for correlation functions with no momentum.
 
-        return obj
+        Warning
+        -------
+        This overwrites the data, so be careful to save the data before.
 
-    def __array_finalize__(self, obj):
-        if obj is None:
-            return
-        self.corr_id = getattr(obj, 'corr_id', [])
-        self.corr_num = getattr(obj, 'corr_num', [])
+        Parameters
+        ----------
+        mass : FitResult
+            The masses of the single particles.
+        parself, parmass : int, optional
+            The parameters for which to do this.
+        L : int
+            The spatial extend of the lattice.
+        isratio : bool
+            If self is already the ratio.
+        """
+        # we need the weight of both mass and self
+        self.calc_error()
+        mass.calc_error()
+        # get the mass of the single particles, assuming the
+        # first entry of the mass FitResults contains them.
+        _mass = mass.data[0][:,parmass]
+        _massweight = mass.weight[parmass][0]
+        _energy = self.data[0][:,parself]
+        _energyweight = self.weight[parself][0]
+        nsam = _mass.shape[0]
+        print(_mass.shape)
+        print(self.data[0].shape)
+        # Constants for the Luescher Function
+        c = [-2.837297, 6.375183, -8.311951]
+        # prefactor of the equation
+        pre = -4.*np.pi / (_mass * float(L*L*L))
+        self.scat_len = np.zeros((nsam, _mass.shape[-1], _energy.shape[-1]))
+        self.scat_len_w = np.zeros((_mass.shape[-1], _energy.shape[-1]))
+        # loop over fitranges of self
+        for i in range(_energy.shape[-1]):
+            # loop over fitranges of mass
+            for j in range(_mass.shape[-1]):
+                # loop over samples
+                for b in range(nsam):
+                    if isratio:
+                        p = np.asarray([pre[b,j]*c[1]/float(L*L),
+                            pre[b,j]*c[1]/float(L),
+                            pre[b,j],
+                            -1. * _energy[b,j,i]])
+                    else:
+                        p = np.asarray([pre[b,j]*c[1]/float(L*L),
+                            pre[b,j]*c[1]/float(L),
+                            pre[b,j],
+                            -1. * _energy[b,i]-2*_mass[b,j]])
+                    # find the roots of the polynomial
+                    root = np.roots(p)
+                    # sort by absolute value of imaginary part
+                    ind_root = np.argsort(np.fabs(root.imag))
+                    # the first entry is the wanted
+                    self.scat_len[b,j,i] = root[ind_root][0].real
+                    if isratio:
+                        self.scat_len_w[j,i] = _massweight[j] * _energyweight[j,i]
+                    else:
+                        self.scat_len_w[j,i] = _massweight[j] * _energyweight[i]
+        res, std, syst = sys_error_der(self.scat_len, self.scat_len_w)
+        print(res)
+        print(std)
+        print(syst)
 
-    #def __mul__(self, x):
-    #    return np.multiply(self, x)
+    #def _setup_new(self, other):
+    #    # check whether the two objects have the same number of samples
+    #    nsam = self.data[0].shape[0]
+    #    # new object
+    #    obj = FitResult(self.corr_id + other.corr_id)
+    #    obj.derived=True
+    #    # get length of new object
+    #    lc = []
+    #    try:
+    #        lc.append(len(self.corr_num))
+    #        corr_num = self.corr_num
+    #    except TypeError:
+    #        lc.append(1)
+    #        corr_num = [self.corr_num]
+    #    try:
+    #        lc.append(len(other.corr_num))
+    #        corr_num = corr_num + other.corr_num
+    #    except TypeError:
+    #        lc.append(1)
+    #        corr_num.append(other.corr_num)
+    #    corriter = [[n for n in range(m)] for m in corr_num]
+    #    # create the shape of new object
+    #    dshape = []
+    #    oshape = []
+    #    for item in itertools.product(*corriter):
+    #        shape1 = self.data[self._get_index(item[:lc[0]])].shape
+    #        shape2 = other.data[other._get_index(item[lc[0]:])].shape
+    #        dshape.append((nsam, 1) + shape1[2:] + shape2[2:])
+    #        oshape.append((nsam,) + shape1[2:] + shape2[2:])
+    #    obj.create_empty(dshape, oshape, corr_num)
+    #    return obj
 
-    #def __add__(self, x):
-    #    return np.add(self, x)
+    #def _setup_new_comb(self, other):
+    #    pass
 
-    #def __div__(self, x):
-    #    return np.div(self, x)
+    #def __mul__(self, other, par1=0, par2=0):
+    #    if self.corr_id in other.corr_id:
+    #        # i don't know
+    #        pass
+    #        obj = self._setup_new_comb(other)
+    #    else:
+    #        obj = self._setup_new(other)
+    #    return obj
 
-    #def __sub__(self, x):
-    #    return np.subtract(self, x)

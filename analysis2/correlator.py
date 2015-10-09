@@ -226,7 +226,8 @@ class Correlators(object):
         """
         return np.copy(self.data)
 
-    def ratio(self, single_corr, ratio=0, shift=1, single_corr1=None, useall=False):
+    def ratio(self, single_corr, ratio=0, shift=1, single_corr1=None,
+            useall=False, usecomb=None):
         """Calculates the ratio and returns a new Correlator object.
 
         The implemented ratios are:

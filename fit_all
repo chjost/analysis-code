@@ -14,9 +14,9 @@ def main():
         ens = ana.LatticeEnsemble.parse(sys.argv[1])
 
     # read settings
-    readsingledata = True
-    readsinglefit = True
-    plotsingle = False
+    readsingledata = False
+    readsinglefit = False
+    plotsingle = True
     readtwodata = False
     readtwofit = False
     plottwo = True

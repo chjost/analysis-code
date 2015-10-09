@@ -132,8 +132,6 @@ def sys_error_der(data, weights):
     res_syst : list
         1 sigma systematic uncertainty is the difference (res-16%-quantile)
         and (84%-quantile-res) respectively
-    weights : ndarray
-        The calculated weights for the data.
     """
     # initialize empty arrays
     res, res_std, res_sys = [], [], []
