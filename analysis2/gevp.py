@@ -35,6 +35,10 @@ def gevp_shift_1(data, dt, dE=None, axis=1, debug=0):
             print("axis not in range of the dimensions. Not doing anything")
         return data
 
+    # if dt is zero, don't shift
+    if dt is 0:
+        return data
+
     # calculate shape of the new matrix
     dshape = np.asarray(data.shape)
     dshape[axis] -= dt
@@ -42,11 +46,7 @@ def gevp_shift_1(data, dt, dE=None, axis=1, debug=0):
     # weighting of the matrix
     if dE:
         for t in range(data.shape[axis]):
-            data[:,t] = np.exp(dE*t) * data[:,t]
-
-    # if dt is zero, don't shift
-    if dt is 0:
-        return data
+            data[:,t] = data[:,t] * np.exp(dE*t)
 
     # create the new array
     sdata = np.zeros(dshape)
@@ -55,6 +55,10 @@ def gevp_shift_1(data, dt, dE=None, axis=1, debug=0):
     for i in range(dshape[axis]):
         sdata[:,i] = data[:,i] - data[:,i+dt]
 
+    # reweighting of the matrix to cancel
+    if dE:
+        for t in range(dshape[axis]):
+            sdata[:,t] = sdata[:,t] * np.exp(-dE*t)
     # return shifted matrix
     return sdata
 
