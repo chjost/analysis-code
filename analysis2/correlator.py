@@ -251,6 +251,9 @@ class Correlators(object):
         useall : bool
             Using all correlators in the single particle correlator or
             use just the lowest.
+        usecomb : list of list of ints
+            The combinations of entries of single_corr (and single_corr1)
+            to use.
         
         Returns
         -------
@@ -273,12 +276,12 @@ class Correlators(object):
         if single_corr1 is None:
             obj = Correlators(debug=self.debug)
             obj.data = ratiofunc(self.data, single_corr.data, single_corr.data,
-                shift, useall)
+                shift, useall, usecomb)
             obj.shape = obj.data.shape
         else:
             obj = Correlators(debug=self.debug)
             obj.data = ratiofunc(self.data, single_corr.data, single_corr1.data,
-                shift, useall)
+                shift, useall, usecomb)
             obj.shape = obj.data.shape
         return obj
 

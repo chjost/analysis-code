@@ -28,7 +28,7 @@ def simple_ratio(d1, d2, d3):
     # ratio = d1/(d2*d3)
     return ratio
 
-def ratio_shift(d1, d2, d3, shift=1, useall=False):
+def ratio_shift(d1, d2, d3, shift=1, dE=None, useall=False, usecomb=None):
     """Calculates a simple ratio of three data sets.
 
     Calculates d1(t)/(d2(t)*d3(t) - d2(t+shift)*d3(t+shift)).
@@ -43,28 +43,47 @@ def ratio_shift(d1, d2, d3, shift=1, useall=False):
         The denominator of the ratio, at least 3D.
     shift : int, optional
         The number of slices that d2 and d3 are shifted.
+    dE : {None, float}, optional
+        The exponent of the weight used for d1.
     useall : bool, optional
         Use all correlators of d2 and d3 or just the first.
+    usecomb : list of list of ints
+        The combinations of d2 and d3 entries to use for d1 entries.
 
     Returns
     -------
     ndarray:
         The calculated ratio.
     """
+    if usecomb is not None and useall is True:
+        raise RuntimeError("Cannot use useall and usecomb simultaneously")
     # create array from dimensions of the data
     rshape = list(d1.shape)
     if (d2.shape[1] - shift) > rshape[1]:
         raise RuntimeError("The ratio with shift %d cannot be computed" % shift)
     ratio = np.zeros(rshape)
-    for _s in range(rshape[0]):
+    for i, _s in enumerate(range(rshape[0])):
         for _t in range(rshape[1]):
             # calculate ratio
             if useall:
-                ratio[_s,_t] = d1[_s,_t] / (d2[_s,_t]*d3[_s,_t] -
-                    d2[_s,_t+shift]*d3[_s,_t+shift])
+                d = d2[_s,_t]*d3[_s,_t] - d2[_s,_t+shift]*d3[_s,_t+shift]
             else:
-                ratio[_s,_t] = d1[_s,_t] / (d2[_s,_t,0]*d3[_s,_t,0] -
-                    d2[_s,_t+shift,0]*d3[_s,_t+shift,0])
+                if usecomb is None:
+                    d = (d2[_s,_t,0]*d3[_s,_t,0] - 
+                        d2[_s,_t+shift,0]*d3[_s,_t+shift,0])
+                else:
+                    if dE is None:
+                        d = (d2[_s,_t,usecomb[i][0]] * 
+                            d2[_s,_t,usecomb[i][1]] -
+                            d2[_s,_t+shift,usecomb[i][0]] *
+                            d2[_s,_t+shift,usecomb[i][1]])
+                    else:
+                        d = (d2[_s,_t,usecomb[i][0]] * 
+                            d2[_s,_t,usecomb[i][1]] * np.exp(dE*_t) -
+                            d2[_s,_t+shift,usecomb[i][0]] *
+                            d2[_s,_t+shift,usecomb[i][1]] *
+                            np.exp(dE * (_t+shift))) * np.exp(-dE*_t)
+            ratio[_s,_t] = d1[_s,_t] / d
     return ratio
 
 def simple_ratio_subtract(d1, d2, d3):
