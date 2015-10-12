@@ -1,4 +1,5 @@
-#!/usr/bin/python
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+##!/usr/bin/python2
 ################################################################################
 #
 # Author: Christian Jost (jost@hiskp.uni-bonn.de)
@@ -28,83 +29,115 @@
 
 import os
 import numpy as np
+import ConfigParser
 
-import analysis as ana
+import analysis2 as ana
+
+def parse_input():
+    """Parse the input file."""
+    config = ConfigParser.SafeConfigParser()
+    opts = {}
+    opts["debug"] = config.getint("main", "debug")
+    opts["inputpath"] = config.get("main", "inputpath")
+    opts["outputpath"] = config.get("main", "outputpath")
+    opts["pimax"] = config.getint("main", "pimax")
+    opts["cmfmax"] = config.getint("main", "cmfmax")
+    opts["mfmax"] = config.getint("main", "mfmax")
+    opts["confmax"] = config.getint("main", "confmax")
+    opts["confmin"] = config.getint("main", "confmin")
+    opts["confstep"] = config.getint("main", "confstep")
 
 def main():
-    # needed variables
-    #inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/sum/pi_corr_p0.conf"
-    #outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/pi_corr_p0"
-    #inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_6rnd/sum/"
-    #outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_6rnd/"
-    inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D30/sum/"
-    outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D30/"
-    filelist = ["pi_corr_p%d" % (x) for x in xrange(4)]
-    filelist += ["pipi_pipi_A1_corr_TP0_%02d" % (x) for x in [00, 01, 02, 10, 11, 12, 20, 21, 22]]
-    filelist += ["pipi_pipi_A1_corr_TP1_%02d" % (x) for x in [00, 01, 10, 11]]
-    filelist += ["pipi_pipi_A1_corr_TP2_%02d" % (x) for x in [00, 01, 10, 11]]
-    filelist += ["pipi_pipi_A1_corr_TP3_%02d" % (x) for x in [00, 01, 10, 11]]
-    #inputpath="/hiskp2/helmes/contractions/A60.24/k-k_test_C4/strange_0225/merged/"
-    #outputpath="/hiskp2/helmes/contractions/A60.24/k-k_test_C4/strange_0225/merged/"
-    #filelist = ["C2_k"]
-    #filelist += ["C4_%d" % (x) for x in [1,2,3,4]]
-    #for p in xrange(4):
-    #    filelist += ["pipi_pipi_A1_corr_TP%01d_%02d" % (p,x) for x in 
-    #                 [00, 01, 02, 10, 11, 12, 20, 21, 22]]
+    # check for input file
+    if len(os.sys.argv) < 2:
+        # no input file, generate sample
+        print("no input file specified, creating example")
+        config = ConfigParser.SafeConfigParser()
+        config.add_section("main")
+        config.set("main", "debug", "0")
+        config.set("main", "inputpath", "./")
+        config.set("main", "outputpath", "./")
+        config.set("main", "pimax", "4")
+        config.set("main", "cmfmax", "3")
+        config.set("main", "mfmax", "2")
+        config.set("main", "confmax", "385")
+        config.set("main", "confmin", "300")
+        config.set("main", "confstep", "4")
+        config.set("main", "missing", "384")
+        fi = open("example.cfg", "w")
+        config.write(fi)
+        os.sys.exit(-1)
+
+    # parse the input file for variables
+    config = ConfigParser.SafeConfigParser()
+    config.read(os.sys.argv[1])
+    debug = config.getint("main", "debug")
+    inputpath = config.get("main", "inputpath")
+    outputpath = config.get("main", "outputpath")
+    pimax = config.getint("main", "pimax")
+    cmfmax = config.getint("main", "cmfmax")
+    mfmax = config.getint("main", "mfmax")
+    confmax = config.getint("main", "confmax")
+    confmin = config.getint("main", "confmin")
+    confstep = config.getint("main", "confstep")
+    # workaround: missing needs ints, config reads strings
+    miss = config.get("main", "missing").split(",")
+    missing = []
+    for m in miss:
+        missing.append(int(m))
+    #debug = 1
+    #inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D30/sum/"
+    #outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D30/"
+    #pimax = 4
+    #cmfmax = 3
+    #mfmax = 2
+    #missing = [384, 388, 392, 396, 412, 416, 420, 424, 428]
+    #confmin = 300
+    #confmax = 445
+    #confstep = 4
+
+    filelist = ["pi_corr_p%d" % (x) for x in xrange(pimax)]
+    filelist += ["pipi_pipi_A1_corr_TP0_%1d%1d" % (i, j) for i in range(cmfmax)
+        for j in range(cmfmax)]
+    filelist += ["pipi_pipi_A1_corr_TP1_%1d%1d" % (i, j) for i in range(mfmax)
+        for j in range(mfmax)]
+    filelist += ["pipi_pipi_A1_corr_TP2_%1d%1d" % (i, j) for i in range(mfmax)
+        for j in range(mfmax)]
+    filelist += ["pipi_pipi_A1_corr_TP3_%1d%1d" % (i, j) for i in range(mfmax)
+        for j in range(mfmax)]
     suffix=".dat"
-    #missing = [292, 328, 388, 444, 516, 524, 556]
-    #missing += [40, 48, 56, 64, 80, 88]
-    missing = [328, 336]
     inputlist = []
-    for i in range(312, 381, 4):
+    for i in range(confmin, confmax, confstep):
         if i in missing:
             continue
         inputlist.append(".conf%04d" % i)
-    #for i in range(90, 160, 4):
-    #    if i in missing:
-    #        continue
-    #    inputlist.append(".conf%04d" % i)
-    #inputlist = []
-    #for i in range(600, 3104, 8):
-    #    if i in missing:
-    #        continue
-    #    inputlist.append("_c%04d" % i)
-    #print(inputpath)
-    #print(outputpath)
-    #print(filelist)
-    print(len(filelist))
-    print(len(inputlist))
-    #return
+    if debug > 0:
+        print("number of files: %d" % len(filelist))
+        print("number of configs: %d" % len(inputlist))
+    if debug > 1:
+        print(inputpath)
+        print(outputpath)
+    if debug > 2:
+        print(filelist)
+        print(inputlist)
+        print(missing)
 
     for d in filelist:
+        fnames = []
+        for i in inputlist:
+            fnames.append("".join((inputpath, d, i, suffix)))
+        if debug > 2:
+            print(fnames)
         # read in data
-        # read in the first file to create all variables
-        corrs = ana.read_data_ascii( "".join((inputpath, d, inputlist[0], suffix)) )
-        #corrs = ana.read_data_ascii( "".join((inputpath, d, inputlist[0], suffix)),(0,) )
-        _nbcfg = corrs.shape[0]
-        _t = corrs.shape[1]
-        # loop over the remaining files and append to the first data set
-        for _i in inputlist[1:]:
-            # read in file
-            _ctmp = ana.read_data_ascii("".join((inputpath, d, _i, suffix)))
-            #_ctmp = ana.read_data_ascii("".join((inputpath, d, _i, suffix)), (0,))
-            _nbtmp = _ctmp.shape[0]
-            _ttmp = _ctmp.shape[1]
-            # check whether time extend is the same
-            if _t != _ttmp:
-                print("ERROR: the time extend of two files is not the same. Returning...")
-                return
-            # append the correlation function
-            #corrs = np.append(corrs, _ctmp)
-            corrs = np.concatenate((corrs, _ctmp))
-            # add number of configurations
-            _nbcfg += _nbtmp
+        corrs = ana.Correlators(fnames, matrix=False)
+        corrs.data = np.rollaxis(corrs.data, 1, 0)
+        corrs.data = np.rollaxis(corrs.data, 2, 0)
 
         # print to file
-        ana.write_data_ascii(corrs, "".join((outputpath, d, suffix)), verbose=False)
-        #print(corrs)
-        print("".join((outputpath, d, suffix)))
-        print(corrs.shape)
+        outname = "".join((outputpath, d, suffix))
+        if debug > 1:
+            print("save data to %s" % outname)
+        corrs.save(outname, asascii=True)
 
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':

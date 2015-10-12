@@ -205,7 +205,7 @@ def write_data_ascii(data, filename, verbose=False):
     # generate format string
     fmt = ('%.0f',) + ('%.14f',) * _data[0].size
     # write data to file
-    savetxt(filename, _fdata, header=head, comments='', fmt=fmt)
+    np.savetxt(filename, _fdata, header=head, comments='', fmt=fmt)
 
 def read_data_ascii(filename, column=(1,), noheader=False, skip=0,
         verbose=False):
