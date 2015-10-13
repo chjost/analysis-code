@@ -40,11 +40,11 @@ from matplotlib.backends.backend_pdf import PdfPages
 import analysis as ana
 def main():
     # number of bootstrap samples
-    nbsamples = 500
+    nbsamples = 1000
     # temporal lattice extent
     tmin = 1
-    T = 48
-    L = 24
+    T = 64
+    L = 32
     # Strange quark masses and unitary kaon mass
     #mk_unit = 0.26695
     #dmk_unit = 0.00052
@@ -53,16 +53,16 @@ def main():
     #B-ensemble strange quark masses
     #amu_s = [0.016, 0.01861, 0.021]
     p_zero = np.asarray([0,0,0])
-    amu_s = [0.0225]
+    amu_s = [0.0225,0.02464]
     #ensemblelist = ['A60.24/','A80.24/']
-    ensemblelist = ['A40.24/']
+    ensemblelist = ['A30.32/']
     filelist = ['k_corr_p0.dat','kk_A1_TP0_00.dat']
     #filelist = ['C2.dat','kpi_4.dat']
-    pathroot = "/hiskp2/helmes/k-k-scattering/tests/3_rnd_vec/"
-    #pathroot ="/hiskp2/helmes/k-k-scattering/"
+    #pathroot = "/hiskp2/helmes/k-k-scattering/tests/5_rnd_vec/"
+    pathroot ="/hiskp2/helmes/k-k-scattering/"
     for ens in ensemblelist:
-        datapath = pathroot+ens+"data/"
-        cachepath = pathroot+ens+"cache/"
+        datapath = pathroot+"data/"+ens
+        cachepath = pathroot+"data/cache/"
         #print datapath
         #Numpy array to hold all data at end
         m_k_dat = [] #np.zeros((len(amu_s), nbsamples))
@@ -71,20 +71,22 @@ def main():
         save_res.write("amu_s\tm_k d_stat(m_k) +d_sys(m_k) -d_sys(m_k)\t delE d_stat(delE) +d_sys(delE) -d_sys(delE)\ta_kk d_stat(a_kk) +d_sys(a_kk) -d_sys(a_kk)\tm_k*a_kk d_stat(m_k*a_kk) +d_sys(m_k*a_kk) -dsys(m_k*a_kk)\n") 
         for s in range(0,len(amu_s)):
             # need two cachepaths
-            name_cache_k = cachepath
-            name_cache_kk = cachepath
-            #name_cache_k = cachepath+ens[:-1]+"_"+str(amu_s[s])[3:]+"_"+filelist[0]
-            #name_cache_kk = cachepath+ens[:-1]+"_"+str(amu_s[s])[3:]+"_"+filelist[1]
+            #name_cache_k = cachepath
+            #name_cache_kk = cachepath
+            name_cache_k = cachepath+ens[:-1]+"_"+str(amu_s[s])[3:]+"_"+filelist[0]
+            name_cache_kk = cachepath+ens[:-1]+"_"+str(amu_s[s])[3:]+"_"+filelist[1]
+            print name_cache_k
             #set up paths for data read in and result storage
-            #path = datapath+"amu_s_"+str(amu_s[s])[3:]+"/"
-            path = datapath
+            path = datapath+"amu_s_"+str(amu_s[s])[3:]+"/"
+            #path = datapath
             print path
+            tmp_out = pathroot+"plots/"+ens
             #tmp_out = pathroot+"plots/"+ens+"amu_s_"+str(amu_s[s])[3:]
-            tmp_out = pathroot+ens+"plots/"
+            #tmp_out = pathroot+ens+"plots/"
             # start with usual analysis (thermal states contamination expected)
             fitfunc = lambda p,t: 10e6 if p[1] < 0.0 else 0.5*p[0]*p[0]*(np.exp(-p[1]*t) + np.exp(-p[1]*(T-t)))
             par_mass = [1.]
-            par_ratio = [2.,0.1]
+            par_ratio = [1.,1.]
             massfunc = lambda p, t: p
             
             T2=int(T/2)+1
@@ -128,8 +130,7 @@ def main():
             mass, mmass, dmass = ana.compute_mass(bsamples_k, True)
             # ana.scan_fit_range(massfunc, tlist_corr,mass, par_mass)
             # TODO: set two points more than wanted for upper limit
-            ranges = ana.set_fit_interval(mass, [9], [30], 7)
-            
+            ranges = ana.set_fit_interval(mass, [9], [25], 16)
             # For mass use one parameter fit
             # res has shape (nb_samples, nb_pars, ncorr, nb_fitranges)
             print ens[:-1], amu_s[s]
@@ -164,7 +165,6 @@ def main():
             #----- Calc 4 pt mean correlator and effective mass ---------------
 
             label = ["KK 4pt func", "time", "C4(t)", "data", ""]
-            up=23
             pfit = PdfPages("%s%sC4_%s_plot.pdf" % (tmp_out,"m_eff_",str(amu_s[s]))) 
             ana.plot_data_with_fit(tlist_corr, corr_kk_data, d_kk_data, massfunc, [0], [1,T2-2], label, pfit, logscale=True )
             label[2] = "m_eff_4pt(t)"
@@ -178,6 +178,10 @@ def main():
 
             R_boot, R_mean, R_stdev, = ana.simple_ratio_subtract(bsamples_kk, bsamples_k, bsamples_k)
             label = ["Ratio K-K", "time", "R(t)", "data", ""]
+            # plot mean ratio
+            pfit = PdfPages("./A30_mean_Ratio_%s.pdf" % str(amu_s[s]))
+            ana.plot_data(tlist_ratio, R_mean, R_stdev, pfit, label,[1,T2-2])
+            pfit.close()
             # define the ratiofunction, Using fitted energies seems to make more
             # sense
             ratio = lambda p, t, e : p[0]*(np.cosh(p[1]*(t-T/2))+np.sinh(p[1]*(t-T/2))/(np.tanh(2*e*(t-T/2))))
@@ -189,7 +193,7 @@ def main():
               # define fit ranges
                 # res_R has shape (nb_samples, nb_pars, n_corr, nb_ranges1 *
                 # nb_ranges2)
-                ranges1 = ana.set_fit_interval(R_boot,[13],[31],8)
+                ranges1 = ana.set_fit_interval(R_boot,[13],[31],18)
                 res_R, chi2_R, pvals_R = ana.genfit_comb(R_boot,ranges1,ranges,
                     ratio,par_ratio,res,
                     1,ens[:-1],label,tmp_out,
@@ -203,6 +207,7 @@ def main():
                 prefix,par=1,
                 path=tmp_out,
                 boot = True)
+            print weights_del_E
             print("delE +/- d_stat(del_E) + d_sys(del_E) -d_sys(del_E)\n%f +/- %f +%f -%f\n" 
                 %(del_E_w[0][0][0], ddel_E_stat[0][0], ddel_E_sys[0][0][0], ddel_E_sys[0][0][1]))
 
@@ -211,6 +216,7 @@ def main():
 
             # calculate Scattering length
             a_kk = ana.calc_scat_length_bare(del_E_w, m_k_w, L)
+            print a_kk[0][0][0]
 
 
             #------------------------- m_k*a_kk -------------------------------
@@ -219,6 +225,8 @@ def main():
             ma_k = np.multiply(a_kk, m_k_w)
             scat_length_path = datapath + "mk_a0_" + str(amu_s[s])[3:] + ".npy" 
             ana.write_data(ma_k, scat_length_path)
+            print ma_k.shape
+            print "M_K a_KK = %f +/- %f" % (  ma_k[0][0][0], np.std(ma_k[0][0]))
 
 
             #save_res.write("%f\t%f %f +%f -%f\t%f +/- %f +%f -%f\t%f +/- %f +%f -%f\t%f +/- %f +%f -%f\n"

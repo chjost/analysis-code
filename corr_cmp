@@ -1,0 +1,148 @@
+#!/usr/bin/python
+################################################################################
+#
+# Author: Christian Jost (jost@hiskp.uni-bonn.de),
+#         Christopher Helmes (helmes@hiskp.uni-bonn.de)
+# Date:   October 2015
+#
+# Copyright (C) 2015 Christian Jost, Christopher Helmes
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Function: A short comparison of 2 pt and 4 pt correlation functions.
+#
+# For informations on input parameters see the description of the function.
+#
+################################################################################
+
+import matplotlib
+matplotlib.use('Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+import numpy as np
+import math
+import analysis as ana
+
+def main():
+  ## definition of some variables
+    nbsamples = 500
+    T = 48
+    T2 = int(T/2)+1
+    massfunc = lambda p, t: p
+
+    # get mean correlators of 2 and 4pt function to compare
+
+    cmp_quant = ["3_rnd_vec/A40.24/data/","4_rnd_vec/A40.24/data/","5_rnd_vec/A40.24/data/"]
+    nb_obs = len(cmp_quant)
+    path = "/hiskp2/helmes/k-k-scattering/tests/"
+    plotpath = path+"plots/"
+    # Arrays for different configuration subsets
+    # shape is ( nb_quant, time, dat_type)
+    mean_corr_2pt = np.zeros((nb_obs, T2-2, 2))
+    mean_corr_4pt = np.zeros((nb_obs, T2-2, 2)) 
+    for _e in range(0,nb_obs):
+        name_2pt = path+cmp_quant[_e]+"k_corr_p0.dat"
+        name_4pt = path+cmp_quant[_e]+"kk_A1_TP0_00.dat"
+        print ("Reading:\n%s\n%s" % (name_2pt, name_4pt))
+        corrs_2pt = ana.read_data_ascii(name_2pt)
+        corrs_4pt = ana.read_data_ascii(name_4pt)
+
+        bsamples_2pt =  ana.sym_and_boot(corrs_2pt,nbsamples)
+        bsamples_4pt =  ana.sym_and_boot(corrs_4pt,nbsamples)
+
+        corr_2pt_data, d_2pt_data = ana.calc_error(bsamples_2pt)
+        corr_4pt_data, d_4pt_data = ana.calc_error(bsamples_4pt)
+
+        # compute effective masses
+        m_eff_2pt, mm_eff_2pt, err_m_eff_2pt = ana.compute_mass(bsamples_2pt) 
+        m_eff_4pt, mm_eff_4pt, err_m_eff_4pt = ana.compute_mass(bsamples_4pt)
+        print mm_eff_2pt, mm_eff_4pt
+        # plot effective masses
+        save_plt = "%s%s%sm_eff.pdf" % ( path, cmp_quant[_e][:-5],"plots/") 
+        pfit = PdfPages(save_plt)
+        print "Save effective mass plot to %s" % save_plt
+
+        tlist_corr = np.linspace(0., float(T2-2), float(T2-2), endpoint=False)
+        label_2pt = ["Effective Mass", "time", "m_eff_2pt(t)", "2pt", cmp_quant[_e]]
+        label_4pt = ["Effective Mass", "time", "m_eff_4pt(t)", "4pt", cmp_quant[_e]]
+
+        ana.plot_data(tlist_corr, mm_eff_2pt, err_m_eff_2pt,pfit, label_2pt, [1,T2])
+        ana.plot_data(tlist_corr, mm_eff_4pt, err_m_eff_4pt,pfit, label_4pt, [1,T2])
+        pfit.close()
+
+        # append stuff to array
+        #mean_corr_2pt [_e,:, 0] = corr_2pt_data
+        #mean_corr_2pt [_e,:, 1] = d_2pt_data   
+        #mean_corr_4pt [_e,:, 0] = corr_4pt_data
+        #mean_corr_4pt [_e,:, 1] = d_4pt_data   
+        mean_corr_2pt [_e,:, 0] = mm_eff_2pt
+        mean_corr_2pt [_e,:, 1] = err_m_eff_2pt
+        mean_corr_4pt [_e,:, 0] = mm_eff_4pt
+        mean_corr_4pt [_e,:, 1] = err_m_eff_4pt
+
+    # relative error
+    rel_err_2pt = np.divide(mean_corr_2pt[:,:,1], mean_corr_2pt[:,:,0])
+    rel_err_4pt = np.divide(mean_corr_4pt[:,:,1], mean_corr_4pt[:,:,0])
+    print rel_err_2pt[0].shape, rel_err_4pt[1].shape
+
+    # Noise to signal ratios i vs j configs
+    nsr_2pt = np.divide(rel_err_2pt[0], rel_err_2pt[1] )
+    nsr_4pt = np.divide(rel_err_4pt[0], rel_err_4pt[1] )
+
+    # plot mean and stdev
+    tlist_corr = np.linspace(0., float(T2-2), float(T2-2), endpoint=False)
+    # zeros for the y-error in the plots
+    dY = np.zeros_like(nsr_2pt)
+    print len(tlist_corr)
+    pfit = PdfPages("%s%s_plot.pdf" % (plotpath,"rel_err_"))
+    for _e in range(0,nb_obs):
+        rnd_lbl = cmp_quant[_e][0]+"rnd vecs"
+        label_2pt = ["rel_error", "time", "dm_eff_2pt(t)/m_eff_2pt(t)", rnd_lbl, cmp_quant[_e]]
+        label_4pt = ["rel_error", "time", "dm_eff_4pt(t)/m_eff_4pt(t)", rnd_lbl, cmp_quant[_e]]
+
+        ana.plot_data(tlist_corr, rel_err_2pt[_e],dY,pfit, label_2pt, [1,T2])
+        ana.plot_data(tlist_corr, rel_err_4pt[_e],dY,pfit, label_4pt, [1,T2])
+    pfit.close()
+    
+    label_2pt = ["Ratio rel. errors", "time", "NSR_2pt(t)", "3:4 rnd vecs", cmp_quant[0] +" : "+ cmp_quant[2]]
+    label_4pt = ["Ratio rel. errors", "time", "NSR_4pt(t)", "3:4 rnd vecs", cmp_quant[0] +" : "+ cmp_quant[2]]
+    pfit = PdfPages("%s%s_plot.pdf" % (plotpath,"NSR_"))
+    ana.plot_data(tlist_corr, nsr_2pt, dY, pfit, label_2pt, [1,T2])
+    ana.plot_data(tlist_corr, nsr_4pt, dY, pfit, label_4pt, [1,T2])
+    pfit.close()
+    #for a in range(0,2):
+    #    for b in range(0,2):
+    #        if ( a == b ):
+    #            continue
+    #        if (a < b):
+    #            i, j = cmp_quant[b], cmp_quant[a]
+    #            #rat = math.sqrt(float(j)/float(i))
+    #            label_2pt = ["Stat. error growth 2pt", "time", "NSR_hi/NSR_low", "data", "#cfg: "+str(i)+" vs. "+str(j)]
+    #            label_4pt = ["Stat. error growth 4pt", "time", "NSR_hi/NSR_low", "data", "#cfg: "+str(i)+" vs. "+str(j)]
+    #            nsr_2pt = np.divide(rel_err_2pt[b], rel_err_2pt[a] )
+    #            nsr_4pt = np.divide(rel_err_4pt[b], rel_err_4pt[a] )
+    #            ana.corr_fct(tlist_corr, nsr_2pt, [1,T2], label_2pt, pfit)
+    #            ana.corr_fct(tlist_corr, nsr_4pt, [1,T2], label_4pt, pfit)
+    #            #ana.corr_fct(tlist_corr, rel_err_4pt, [1,T2], label_4pt, pfit)
+    #pfit.close()
+
+
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+  try:
+    main()
+  except KeyboardInterrupt:
+    print("Keyboard Interrupt")

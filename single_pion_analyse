@@ -36,7 +36,7 @@ import analysis as ana
 
 def main():
     ## definition of some variables
-    nbsamples = 100
+    nbsamples = 1000
     #inputpath="/hiskp2/helmes/contractions/A40.24/kaon/strange_225/merged/"
     #outputpath="/hiskp2/helmes/contractions/A40.24/kaon/strange_225/merged/scratch/"
     inputpath="/hiskp2/helmes/contractions/B55.32/pi_single/merged/"

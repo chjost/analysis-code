@@ -50,29 +50,29 @@ def main():
     rootpath = '/hiskp2/helmes/k-k-scattering/plots/overview/light_qmd/'
     datapath = rootpath+'data/'
     # Ensemble name
-    ensemble = ['A40.24/','A60.24/','A80.24/','A100.24/']
+    ensemble = ['A30.32/','A40.24/','A60.24/','A80.24/','A100.24/']
     #ensemble = ['A40.24/']
     # A-ensemble strange quark masses
     amu_s = np.asarray([0.0185,0.0225,0.02464])
-    amu_l = np.array([[0.004],[0.006],[0.008],[0.01]])
+    amu_l = np.array([[0.003],[0.004],[0.006],[0.008],[0.01]])
     nb_mu_s = len(amu_s)
     # unitary kaon masses and decay constants from eta eta` paper
     # A40.24  0.25884(43)
     # A60.24  0.26695(52) 
     # A80.24  0.27706(61)
     #A100.24  0.28807(34)
-    fk_unit = np.array([[0.07432, 0.0057], [0.07699 ,0.0046],
+    fk_unit = np.array([[0.07658,0.00032],[0.07432, 0.0057], [0.07699 ,0.0046],
                [0.07886 ,0.0046], [0.0805 ,0.0051]])
     # transform M_K^phys to lattice units for each ensemble by M_K^lat =
     # M_K^lat = 0.5 fm * a/r_0 * M_K^phys / hc
-    r0_a = [[5.178,0.044],[5.209,0.058],
+    r0_a = [[5.127,0.030],[5.178,0.044],[5.209,0.058],
            [4.989,0.040],[4.864,0.021]]
     hc = [197.326968]
     lat_spac = np.divide(0.5,r0_a)
     M_K_pdg = [493.677,0.016] 
     mk_phys = np.divide(np.multiply(lat_spac,M_K_pdg),hc)
     print mk_phys
-    mk_unit = np.array([[0.25884,0.00043], [0.26695,0.00052],
+    mk_unit = np.array([[0.25150,0.00029],[0.25884,0.00043], [0.26695,0.00052],
                [0.27706,0.00061], [0.28807,0.00034]])
 
     nb=[0,1,2,3]
@@ -83,9 +83,9 @@ def main():
     print mk_by_fk
     # arrayfor final results stores for each ensemble light quark mass, amu_s
     # from matching,unitary mass and mk_akk from interpolation
-    amu_s_ipol = np.zeros((4,2)) 
-    akk_mk_match = np.zeros((4,2))
-    fk_ipol = np.zeros((4,2))
+    amu_s_ipol = np.zeros((5,2)) 
+    akk_mk_match = np.zeros((5,2))
+    fk_ipol = np.zeros((5,2))
     # loop over Ensembles
     for (ens, idx ,mk_match_sq) in zip(ensemble,nb,mk_match):
         
@@ -112,6 +112,9 @@ def main():
             mk = ana.read_data(infile_mk)
   
             # Append read in results to arrays.
+            if(ma_kk.shape != ma_kk_sum[0].shape):
+              ma_kk = np.resize(ma_kk,(1500))
+              mk = np.resize(mk,(1500))
             ma_kk_sum[:,s] = ma_kk
             mk_sq_sum[:,s] = np.square(mk)
         
@@ -195,14 +198,14 @@ def main():
         # Plot original data together with statistical error and the constant unitary
         # mass
         # Savepaths
-        pltout_mk_sq = plt_path+"mk_sq_ph_chiral.pdf"
-        pltout_ma_kk = plt_path+"ma_kk_ph_chiral.pdf"
+        pltout_mk_sq = plt_path+"mk_sq_unit_chiral.pdf"
+        pltout_ma_kk = plt_path+"ma_kk_unit_chiral.pdf"
         # PDFplots
         pdf_mk = PdfPages(pltout_mk_sq) 
         pdf_ma_kk = PdfPages(pltout_ma_kk) 
         # Labels
         label_mk_sq = [r'Chiral behaviour of $M_K$',r'$a\mu_s$',r'$(aM_K)^2$',
-            ens[:-1],r'linear fit',r'$(aM_K^{\mathrm{phys}})^2$',
+            ens[:-1],r'linear fit',r'$(aM_K^{\mathrm{unit}})^2$',
                        r'$a\mu_s^{\mathrm{K}}$']
         label_ma_kk = [r'Chiral behaviour of $a_0M_K$',r'$a\mu_s$',r'$a_0M_K$',
             ens[:-1],r'lin. ipol',r'$a_0M_K$',
