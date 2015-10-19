@@ -32,7 +32,7 @@ class LatticeFit(object):
             self.fitfunc = fitfunc
 
     def fit(self, start, corr, ranges, corrid="", add=None, oldfit=None,
-            oldfitpar=None, useall=False, debug=0):
+            oldfitpar=None, useall=False, step=2, min_size=4, debug=0):
         """Fits fitfunc to a Correlators object.
 
         The predefined functions describe a single particle correlation
@@ -61,6 +61,10 @@ class LatticeFit(object):
         useall : bool
             Using all correlators in the single particle correlator or
             use just the lowest.
+        step : int, optional
+            The steps in the loops.
+        min_size : int, optional
+            The minimal size of the interval.
         debug : int, optional
             The amount of info printed.
 
@@ -75,7 +79,8 @@ class LatticeFit(object):
             # get the fitranges
             dshape = corr.shape
             ncorr = dshape[-1]
-            franges, fshape = calculate_ranges(ranges, dshape)
+            franges, fshape = calculate_ranges(ranges, dshape, step=step,
+                    min_size=min_size, debug=debug)
 
             # prepare storage
             fitres = FitResult(corrid)
@@ -98,7 +103,8 @@ class LatticeFit(object):
             # handle the fitranges
             dshape = corr.shape
             oldranges, oldshape = oldfit.get_ranges()
-            franges, fshape = calculate_ranges(ranges, dshape, oldshape)
+            franges, fshape = calculate_ranges(ranges, dshape, oldshape,
+                    step=step, min_size=min_size, debug=debug)
 
             # generate the shapes for the data
             shapes_data = []
@@ -124,7 +130,7 @@ class LatticeFit(object):
             # do the fitting
             if add is None:
                 for res in fit_comb(self.fitfunc, start, corr, franges, fshape,
-                        oldfit, oldfitpar, debug=debug):
+                        oldfit, None, oldfitpar, debug=debug):
                     fitres.add_data(*res)
             else:
                 for res in fit_comb(self.fitfunc, start, corr, franges, fshape,
@@ -413,7 +419,7 @@ class FitResult(object):
         r, rstd, rsys, nfits = self.error[par]
         for i, lab in enumerate(self.label):
             print("correlator %s, %d fits" %(str(lab), nfits[i]))
-            print("%.5f +- %.5f -%.5f +%.5f" % (r[i], rstd[i], rsys[i][0], rsys[i][1]))
+            print("%.5f +- %.5f -%.5f +%.5f" % (r[i][0], rstd[i], rsys[i][0], rsys[i][1]))
 
     def calc_cot_delta(self, mass, parself=0, parmass=0):
         """Calculate the cotangent of the scattering phase.
@@ -430,6 +436,46 @@ class FitResult(object):
             The parameters for which to do this.
         """
         pass
+
+    def calc_dE(self, mass, parself=0, parmass=0):
+        """Calculate dE from own data and the mass of the particles.
+
+        Parameters
+        ----------
+        mass : FitResult
+            The masses of the single particles.
+        parself, parmass : int, optional
+            The parameters for which to do this.
+        """
+        # we need the weight of both mass and self
+        self.calc_error()
+        mass.calc_error()
+        # get the mass of the single particles, assuming the
+        # first entry of the mass FitResults contains them.
+        _ma = mass.data[0][:,parmass]
+        _ma_w = mass.weight[parmass][0]
+        _dE = []
+        _dE_w = []
+        nsamples = self.data[0].shape[0]
+        for i, d in enumerate(self.data):
+            # create the empty arrays
+            _dE.append(np.zeros((nsamples,)+_ma.shape[1:]+d.shape[2:]))
+            _dE_w.append(np.zeros(_ma.shape[1:]+d.shape[2:]))
+            len1 = len(_ma.shape[1:])
+            # iterate over the new array
+            niter = [[x for x in range(n)] for n in _dE[-1].shape[1:]]
+            for item in itertools.product(*niter):
+                s = d[(slice(None), parself)+item[len1:]]
+                a = _ma[(slice(None),)+item[:len1]]
+                _dE[-1][(slice(None),)+item] = s - 2. * a
+                _dE_w[-1][item] = (_ma_w[item[:len1]] *
+                        self.weight[parself][i][item[len1:]])
+        self.dE = _dE
+        self.dE_w = _dE_w
+        res, std, syst = sys_error_der(self.dE, self.dE_w)
+        print(res)
+        print(std)
+        print(syst)
 
     def calc_scattering_length(self, mass, parself=0, parmass=0, L=24,
             isratio=False):
@@ -461,14 +507,14 @@ class FitResult(object):
         _energy = self.data[0][:,parself]
         _energyweight = self.weight[parself][0]
         nsam = _mass.shape[0]
-        print(_mass.shape)
         print(self.data[0].shape)
+        print(mass.data[0].shape)
         # Constants for the Luescher Function
         c = [-2.837297, 6.375183, -8.311951]
         # prefactor of the equation
         pre = -4.*np.pi / (_mass * float(L*L*L))
-        self.scat_len = np.zeros((nsam, _mass.shape[-1], _energy.shape[-1]))
-        self.scat_len_w = np.zeros((_mass.shape[-1], _energy.shape[-1]))
+        self.scat_len = [np.zeros((nsam, _mass.shape[-1], _energy.shape[-1]))]
+        self.scat_len_w = [np.zeros((_mass.shape[-1], _energy.shape[-1]))]
         # loop over fitranges of self
         for i in range(_energy.shape[-1]):
             # loop over fitranges of mass
@@ -490,57 +536,13 @@ class FitResult(object):
                     # sort by absolute value of imaginary part
                     ind_root = np.argsort(np.fabs(root.imag))
                     # the first entry is the wanted
-                    self.scat_len[b,j,i] = root[ind_root][0].real
+                    self.scat_len[0][b,j,i] = root[ind_root][0].real
                     if isratio:
-                        self.scat_len_w[j,i] = _massweight[j] * _energyweight[j,i]
+                        self.scat_len_w[0][j,i] = _massweight[j] * _energyweight[j,i]
                     else:
-                        self.scat_len_w[j,i] = _massweight[j] * _energyweight[i]
+                        self.scat_len_w[0][j,i] = _massweight[j] * _energyweight[i]
         res, std, syst = sys_error_der(self.scat_len, self.scat_len_w)
         print(res)
         print(std)
         print(syst)
-
-    #def _setup_new(self, other):
-    #    # check whether the two objects have the same number of samples
-    #    nsam = self.data[0].shape[0]
-    #    # new object
-    #    obj = FitResult(self.corr_id + other.corr_id)
-    #    obj.derived=True
-    #    # get length of new object
-    #    lc = []
-    #    try:
-    #        lc.append(len(self.corr_num))
-    #        corr_num = self.corr_num
-    #    except TypeError:
-    #        lc.append(1)
-    #        corr_num = [self.corr_num]
-    #    try:
-    #        lc.append(len(other.corr_num))
-    #        corr_num = corr_num + other.corr_num
-    #    except TypeError:
-    #        lc.append(1)
-    #        corr_num.append(other.corr_num)
-    #    corriter = [[n for n in range(m)] for m in corr_num]
-    #    # create the shape of new object
-    #    dshape = []
-    #    oshape = []
-    #    for item in itertools.product(*corriter):
-    #        shape1 = self.data[self._get_index(item[:lc[0]])].shape
-    #        shape2 = other.data[other._get_index(item[lc[0]:])].shape
-    #        dshape.append((nsam, 1) + shape1[2:] + shape2[2:])
-    #        oshape.append((nsam,) + shape1[2:] + shape2[2:])
-    #    obj.create_empty(dshape, oshape, corr_num)
-    #    return obj
-
-    #def _setup_new_comb(self, other):
-    #    pass
-
-    #def __mul__(self, other, par1=0, par2=0):
-    #    if self.corr_id in other.corr_id:
-    #        # i don't know
-    #        pass
-    #        obj = self._setup_new_comb(other)
-    #    else:
-    #        obj = self._setup_new(other)
-    #    return obj
 

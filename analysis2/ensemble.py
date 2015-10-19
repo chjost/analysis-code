@@ -67,7 +67,7 @@ class LatticeEnsemble(object):
         # get all other options
         if config.has_section("strings"):
             for opt in config.options("strings"):
-                obj.data.update({opt: config.get("strings", opt)}) 
+                obj.data.update({opt: config.get("strings", opt, 1)}) 
         if config.has_section("ints"):
             for opt in config.options("ints"):
                 obj.data.update({opt: config.getint("ints", opt)}) 

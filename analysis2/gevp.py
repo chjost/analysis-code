@@ -5,7 +5,7 @@ Functions for the GEVP and similar functions.
 import numpy as np
 import scipy.linalg as spla
 
-def gevp_shift_1(data, dt, dE=None, axis=1, debug=0):
+def gevp_shift_1(data, dt, dE=None, debug=0):
     """Weight-shift the correlation function matrix.
 
     This is based on the paper by Dudek et al, Phys.Rev. D86, 034031 (2012).
@@ -28,37 +28,34 @@ def gevp_shift_1(data, dt, dE=None, axis=1, debug=0):
     ndarray
         The shifted array.
     """
-    # check whether axis is in the number of dimension
-    ndim = data.ndim
-    if axis > ndim or axis < 0:
-        if debug > 0:
-            print("axis not in range of the dimensions. Not doing anything")
-        return data
-
     # if dt is zero, don't shift
     if dt is 0:
         return data
 
     # calculate shape of the new matrix
     dshape = np.asarray(data.shape)
-    dshape[axis] -= dt
+    dshape[1] -= dt
 
     # weighting of the matrix
-    if dE:
-        for t in range(data.shape[axis]):
-            data[:,t] = data[:,t] * np.exp(dE*t)
+    if dE is not None:
+        for t in range(dshape[1]):
+            weight = np.exp(dE*t)
+            for b in range(dshape[0]):
+                data[b,t] = data[b,t] * weight[b]
 
     # create the new array
     sdata = np.zeros(dshape)
 
     # fill the new array
-    for i in range(dshape[axis]):
+    for i in range(dshape[1]):
         sdata[:,i] = data[:,i] - data[:,i+dt]
 
     # reweighting of the matrix to cancel
-    if dE:
-        for t in range(dshape[axis]):
-            sdata[:,t] = sdata[:,t] * np.exp(-dE*t)
+    if dE is not None:
+        for t in range(dshape[1]):
+            weight = np.exp(-dE*t)
+            for b in range(dshape[0]):
+                sdata[b,t] = sdata[b,t] * weight[b]
     # return shifted matrix
     return sdata
 

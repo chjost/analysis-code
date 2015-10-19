@@ -178,11 +178,11 @@ class Correlators(object):
             return
 
         if shift == 1:
-            self.data = gevp.gevp_shift_1(self.data, dt, dE, 1, self.debug)
+            self.data = gevp.gevp_shift_1(self.data, dt, dE, self.debug)
         elif dE is None:
             raise ValueError("dE is mandatory for the second implemented shift")
         else:
-            self.data = gevp.gevp_shift_2(self.data, dt, dE, 1, self.debug)
+            self.data = gevp.gevp_shift_2(self.data, dt, dE, self.debug)
         self.shape = self.data.shape
 
     def gevp(self, t0):

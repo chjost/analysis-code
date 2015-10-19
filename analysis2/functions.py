@@ -107,8 +107,8 @@ def func_ratio(p, t, o):
     * p0 is the amplitude
     * p1 is the energy difference
     * t is the time,
-    * o0 is the time extent of the lattice, and
-    * o1 is the single particle energy.
+    * o1 is the time extent of the lattice, and
+    * o0 is the single particle energy.
 
     Parameters
     ----------
@@ -124,8 +124,8 @@ def func_ratio(p, t, o):
     float
         The result.
     """
-    return p[0]*(np.cosh(p[1]*(t-o[0]-1.))+np.sinh(p[1]*(t-o[0]/2.))/
-            (np.tanh(2.*o[1]*(t-o[0]/2.))))
+    return p[0]*(np.cosh(p[1]*(t-o[0]/2.+0.5))+np.sinh(p[1]*(t-o[0]/2.+0.5))/
+            (np.tanh(2.*o[0]*(t-o[1]/2.+0.5))))
 
 def func_const(p, t):
     """A constant function.

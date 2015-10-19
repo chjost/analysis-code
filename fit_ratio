@@ -15,7 +15,7 @@ def main():
         ens = ana.LatticeEnsemble.parse(sys.argv[1])
 
     # read settings
-    readratio = False
+    readratio = True
 
     # get data from input file
     prefix = ens.get_data("path")
@@ -25,21 +25,21 @@ def main():
     gmax = int(ens.get_data("gmax"))
     plotdir = ens.get_data("plotdir")
     d2 = ens.get_data("d2")
-    T = ens.T()
+    T2 = ens.T2()
     files = ["%s/pipi_pipi_A1_corr_TP0_%d%d.dat" % (prefix, i, j) for i in range(gmax) for j in range(gmax)]
-    addT = np.ones((nboot,)) * T
+    addT2 = np.ones((nboot,)) * T2
 
     # read pion data
     pi = ana.Correlators.read("%s/corr_pi_%s.npy" % (datadir, lat))
     pifit = ana.FitResult.read("%s/fit_pi_%s.npz" % (datadir, lat))
 
     # prepare the fitting of data
-    # 0 is single partivle correlation function
+    # 0 is single particle correlation function
     # 1 is ratio fit
     # 2 is constant fit
     print("prepare fit")
     fitter = ana.LatticeFit(1, True)
-    start = [1., 0.3]
+    start = [1., 0.01]
 
     print("prepare ratio")
     if readratio == False:
@@ -55,19 +55,25 @@ def main():
         ratio = ana.Correlators.read("%s/ratio_pipi_TP%d_%s.npy" % (datadir, d2, lat))
 
     print("fitting")
-    fitres = fitter.fit(start, ratio, [10, 16], corrid="dE", add=addT, oldfit=pifit)
+    fitres = fitter.fit(start, ratio, [[6, T2], [10,17], [10,17]], corrid="dE",
+            add=addT2, oldfit=pifit, min_size=6)
 
     print("save")
     # save the fit result
-    fitres.save("%s/fit_pipi_TP%d_%s.npz" % (datadir, d2, lat))
-    #fitres = ana.FitResult.read("%s/fit_pipi_TP%d_%s.npz" % (datadir, d2, lat))
-    #fitres.print_data(0)
+    fitres.save("%s/fit_pipi_ratio_TP%d_%s.npz" % (datadir, d2, lat))
+    #fitres = ana.FitResult.read("%s/fit_pipi_ratio_TP%d_%s.npz" % (datadir, d2, lat))
+    fitres.print_data(0)
     fitres.print_data(1)
 
     # plot the result
-    plotter = ana.LatticePlot("test_ratio.pdf")
-    label = ["ratio", "x-axis", "y-axis", "ratio"]
-    plotter.plot(ratio, label, fitres, fitter, oldfit=pifit, add=addT)
+    plotter = ana.LatticePlot("%s/fit_ratio_%s.pdf" % (plotdir, lat))
+    #plotter.set_env(ylog=True)
+    label = ["ratio", "t", "R(t)", "dE"]
+    plotter.plot(ratio, label, fitres, fitter, oldfit=pifit, add=addT2)
+    histo = ana.LatticePlot("%s/hist_fit_ratio_%s.pdf" % (plotdir, lat))
+    label = ["ratio", "dE$_\pi$/a", "dE$_\pi$"]
+    histo.histogram(fitres, label, 1)
+    del plotter, histo
 
 if __name__ == '__main__':
     try:
