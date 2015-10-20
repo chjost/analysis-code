@@ -44,17 +44,25 @@ def main():
 
     # get mean correlators of 2 and 4pt function to compare
 
-    cmp_quant = ["3_rnd_vec/A40.24/data/","4_rnd_vec/A40.24/data/","5_rnd_vec/A40.24/data/"]
+    cmp_quant = ["3_rnd_vec/data/","4_rnd_vec/data/","5_rnd_vec/data/"]
     nb_obs = len(cmp_quant)
-    path = "/hiskp2/helmes/k-k-scattering/tests/"
-    plotpath = path+"plots/"
+    path_pipi = "/hiskp2/helmes/pi-pi-scattering/tests/A40.24/"
+    path_kk = "/hiskp2/helmes/k-k-scattering/tests/A40.24/"
+    plotpath_pi = path_pipi+"plots/"
+    plotpath_k = path_kk+"plots/"
     # Arrays for different configuration subsets
     # shape is ( nb_quant, time, dat_type)
     mean_corr_2pt = np.zeros((nb_obs, T2-2, 2))
-    mean_corr_4pt = np.zeros((nb_obs, T2-2, 2)) 
+    mean_corr_4pt = np.zeros((nb_obs, T2-2, 2))
+    rat_array = np.zeros((nb_obs, T2-1))
+    rel_err_c2 = np.zeros((nb_obs, T2))
+    rel_err_c4 = np.zeros_like(rel_err_c2)
+    tlist_corr = np.linspace(0., float(T2-2), float(T2-2), endpoint=False)
     for _e in range(0,nb_obs):
-        name_2pt = path+cmp_quant[_e]+"k_corr_p0.dat"
-        name_4pt = path+cmp_quant[_e]+"kk_A1_TP0_00.dat"
+        name_pi_2pt = path_pipi+cmp_quant[_e]+"pi_corr_p0.dat"
+        name_2pt = path_kk+cmp_quant[_e]+"k_corr_p0.dat"
+        name_pi_4pt = path_pipi+cmp_quant[_e]+"pipi_A1_TP0_00.dat"
+        name_4pt = path_kk+cmp_quant[_e]+"kk_A1_TP0_00.dat"
         print ("Reading:\n%s\n%s" % (name_2pt, name_4pt))
         corrs_2pt = ana.read_data_ascii(name_2pt)
         corrs_4pt = ana.read_data_ascii(name_4pt)
@@ -69,8 +77,12 @@ def main():
         m_eff_2pt, mm_eff_2pt, err_m_eff_2pt = ana.compute_mass(bsamples_2pt) 
         m_eff_4pt, mm_eff_4pt, err_m_eff_4pt = ana.compute_mass(bsamples_4pt)
         print mm_eff_2pt, mm_eff_4pt
+
+        # compute ratio (C4/C2^2)(dt+1/2)
+        rat, mean_rat, err_rat = ana.simple_ratio_subtract(bsamples_4pt,
+                                               bsamples_2pt,bsamples_2pt)
         # plot effective masses
-        save_plt = "%s%s%sm_eff.pdf" % ( path, cmp_quant[_e][:-5],"plots/") 
+        save_plt = "%s%s%sm_eff.pdf" % ( path_kk, cmp_quant[_e][:-5],"plots/") 
         pfit = PdfPages(save_plt)
         print "Save effective mass plot to %s" % save_plt
 
@@ -91,6 +103,11 @@ def main():
         mean_corr_2pt [_e,:, 1] = err_m_eff_2pt
         mean_corr_4pt [_e,:, 0] = mm_eff_4pt
         mean_corr_4pt [_e,:, 1] = err_m_eff_4pt
+        rel_err_c2 [_e,:] = np.divide(d_2pt_data,corr_2pt_data)
+        rel_err_c4 [_e,:] = np.divide(d_4pt_data,corr_4pt_data)
+        rat_array [_e,:] = np.divide(err_rat,rat[0])
+
+
 
     # relative error
     rel_err_2pt = np.divide(mean_corr_2pt[:,:,1], mean_corr_2pt[:,:,0])
@@ -98,15 +115,14 @@ def main():
     print rel_err_2pt[0].shape, rel_err_4pt[1].shape
 
     # Noise to signal ratios i vs j configs
-    nsr_2pt = np.divide(rel_err_2pt[0], rel_err_2pt[1] )
-    nsr_4pt = np.divide(rel_err_4pt[0], rel_err_4pt[1] )
+    nsr_2pt = np.divide(rel_err_2pt[1], rel_err_2pt[2] )
+    nsr_4pt = np.divide(rel_err_4pt[1], rel_err_4pt[2] )
 
     # plot mean and stdev
-    tlist_corr = np.linspace(0., float(T2-2), float(T2-2), endpoint=False)
     # zeros for the y-error in the plots
     dY = np.zeros_like(nsr_2pt)
     print len(tlist_corr)
-    pfit = PdfPages("%s%s_plot.pdf" % (plotpath,"rel_err_"))
+    pfit = PdfPages("%s%s_plot.pdf" % (plotpath_k,"rel_err_"))
     for _e in range(0,nb_obs):
         rnd_lbl = cmp_quant[_e][0]+"rnd vecs"
         label_2pt = ["rel_error", "time", "dm_eff_2pt(t)/m_eff_2pt(t)", rnd_lbl, cmp_quant[_e]]
@@ -116,12 +132,43 @@ def main():
         ana.plot_data(tlist_corr, rel_err_4pt[_e],dY,pfit, label_4pt, [1,T2])
     pfit.close()
     
-    label_2pt = ["Ratio rel. errors", "time", "NSR_2pt(t)", "3:4 rnd vecs", cmp_quant[0] +" : "+ cmp_quant[2]]
-    label_4pt = ["Ratio rel. errors", "time", "NSR_4pt(t)", "3:4 rnd vecs", cmp_quant[0] +" : "+ cmp_quant[2]]
-    pfit = PdfPages("%s%s_plot.pdf" % (plotpath,"NSR_"))
+    label_2pt = ["Ratio rel. errors", "time", "NSR_2pt(t)", "4:5 rnd vecs", cmp_quant[0] +" : "+ cmp_quant[2]]
+    label_4pt = ["Ratio rel. errors", "time", "NSR_4pt(t)", "4:5 rnd vecs", cmp_quant[0] +" : "+ cmp_quant[2]]
+    pfit = PdfPages("%s%s_plot.pdf" % (plotpath_k,"NSR_"))
     ana.plot_data(tlist_corr, nsr_2pt, dY, pfit, label_2pt, [1,T2])
     ana.plot_data(tlist_corr, nsr_4pt, dY, pfit, label_4pt, [1,T2])
     pfit.close()
+
+    # Average relative error of correlators and ratio over time extent for all three random vector
+    # numbers
+    corr_2pt_avg_t = np.asarray([ana.calc_error(mc2) for mc2 in mean_corr_2pt])
+    corr_4pt_avg_t = np.asarray([ana.calc_error(mc4) for mc4 in mean_corr_4pt])
+    print rat_array.shape
+    #ratio_avg_t = np.asarray([ana.calc_error(ra,0) for ra in rat_array])
+    #print ratio_avg_t[:,0]
+    # plot all random vectors in one plot
+
+    plt_label=[r'$N_R=3$',r'$N_R=4$',r'$N_R=5$']
+    rat_label = [r'rel_error',r'$t+0.5$',r'dR/R',plt_label]
+    c2_label = [r'rel_error',r'$t$',r'dC_2/C_2',plt_label]
+    c4_label = [r'rel_error',r'$t$',r'dC_4/C4',plt_label]
+    tlist_rat = np.linspace(0.5, float(T2-0.5), float(T2-1), endpoint=False)
+    print tlist_rat
+    print rat_array
+    rnd_cmp = PdfPages("%s%s_plot.pdf" %(plotpath_k, "C2_err_cmp"))
+    print rel_err_c2.shape
+    ana.plot_data(tlist_corr, rel_err_c2,np.zeros(23), rnd_cmp,
+                  rat_label, plotrange=[2,T2-2])
+    rnd_cmp.close()
+    rnd_cmp = PdfPages("%s%s_plot.pdf" %(plotpath_k, "C4_err_cmp"))
+    ana.plot_data(tlist_corr, rel_err_c4,np.zeros(23), rnd_cmp,
+                  rat_label, plotrange=[1,T2-2])
+    rnd_cmp.close()
+    rnd_cmp = PdfPages("%s%s_plot.pdf" %(plotpath_k, "err_cmp"))
+    ana.plot_data(tlist_rat, rat_array,np.zeros(25), rnd_cmp,
+                  rat_label, plotrange=[2,T2-1])
+    rnd_cmp.close()
+ 
     #for a in range(0,2):
     #    for b in range(0,2):
     #        if ( a == b ):

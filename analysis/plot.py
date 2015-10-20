@@ -85,7 +85,7 @@ def plot_data_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
     plt.title(label[0])
     plt.xlabel(label[1])
     plt.ylabel(label[2])
-    plt.legend(loc='best',framealpha=0.75)
+    plt.legend(loc='best')
     if pval is not None:
         # x and y position of the label
         x = np.max(X) * 0.7
@@ -153,7 +153,11 @@ def plot_data(X, _Y, dY, pdfplot, label, plotrange=None, logscale=False, xlim=No
             u = int(plotrange[1])
         # plot the data
         print l,u
-        p1 = plt.errorbar(X[l:u], Y[0,l:u], dY[l:u], marker='x', color='teal',linestyle='', label=label[3])
+        col=['red','blue','black']
+        for a,y in enumerate(Y):
+          p1 = plt.errorbar(X[l:u], y[l:u], dY[l:u], marker='x',
+              color=col[a],linestyle='', label=label[3][a])
+          print y[l:u]
     else:
         # plot the data
         p1 = plt.errorbar(X, Y, dY, marker='x', color='teal', linestyle='',  label=label[3])

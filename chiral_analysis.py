@@ -49,33 +49,49 @@ def main():
     
     rootpath = '/hiskp2/helmes/k-k-scattering/plots/overview/light_qmd/'
     datapath = rootpath+'data/'
-    # Ensemble name
-    ensemble = ['A30.32/','A40.24/','A60.24/','A80.24/','A100.24/']
-    #ensemble = ['A40.24/']
-    # A-ensemble strange quark masses
-    amu_s = np.asarray([0.0185,0.0225,0.02464])
-    amu_l = np.array([[0.003],[0.004],[0.006],[0.008],[0.01]])
-    nb_mu_s = len(amu_s)
+    ##-------------------- A Ensembles ----------------------------------------
+    ## name
+    # ensemble = ['A30.32/','A40.24/','A60.24/','A80.24/','A100.24/']
+    # ensemble = ['A40.24/']
+
+    ## strange quark masses
+    # amu_s = np.asarray([0.0185,0.0225,0.02464])
+    ## light masses
+    # amu_l = np.array([[0.003],[0.004],[0.006],[0.008],[0.01]])
+    ## unitary observables 
+    # fk_unit = np.array([[0.07658,0.00032],[0.07432, 0.0057], [0.07699 ,0.0046],
+    #           [0.07886 ,0.0046], [0.0805 ,0.0051]])
+    # r0_a = [[5.127,0.030],[5.178,0.044],[5.209,0.058],
+    #       [4.989,0.040],[4.864,0.021]]
+    # mk_unit = np.array([[0.25150,0.00029],[0.25884,0.00043], [0.26695,0.00052],
+    #           [0.27706,0.00061], [0.28807,0.00034]])
     # unitary kaon masses and decay constants from eta eta` paper
     # A40.24  0.25884(43)
     # A60.24  0.26695(52) 
     # A80.24  0.27706(61)
     #A100.24  0.28807(34)
-    fk_unit = np.array([[0.07658,0.00032],[0.07432, 0.0057], [0.07699 ,0.0046],
-               [0.07886 ,0.0046], [0.0805 ,0.0051]])
+
+    #------------------------------ B Ensembles -------------------------------
+    # name 
+    ensemble = ['B85.24/']
+    # strange quark masses
+    amu_s = np.asarray([0.016, 0.01861, 0.021])
+    # light masses
+    amu_l = np.array([0.0085])
+    # unitary observables
+    fk_unit = np.array([[0.07226,0.00042]])
+    r0_a = np.array([[5.493,0.041]])
+    mk_unit = np.array([[0.24392,0.00059]])
+    nb_mu_s = len(amu_s)
     # transform M_K^phys to lattice units for each ensemble by M_K^lat =
     # M_K^lat = 0.5 fm * a/r_0 * M_K^phys / hc
-    r0_a = [[5.127,0.030],[5.178,0.044],[5.209,0.058],
-           [4.989,0.040],[4.864,0.021]]
     hc = [197.326968]
     lat_spac = np.divide(0.5,r0_a)
     M_K_pdg = [493.677,0.016] 
     mk_phys = np.divide(np.multiply(lat_spac,M_K_pdg),hc)
     print mk_phys
-    mk_unit = np.array([[0.25150,0.00029],[0.25884,0.00043], [0.26695,0.00052],
-               [0.27706,0.00061], [0.28807,0.00034]])
 
-    nb=[0,1,2,3]
+    nb=[0]
     mk_match = mk_unit
     rat_mf = np.divide(mk_match[:,0],fk_unit[:,0])
     drat_mf = ana.err_prop_gauss(mk_match,fk_unit)
@@ -158,9 +174,9 @@ def main():
         
         # ----------------- linear interpolation of fk ------------------------ 
         # interpolate fk to amu_s value
-        OS_fk_y = OS_fk[np.logical_and(OS_fk[:,1]>0.02,OS_fk[:,1]<0.025),4]
+        OS_fk_y = OS_fk[np.logical_and(OS_fk[:,1]>0.015,OS_fk[:,1]<0.02),4]
         OS_fk_y = np.atleast_2d(OS_fk_y)
-        OS_fk_x = OS_fk[np.logical_and(OS_fk[:,1]>0.02,OS_fk[:,1]<0.025),1]
+        OS_fk_x = OS_fk[np.logical_and(OS_fk[:,1]>0.015,OS_fk[:,1]<0.02),1]
         fk_coeff = ana.ipol_lin(OS_fk_y,OS_fk_x)
         fk_coeff_match = ana.eval_lin(fk_coeff, b_roots_p1) 
         print("lin. i-pol.:\tf_K = %f +/- %f" % (fk_coeff_match[0], 0))
@@ -214,34 +230,37 @@ def main():
         # Plot the linear fit with its matched amu_s
         ana.plot_data_with_fit(amu_s, mk_sq_sum[0,:], mk_sq_std, linfit, p_mk_sq[0],
             None, label_mk_sq, pdf_mk, hconst = np.square(mk_match_sq),
-            vconst=(b_roots_fit[0],std_amu_s))
+            vconst=(b_roots_fit[0],std_amu_s),xlim=[0.01,0.025])
 
         # Plot the linear interpolation with its matched amu_s
         label_mk_sq[4] = r'linear ipol'
         ana.plot_data_with_fit(amu_s, mk_sq_sum[0,:], mk_sq_std, linfit, interp1[0],
             None, label_mk_sq, pdf_mk, hconst = np.square(mk_match_sq),
-            vconst=(b_roots_p1[0],std_amu_s_p1))
+            vconst=(b_roots_p1[0],std_amu_s_p1),xlim=[0.01,0.025])
+
 
         # Plot the quadratic interpolation with its matched amu_s
         label_mk_sq[4] = r'quadr. ipol'
         ana.plot_data_with_fit(amu_s, mk_sq_sum[0,:], mk_sq_std, sqfit, interp2[0],
             None, label_mk_sq, pdf_mk, hconst = np.square(mk_match_sq),
-            vconst=(b_roots_p2[0],std_amu_s_p2))
+            vconst=(b_roots_p2[0],std_amu_s_p2),xlim=[0.01,0.025])
 
         # Plot M_K * a_kk vs. amu_s
         # linear interpolation
         ana.plot_data_with_fit(amu_s, ma_kk_sum[0,:], ma_kk_std, linfit,
             a_k_ipol[0], None, label_ma_kk, pdf_ma_kk,
-            hconst = (a_kk_match[0],std_a_kk_match),vconst=(b_roots_p1[0],std_amu_s_p1))
+            hconst =
+            (a_kk_match[0],std_a_kk_match),vconst=(b_roots_p1[0],std_amu_s_p1),xlim=[0.01,0.025])
         # Plot the linear fit with its fitted amu_s
         ana.plot_data_with_fit(amu_s, ma_kk_sum[0,:], std_ma_k_fit,linfit,
             p_a_k[0],None,label_ma_kk,pdf_ma_kk,
-            hconst=(mak_fit[0],std_ma_k_fit),vconst=(b_roots_fit[0],std_amu_s))
+            hconst=(mak_fit[0],std_ma_k_fit),vconst=(b_roots_fit[0],std_amu_s),xlim=[0.01,0.025])
         # quadratic interpolation
         label_ma_kk[4] = r'qudr. ipol'
         ana.plot_data_with_fit(amu_s, ma_kk_sum[0,:], ma_kk_std, sqfit,
             a_k_ipol2[0], None, label_ma_kk, pdf_ma_kk,
-            hconst = (a_kk_match_q[0],a_kk_match_stat[1]),vconst=(b_roots_p2[0],std_amu_s_p2))
+            hconst =
+            (a_kk_match_q[0],a_kk_match_stat[1]),vconst=(b_roots_p2[0],std_amu_s_p2),xlim=[0.01,0.025])
         # Close pdf files
         pdf_mk.close() 
         pdf_ma_kk.close()

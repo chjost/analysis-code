@@ -40,11 +40,11 @@ from matplotlib.backends.backend_pdf import PdfPages
 import analysis as ana
 def main():
     # number of bootstrap samples
-    nbsamples = 1000
+    nbsamples = 500
     # temporal lattice extent
     tmin = 1
-    T = 64
-    L = 32
+    T = 48
+    L = 24
     # Strange quark masses and unitary kaon mass
     #mk_unit = 0.26695
     #dmk_unit = 0.00052
@@ -53,22 +53,26 @@ def main():
     #B-ensemble strange quark masses
     #amu_s = [0.016, 0.01861, 0.021]
     p_zero = np.asarray([0,0,0])
-    amu_s = [0.0225,0.02464]
+    amu_s = [0.0225]
     #ensemblelist = ['A60.24/','A80.24/']
-    ensemblelist = ['A30.32/']
+    ensemblelist = ['3_rnd_vec/','4_rnd_vec/','5_rnd_vec/']
     filelist = ['k_corr_p0.dat','kk_A1_TP0_00.dat']
     #filelist = ['C2.dat','kpi_4.dat']
     #pathroot = "/hiskp2/helmes/k-k-scattering/tests/5_rnd_vec/"
-    pathroot ="/hiskp2/helmes/k-k-scattering/"
+    pathroot ="/hiskp2/helmes/k-k-scattering/tests/A40.24/"
+
     for ens in ensemblelist:
-        datapath = pathroot+"data/"+ens
-        cachepath = pathroot+"data/cache/"
+        # Constructing all needed paths
+        datapath = pathroot+ens+"data/"
+        cachepath = pathroot+ens+"cache/"
+        plotpath = pathroot+ens+"plots/"
+
         #print datapath
         #Numpy array to hold all data at end
         m_k_dat = [] #np.zeros((len(amu_s), nbsamples))
         a_k_dat = [] #np.zeros((len(amu_s), nbsamples))
         save_res=open(datapath+"res.dat","w")
-        save_res.write("amu_s\tm_k d_stat(m_k) +d_sys(m_k) -d_sys(m_k)\t delE d_stat(delE) +d_sys(delE) -d_sys(delE)\ta_kk d_stat(a_kk) +d_sys(a_kk) -d_sys(a_kk)\tm_k*a_kk d_stat(m_k*a_kk) +d_sys(m_k*a_kk) -dsys(m_k*a_kk)\n") 
+        save_res.write("amu_s\tm_k d_stat(m_k) +d_sys(m_k) -d_sys(m_k)\t delE d_stat(delE) +d_sys(delE) -d_sys(delE)\ta_kk d_stat(a_kk)\tm_k*a_kk d_stat(m_k*a_kk)\n") 
         for s in range(0,len(amu_s)):
             # need two cachepaths
             #name_cache_k = cachepath
@@ -77,10 +81,10 @@ def main():
             name_cache_kk = cachepath+ens[:-1]+"_"+str(amu_s[s])[3:]+"_"+filelist[1]
             print name_cache_k
             #set up paths for data read in and result storage
-            path = datapath+"amu_s_"+str(amu_s[s])[3:]+"/"
+            path = datapath
             #path = datapath
             print path
-            tmp_out = pathroot+"plots/"+ens
+            tmp_out = plotpath
             #tmp_out = pathroot+"plots/"+ens+"amu_s_"+str(amu_s[s])[3:]
             #tmp_out = pathroot+ens+"plots/"
             # start with usual analysis (thermal states contamination expected)
@@ -90,7 +94,7 @@ def main():
             massfunc = lambda p, t: p
             
             T2=int(T/2)+1
-            tlist_corr = np.linspace(0., float(T2), float(T2), endpoint=False)
+            tlist_corr = np.linspace(0., float(T2-1), float(T2-1), endpoint=False)
             tlist_ratio = np.linspace(0.5, float(T2-0.5), float(T2-1), endpoint=False)
 
 
@@ -106,8 +110,8 @@ def main():
             else:
             # else read data anew
                 print("Starting from scratch")
-                corrs_k = ana.read_data_ascii("".join((path, filelist[0])))
-                corrs_kk = ana.read_data_ascii("".join((path, filelist[1])))
+                corrs_k = ana.read_data_ascii("".join((datapath, filelist[0])))
+                corrs_kk = ana.read_data_ascii("".join((datapath, filelist[1])))
                 nbcfg = corrs_k.shape[0]
                 # Create symmetrized bootstrap samples of 2pt and 4pt Corr-function
                 bsamples_k = ana.sym_and_boot(corrs_k, nbsamples)
@@ -122,6 +126,7 @@ def main():
             corr_kk_data, d_kk_data = ana.calc_error(bsamples_kk)
 
 
+
             #------------------- m_k from bsamples_k --------------------------
 
             label = ["Kaon m_eff", "time", "C(t)", "data", ""]
@@ -130,11 +135,12 @@ def main():
             mass, mmass, dmass = ana.compute_mass(bsamples_k, True)
             # ana.scan_fit_range(massfunc, tlist_corr,mass, par_mass)
             # TODO: set two points more than wanted for upper limit
-            ranges = ana.set_fit_interval(mass, [9], [25], 16)
+            ranges = ana.set_fit_interval(mass, [9], [25], 10)
             # For mass use one parameter fit
             # res has shape (nb_samples, nb_pars, ncorr, nb_fitranges)
-            print ens[:-1], amu_s[s]
-            prefix = "_"+ens[:-1]+str(amu_s[s])[3:]
+            print str(ens[:-1])
+            print amu_s[s]
+            prefix = "_"+str(ens[:-1])+str(amu_s[s])[3:]
 
             # Check and conditionally read cache of fit
             genfit_mass_cache = name_cache_k+"genfit_mass"
@@ -142,7 +148,7 @@ def main():
                 ranges, res, chi2, pval = ana.read_fitresults(genfit_mass_cache+".npz")
             else:
                 res, chi2, pval = ana.genfit(mass,ranges,massfunc,
-                    par_mass,1,prefix,np.asarray([0,0,0]),label,tmp_out,"mass",False)
+                    par_mass,1,prefix,np.asarray([0,0,0]),label,cachepath,"mass",False)
                 print len(ranges)
                 
                 # Save fit results
@@ -168,7 +174,7 @@ def main():
             pfit = PdfPages("%s%sC4_%s_plot.pdf" % (tmp_out,"m_eff_",str(amu_s[s]))) 
             ana.plot_data_with_fit(tlist_corr, corr_kk_data, d_kk_data, massfunc, [0], [1,T2-2], label, pfit, logscale=True )
             label[2] = "m_eff_4pt(t)"
-            m_eff_C4, mm_eff_C4, dm_eff_C4 = ana.compute_mass(bsamples_kk, False)
+            m_eff_C4, mm_eff_C4, dm_eff_C4 = ana.compute_mass(bsamples_kk, True)
             ana.plot_data_with_fit(tlist_corr, mm_eff_C4, dm_eff_C4, massfunc,
                 [0], [1,T2-2], label, pfit, False, False)
             pfit.close()
@@ -179,8 +185,8 @@ def main():
             R_boot, R_mean, R_stdev, = ana.simple_ratio_subtract(bsamples_kk, bsamples_k, bsamples_k)
             label = ["Ratio K-K", "time", "R(t)", "data", ""]
             # plot mean ratio
-            pfit = PdfPages("./A30_mean_Ratio_%s.pdf" % str(amu_s[s]))
-            ana.plot_data(tlist_ratio, R_mean, R_stdev, pfit, label,[1,T2-2])
+            pfit = PdfPages("./A40_orig_Ratio_%s.pdf" % str(amu_s[s]))
+            ana.plot_data(tlist_ratio, R_boot[0], R_stdev, pfit, label,[1,T2-2])
             pfit.close()
             # define the ratiofunction, Using fitted energies seems to make more
             # sense
@@ -193,7 +199,7 @@ def main():
               # define fit ranges
                 # res_R has shape (nb_samples, nb_pars, n_corr, nb_ranges1 *
                 # nb_ranges2)
-                ranges1 = ana.set_fit_interval(R_boot,[13],[31],18)
+                ranges1 = ana.set_fit_interval(R_boot,[9],[T2-1],10)
                 res_R, chi2_R, pvals_R = ana.genfit_comb(R_boot,ranges1,ranges,
                     ratio,par_ratio,res,
                     1,ens[:-1],label,tmp_out,
@@ -217,6 +223,8 @@ def main():
             # calculate Scattering length
             a_kk = ana.calc_scat_length_bare(del_E_w, m_k_w, L)
             print a_kk[0][0][0]
+            mean_a_kk, std_a_kk = ana.calc_error(a_kk[0][0])
+
 
 
             #------------------------- m_k*a_kk -------------------------------
@@ -226,15 +234,15 @@ def main():
             scat_length_path = datapath + "mk_a0_" + str(amu_s[s])[3:] + ".npy" 
             ana.write_data(ma_k, scat_length_path)
             print ma_k.shape
-            print "M_K a_KK = %f +/- %f" % (  ma_k[0][0][0], np.std(ma_k[0][0]))
+            mean_mak, std_mak = ana.calc_error(ma_k[0][0])
+            print "M_K a_KK = %f +/- %f" % (  mean_mak, std_mak)
 
 
-            #save_res.write("%f\t%f %f +%f -%f\t%f +/- %f +%f -%f\t%f +/- %f +%f -%f\t%f +/- %f +%f -%f\n"
-            #  %(amu_s[s],
-            #  m_k_w[0], dm_stat[0], dm_sys[0][0], dm_sys[0][1], 
+            #save_res.write("%f\t%f %f +%f -%f\t%f +/- %f +%f -%f\t%f +/- %f\t%f +/- %f\n" 
+            #  %(amu_s[s], m_k_w[0], dm_stat[0], dm_sys[0][0], dm_sys[0][1], 
             #  del_E_w[0][0], ddel_E_stat[0][0], ddel_E_sys[0][0][0],ddel_E_sys[0][0][1],
-            #  a_kk_w[0][0], a_kk_stat[0][0], a_kk_sys[0][0][0], a_kk_sys[0][0][1],
-            #  ma_k_w[0][0], ma_k_stat[0][0], ma_k_sys[0][0][0], ma_k_sys[0][0][1]))
+            #  mean_a_kk.astype(float), std_a_kk.astype(float),
+            #  mean_mak.astype(float), std_mak.astype(float)))
 
         
         save_res.close()
