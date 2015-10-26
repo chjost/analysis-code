@@ -49,7 +49,7 @@ def main():
     suffix=".dat"
     missing = []
     inputlist = []
-    for i in range(716,1112, 4):
+    for i in range(1112,1512, 4):
         if i in missing:
             continue
         inputlist.append("_c%04d" % i)
