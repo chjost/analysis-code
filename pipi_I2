@@ -17,15 +17,10 @@ def main():
     # read settings
 
     # get data from input file
-    prefix = ens.get_data("path")
     lat = ens.name()
-    nboot = ens.get_data("nboot")
     datadir = ens.get_data("datadir")
     plotdir = ens.get_data("plotdir")
-    gmax = ens.get_data("gmax")
     d2 = ens.get_data("d2")
-    T = ens.T()
-    addT = np.ones((nboot,)) * T
 
     # single particle correlator
     print("read single particle corrs")
@@ -38,20 +33,27 @@ def main():
 
     # two particle correlator
     print("\n\nread ratio")
-    ratiocorr = ana.Correlators.read("%s/ratio_pipi_TP%d_%s.npy" % (datadir, d2, lat))
-    ratiofit = ana.FitResult.read("%s/fit_pipi_ratio_TP%d_%s.npz" % (datadir, d2, lat))
-    ratiofit.print_data(1)
-    print(ratiofit.weight[1])
-    print("dE best fits")
-    #print(ratiofit.weight[1][0][11])
-    #print(ratiofit.data[0][0,:,11])
-    #print(ratiofit.weight[1][1][9])
-    #print(ratiofit.data[1][0,:,9])
-    #print(ratiofit.weight[1][2][5])
-    #print(ratiofit.data[2][0,:,5])
+    #ratiocorr = ana.Correlators.read("%s/ratio_pipi_TP%d_%s.npy" % (datadir, d2, lat))
+    #ratiofit = ana.FitResult.read("%s/fit_pipi_ratio_TP%d_%s.npz" % (datadir, d2, lat))
+    pipifit = ana.FitResult.read("%s/fit_pipi_TP%d_%s.npz" % (datadir, d2, lat))
+    #ratiofit.print_data(0)
+    #ratiofit.print_data(1)
+    pipifit.print_data(0)
+    pipifit.print_data(1)
+    pipifit.print_data(2)
+    #print(ratiofit.weight[1])
+    #print("dE best fits")
+    #print(ratiofit.weight[1][0][29])
+    #print(ratiofit.data[0][0,:,29])
+    #print(ratiofit.weight[1][1][29])
+    #print(ratiofit.data[1][0,:,29])
+    #print(ratiofit.weight[1][2][29])
+    #print(ratiofit.data[2][0,:,29])
 
-    #pipifit.calc_dE(pifit, 1, 1)
-    #pipifit.calc_scattering_length(pifit, 1, 1, L=ens.L(), isratio=False)
+    print("calculate scattering length")
+    #a_pipi = ratiofit.calc_scattering_length(pifit, 1, 1, L=ens.L(), isratio=True)
+    #a_pipi = pipifit.calc_scattering_length(pifit, 1, 1, L=ens.L(), isratio=False)
+    #cotd = ratiofit.calc_cot_delta(pifit, 1, 1, L=ens.L(), isratio=True)
 
 if __name__ == '__main__':
     try:

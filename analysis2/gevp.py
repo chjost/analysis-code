@@ -22,6 +22,8 @@ def gevp_shift_1(data, dt, dE=None, debug=0):
         The exponent of the weight.
     axis : int, optional
         The axis along witch the shift is done.
+    debug : int, optional
+        Amount of info printed.
 
     Returns
     -------
@@ -40,8 +42,11 @@ def gevp_shift_1(data, dt, dE=None, debug=0):
     if dE is not None:
         for t in range(dshape[1]):
             weight = np.exp(dE*t)
-            for b in range(dshape[0]):
-                data[b,t] = data[b,t] * weight[b]
+            if isinstance(dE, (int, float)):
+                data[:,t] = data[:,t] * weight
+            else:
+                for b in range(dshape[0]):
+                    data[b,t] = data[b,t] * weight[b]
 
     # create the new array
     sdata = np.zeros(dshape)
@@ -54,12 +59,15 @@ def gevp_shift_1(data, dt, dE=None, debug=0):
     if dE is not None:
         for t in range(dshape[1]):
             weight = np.exp(-dE*t)
-            for b in range(dshape[0]):
-                sdata[b,t] = sdata[b,t] * weight[b]
+            if isinstance(dE, (int, float)):
+                sdata[:,t] = sdata[:,t] * weight
+            else:
+                for b in range(dshape[0]):
+                    sdata[b,t] = sdata[b,t] * weight[b]
     # return shifted matrix
     return sdata
 
-def gevp_shift_2(data, dt, dE, axis=1, debug=0):
+def gevp_shift_2(data, dt, dE, debug=0):
     """Weight-shift the correlation function matrix.
 
     This is based on the paper by Feng et al, Phys.Rev. D91, 054504 (2015).
@@ -73,25 +81,21 @@ def gevp_shift_2(data, dt, dE, axis=1, debug=0):
         The amount of shift.
     dE : float
         The factor of the weight.
-    axis : int, optional
-        The axis along witch the shift is done.
+    debug : int, optional
+        Amount of info printed.
 
     Returns
     -------
     ndarray
         The shifted array.
     """
-    # check whether axis is in the number of dimension
-    ndim = data.ndim
-    if axis > ndim or axis < 0:
-        if debug > 0:
-            print("axis not in range of the dimensions. Not doing anything")
+    if dt == 0:
         return data
 
     # calculate shape of the new matrix
     dshape = np.asarray(data.shape)
-    dshape[axis] -= dt
-    T = data.shape[axis]
+    dshape[1] -= dt
+    T = data.shape[1]
 
     # if dt is zero, don't shift
     if dt is 0:
@@ -101,7 +105,7 @@ def gevp_shift_2(data, dt, dE, axis=1, debug=0):
     sdata = np.zeros(dshape)
 
     # fill the new array
-    for i in range(dshape[axis]):
+    for i in range(dshape[1]):
         sdata[:,i] = data[:,i] - data[:,i+dt] * (np.cosh(dE*(T-i)) /
             np.cosh(dE*(T-i+dt)))
 

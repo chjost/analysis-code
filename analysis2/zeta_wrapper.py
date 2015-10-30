@@ -6,8 +6,8 @@ import numpy as np
 import memoize
 import zeta
 
-def Z(q2, gamma=None, l=0, m=0, d=np.array([0., 0., 0.]), \
-      m_split=1., prec=10e-6, verbose=0):
+def Z(q2, gamma=None, l=0, m=0, d=np.array([0., 0., 0.]), m_split=1.,
+        prec=10e-6, verbose=0):
     """Calculates the Luescher Zeta function.
 
     Parameters

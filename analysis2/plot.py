@@ -169,29 +169,106 @@ class LatticePlot(object):
         plotrange : list of ints, optional
             The lower and upper range of the plot.
         """
-        # plotting the fit function, check for seperate range
+        # check for plotting range
         if isinstance(plotrange, (np.ndarray, list, tuple)):
-            plotrange = np.asarray(plotrange).flatten()
-            if plotrange.size < 2:
+            _plotrange = np.asarray(plotrange).flatten()
+            if _plotrange.size < 2:
                 raise IndexError("fitrange has not enough indices")
             else:
-                lfunc = int(plotrange[0])
-                ufunc = int(plotrange[1])
+                lfunc = int(_plotrange[0])
+                ufunc = int(_plotrange[1])
         else:
             lfunc = X[0]
             ufunc = X[-1]
         x1 = np.linspace(lfunc, ufunc, 1000)
+
+        # check dimensions of args, if more than one,
+        # iterate over first dimension
+        _args = np.asarray(args)
         if add is not None:
-            y1 = []
-            for j, x in enumerate(x1):
-                y1.append(func(args, x, add[j]))
-            y1 = np.asarray(y1)
+            _add = np.asarray(add)
+        if _args.ndim > 1:
+            # the first sample contains original data,
+            # also save min and max at each x
+            y1, ymin, ymax = [], [], []
+            # check for dimensions of add
+            if add is not None:
+                # need to check size of first axis
+                args0 = _args.shape[0]
+                add0 = _add.shape[0]
+                if args0 == add0:
+                    # first axis has same size for both
+                    # iterate over the x range
+                    for x in x1:
+                        # the actual value is given by the first sample
+                        y1.append(func(_args[0], x, _add[0]))
+                        tmp = [y1[-1]]
+                        # iterate over the rest of the arguments
+                        for i in range(1,args0):
+                            tmp.append(func(_args[i], x, _add[i]))
+                        ymin.append(np.min(tmp))
+                        ymax.append(np.max(tmp))
+                elif (args0 % add0) == 0:
+                    # size of add is a divisor of size of args
+                    # iterate over x
+                    for x in x1:
+                        # the actual value is given by the first sample
+                        y1.append(func(_args[0], x, _add[0]))
+                        tmp = [y1[-1]]
+                        # iterate over the rest of the arguments
+                        for i in range(1,args0):
+                            tmp.append(func(_args[i], x, _add[i%add0]))
+                        ymin.append(np.min(tmp))
+                        ymax.append(np.max(tmp))
+                elif (add0 % args0) == 0:
+                    # size of args is a divisor of size of add
+                    # iterate over x
+                    for x in x1:
+                        # the actual value is given by the first sample
+                        y1.append(func(_args[0], x, _add[0]))
+                        tmp = [y1[-1]]
+                        # iterate over the rest of the arguments
+                        for i in range(1,add0):
+                            tmp.append(func(_args[i%args0], x, _add[i]))
+                        ymin.append(np.min(tmp))
+                        ymax.append(np.max(tmp))
+            else:
+                # no additional arguments, iterate over args
+                #iterate over x
+                for x in x1:
+                    y1.append(func(_args[0], x))
+                    tmp = [y[-1]]
+                    for i in range(1, _args.shape[0]):
+                        tmp.append(func(_args[i], x))
+                    ymin.append(np.min(tmp))
+                    ymax.append(np.max(tmp))
+        # only one args
         else:
+            # the first sample contains original data
             y1 = []
+            # calculate minimal and maximal y1 for
+            # error checking
+            ymax = []
+            ymin = []
+            # iterate over x values
             for x in x1:
-                y1.append(func(args, x))
-            y1 = np.asarray(y1)
+                # check for additional arguments
+                if add is not None:
+                    tmp = func(_args, x, _add)
+                    if np.asarray(tmp).size > 1:
+                        y1.append(tmp[0])
+                        ymax.append(np.max(tmp))
+                        ymin.append(np.min(tmp))
+                    else:
+                        y1.append(tmp)
+                else:
+                    # calculate on original data
+                    y1.append(func(_args, x))
         plt.plot(x1, y1, "r", label=label)
+        if ymax and ymin:
+            plt.fill_between(x1, ymin, ymax, facecolor="red",
+                edgecolor="red", alpha=0.3)
+        plt.legend()
 
     def plot_data(self, X, Y, dY, label, plotrange=None, fmt="xb"):
         """A function that plots data.
@@ -456,9 +533,6 @@ class LatticePlot(object):
                         plotrange=[1,T])
                 self.plot_function(fitfunc.fitfunc, X, mpar, label[4], 
                         add_data, fi)
-                #self.plot_data_with_fit(X, corr.data[0,:,n], ddata,
-                #        fitfunc.fitfunc, mpar, label[3:], plotrange=[1,T],
-                #        addpars=add_data, fitrange=fi)
                 plt.legend()
                 self.save()
 
@@ -481,13 +555,13 @@ class LatticePlot(object):
             Reuse the fit results of an old fit for the new fit.
         add : ndarray, optional
             Additional arguments to the fit function. This is stacked along
+            the third dimenstion to the oldfit data.
         oldfitpar : None, int or sequence of int, optional
             Which parameter of the old fit to use, if there is more than one.
-                the third dimenstion to the oldfit data.
         debug : int, optional
             The amount of info printed.
         """
-        if fitresult is None or oldfit is None:
+        if oldfit is None:
             self._genplot_single(corr, label, fitresult, fitfunc, add=add,
                     debug=debug)
         else:

@@ -119,11 +119,12 @@ class FitResult_Test(unittest.TestCase):
         fexists = os.path.isfile(fname)
         self.assertTrue(fexists)
         if fexists:
-            with np.load(fname) as f:
-                L = f.files
-                self.assertEqual(len(L), 6*4+2)
-                tmp = f['pi00']
-                self.assertTrue(np.array_equal(np.zeros((10, 25, 4)), tmp))
+            f = np.load(fname)
+            L = f.files
+            self.assertEqual(len(L), 6*4+2)
+            tmp = f['pi00']
+            self.assertTrue(np.array_equal(np.zeros((10, 25, 4)), tmp))
+            f.close()
 
     def test_read(self):
         fr = FitResult("test")

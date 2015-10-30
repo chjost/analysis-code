@@ -23,7 +23,7 @@ def main():
     datadir = ens.get_data("datadir")
     plotdir = ens.get_data("plotdir")
     T = ens.T()
-    files = ["%s/pi_corr_p%d.dat" % (prefix, d) for d in range(3)]
+    files = ["%s/pi_corr_p%d.dat" % (prefix, d) for d in range(1)]
     addT = np.ones((nboot,)) * T
 
     # prepare the fitting of data

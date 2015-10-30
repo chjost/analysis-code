@@ -2,14 +2,15 @@
 The class for fitting.
 """
 
-
 import itertools
 import numpy as np
 
 from fit_routines import fit_comb, fit_single, calculate_ranges
 from in_out import read_fitresults, write_fitresults
-from functions import func_single_corr, func_ratio, func_const
+from functions import func_single_corr, func_ratio, func_const, func_two_corr
 from statistics import compute_error, sys_error, sys_error_der
+from energies import calc_q2
+from zeta_wrapper import Z
 
 class LatticeFit(object):
     def __init__(self, fitfunc, verbose=False):
@@ -24,9 +25,10 @@ class LatticeFit(object):
         self.verbose = verbose
         # chose the correct function if using predefined function
         if isinstance(fitfunc, int):
-            if fitfunc > 2:
+            if fitfunc > 3:
                 raise ValueError("No fit function choosen")
-            functions = {0: func_single_corr, 1: func_ratio, 2: func_const}
+            functions = {0: func_single_corr, 1: func_ratio, 2: func_const,
+                3: func_two_corr}
             self.fitfunc = functions.get(fitfunc)
         else:
             self.fitfunc = fitfunc
@@ -415,13 +417,16 @@ class FitResult(object):
         """Prints the errors etc of the data."""
         self.calc_error()
 
+        print("------------------------------")
         print("summary for %s" % self.corr_id)
+        print("parameter %d" % par)
         r, rstd, rsys, nfits = self.error[par]
         for i, lab in enumerate(self.label):
             print("correlator %s, %d fits" %(str(lab), nfits[i]))
             print("%.5f +- %.5f -%.5f +%.5f" % (r[i][0], rstd[i], rsys[i][0], rsys[i][1]))
+        print("------------------------------\n\n")
 
-    def calc_cot_delta(self, mass, parself=0, parmass=0):
+    def calc_cot_delta(self, mass, parself=0, parmass=0, L=24, isratio=False):
         """Calculate the cotangent of the scattering phase.
 
         Warning
@@ -434,8 +439,43 @@ class FitResult(object):
             The masses of the single particles.
         parself, parmass : int, optional
             The parameters for which to do this.
+        L : int
+            The spatial extend of the lattice.
+        isratio : bool
+            If self is already the ratio.
         """
-        pass
+        # we need the weight of both mass and self
+        self.calc_error()
+        mass.calc_error()
+        # get the mass of the single particles, assuming the
+        # first entry of the mass FitResults contains them.
+        _ma = mass.data[0][:,parmass]
+        _ma_w = mass.weight[parmass][0]
+        _data = self.data[0][:,parself]
+        _data_w = self.weight[parself][0]
+        nsam = _ma.shape[0]
+        cotd = [np.zeros((nsam, _ma.shape[-1], _data.shape[-1]))]
+        cotd_w = [np.zeros((_ma.shape[-1], _data.shape[-1]))]
+        # loop over fitranges of self
+        for i in range(_data.shape[-1]):
+            # loop over fitranges of mass
+            for j in range(_ma.shape[-1]):
+                if isratio:
+                    q2 = ((_data[:,j,i]*_data[:,j,i]/4.+_data[:,j,i]*_ma[:,j]) *
+                          (2. * np.pi) / float(L))
+                else:
+                    q2 = calc_q2(_data[:,i], _ma[:,j], L)
+                cotd[0][:,j,i] = Z(q2).real / (np.pow(np.pi, 3./2.) * np.sqrt(q2))
+                if isratio:
+                    cotd_w[0][j,i] = _ma_w[j] * _data_w[j,i]
+                else:
+                    cotd_w[0][j,i] = _ma_w[j] * _data_w[i]
+        np.save("cotd_test.npy", cotd[0])
+        np.save("cotd_w_test.npy", cotd_w[0])
+        res, std, syst = sys_error_der(cotd, cotd_w)
+        print(res[0][0])
+        print(std[0])
+        print(syst[0])
 
     def calc_dE(self, mass, parself=0, parmass=0):
         """Calculate dE from own data and the mass of the particles.
@@ -507,8 +547,6 @@ class FitResult(object):
         _energy = self.data[0][:,parself]
         _energyweight = self.weight[parself][0]
         nsam = _mass.shape[0]
-        print(self.data[0].shape)
-        print(mass.data[0].shape)
         # Constants for the Luescher Function
         c = [-2.837297, 6.375183, -8.311951]
         # prefactor of the equation
@@ -523,12 +561,12 @@ class FitResult(object):
                 for b in range(nsam):
                     if isratio:
                         p = np.asarray([pre[b,j]*c[1]/float(L*L),
-                            pre[b,j]*c[1]/float(L),
+                            pre[b,j]*c[0]/float(L),
                             pre[b,j],
                             -1. * _energy[b,j,i]])
                     else:
                         p = np.asarray([pre[b,j]*c[1]/float(L*L),
-                            pre[b,j]*c[1]/float(L),
+                            pre[b,j]*c[0]/float(L),
                             pre[b,j],
                             -1. * _energy[b,i]-2*_mass[b,j]])
                     # find the roots of the polynomial
@@ -542,7 +580,7 @@ class FitResult(object):
                     else:
                         self.scat_len_w[0][j,i] = _massweight[j] * _energyweight[i]
         res, std, syst = sys_error_der(self.scat_len, self.scat_len_w)
-        print(res)
-        print(std)
-        print(syst)
+        print(res[0][0])
+        print(std[0])
+        print(syst[0])
 

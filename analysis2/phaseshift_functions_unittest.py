@@ -21,7 +21,8 @@ class Phase_Test(unittest.TestCase):
         Ecm = 0.396
         gamma = E/Ecm
         delta, tandelta, sindelta = calculate_phaseshift(q*q, gamma, d2)
-        self.assertAlmostEqual(delta*180./np.pi, 115.74, delta=0.01)
+        self.assertAlmostEqual(delta*180./np.pi, 118.75, delta=0.01)
+        #self.assertAlmostEqual(delta*180./np.pi, 115.74, delta=0.01)
 
     def test_mf2(self):
         d2 = 2
@@ -31,7 +32,8 @@ class Phase_Test(unittest.TestCase):
         Ecm = 0.407
         gamma = E/Ecm
         delta, tandelta, sindelta = calculate_phaseshift(q*q, gamma, d2)
-        self.assertAlmostEqual(delta*180./np.pi, 127.99, delta=0.01)
+        self.assertAlmostEqual(delta*180./np.pi, 128.57, delta=0.01)
+        #self.assertAlmostEqual(delta*180./np.pi, 127.99, delta=0.01)
 
     def test_cmf_multi(self):
         q = np.ones((100,)) * 0.1207*24/(2.*np.pi)

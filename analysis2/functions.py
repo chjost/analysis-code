@@ -98,6 +98,35 @@ def func_single_corr(p, t, T2):
     """
     return 0.5*p[0]*p[0]*(np.exp(-p[1]*t)+np.exp(-p[1]*(T2-t)))
 
+def func_two_corr(p, t, o):
+    """A function which describes the four point correlation
+    function.
+
+    The function is given by p0*cosh(p1*(t-o1/2.)) +
+    p2*exp(-o0*o1), where
+    * p0 is the first amplitude
+    * p1 is the energy
+    * p2 is the second amplitude
+    * t is the time,
+    * o1 is the time extent of the lattice, and
+    * o0 is the single particle energy.
+
+    Parameters
+    ----------
+    p : sequence of float
+        The parameters of the function.
+    t : float
+        The variable of the function.
+    o : sequence of float
+        The constants of the function.
+
+    Returns
+    -------
+    float
+        The result.
+    """
+    return p[0]*np.cosh(p[1]*(t-(o[1]/2.))) + p[2]*np.exp(-o[0]*o[1])
+
 def func_ratio(p, t, o):
     """A function which describes the ratio of a four and a two point
     function.
@@ -124,8 +153,8 @@ def func_ratio(p, t, o):
     float
         The result.
     """
-    return p[0]*(np.cosh(p[1]*(t-o[0]/2.+0.5))+np.sinh(p[1]*(t-o[0]/2.+0.5))/
-            (np.tanh(2.*o[0]*(t-o[1]/2.+0.5))))
+    return p[0]*(np.cosh(p[1]*(t-(o[1]/2.)))+np.sinh(p[1]*(t-(o[1]/2.)))/
+            (np.tanh(2.*o[0]*(t-(o[1]/2.)))))
 
 def func_const(p, t):
     """A constant function.
