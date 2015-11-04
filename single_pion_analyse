@@ -108,7 +108,7 @@ def main():
             ana.plot_data_with_fit(tlist, mdata, ddata , fitfunc, res[0],
                                        [1,T2-2], label, pfit, True, True,
                                        fitrange=[lo,up])
-        mass, mmass, dmass = ana.compute_mass(bsamples, False)
+        mass, mmass, dmass = ana.compute_mass(bsamples, True)
         ana.plot_data_with_fit(tlist[:-2], mmass, dmass, massfunc, res[0,1],
                               [1,T2], label, pfit, False, False)
         pfit.close()

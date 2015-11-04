@@ -44,7 +44,8 @@ def main():
 
     # get mean correlators of 2 and 4pt function to compare
 
-    cmp_quant = ["3_rnd_vec/data/","4_rnd_vec/data/","5_rnd_vec/data/"]
+    #cmp_quant = ["3_rnd_vec/data/","4_rnd_vec/data/","5_rnd_vec/data/"]
+    cmp_quant = ["rnd_3/data/","rnd_4/data/","rnd_5/data/"]
     nb_obs = len(cmp_quant)
     path_pipi = "/hiskp2/helmes/pi-pi-scattering/tests/A40.24/"
     path_kk = "/hiskp2/helmes/k-k-scattering/tests/A40.24/"
@@ -58,6 +59,24 @@ def main():
     rel_err_c2 = np.zeros((nb_obs, T2))
     rel_err_c4 = np.zeros_like(rel_err_c2)
     tlist_corr = np.linspace(0., float(T2-2), float(T2-2), endpoint=False)
+#    test = PdfPages("quicktest.pdf")
+#    for _e in range(nb_obs):
+#        name_2pt = path_kk+cmp_quant[_e]+"k_corr_p0.dat"
+#        name_4pt = path_kk+cmp_quant[_e]+"kk_A1_TP0_00.dat"
+#        corrs_2pt = ana.read_data_ascii(name_2pt)
+#        corrs_4pt = ana.read_data_ascii(name_4pt)
+#
+#        c2pt_mean, c2pt_err = ana.calc_error(corrs_2pt)
+#        c4pt_mean, c4pt_err = ana.calc_error(corrs_4pt)
+#
+#        tlist = np.linspace(0., float(T), float(T), endpoint=False)
+#        p = plt.errorbar(tlist,c4pt_mean,c4pt_err, fmt='x')
+#
+#    plt.grid(True)
+#    plt.yscale('log')
+#    test.savefig()
+#    test.close()
+
     for _e in range(0,nb_obs):
         name_pi_2pt = path_pipi+cmp_quant[_e]+"pi_corr_p0.dat"
         name_2pt = path_kk+cmp_quant[_e]+"k_corr_p0.dat"
@@ -108,7 +127,6 @@ def main():
         rat_array [_e,:] = np.divide(err_rat,rat[0])
 
 
-
     # relative error
     rel_err_2pt = np.divide(mean_corr_2pt[:,:,1], mean_corr_2pt[:,:,0])
     rel_err_4pt = np.divide(mean_corr_4pt[:,:,1], mean_corr_4pt[:,:,0])
@@ -124,19 +142,23 @@ def main():
     print len(tlist_corr)
     pfit = PdfPages("%s%s_plot.pdf" % (plotpath_k,"rel_err_"))
     for _e in range(0,nb_obs):
-        rnd_lbl = cmp_quant[_e][0]+"rnd vecs"
-        label_2pt = ["rel_error", "time", "dm_eff_2pt(t)/m_eff_2pt(t)", rnd_lbl, cmp_quant[_e]]
-        label_4pt = ["rel_error", "time", "dm_eff_4pt(t)/m_eff_4pt(t)", rnd_lbl, cmp_quant[_e]]
+        rnd_lbl = cmp_quant[_e][4]+"rnd vecs"
+        label_2pt = ["rel_error", "time", "dm_eff_2pt(t)/m_eff_2pt(t)",
+                    [rnd_lbl], cmp_quant[_e]]
+        label_4pt = ["rel_error", "time", "dm_eff_4pt(t)/m_eff_4pt(t)",
+                    [rnd_lbl], cmp_quant[_e]]
 
         ana.plot_data(tlist_corr, rel_err_2pt[_e],dY,pfit, label_2pt, [1,T2])
         ana.plot_data(tlist_corr, rel_err_4pt[_e],dY,pfit, label_4pt, [1,T2])
     pfit.close()
     
-    label_2pt = ["Ratio rel. errors", "time", "NSR_2pt(t)", "4:5 rnd vecs", cmp_quant[0] +" : "+ cmp_quant[2]]
-    label_4pt = ["Ratio rel. errors", "time", "NSR_4pt(t)", "4:5 rnd vecs", cmp_quant[0] +" : "+ cmp_quant[2]]
+    label_2pt = ["Ratio rel. errors", "time", "NSR_2pt(t)", ["4:5 rnd vecs"],
+                cmp_quant[0] +" : "+ cmp_quant[2]]
+    label_4pt = ["Ratio rel. errors", "time", "NSR_4pt(t)", ["4:5 rnd vecs"],
+                cmp_quant[0] +" : "+ cmp_quant[2]]
     pfit = PdfPages("%s%s_plot.pdf" % (plotpath_k,"NSR_"))
-    ana.plot_data(tlist_corr, nsr_2pt, dY, pfit, label_2pt, [1,T2])
-    ana.plot_data(tlist_corr, nsr_4pt, dY, pfit, label_4pt, [1,T2])
+    ana.plot_data(tlist_corr, nsr_2pt, dY, pfit, label_2pt, [1,T2],hann = [5.,4.])
+    ana.plot_data(tlist_corr, nsr_4pt, dY, pfit, label_4pt, [1,T2],hann = [5.,4.])
     pfit.close()
 
     # Average relative error of correlators and ratio over time extent for all three random vector

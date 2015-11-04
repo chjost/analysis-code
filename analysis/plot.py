@@ -120,7 +120,23 @@ def plot_data_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
 #  plt.bar(center, hist, align='center', width=width)
 #  plt.show()
 
-def plot_data(X, _Y, dY, pdfplot, label, plotrange=None, logscale=False, xlim=None, ylim=None):
+def check_corrs(name,path,T,corrs):
+    pfit = PdfPages("%s%s_corr_check.pdf" % (path,name))
+    full_tlist = np.linspace(0., float(T), float(T), endpoint=False)
+    plt.title("Correlators")
+    plt.xlabel(r'$t$')
+    plt.ylabel(name)
+    #loop over configs
+    for c in corrs:
+        p1 = plt.plot(full_tlist,c,marker='x',ls='None')
+    plt.yscale("log")
+    plt.grid(True)
+    pfit.savefig()
+    plt.clf()
+    pfit.close()
+
+def plot_data(X, _Y, dY, pdfplot, label, plotrange=None, logscale=False,
+    xlim=None, ylim=None, hann=None):
     """A function that plots a correlation function.
 
     This function plots the given data points and the fit to the data. The plot
@@ -161,7 +177,9 @@ def plot_data(X, _Y, dY, pdfplot, label, plotrange=None, logscale=False, xlim=No
     else:
         # plot the data
         p1 = plt.errorbar(X, Y, dY, marker='x', color='teal', linestyle='',  label=label[3])
-
+    if hann is not None:
+        p1 = plt.axhline(y=np.sqrt(hann[0]/hann[1]),color = 'green', ls='-',
+            label = 'expct.')
     # adjusting the plot style
     plt.grid(True)
     plt.xlabel(label[1])
