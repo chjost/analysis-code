@@ -59,13 +59,13 @@ class LatticePlot(object):
             plt.xlim(self.xlim)
         if self.ylim:
             plt.ylim(self.ylim)
-        if self.legend:
-            plt.legend()
+        #if self.legend:
+        #    plt.legend()
 
     def _est_env_hist(self):
         plt.grid(self.grid)
-        if self.legend:
-            plt.legend()
+        #if self.legend:
+        #    plt.legend()
 
     def set_title(self, title, axis):
         """Set the title and axis labels of the plot.
@@ -328,7 +328,9 @@ class LatticePlot(object):
     
         # prepare the plot
         width = 0.7 * (bins[1] - bins[0])
+        uwidth = 0.7 * (ubins[1] - ubins[0])
         center = (bins[:-1] + bins[1:]) / 2
+        ucenter = (ubins[:-1] + ubins[1:]) / 2
     
         # plot both histograms in same plot
         plt.title(label[0])
@@ -352,9 +354,6 @@ class LatticePlot(object):
         plt.grid(True)
         # plot
         plt.bar(center, hist, align='center', width=width, color='r', alpha=0.5)
-        #plt.bar(center, hist, align='center', width=width, color='r', alpha=0.5,
-        #        label=label[2])
-        #plt.legend()
         # save and clear
         self.save()
     
@@ -365,10 +364,7 @@ class LatticePlot(object):
         plt.ylabel('unweighted distribution')
         plt.grid(True)
         # plot
-        plt.bar(center, uhist, align='center', width=width, color='b', alpha=0.5)
-        #plt.bar(center, uhist, align='center', width=width, color='b', alpha=0.5,
-        #        label=label[2])
-        #plt.legend()
+        plt.bar(ucenter, uhist, align='center', width=uwidth, color='b', alpha=0.5)
         # save and clear
         self.save()
 
@@ -504,7 +500,6 @@ class LatticePlot(object):
                 # get fit interval
                 fi = franges[n][r]
                 _par = fitresult.get_data(item + ritem)
-                mpar, dpar = compute_error(_par)
 
                 # set up labels
                 label[0] = "%s, pc %d (%s)" % (label_save, n, str(item[:-1]))
@@ -531,7 +526,7 @@ class LatticePlot(object):
                 self._set_env_normal()
                 self.plot_data(X, corr.data[0,:,n], ddata, label[3],
                         plotrange=[1,T])
-                self.plot_function(fitfunc.fitfunc, X, mpar, label[4], 
+                self.plot_function(fitfunc.fitfunc, X, _par, label[4], 
                         add_data, fi)
                 plt.legend()
                 self.save()
@@ -582,16 +577,22 @@ class LatticePlot(object):
         """
         fitresult.calc_error()
         label_save = label[0]
-        if par is None:
-            for p, w in enumerate(fitresult.weight):
-                for i, d in enumerate(fitresult.data):
-                    label[0] = " ".join((label_save, str(fitresult.label[i])))
-                    self.plot_histogram(d[0,p], w[i], label)
-        else:
-            w = fitresult.weight[par]
+        if fitresult.derived:
+            w = fitresult.weight[0]
             for i, d in enumerate(fitresult.data):
                 label[0] = " ".join((label_save, str(fitresult.label[i])))
-                self.plot_histogram(d[0,par], w[i], label)
+                self.plot_histogram(d[0], w[i], label)
+        else:
+            if par is None:
+                for p, w in enumerate(fitresult.weight):
+                    for i, d in enumerate(fitresult.data):
+                        label[0] = " ".join((label_save, str(fitresult.label[i])))
+                        self.plot_histogram(d[0,p], w[i], label)
+            else:
+                w = fitresult.weight[par]
+                for i, d in enumerate(fitresult.data):
+                    label[0] = " ".join((label_save, str(fitresult.label[i])))
+                    self.plot_histogram(d[0,par], w[i], label)
         label[0] = label_save
 
     def set_env(self, xlog=False, ylog=False, xlim=None, ylim=None, grid=True):

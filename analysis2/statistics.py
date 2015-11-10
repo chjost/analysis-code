@@ -134,30 +134,32 @@ def sys_error_der(data, weights):
         and (84%-quantile-res) respectively
     """
     # initialize empty arrays
+    data_weight = []
     res, res_std, res_sys = [], [], []
     # loop over principal correlators
     for i, d in enumerate(data):
         # append the necessary data arrays
+        data_weight.append(weights[i][0])
         res.append(np.zeros(d.shape[0]))
         res_std.append(np.zeros((1,)))
         res_sys.append(np.zeros((2,)))
 
         # using the weights, calculate the median over all fit intervals
         # for every bootstrap sample.
-        for b in xrange(d.shape[0]):
-            res[i][b] = weighted_quantile(d[b].ravel(), weights[i].ravel())
+        for b in range(d.shape[0]):
+            res[i][b] = weighted_quantile(d[b].ravel(), weights[i][b].ravel())
         # the statistical error is the standard deviation of the medians
         # over the bootstrap samples.
         res_std[i] = np.std(res[i])
         # the systematic error is given by difference between the median 
         # on the original data and the 16%- or 84%-quantile respectively
         res_sys[i][0] = res[i][0]-weighted_quantile(d[0].ravel(),
-                weights[i].ravel(), 0.16)
-        res_sys[i][1] = weighted_quantile(d[0].ravel(), weights[i].ravel(),
+                weights[i][0].ravel(), 0.16)
+        res_sys[i][1] = weighted_quantile(d[0].ravel(), weights[i][0].ravel(),
                 0.84)-res[i][0]
         # keep only the median of the original data
         #res[i] = res[i][0]
-    return res, res_std, res_sys
+    return res, res_std, res_sys, data_weight
 
 if __name__ == "main":
     pass

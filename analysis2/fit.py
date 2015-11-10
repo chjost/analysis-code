@@ -11,6 +11,7 @@ from functions import func_single_corr, func_ratio, func_const, func_two_corr
 from statistics import compute_error, sys_error, sys_error_der
 from energies import calc_q2
 from zeta_wrapper import Z
+from scattering_length import calculate_scat_len
 
 class LatticeFit(object):
     def __init__(self, fitfunc, verbose=False):
@@ -156,13 +157,15 @@ class FitResult(object):
     Next to the data the chi^2 data and the p-values of the fit are
     saved.
     """
-    def __init__(self, corr_id):
+    def __init__(self, corr_id, derived=False):
         """Create FitResults with given identifier.
 
         Parameters
         ----------
         corr_id : str
             The identifier of the fit results.
+        derived : bool
+            If the data is derived or not.
         """
         self.data = None
         self.pval = None
@@ -172,7 +175,7 @@ class FitResult(object):
         self.corr_num = None
         self.fit_ranges = None
         self.fit_ranges_shape = None
-        self.derived = False
+        self.derived = derived
         self.error = None
         self.weight = None
 
@@ -265,14 +268,20 @@ class FitResult(object):
             if len(index) != 2:
                 raise ValueError("Index has wrong length")
             lindex = self._get_index(index[0])
-            self.data[lindex][:,:,index[1]] = data
+            if self.derived:
+                self.data[lindex][:, index[1]] = data
+            else:
+                self.data[lindex][:,:,index[1]] = data
             self.chi2[lindex][:,index[1]] = chi2
             self.pval[lindex][:,index[1]] = pval
         else:
             if len(index) != 2*len(self.corr_num):
                 raise ValueError("Index has wrong length")
             lindex = self._get_index(index[:len(self.corr_num)])
-            rindex = [slice(None), slice(None)] + [x for x in index[len(self.corr_num):]]
+            if self.derived:
+                rindex = [slice(None)] + [x for x in index[len(self.corr_num):]]
+            else:
+                rindex = [slice(None), slice(None)] + [x for x in index[len(self.corr_num):]]
             self.data[lindex][rindex] = data
             rindex = [slice(None)] + [x for x in index[len(self.corr_num):]]
             self.chi2[lindex][rindex] = chi2
@@ -345,7 +354,9 @@ class FitResult(object):
             comb = [[x for x in range(n)] for n in corr_num]
             if isinstance(shape1[0], int):
                 # one shape for all correlators
-                if len(shape1) != (len(shape2) + 1):
+                if (self.derived == False and len(shape1) != (len(shape2)+1)):
+                    raise ValueError("shape1 and shape2 incompatible")
+                elif (self.derived == True and len(shape1) != len(shape2)): 
                     raise ValueError("shape1 and shape2 incompatible")
                 # iterate over all correlator combinations
                 for item in itertools.product(*comb):
@@ -369,7 +380,9 @@ class FitResult(object):
         # corr_num is an int
         else:
             if isinstance(shape1[0], int):
-                if len(shape1) != (len(shape2) + 1):
+                if (self.derived == False and len(shape1) != (len(shape2)+1)):
+                    raise ValueError("shape1 and shape2 incompatible")
+                elif (self.derived == True and len(shape1) != len(shape2)):
                     raise ValueError("shape1 and shape2 incompatible")
                 # one shape for all correlators
                 for i in range(corr_num):
@@ -400,18 +413,22 @@ class FitResult(object):
     def calc_error(self):
         """Calculates the error and weight of data."""
         if self.error is None:
-            npar = self.data[0].shape[1]
             self.error = []
             self.weight = []
-            nfits = [d[0,0].size for d in self.data]
-            for i in range(npar):
-                if self.derived:
-                    pass
-                    r, r_std, r_syst, w = sys_error_der(self.data, self.weight, i)
-                else:
-                    r, r_std, r_syst, w = sys_error(self.data, self.pval, i)
+            if self.derived:
+                nfits = [d[0].size for d in self.data]
+            else:
+                nfits = [d[0,0].size for d in self.data]
+            if self.derived:
+                r, r_std, r_syst, w = sys_error_der(self.data, self.pval)
                 self.error.append((r, r_std, r_syst, nfits))
                 self.weight.append(w)
+            else:
+                npar = self.data[0].shape[1]
+                for i in range(npar):
+                    r, r_std, r_syst, w = sys_error(self.data, self.pval, i)
+                    self.error.append((r, r_std, r_syst, nfits))
+                    self.weight.append(w)
 
     def print_data(self, par=0):
         """Prints the errors etc of the data."""
@@ -419,11 +436,16 @@ class FitResult(object):
 
         print("------------------------------")
         print("summary for %s" % self.corr_id)
-        print("parameter %d" % par)
-        r, rstd, rsys, nfits = self.error[par]
+        if self.derived:
+            print("derived values")
+            r, rstd, rsys, nfits = self.error[0]
+        else:
+            print("parameter %d" % par)
+            r, rstd, rsys, nfits = self.error[par]
         for i, lab in enumerate(self.label):
             print("correlator %s, %d fits" %(str(lab), nfits[i]))
-            print("%.5f +- %.5f -%.5f +%.5f" % (r[i][0], rstd[i], rsys[i][0], rsys[i][1]))
+            print("%.5f +- %.5f -%.5f +%.5f" % (r[i][0], rstd[i], rsys[i][0],
+                rsys[i][1]))
         print("------------------------------\n\n")
 
     def calc_cot_delta(self, mass, parself=0, parmass=0, L=24, isratio=False):
@@ -518,7 +540,7 @@ class FitResult(object):
         print(syst)
 
     def calc_scattering_length(self, mass, parself=0, parmass=0, L=24,
-            isratio=False):
+            isratio=False, isdependend=True):
         """Calculate the scattering length.
         This only makes sense for correlation functions with no momentum.
 
@@ -540,47 +562,21 @@ class FitResult(object):
         # we need the weight of both mass and self
         self.calc_error()
         mass.calc_error()
-        # get the mass of the single particles, assuming the
-        # first entry of the mass FitResults contains them.
+        # get the data
         _mass = mass.data[0][:,parmass]
         _massweight = mass.weight[parmass][0]
         _energy = self.data[0][:,parself]
         _energyweight = self.weight[parself][0]
         nsam = _mass.shape[0]
-        # Constants for the Luescher Function
-        c = [-2.837297, 6.375183, -8.311951]
-        # prefactor of the equation
-        pre = -4.*np.pi / (_mass * float(L*L*L))
-        self.scat_len = [np.zeros((nsam, _mass.shape[-1], _energy.shape[-1]))]
-        self.scat_len_w = [np.zeros((_mass.shape[-1], _energy.shape[-1]))]
-        # loop over fitranges of self
-        for i in range(_energy.shape[-1]):
-            # loop over fitranges of mass
-            for j in range(_mass.shape[-1]):
-                # loop over samples
-                for b in range(nsam):
-                    if isratio:
-                        p = np.asarray([pre[b,j]*c[1]/float(L*L),
-                            pre[b,j]*c[0]/float(L),
-                            pre[b,j],
-                            -1. * _energy[b,j,i]])
-                    else:
-                        p = np.asarray([pre[b,j]*c[1]/float(L*L),
-                            pre[b,j]*c[0]/float(L),
-                            pre[b,j],
-                            -1. * _energy[b,i]-2*_mass[b,j]])
-                    # find the roots of the polynomial
-                    root = np.roots(p)
-                    # sort by absolute value of imaginary part
-                    ind_root = np.argsort(np.fabs(root.imag))
-                    # the first entry is the wanted
-                    self.scat_len[0][b,j,i] = root[ind_root][0].real
-                    if isratio:
-                        self.scat_len_w[0][j,i] = _massweight[j] * _energyweight[j,i]
-                    else:
-                        self.scat_len_w[0][j,i] = _massweight[j] * _energyweight[i]
-        res, std, syst = sys_error_der(self.scat_len, self.scat_len_w)
-        print(res[0][0])
-        print(std[0])
-        print(syst[0])
+        # create the new shapes
+        scatshape = (nsam, _mass.shape[-1], _energy.shape[-1])
+        scatshape_w = scatshape
+        # prepare storage
+        scat = FitResult("scat_len", True)
+        scat.create_empty(scatshape, scatshape_w, [1,1])
+        # calculate scattering length
+        for res in calculate_scat_len(_mass, _massweight, _energy, _energyweight,
+                L, isdependend, isratio):
+            scat.add_data(*res)
+        return scat
 

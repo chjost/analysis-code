@@ -27,9 +27,9 @@ def main():
     picorr = ana.Correlators.read("%s/corr_pi_%s.npy" % (datadir, lat))
     pifit = ana.FitResult.read("%s/fit_pi_%s.npz" % (datadir, lat))
     pifit.print_data(1)
-    print("pi best fit")
-    print(pifit.weight[1][0][29])
-    print(pifit.data[0][0,:,29])
+    #print("pi best fit")
+    #print(pifit.weight[1][0][29])
+    #print(pifit.data[0][0,:,29])
 
     # two particle correlator
     print("\n\nread ratio")
@@ -38,10 +38,11 @@ def main():
     pipifit = ana.FitResult.read("%s/fit_pipi_TP%d_%s.npz" % (datadir, d2, lat))
     #ratiofit.print_data(0)
     #ratiofit.print_data(1)
-    pipifit.print_data(0)
     pipifit.print_data(1)
-    pipifit.print_data(2)
-    #print(ratiofit.weight[1])
+    #pipifit.print_data(1)
+    #pipifit.print_data(2)
+    #print(pipifit.data[0][0])
+    #print(pipifit.data[0][1000])
     #print("dE best fits")
     #print(ratiofit.weight[1][0][29])
     #print(ratiofit.data[0][0,:,29])
@@ -50,10 +51,20 @@ def main():
     #print(ratiofit.weight[1][2][29])
     #print(ratiofit.data[2][0,:,29])
 
-    print("calculate scattering length")
-    #a_pipi = ratiofit.calc_scattering_length(pifit, 1, 1, L=ens.L(), isratio=True)
-    #a_pipi = pipifit.calc_scattering_length(pifit, 1, 1, L=ens.L(), isratio=False)
-    #cotd = ratiofit.calc_cot_delta(pifit, 1, 1, L=ens.L(), isratio=True)
+    calca = False
+    if calca:
+        print("calculate scattering length")
+        #a_pipi = ratiofit.calc_scattering_length(pifit, 1, 1, L=ens.L(), isratio=True)
+        a_pipi = pipifit.calc_scattering_length(pifit, 1, 1, L=ens.L(), isratio=False)
+        #cotd = ratiofit.calc_cot_delta(pifit, 1, 1, L=ens.L(), isratio=True)
+        a_pipi.save("%s/scat_len_TP%d_%s.npz" % (datadir, d2, lat))
+    else:
+        a_pipi = ana.FitResult.read("%s/scat_len_TP%d_%s.npz" % (datadir, d2, lat))
+    a_pipi.print_data()
+    plotter = ana.LatticePlot("%s/scat_len_TP%d_%s.pdf" % (plotdir, d2, lat))
+    label = ["scattering length", "a$_{\pi\pi}$", "a$_{\pi\pi}$"]
+    plotter.histogram(a_pipi, label)
+    del plotter
 
 if __name__ == '__main__':
     try:

@@ -52,6 +52,10 @@ def fit_single(fitfunc, start, corr, franges, add=None, debug=0):
             res, chi, pva = fitting(fitfunc, X[r[0]:r[1]],
                 corr.data[:,r[0]:r[1],n], start, add = add, correlated=True,
                 debug=debug)
+            if i==0:
+                print(res.shape)
+                print(chi.shape)
+                print(pva.shape)
             yield (n, i), res, chi, pva
 
 def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,

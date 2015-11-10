@@ -16,9 +16,9 @@ def main():
     # read settings
     readsingledata = True
     readsinglefit = True
-    plotsingle = False
+    plotsingle = True
     readtwodata = True
-    readtwofit = False
+    readtwofit = True
     plottwo = True
 
     # get data from input file
@@ -52,7 +52,7 @@ def main():
     start_single = [1., 0.3]
     if readsinglefit == False:
         print("fitting")
-        pifit = fit_single.fit(start_single, picorr, [6,24], corrid="epi", add=addT)
+        pifit = fit_single.fit(start_single, picorr, [14,24], corrid="epi", add=addT, min_size=10)
         pifit.save("%s/fit_pi_%s.npz" % (datadir, lat))
     else:
         pifit = ana.FitResult.read("%s/fit_pi_%s.npz" % (datadir, lat))
@@ -93,14 +93,14 @@ def main():
         #ratio = ana.Correlators.read("%s/ratio_pipi_TP%d_%s.npy" % (datadir, d2, lat))
 
     fit_ratio = ana.LatticeFit(3, True)
-    start_ratio = [0.001, 0.3, 0.01]
+    start_ratio = [0.01, 0.25, 1.]
     if readtwofit == False:
         print("fitting")
         #pipifit = fit_ratio.fit(start_ratio, ratio, [[6,T2], [6,18], [5,15]],
         #        corrid="dE", add=addT, oldfit=pifit, debug=debug, min_size=5)
         #pipifit.save("%s/fit_pipi_ratio_TP%d_%s.npz" % (datadir, d2, lat))
-        pipifit = fit_ratio.fit(start_ratio, pipicorr, [10,16], #[[6,T2], [6,18], [5,15]],
-                corrid="E", add=addT, oldfit=pifit, debug=debug, min_size=5)
+        pipifit = fit_ratio.fit(start_ratio, pipicorr, [[6,T2], [6,18], [5,15]],
+                corrid="E", add=addT, oldfit=pifit, oldfitpar=1, debug=debug, min_size=6)
         pipifit.save("%s/fit_pipi_TP%d_%s.npz" % (datadir, d2, lat))
     else:
         #pipifit = ana.FitResult.read("%s/fit_pipi_ratio_TP%d_%s.npz" % (datadir,
@@ -118,8 +118,9 @@ def main():
         plotter.set_env(ylog=True)
         label = ["two pions", "t", "C$_4$(t)", "E$_{\pi\pi}$"]
         plotter.plot(pipicorr, label)
-        plotter.plot(pipicorr, label, pipifit, fit_ratio, oldfit=pifit, add=addT)
-        plotter.new_file("%s/hist_fit_pipi_ratio_TP%d_%s.pdf" % (plotdir, d2, lat))
+        plotter.plot(pipicorr, label, pipifit, fit_ratio, oldfit=pifit, oldfitpar=1, add=addT)
+        plotter.new_file("%s/hist_fit_pipi_TP%d_%s.pdf" % (plotdir, d2, lat))
+        #plotter.new_file("%s/hist_fit_pipi_ratio_TP%d_%s.pdf" % (plotdir, d2, lat))
         label = ["ratio", "dE$_{\pi\pi}$/a", "dE$_{\pi\pi}$"]
         plotter.histogram(pipifit, label, 1)
         del plotter
