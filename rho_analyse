@@ -61,6 +61,52 @@ def write_results(data, staterror, systerror, filename):
               data[_i,2], staterror[_i,2], systerror[0,_i,2], systerror[1,_i,2],
               data[_i,3], staterror[_i,3], systerror[0,_i,3], systerror[1,_i,3]))
 
+def calc_gevp(data, s, tmin, d2, datafolder, lattice, solvenew=True, 
+              verbose=False):
+    """Shift the correlation function matrix and solve the gevp.
+
+    Args:
+        data: correlation function matrix
+        s: number of timeslices to shift
+        tmin: t0 for the GEVP solver
+        d2: total momentum squared
+        datafolder: folder where to store numpy data
+        lattice: the name of the lattice
+        solvenew: If true recalculate, if false read from disk
+        verbose: amount of information written to screen
+
+    Returns:
+        gevp: solution of the GEVP
+        mgevp: mean of the solution of the GEVP
+        dgevp: std of the solution of the GEVP
+    """
+    fname = "%s/pipi_corr_mat_%s_TP%d_s%d.npy" % (datafolder, lattice, d2, s)
+    if solvenew:
+        if verbose:
+            print("shift %d" % s)
+        data_shift = ana.shift_corr_matrix(data, s)
+
+        if verbose:
+            print("shifted data")
+            print(data_shift.shape)
+
+        ## GEVP
+        gevp = ana.calculate_gevp(data_shift, tmin)
+        ana.write_data(gevp, fname)
+    else:
+        if verbose:
+            print("read shifted data")
+        gevp = ana.read_data(fname)
+    mgevp, dgevp = ana.calc_error(gevp)
+    
+    if verbose:
+        print("gevp shapes")
+        print(gevp.shape)
+        print(mgevp.shape)
+        print(dgevp.shape)
+
+    return gevp, mgevp, dgevp
+
 def read_new_data(nbsamples, path, filelist, tmin, lattice, d2, verbose=False):
     """Read in data for a new configuration.
     """
@@ -72,8 +118,11 @@ def read_new_data(nbsamples, path, filelist, tmin, lattice, d2, verbose=False):
     # solve the GEVP
     if verbose:
         print("solving GEVP")
-    gevp_mat = ana.calculate_gevp(corr_mat, tmin)
-    ana.write_data(gevp_mat, "./raw_data/gevp_mat_rho_%s_TP%d.npy"%(lattice,d2))
+    gevp_mat, mgevp, dgevp = calc_gevp(corr_mat, 1, tmin, d2, "./raw_data/", 
+                                       lattice, solvenew=True, verbose=True)
+
+#    gevp_mat = ana.calculate_gevp(corr_mat, tmin)
+#    ana.write_data(gevp_mat, "./raw_data/gevp_mat_rho_%s_TP%d.npy"%(lattice,d2))
     # write in ASCII
     ana.write_data_ascii(gevp_mat,"./raw_data/gevp_rho_%s_TP%d.dat"%(lattice,d2))
     return gevp_mat
@@ -730,8 +779,8 @@ def setup_lattice(lattice, d):
             upborder=np.array((15, 15))
 
     # for testing -> three intervalls on A40.24 TP0
-#    loborder = np.array((7, 7))
-#    upborder = np.array((23, 23))
+    loborder = np.array((10, 10))
+    upborder = np.array((31, 31))
 
     return mpi, L, T, loborder, upborder
 

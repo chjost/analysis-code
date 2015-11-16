@@ -451,7 +451,8 @@ def genfit(_data, fit_intervals, fitfunc, start_params, olddata=None, verbose=Tr
                     print("fitting correlation function")
                     print(tlist[lo:up+1])
                 res[_l][:,:,_i], chi2[_l][:,_i], pval[_l][:,_i] = fitting(fitfunc, 
-                        tlist[lo:up+1], data[:,lo:up+1,_l], start_params, verbose=False)
+                        tlist[lo:up+1], data[:,lo:up+1,_l], start_params, 
+                        correlated=True, verbose=False)
             if verbose:
                 print("p-value %.7lf\nChi^2/dof %.7lf\nresults:"
                       % (pval[_l][ 0, _i], chi2[_l][0,_i]/( (up - lo + 1) -

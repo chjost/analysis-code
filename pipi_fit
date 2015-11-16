@@ -36,7 +36,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 import analysis as ana
 
-def read_data(path, pilist, pipilist, datafolder, nsamples, lattice, d,
+def read_data(path, pilist, datafolder, nsamples, lattice, d,
               readnew=True, verbose=True):
     d2 = np.dot(d,d)
     suffix="%s_TP%d.npy" % (lattice, d2)
@@ -47,23 +47,24 @@ def read_data(path, pilist, pipilist, datafolder, nsamples, lattice, d,
             print("reading files:")
             for f in pilist:
                 print(f)
-            for f in pipilist:
-                print(f)
-        pipi_data = ana.create_corr_matrix(nsamples, path, pipilist)
+#            for f in pipilist:
+#                print(f)
+#        pipi_data = ana.create_corr_matrix(nsamples, path, pipilist)
         corr = ana.read_data_ascii("".join((path, pilist[0])))
         pi_data = ana.sym_and_boot(corr, nsamples)
-        ana.write_data(pipi_data, "%s/pipi_data_%s" % (datafolder, suffix))
+#        ana.write_data(pipi_data, "%s/pipi_data_%s" % (datafolder, suffix))
         ana.write_data(pi_data, "%s/pi_data_%s" % (datafolder, suffix))
     else:
         if verbose:
             print("reading numpy data")
-        pipi_data = ana.read_data("%s/pipi_data_%s" % (datafolder, suffix))
+#        pipi_data = ana.read_data("%s/pipi_data_%s" % (datafolder, suffix))
         pi_data = ana.read_data("%s/pi_data_%s" % (datafolder, suffix))
     if verbose:
         print("data shapes")
         print(pi_data.shape)
-        print(pipi_data.shape)
-    return pi_data, pipi_data
+#        print(pipi_data.shape)
+#    return pi_data, pipi_data
+    return pi_data
 
 def fit_single_pion(pi_data, lo, up, fmin, pars, pionfit, tmin, lattice, d,
                     label, plotfolder, datafolder, newfit=True, verbose=True):
@@ -175,10 +176,10 @@ def analyse(ensemble, datafolder, plotfolder):
     """
     ## define main variables
     # flags for the different parts
-    readnewdata=False
-    fitsinglepion=False
-    calculategevp=False
-    fitratio=True
+    readnewdata=True
+    fitsinglepion=True
+    calculategevp=True
+    fitratio=False
     # verbose prints all the shaped of the different arrays
     verbose=False
     nsamples = 1500 # number of bootstrap samples
@@ -240,8 +241,10 @@ def analyse(ensemble, datafolder, plotfolder):
     par_ratio = [0.5, 0.01]
 
     ## read in data
-    pi_data, pipi_data = read_data(path, pilist, pipilist, datafolder,
-                                   nsamples, lattice, d, readnew=readnewdata)
+#    pi_data, pipi_data = read_data(path, pilist, pipilist, datafolder,
+#                                   nsamples, lattice, d, readnew=readnewdata)
+    pi_data = read_data(path, pilist, datafolder, nsamples, lattice, d, 
+                        readnew=readnewdata)
 
     # fit the correlator
     fitcorr=False
@@ -275,74 +278,74 @@ def analyse(ensemble, datafolder, plotfolder):
     for p, dp, ddp in zip(mpi, dmpi_stat, dmpi_syst):
         print("%.5f +- %.5f -%.5f +%.5f" % (p, dp, ddp[0], ddp[1]))
 
-    for s in slist:
-        print("shift %d" % s)
-        ## GEVP
-        gevp, mgevp, dgevp=calc_gevp(pipi_data, s, tmin, d2, datafolder, lattice,
-                                     solvenew=calculategevp)
-
-        ## build ratio to determine dE
-        print("calculating ratio")
-        ratio, mratio, dratio=ana.simple_ratio_subtract(gevp, pi_data, pi_data)
-
-        ## TODO(CJ): ONLY USE 2 LOWEST CORRELATORS ATM
-        ratio = ratio[:,:,:2]
-        mratio = mratio[:,:2]
-        dratio = dratio[:,:2]
-
-        ## fit ratio
-        print("fitting ratio")
-        fname = "%s/fit_ratio_%s_TP%d_s%d.npz" % (datafolder, lattice, d2, s)
-        ensemble.add_data("ratio data file", fname)
-        if fitratio:
-            ratioranges = ana.set_fit_interval(ratio, lo_ratio, up_ratio, fmin)
-            rres, rchi2, rpvals = ana.genfit_comb(ratio, ratioranges, pionranges,
-                ratiofit, par_ratio, pi, olddata=fname, verbose=False)
-            ana.write_fitresults(fname, ratioranges, rres, rchi2, rpvals)
-            ana.genplot_comb(ratio, rpvals, ratioranges, pionranges, ratiofit, 
-                rres, pi, tmin, lattice, label_ratio, path=plotfolder, 
-                plotlabel="ratio_s%d" % s, verbose=False)
-        else:
-            ratioranges, rres, rchi2, rpvals = ana.read_fitresults(fname)
-            #ana.genplot_comb(ratio, rpvals, ratioranges, pionranges, ratiofit, 
-            #    rres, pi, tmin, lattice, label_ratio, path=plotfolder, 
-            #    plotlabel="ratio_s%d" % s, verbose=False)
-
-        if verbose:
-            print("rres")
-            print(len(rres))
-            for p in rres:
-                print(len(p))
-                for q in p:
-                    print(q.shape)
-            print("rpvals")
-            print(len(rpvals))
-            for p in rpvals:
-                print(len(p))
-                for q in p:
-                    print(q.shape)
-
-        # calculate statistic and systematic error for delta E
-        plotname = "ratio_s%d_%s" % (s, lattice)
-        dE, ddE_stat, ddE_syst, weights_dE = ana.sys_error(rres, rpvals, d, 
-            plotname, par=1, path=plotfolder, absolute=True)
-
-        if verbose:
-            print("weights_dE")
-            print(len(weights_dE))
-            for p in weights_dE:
-                print(len(p))
-                for q in p:
-                    print(q.shape)
-            print(len(dE))
-            for p in dE:
-                print(len(p))
-                for q in p:
-                    print(q)
-        print("dE with errors")
-        for p, dp, ddp in zip(dE, ddE_stat, ddE_syst):
-            for q, dq, ddq in zip(p, dp, ddp):
-                print("%.4f +- %.4f -%.4f +%.4f" % (q, dq, ddq[0], ddq[1]))
+#    for s in slist:
+#        print("shift %d" % s)
+#        ## GEVP
+#        gevp, mgevp, dgevp=calc_gevp(pipi_data, s, tmin, d2, datafolder, lattice,
+#                                     solvenew=calculategevp)
+#
+#        ## build ratio to determine dE
+#        print("calculating ratio")
+#        ratio, mratio, dratio=ana.simple_ratio_subtract(gevp, pi_data, pi_data)
+#
+#        ## TODO(CJ): ONLY USE 2 LOWEST CORRELATORS ATM
+#        ratio = ratio[:,:,:2]
+#        mratio = mratio[:,:2]
+#        dratio = dratio[:,:2]
+#
+#        ## fit ratio
+#        print("fitting ratio")
+#        fname = "%s/fit_ratio_%s_TP%d_s%d.npz" % (datafolder, lattice, d2, s)
+#        ensemble.add_data("ratio data file", fname)
+#        if fitratio:
+#            ratioranges = ana.set_fit_interval(ratio, lo_ratio, up_ratio, fmin)
+#            rres, rchi2, rpvals = ana.genfit_comb(ratio, ratioranges, pionranges,
+#                ratiofit, par_ratio, pi, olddata=fname, verbose=False)
+#            ana.write_fitresults(fname, ratioranges, rres, rchi2, rpvals)
+#            ana.genplot_comb(ratio, rpvals, ratioranges, pionranges, ratiofit, 
+#                rres, pi, tmin, lattice, label_ratio, path=plotfolder, 
+#                plotlabel="ratio_s%d" % s, verbose=False)
+#        else:
+#            ratioranges, rres, rchi2, rpvals = ana.read_fitresults(fname)
+#            #ana.genplot_comb(ratio, rpvals, ratioranges, pionranges, ratiofit, 
+#            #    rres, pi, tmin, lattice, label_ratio, path=plotfolder, 
+#            #    plotlabel="ratio_s%d" % s, verbose=False)
+#
+#        if verbose:
+#            print("rres")
+#            print(len(rres))
+#            for p in rres:
+#                print(len(p))
+#                for q in p:
+#                    print(q.shape)
+#            print("rpvals")
+#            print(len(rpvals))
+#            for p in rpvals:
+#                print(len(p))
+#                for q in p:
+#                    print(q.shape)
+#
+#        # calculate statistic and systematic error for delta E
+#        plotname = "ratio_s%d_%s" % (s, lattice)
+#        dE, ddE_stat, ddE_syst, weights_dE = ana.sys_error(rres, rpvals, d, 
+#            plotname, par=1, path=plotfolder, absolute=True)
+#
+#        if verbose:
+#            print("weights_dE")
+#            print(len(weights_dE))
+#            for p in weights_dE:
+#                print(len(p))
+#                for q in p:
+#                    print(q.shape)
+#            print(len(dE))
+#            for p in dE:
+#                print(len(p))
+#                for q in p:
+#                    print(q)
+#        print("dE with errors")
+#        for p, dp, ddp in zip(dE, ddE_stat, ddE_syst):
+#            for q, dq, ddq in zip(p, dp, ddp):
+#                print("%.4f +- %.4f -%.4f +%.4f" % (q, dq, ddq[0], ddq[1]))
     return
 
 def main():
