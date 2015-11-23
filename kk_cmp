@@ -1,4 +1,4 @@
-#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+#!/usr/bin/python
 ################################################################################
 #
 # Author: Christian Jost (jost@hiskp.uni-bonn.de)
@@ -37,13 +37,14 @@ import analysis as ana
 def main():
     ## definition of some variables
     nbsamples = 500
-    #inputpath="/hiskp2/helmes/contractions/A40.24/kaon/strange_225/merged/"
+    #inputpath="/hiskp2/helmes/contractions/A40.24/k-k_test/strange_225/merged/"
+    inputpath="/hiskp2/helmes/k-k-scattering/tests/A40.24/bastians_code/dsg4/data/"
     #outputpath="/hiskp2/helmes/contractions/A40.24/kaon/strange_225/merged/scratch/"
-    inputpath="/hiskp2/helmes/analysis/scattering/pion_test/data/A40.24/"
-    outputpath = inputpath + "scratch/"
-    suffix="C2_pi.dat"
-    suffix1="pi_p0_average.dat"
-    suffix2="pi_p0_mass.dat"
+    #inputpath = "/hiskp2/helmes/contractions/A30.32/k-k_test/strange_225/merged/"
+    outputpath = inputpath+"scratch/"
+    suffix="k+_corr0_p0.dat"
+    suffix1="k+k+_A1_TP0_00.dat"
+    suffix2="k+_p0_mass.dat"
     inputlist=[""]
     #inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/"
     #outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/"
@@ -58,11 +59,10 @@ def main():
     fitfunc = lambda p,t: 10e6 if p[1] < 0.0 else 0.5*p[0]*p[0]*(np.exp(-p[1]*t) + np.exp(-p[1]*(T-t)))
     massfunc = lambda p,t: p
     for _i in inputlist:
-        #pfit = PdfPages("./plots/%s_plot.pdf" % (_i[:-1]))
-        pfit = PdfPages("%sm_eff_plot.pdf" % outputpath)
         # read in data
         print("".join((inputpath, inputlist[0], suffix)))
         corrs = ana.read_data_ascii("".join((inputpath, inputlist[0], suffix)))
+        corrs_kk = ana.read_data_ascii("".join((inputpath, inputlist[0], suffix1)))
         T = corrs.shape[1]
         nbcfg = corrs.shape[0]
         T2=int(T/2)+1
@@ -72,45 +72,51 @@ def main():
         tlist = np.linspace(0., float(T2), float(T2), endpoint=False)
         # create bootstrap samples
         bsamples = ana.sym_and_boot(corrs, nbsamples)
-        mdata, ddata = ana.calc_error(bsamples)
-        #print(bsamples.shape)
-        #for t in range(bsamples.shape[1]):
-        #    print(bsamples[:,t])
-        #for s in range(bsamples.shape[0]):
-        #    print(bsamples[s])
-        #print(bsamples.shape)
-        # choose fitrange
-
-        # single pi
-        #label = ["single pion, D15", "time", "C(t)", "data", ""]
-        #for lo in range(14, bsamples.shape[1]-5):
-        #    for up in range(lo+3, bsamples.shape[1]-1):
-        #        res, chi2, pval = ana.fitting(fitfunc, tlist[lo:up], bsamples[:,lo:up], [1., 0.07], verbose=0)
-        #        print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, E %.7lf" % (lo, up, pval[0], chi2[0]/(len(tlist[lo:up])-2), res[0,1]))
-        #        fitlabel = "fit %d:%d" % (lo, up-1)
-        #        label[3] = fitlabel
-        #        ana.corr_fct_with_fit(tlist, bsamples[0], ddata, fitfunc, res[0],
-        #                               [1,T2], label, pfit, True)
-        #mass, mmass, dmass = ana.compute_mass(bsamples, True)
-        #ana.corr_fct_with_fit(tlist[:-2], mmass, dmass, massfunc, res[0,1],
-        #                      [1,T2-2], label, pfit, False)
-
-        # single kaon
-        label = ["single pion, A40.24", "time", "C(t)", "data", ""]
-        up=T2-1
-        for lo in range(9, bsamples.shape[1]-11):
-            #for up in range(lo+5, bsamples.shape[1]):
-            res, chi2, pval = ana.fitting(fitfunc, tlist[lo:up], bsamples[:,lo:up], [1., 1.], verbose=1)
-            print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, E %.7lf" % (lo, up, pval[0], chi2[0]/(len(tlist[lo:up])-2), res[0,1]))
-            fitlabel = "fit %d:%d" % (lo, up-1)
-            label[3]
-            print res[0].shape
-            ana.plot_data_with_fit(tlist, mdata, ddata , fitfunc, res[0],
-                                       [1,T2-2], label, pfit, True, True,
-                                       fitrange=[lo,up])
+        bsamples_kk = ana.sym_and_boot(corrs_kk, nbsamples)
+        # compute ratio
+        tlist_ratio = np.linspace(0.5, float(T2-0.5), float(T2-1), endpoint=False)
+        R_boot, R_mean, R_stdev, = ana.simple_ratio_subtract(bsamples_kk, bsamples, bsamples)
+        # compare single kaon and kk effective masses
         mass, mmass, dmass = ana.compute_mass(bsamples, True)
-        ana.plot_data_with_fit(tlist[:-2], mmass, dmass, massfunc, res[0,1],
-                              [1,T2], label, pfit, False, False)
+        mass_kk, mmass_kk, dmass_kk = ana.compute_mass(bsamples_kk, True)
+        m_cmp = np.zeros((2,T2-2))
+        dm_cmp = np.zeros_like(m_cmp)
+        m_cmp[0] = mass[0]
+        dm_cmp[0] = dmass
+        m_cmp[1] = mass_kk[0]
+        dm_cmp[1] = dmass_kk
+        # plot correlationfunctions
+        ana.check_corrs("C2",outputpath,T,corrs)
+        # plot correlationfunctions
+        ana.check_corrs("C4",outputpath,T,corrs_kk)
+
+        # plot effective masses in 1 plot
+        label = ["kk and k, A40.24, amu_s = 0.225", "time",
+        r'm_eff(t)',
+            "data", [r'$C_2(t)$', r'$C_4(t)$' ]]
+        pfit = PdfPages("%sm_k_eff_plot.pdf" % outputpath)
+        plt.title(label[0])
+        plt.xlabel(label[1])
+        plt.ylabel(label[2])
+        p1 = plt.errorbar(tlist[:-2],
+            np.multiply(1,m_cmp[0]), dm_cmp[0], marker='x',
+            color='red',linestyle='', label=label[4][0])
+
+        p1 = plt.errorbar(tlist[:-2], m_cmp[1], dm_cmp[1], marker='x',
+            color='blue',linestyle='', label=label[4][1])
+        plt.grid(True)
+        plt.legend(loc='best')
+        pfit.savefig()
+        plt.clf()
+        label = ["Ratio K-K", "time", "R(t)", "data", ""]
+        plt.title(label[0])
+        plt.xlabel(label[1])
+        plt.ylabel(label[2])
+        p2 = plt.errorbar(tlist_ratio, R_boot[0], R_stdev,
+            marker='x',color='black',linestyle='',label=label[3])
+        plt.grid(True)
+        plt.legend(loc='best')
+        pfit.savefig()
         pfit.close()
 
 # make this script importable, according to the Google Python Style Guide
@@ -118,4 +124,4 @@ if __name__ == '__main__':
     try:
         main()
     except KeyboardInterrupt:
-      print("Keyboard Interrupt")
+        print("Keyboard Interrupt")

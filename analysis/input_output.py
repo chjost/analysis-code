@@ -29,7 +29,7 @@
 __all__ = ["write_data", "read_data", "write_data_ascii", "read_data_ascii",
            "write_data_w_err_ascii", "read_data_w_err_ascii",
            "extract_bin_corr_fct", "write_fitresults",
-           "read_fitresults","_read_corr","read_confs","confs_subtr",
+           "read_fitresults","_read_corr","read_confs","confs_subtr","confs_mult",
            "conf_abs","inputnames"]
 
 import ConfigParser as cp
@@ -383,7 +383,7 @@ def _read_corr(_name, _T=48):
 #------------------------------------------------------------------------------
 
 
-def read_confs(path,corrname,confs,_T=48):
+def read_confs(path,corrname,confs,_T=48,verb=False):
   """ Wrapper to read in correlationfunctions of several configurations
 
       This file assumes B. Knippschilds binary file layout with all the
@@ -401,7 +401,8 @@ def read_confs(path,corrname,confs,_T=48):
   C = np.zeros((len(confs),_T,2))
   for i,d in enumerate(confs):
     #Generate filename from inputlist
-    print path, d, corrname
+    if verb is True:
+      print path, d, corrname
     _fname = path+d+corrname
     _C_tmp = _read_corr(_fname,_T)
     C[i] = _C_tmp
@@ -445,6 +446,26 @@ def conf_abs(Corr):
   for i in range(Corr.shape[0]):
     _re = np.absolute(Corr[i,:,0])
     _im = np.absolute(Corr[i,:,1])
+    Cabs[i] = np.column_stack((_re,_im))
+  return Cabs 
+
+#------------------------------------------------------------------------------
+
+def confs_mult(Corr,scl):
+  """ Multiply Correlation function with scalar
+  
+
+  Args:
+      Corr: Numpy array of one or more correlation functions
+      scl: a python scalar (float or int)
+
+  Returns:
+      A list of three tuples containing scl*C1(t)
+  """
+  Cabs = np.zeros_like(Corr)
+  for i in range(Corr.shape[0]):
+    _re = np.multiply(scl,Corr[i,:,0])
+    _im = np.multiply(scl,Corr[i,:,1])
     Cabs[i] = np.column_stack((_re,_im))
   return Cabs 
 
@@ -655,7 +676,7 @@ def inputnames(conf_file, corr_string):
             # TODO: expand entrys in operator lists
             # join single lists together for filename
             join_q = ''.join(q_list)
-            join_op = '.'.join(op_list)
+            join_op = '_'.join(op_list)
             # build the filename
             corrname = c0[0]+"/"+c0[0]+"_"+join_q+"_"+join_op+".dat"
             print corrname

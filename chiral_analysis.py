@@ -46,43 +46,45 @@ import analysis as ana
 def main():
   
     #----------- Define global parameters, like number of ensembles -------------
-    
-    rootpath = '/hiskp2/helmes/k-k-scattering/plots/overview/light_qmd/'
-    datapath = rootpath+'data/'
-    ##-------------------- A Ensembles ----------------------------------------
+    # Datapath old data
+    rootpath = '/hiskp2/helmes/k-k-scattering/data/'
+    # Datapath new data
+    #rootpath = '/hiskp2/helmes/analysis/scattering/k_charged/'
+    datapath = rootpath+'results/'
+    #-------------------- A Ensembles ----------------------------------------
     ## name
-    # ensemble = ['A30.32/','A40.24/','A60.24/','A80.24/','A100.24/']
-    # ensemble = ['A40.24/']
+    # ensemble = ['A40.24/','A60.24/','A80.24/','A100.24/']
+    ## ensemble = ['A40.24/']
 
     ## strange quark masses
-    # amu_s = np.asarray([0.0185,0.0225,0.02464])
+    #amu_s = np.asarray([0.0225,0.02464])
     ## light masses
-    # amu_l = np.array([[0.003],[0.004],[0.006],[0.008],[0.01]])
+    #amu_l = np.array([[0.004],[0.006],[0.008],[0.01]])
     ## unitary observables 
-    # fk_unit = np.array([[0.07658,0.00032],[0.07432, 0.0057], [0.07699 ,0.0046],
-    #           [0.07886 ,0.0046], [0.0805 ,0.0051]])
-    # r0_a = [[5.127,0.030],[5.178,0.044],[5.209,0.058],
-    #       [4.989,0.040],[4.864,0.021]]
-    # mk_unit = np.array([[0.25150,0.00029],[0.25884,0.00043], [0.26695,0.00052],
-    #           [0.27706,0.00061], [0.28807,0.00034]])
-    # unitary kaon masses and decay constants from eta eta` paper
-    # A40.24  0.25884(43)
-    # A60.24  0.26695(52) 
-    # A80.24  0.27706(61)
-    #A100.24  0.28807(34)
+    #fk_unit = np.array([[0.07432, 0.0057], [0.07699 ,0.0046],
+    #          [0.07886 ,0.0046], [0.0805 ,0.0051]])
+    #r0_a = [[5.178,0.044],[5.209,0.058],
+    #      [4.989,0.040],[4.864,0.021]]
+    #mk_unit = np.array([[0.25884,0.00043], [0.26695,0.00052],
+    #          [0.27706,0.00061], [0.28807,0.00034]])
+    ## unitary kaon masses and decay constants from eta eta` paper
+    ## A40.24  0.25884(43)
+    ## A60.24  0.26695(52) 
+    ## A80.24  0.27706(61)
+    ##A100.24  0.28807(34)
 
     #------------------------------ B Ensembles -------------------------------
     # name 
     ensemble = ['B85.24/']
     # strange quark masses
-    amu_s = np.asarray([0.016, 0.01861, 0.021])
+    amu_s = np.asarray([0.01861])
     # light masses
     amu_l = np.array([0.0085])
     # unitary observables
     fk_unit = np.array([[0.07226,0.00042]])
     r0_a = np.array([[5.493,0.041]])
     mk_unit = np.array([[0.24392,0.00059]])
-    nb_mu_s = len(amu_s)
+    b_mu_s = len(amu_s)
     # transform M_K^phys to lattice units for each ensemble by M_K^lat =
     # M_K^lat = 0.5 fm * a/r_0 * M_K^phys / hc
     hc = [197.326968]
@@ -99,26 +101,27 @@ def main():
     print mk_by_fk
     # arrayfor final results stores for each ensemble light quark mass, amu_s
     # from matching,unitary mass and mk_akk from interpolation
-    amu_s_ipol = np.zeros((5,2)) 
-    akk_mk_match = np.zeros((5,2))
-    fk_ipol = np.zeros((5,2))
+    amu_s_ipol = np.zeros((1,1)) 
+    akk_mk_match = np.zeros((1,1))
+    fk_ipol = np.zeros((1,1))
     # loop over Ensembles
     for (ens, idx ,mk_match_sq) in zip(ensemble,nb,mk_match):
         
         # Source path for data
         src_path = "/hiskp2/helmes/k-k-scattering/data/"+ens
         # cache path for fit results
-        cache_path = "/hiskp2/helmes/k-k-scattering/data/cache/"
+        cache_path = "/hiskp2/helmes/k-k-scattering/data/cache/" 
         # Path for plots
         plt_path = "/hiskp2/helmes/k-k-scattering/plots/"+ens
   
         # Numpy array for mass and scattering length (dim: nb_samples, nb_mu_s)
-        mk_sq_sum = np.zeros((1500,3))
+        mk_sq_sum = np.zeros((1500,1))
         ma_kk_sum = np.zeros_like(mk_sq_sum)
   
   
         #----------- Read in samples: m_k, a0, mk_a0 --------------------------------
         # loop over strange quark masses
+        nb_mu_s = len(amu_s)
         for s in range(0, nb_mu_s):
             # mk_a0 input
             infile_ma_kk = src_path + "mk_a0_" + str(amu_s[s])[3:] + ".npy"
@@ -143,35 +146,36 @@ def main():
         lqm = float(ens[1:-3])*0.0001
         OS_fk = OS_fk[np.logical_not(OS_fk[:,0]!=lqm)]
   
-        #------ Fit and interpolations to resorted data (Bootstrapsamplewise) -------
+        ##------ Fit and interpolations to resorted data (Bootstrapsamplewise) -------
 
-        # Necessary functions 
-        # linear fit
-        linfit = lambda p, t: p[0]*t+p[1]
-        # quadratic interpolation
-        sqfit = lambda p, t: p[0]*t**2+p[1]*t+p[2]
+        ## Necessary functions 
+        ## linear fit
+        #linfit = lambda p, t: p[0]*t+p[1]
+        ## quadratic interpolation
+        #sqfit = lambda p, t: p[0]*t**2+p[1]*t+p[2]
   
-        # matching to M_K^unit with linear fit
-        p_mk_sq, chi2_mk_sq, pvals_mk_sq = ana.fitting(linfit, amu_s, mk_sq_sum,
-                                                       [2.,1.], verbose=False)
-        print("amu_s from unitary M_K matching\n")
-        b_roots_fit = ana.match_qm(p_mk_sq, np.square(mk_match_sq))
-        mean_amu_s, std_amu_s = ana.calc_error(b_roots_fit)
-        print("lin. fit:\tamu_s = %f +/- %f" % (b_roots_fit[0], std_amu_s))
+        ## matching to M_K^unit with linear fit
+        #p_mk_sq, chi2_mk_sq, pvals_mk_sq = ana.fitting(linfit, amu_s, mk_sq_sum,
+        #                                               [2.,1.], verbose=False)
+        #print("amu_s from unitary M_K matching\n")
+        #b_roots_fit = ana.match_qm(p_mk_sq, np.square(mk_match_sq))
+        #mean_amu_s, std_amu_s = ana.calc_error(b_roots_fit)
+        #print("lin. fit:\tamu_s = %f +/- %f" % (b_roots_fit[0], std_amu_s))
   
-        # matching to M_K^unit with linear interpolation
-        interp1 = ana.ipol_lin(mk_sq_sum[:,1:3], amu_s[1:3])
-        b_roots_p1 = ana.match_qm(interp1, np.square(mk_match_sq))
-        mean_amu_s_p1, std_amu_s_p1 = ana.calc_error(b_roots_p1)
-        print("lin. i-pol.:\tamu_s = %f +/- %f" % (b_roots_p1[0], std_amu_s_p1))
-        amu_s_ipol[idx] = np.array([b_roots_p1[0],std_amu_s_p1])
+        ## matching to M_K^unit with linear interpolation
+        #interp1 = ana.ipol_lin(mk_sq_sum[:], amu_s)
+        #b_roots_p1 = ana.match_qm(interp1, np.square(mk_match_sq))
+        #mean_amu_s_p1, std_amu_s_p1 = ana.calc_error(b_roots_p1)
+        #print("lin. i-pol.:\tamu_s = %f +/- %f" % (b_roots_p1[0], std_amu_s_p1))
+        #amu_s_ipol[idx] = np.array([b_roots_p1[0],std_amu_s_p1])
 
-        # matching to M_K^unit with quadratic interpolation
-        interp2 = ana.ipol_quad(mk_sq_sum,amu_s)
-        b_roots_p2 = ana.match_qm(interp2, np.square(mk_match_sq))
-        mean_amu_s_p2, std_amu_s_p2 = ana.calc_error(b_roots_p2)
-        print("quadr. i-pol.:\tamu_s = %f +/- %f" % (b_roots_p2[0], std_amu_s_p2))
+        ### matching to M_K^unit with quadratic interpolation
+        ##interp2 = ana.ipol_quad(mk_sq_sum,amu_s)
+        ##b_roots_p2 = ana.match_qm(interp2, np.square(mk_match_sq))
+        ##mean_amu_s_p2, std_amu_s_p2 = ana.calc_error(b_roots_p2)
+        ##print("quadr. i-pol.:\tamu_s = %f +/- %f" % (b_roots_p2[0], std_amu_s_p2))
         
+        b_roots_p1 = mk
         # ----------------- linear interpolation of fk ------------------------ 
         # interpolate fk to amu_s value
         OS_fk_y = OS_fk[np.logical_and(OS_fk[:,1]>0.015,OS_fk[:,1]<0.02),4]
@@ -185,26 +189,28 @@ def main():
         #------------------ linear interpolation of M_K*a_kk ----------------------
 
         print("M_K * a_kk from unitary M_K matching\n")
-        # Linear interpolation
-        a_k_ipol = ana.ipol_lin(ma_kk_sum[:,1:3], amu_s[1:3])
+        ## Linear interpolation
+        #a_k_ipol = ana.ipol_lin(ma_kk_sum[:], amu_s)
+        a_k_ipol = ma_kk_sum
         a_kk_match = ana.eval_lin(a_k_ipol,b_roots_p1) 
+
         mean_a_kk_match, std_a_kk_match = ana.calc_error(a_kk_match)
         print("lin. i-pol.:\tM_K * a_kk = %f +/- %f" % (a_kk_match[0], std_a_kk_match))
         akk_mk_match[idx] = np.array([a_kk_match[0],std_a_kk_match])
         ana.write_data(a_kk_match, cache_path+ens[:-1]+'_akk_mk_match.npy')
 
-        # Linear fit
-        p_a_k, chi2_a_k, pvals_ak = ana.fitting(linfit, amu_s, ma_kk_sum, [2.,1.],
-            verbose = False)
-        mak_fit = ana.eval_lin(p_a_k,b_roots_fit)
-        mean_ma_k_fit, std_ma_k_fit = ana.calc_error(mak_fit)
-        print("lin. fit:\tM_K * a_kk = %f +/- %f" % (mak_fit[0], std_ma_k_fit))
+        ## Linear fit
+        #p_a_k, chi2_a_k, pvals_ak = ana.fitting(linfit, amu_s, ma_kk_sum, [2.,1.],
+        #    verbose = False)
+        #mak_fit = ana.eval_lin(p_a_k,b_roots_fit)
+        #mean_ma_k_fit, std_ma_k_fit = ana.calc_error(mak_fit)
+        #print("lin. fit:\tM_K * a_kk = %f +/- %f" % (mak_fit[0], std_ma_k_fit))
         
-        # quadratic interpolation
-        a_k_ipol2 = ana.ipol_quad(ma_kk_sum, amu_s)
-        a_kk_match_q = ana.eval_quad(a_k_ipol2,b_roots_p2)
-        a_kk_match_stat = ana.calc_error(a_kk_match_q)
-        print("quad. i-pol.:\tM_K * a_kk = %f +/- %f" % (a_kk_match_q[0], a_kk_match_stat[1]))
+        ## quadratic interpolation
+        #a_k_ipol2 = ana.ipol_quad(ma_kk_sum, amu_s)
+        #a_kk_match_q = ana.eval_quad(a_k_ipol2,b_roots_p2)
+        #a_kk_match_stat = ana.calc_error(a_kk_match_q)
+        #print("quad. i-pol.:\tM_K * a_kk = %f +/- %f" % (a_kk_match_q[0], a_kk_match_stat[1]))
         #------------------ Plot mk_a0 and mk^2 vs. amu_s -------------------------
         
         # Get standard deviation for plots
@@ -230,44 +236,44 @@ def main():
         # Plot the linear fit with its matched amu_s
         ana.plot_data_with_fit(amu_s, mk_sq_sum[0,:], mk_sq_std, linfit, p_mk_sq[0],
             None, label_mk_sq, pdf_mk, hconst = np.square(mk_match_sq),
-            vconst=(b_roots_fit[0],std_amu_s),xlim=[0.01,0.025])
+            vconst=(b_roots_fit[0],std_amu_s),xlim=[0.016,0.021])
 
         # Plot the linear interpolation with its matched amu_s
         label_mk_sq[4] = r'linear ipol'
         ana.plot_data_with_fit(amu_s, mk_sq_sum[0,:], mk_sq_std, linfit, interp1[0],
             None, label_mk_sq, pdf_mk, hconst = np.square(mk_match_sq),
-            vconst=(b_roots_p1[0],std_amu_s_p1),xlim=[0.01,0.025])
+            vconst=(b_roots_p1[0],std_amu_s_p1),xlim=[0.016,0.021])
 
 
-        # Plot the quadratic interpolation with its matched amu_s
-        label_mk_sq[4] = r'quadr. ipol'
-        ana.plot_data_with_fit(amu_s, mk_sq_sum[0,:], mk_sq_std, sqfit, interp2[0],
-            None, label_mk_sq, pdf_mk, hconst = np.square(mk_match_sq),
-            vconst=(b_roots_p2[0],std_amu_s_p2),xlim=[0.01,0.025])
+        ## Plot the quadratic interpolation with its matched amu_s
+        #label_mk_sq[4] = r'quadr. ipol'
+        #ana.plot_data_with_fit(amu_s, mk_sq_sum[0,:], mk_sq_std, sqfit, interp2[0],
+        #    None, label_mk_sq, pdf_mk, hconst = np.square(mk_match_sq),
+        #    vconst=(b_roots_p2[0],std_amu_s_p2),xlim=[0.01,0.025])
 
         # Plot M_K * a_kk vs. amu_s
         # linear interpolation
         ana.plot_data_with_fit(amu_s, ma_kk_sum[0,:], ma_kk_std, linfit,
             a_k_ipol[0], None, label_ma_kk, pdf_ma_kk,
             hconst =
-            (a_kk_match[0],std_a_kk_match),vconst=(b_roots_p1[0],std_amu_s_p1),xlim=[0.01,0.025])
+            (a_kk_match[0],std_a_kk_match),vconst=(b_roots_p1[0],std_amu_s_p1),xlim=[0.022,0.025])
         # Plot the linear fit with its fitted amu_s
         ana.plot_data_with_fit(amu_s, ma_kk_sum[0,:], std_ma_k_fit,linfit,
             p_a_k[0],None,label_ma_kk,pdf_ma_kk,
-            hconst=(mak_fit[0],std_ma_k_fit),vconst=(b_roots_fit[0],std_amu_s),xlim=[0.01,0.025])
-        # quadratic interpolation
-        label_ma_kk[4] = r'qudr. ipol'
-        ana.plot_data_with_fit(amu_s, ma_kk_sum[0,:], ma_kk_std, sqfit,
-            a_k_ipol2[0], None, label_ma_kk, pdf_ma_kk,
-            hconst =
-            (a_kk_match_q[0],a_kk_match_stat[1]),vconst=(b_roots_p2[0],std_amu_s_p2),xlim=[0.01,0.025])
+            hconst=(mak_fit[0],std_ma_k_fit),vconst=(b_roots_fit[0],std_amu_s),xlim=[0.022,0.025])
+        ## quadratic interpolation
+        #label_ma_kk[4] = r'qudr. ipol'
+        #ana.plot_data_with_fit(amu_s, ma_kk_sum[0,:], ma_kk_std, sqfit,
+        #    a_k_ipol2[0], None, label_ma_kk, pdf_ma_kk,
+        #    hconst =
+        #    (a_kk_match_q[0],a_kk_match_stat[1]),vconst=(b_roots_p2[0],std_amu_s_p2),xlim=[0.01,0.025])
         # Close pdf files
         pdf_mk.close() 
         pdf_ma_kk.close()
     res = np.hstack(( amu_l, amu_s_ipol, mk_match, fk_unit, mk_by_fk, akk_mk_match))
     print res
     save_head = 'amu_l\tamu_s_ipol d(amu_s_ipol)\tmk_match d(mk_match)\tfk_unit d(fk_unit)\tmk/fk d(mk/fk)\takk_mk_match d(akk_mk_match)'
-    np.savetxt(datapath+'ma_mk_match.dat',res,fmt='%.4e',header=save_head)
+    np.savetxt(datapath+'ma_mk_match_B.dat',res,fmt='%.4e',header=save_head)
 
 
 # make this script importable, according to the Google Python Style Guide

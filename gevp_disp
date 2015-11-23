@@ -1,0 +1,75 @@
+#!/usr/bin/python
+################################################################################
+#
+# Author: Christian Jost (jost@hiskp.uni-bonn.de)
+# Date:   Februar 2015
+#
+# Copyright (C) 2015 Christian Jost
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Function: At the moment this is a test program, this file will change a lot
+#
+# For informations on input parameters see the description of the function.
+#
+################################################################################
+
+import input_output as io
+import bootstrap
+import corr_matrix
+import gevp
+
+def main():
+    ## definition of some variables
+    nbsamples = 10
+    filepath="/hiskp2/helmes/contractions/A40.20/disp/merged/pi+_d"
+    #filepath="/home/chris/test/data/pi_corr_p"
+    filestring = ["xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz"]
+
+
+    # testing the input
+    #newfile="/hiskp2/correlators/A100.24_L24_T48_beta190_mul0100_musig150_mudel190_kappa1632550/ev120/liuming/pi_corr_p0.dat"
+    #corr, nbcfg, T = io.extract_corr_fct(newfile)
+    #print(corr)
+    #print(nbcfg)
+    #print(T)
+    #io.write_corr_fct(corr, "./corr_test.dat", T, nbcfg)
+
+    # testing the bootstraping
+    #samples = bootstrap.sym_and_boot(corr, T, nbcfg, 100)
+    #print(samples[:,1])
+    #print(samples.shape)
+
+    # testing the creation of a correlation function matrix bootstrapping
+    # included
+    corr_mat, T = corr_matrix.create_corr_matrix(10, filepath, filestring,
+        column=1)
+    #print(corr_mat[:,0,0,0])
+    #print(T)
+    #for s in range(0, nbsamples):
+    #    print("\ts = " + str(s))
+    #    for t in range(0, int(T/2)+1):
+    #        print("\tt = " + str(t))
+    #        print(corr_mat[s][t])
+
+    # testing the GEVP
+    eigenvalues = gevp.calculate_gevp(corr_mat)
+    #print(eigenvalues)
+    io.write_data(eigenvalues, "./test.dat")
+
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    main()
