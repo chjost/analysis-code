@@ -8,7 +8,7 @@ import analyze_fcts as af
 
 def plot_data_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
                        logscale=False, xlim=None, ylim=None, fitrange=None,
-                       addpars=False, pval=None, hconst=None, vconst=None):
+                       addpars=False, pval=None):
     """A function that plots data and the fit to the data.
 
     The plot is saved to pdfplot. It is assumed that pdfplot is a pdf backend to
@@ -44,10 +44,10 @@ def plot_data_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
             l = int(plotrange[0])
             u = int(plotrange[1])
         # plot the data
-        p1 = plt.errorbar(X[l:u], Y[l:u], dY[l:u], fmt='x',color='#dc322f', label = label[3])
+        p1 = plt.errorbar(X[l:u], Y[l:u], dY[l:u], fmt='x' + 'b', label = label[3])
     else:
         # plot the data
-        p1 = plt.errorbar(X, Y, dY, fmt='x',color='#dc322f', label = label[3])
+        p1 = plt.errorbar(X, Y, dY, fmt='x' + 'b', label = label[3])
 
     # plotting the fit function, check for seperate range
     if isinstance(fitrange, (np.ndarray, list, tuple)):
@@ -70,22 +70,13 @@ def plot_data_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
         for i in x1:
             y1.append(fitfunc(args,i))
     y1 = np.asarray(y1)
-    p2, = plt.plot(x1, y1, color='#2aa198',alpha=0.75, label = label[4])
-    # Plotting an additional constant
-    if isinstance(hconst, (np.ndarray,list,tuple)):
-        plt.axhline(hconst[0],color='#b58900')
-        plt.text(X[0],hconst[0]+X[0]/100.,label[5])
-        plt.axhspan(hconst[0]+hconst[1],hconst[0]-hconst[1],alpha=0.35,color='gray')
-    if isinstance(vconst, (np.ndarray,list,tuple)):
-        plt.axvline(vconst[0],color='#859900')
-        plt.text(vconst[0],Y[0],label[6])
-        plt.axvspan(vconst[0]+vconst[1],vconst[0]-vconst[1],alpha=0.35,color='gray')
+    p2, = plt.plot(x1, y1, "r", label = label[4])
     # adjusting the plot style
     plt.grid(True)
     plt.title(label[0])
     plt.xlabel(label[1])
     plt.ylabel(label[2])
-    plt.legend(loc='best')
+    plt.legend()
     if pval is not None:
         # x and y position of the label
         x = np.max(X) * 0.7
@@ -119,24 +110,7 @@ def plot_data_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
 #  plt.plot(x, scipy.stats.chi2.pdf(x, dof), 'r-', lw=2, alpha=1, label='chi2 pdf')
 #  plt.bar(center, hist, align='center', width=width)
 #  plt.show()
-
-def check_corrs(name,path,T,corrs):
-    pfit = PdfPages("%s%s_corr_check.pdf" % (path,name))
-    full_tlist = np.linspace(0., float(T), float(T), endpoint=False)
-    plt.title("Correlators")
-    plt.xlabel(r'$t$')
-    plt.ylabel(name)
-    #loop over configs
-    for c in corrs:
-        p1 = plt.plot(full_tlist,c,marker='x',ls='None')
-    plt.yscale("log")
-    plt.grid(True)
-    pfit.savefig()
-    plt.clf()
-    pfit.close()
-
-def plot_data(X, _Y, dY, pdfplot, label, plotrange=None, logscale=False,
-    xlim=None, ylim=None, hann=None):
+def plot_data(X, Y, dY, pdfplot, label, plotrange=None, logscale=False, xlim=None, ylim=None):
     """A function that plots a correlation function.
 
     This function plots the given data points and the fit to the data. The plot
@@ -168,24 +142,18 @@ def plot_data(X, _Y, dY, pdfplot, label, plotrange=None, logscale=False,
             l = int(plotrange[0])
             u = int(plotrange[1])
         # plot the data
-        print l,u
-        col=['red','blue','black']
-        for a,y in enumerate(Y):
-          p1 = plt.errorbar(X[l:u], y[l:u], dY[l:u], marker='x',
-              color=col[a],linestyle='', label=label[3][a])
-          print y[l:u]
+        p1 = plt.errorbar(X[l:u], Y[0,l:u], dY[l:u], fmt='x' + 'b', label=label[3])
     else:
         # plot the data
-        p1 = plt.errorbar(X, Y, dY, marker='x', color='teal', linestyle='',  label=label[3])
-    if hann is not None:
-        p1 = plt.axhline(y=np.sqrt(hann[0]/hann[1]),color = 'green', ls='-',
-            label = 'expct.')
+        p1 = plt.errorbar(X, Y[0], dY, fmt='x' + 'b', label=label[3])
+
     # adjusting the plot style
     plt.grid(True)
+    plt.ticklabel_format(style='sci', axis='y')
     plt.xlabel(label[1])
     plt.ylabel(label[2])
     plt.title(label[0])
-    plt.legend(loc='best')
+    plt.legend()
     if logscale:
         plt.yscale('log')
     if xlim:

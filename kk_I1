@@ -40,7 +40,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 import analysis as ana
 def main():
     # number of bootstrap samples
-    nbsamples = 1500
+    nbsamples = 250
     # temporal lattice extent
     tmin = 1
     T = 48

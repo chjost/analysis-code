@@ -25,11 +25,113 @@
 #
 ################################################################################
 
-from scipy.optimize import leastsq, fmin_slsqp
+import sys
+from scipy.optimize import leastsq
 import scipy.stats
 import numpy as np
 import analyze_fcts as af
 from .plot import *
+from .input_output import read_fitresults, write_fitresults
+
+def fit(fitfunc, X, Y, start_parm, add_parm=None, num=None, correlated=True,
+    verbose=False):
+    """A function that fits the fitfunc to the data.
+
+    This function fits the given function fitfunc to the data given in X and Y.
+    The function needs some start values, given in start_parm, and can use a
+    correlated or an uncorrelated fit. Optionally an additional parameter can
+    be given to the function using add_parm.
+
+    Parameters
+    ----------
+    fitfunc: callable
+        The function to fit to the data.
+    X: array_like
+        The x data.
+    Y: array_like
+        The bootstrap samples of the data. Needs two dimensions.
+    start_parm: array_like
+        The starting parameters for the fit.
+    add_parm: array_like or tuple
+        Additional parameters, first dimension has to be same as Y.
+    num: integer
+        A number that is returned if given.
+    correlated: boolean
+        Flag to use a correlated or uncorrelated fit.
+    verbose: boolean
+        Controls the amount of information written to the screen.
+
+    Returns
+    -------
+    num: integer
+        If given, the number and the rest is returned as tuple.
+    res: ndarray
+        The fit results.
+    chisquare: ndarray
+        The chi^2 results of the fits.
+    pvals: ndarray
+        The p-values of the fits.
+    """
+    import numpy as np
+    from scipy.optimize import leastsq
+    print("%d\tdefine function" % num)
+    # define the error function to use with scipy.optimize.leastsq
+    if add_parm is None:
+        errfunc = lambda p, x, y, error: np.dot(error, (y-fitfunc(p,x)).T)
+    else:
+        errfunc = lambda p, x, y, e, error: np.dot(error, (y-fitfunc(p,x,e)).T)
+    # compute inverse, cholesky decomposed covariance matrix
+    print("%d\tcompute cov" % num)
+    if not correlated:
+      cov = np.diag(np.diagonal(np.cov(Y[:,:].T)))
+    else:
+      cov = np.cov(Y[:,:].T)
+    cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
+    # degrees of freedom
+    dof = float(Y.shape[1]-len(start_parm)) 
+    print("%d\tcreate array" % num)
+    # create results arrays
+    res = np.zeros((Y.shape[0], len(start_parm)))
+    chisquare = np.zeros(Y.shape[0])
+    # The FIT to the boostrap samples
+    if add_parm is None:
+        for b in range(0, Y.shape[0]):
+            p,cov1,infodict,mesg,ier = leastsq(errfunc, start_parm,
+                args=(X, Y[b,:], cov), full_output=1, factor=0.1)
+            chisquare[b] = float(sum(infodict['fvec']**2.))
+            res[b] = np.array(p)
+    else:
+        print(num, Y.shape, len(add_parm))
+        for b in range(0, Y.shape[0]):
+            p,cov1,infodict,mesg,ier = leastsq(errfunc, start_parm,
+                                       args=(X, Y[b,:], add_parm[b], cov),
+                                       full_output=1, factor=0.1)
+            chisquare[b] = float(sum(infodict['fvec']**2.))
+            res[b] = np.array(p)
+    # calculate mean and standard deviation
+    res_mean, res_std = compute_error(res)
+    # p-value calculated
+    pvals = 1. - scipy.stats.chi2.cdf(chisquare, dof)
+    # writing results to screen
+    if verbose:
+        if correlated:
+            print("fit results for a correlated fit:")
+        else:
+            print("fit results for an uncorrelated fit:")
+        print("degrees of freedom: %f\n" % dof)
+
+        print("original data fit:")
+        for rm, rs in zip(res[0], res_std):
+            print("  %.6e +/- %.6e" % (rm, rs))
+        print("Chi^2/dof: %.6e +/- %.6e" % (chisquare[0]/dof, np.std(chisquare)
+              /dof))
+        print("p-value: %lf" % pvals[0]) 
+    print("%d job finished" % num)
+    # if num was given, it is returned with the rest as a tuple.
+    if num is None:
+        return res, chisquare, pvals
+    else:
+        return (num, res, chisquare, pvals)
 
 def fitting(fitfunc, X, Y, start_parm, E_single=None, correlated=True, verbose=True):
     """A function that fits a correlation function.
@@ -226,72 +328,72 @@ def quantile_1D(data, weights, quantile):
     Pn = (Sn - 0.5*sort_weig) / np.sum(sort_weig)
     return np.interp(quantile, Pn, sort_data)
 
-def fitting_range(fitfunc, X, Y, start_parm, correlated=True, verbose=True):
-    """A function that fits a correlation function for different fit ranges.
+#def fitting_range(fitfunc, X, Y, start_parm, correlated=True, verbose=True):
+#    """A function that fits a correlation function for different fit ranges.
+#
+#    This function fits the given function fitfunc to the data given in X and Y.
+#    The function needs some start values, given in start_parm, and can use a
+#    correlated or an uncorrelated fit. Fits are performed for many different
+#    fit ranges.
+#
+#    Args:
+#        fitfunc: The function to fit to the data.
+#        X: The time slices.
+#        Y: The bootstrap samples of the data.
+#        start_parm: The starting parameters for the fit.
+#        correlated: Flag to use a correlated or uncorrelated fit.
+#        verbose: Controls the amount of information written to the screen.
+#
+#    Returns:
+#    """
+#    # vary the lower and upper end of the fit range
+#    for lo in range(int(Y.shape[1]/4), Y.shape[1]-5):
+#        for up in range(lo+5, X.shape[1]):
+#            # fit the data
+#            res, chi2, pval=fitting(fitfunc, X[lo:up], Y[:,lo:up], start_params,
+#                                    correlated=correlated, verbose=False)
+#            # calculate the weight
+#            weight = ((1. - 2*np.abs(pval - 0.5)) * (1.0))**2
+#            # calculate weighted median
+#            median = quantile_1D(res[:,1], weight, 0.5)
+#
+#            # print some result on screen
+#            print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, E %.7lf" % (lo, up,
+#                  pval[0], chi2[0]/(len(X[lo:up])-len(start_params)),median))
 
-    This function fits the given function fitfunc to the data given in X and Y.
-    The function needs some start values, given in start_parm, and can use a
-    correlated or an uncorrelated fit. Fits are performed for many different
-    fit ranges.
+#def scan_fit_range(fitfunc, X, Y, start_params, correlated=True, verbose=False):
+#    """Fits the fitfunction to the data for different fit ranges and prints the
+#       result.
+#
+#       Args:
+#           fitfunc: The function to fit.
+#           X: The time slices.
+#           Y: The bootstrap samples of the data.
+#           start_params: The start parameters for the fit.
+#           correlated: Correlated or uncorrelated fit.
+#           verbose: Verbosity of the fit function.
+#
+#       Returns:
+#           Nothing.
+#    """
+#    ## vary the lower end of the fit range
+#    #for lo in range(int(Y.shape[1]/4), Y.shape[1]-5):
+#    #    # vary the upper end of the fit range
+#    #    for up in range(lo+5, Y.shape[1]):
+#    # vary the lower end of the fit range
+#    for lo in range(10, 16):
+#        # vary the upper end of the fit range
+#        for up in range(20, 24):
+#            # fir the data
+#            res, chi2, pval=fitting(fitfunc, X[lo:up], Y[:,lo:up], start_params,
+#                                    correlated=correlated, verbose=verbose)
+#            # print some result on screen
+#            print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, E %.7lf" % (lo, up,
+#                  pval[0], chi2[0]/(len(X[lo:up])-len(start_params)),res[0,-1]))
+#
+#    return
 
-    Args:
-        fitfunc: The function to fit to the data.
-        X: The time slices.
-        Y: The bootstrap samples of the data.
-        start_parm: The starting parameters for the fit.
-        correlated: Flag to use a correlated or uncorrelated fit.
-        verbose: Controls the amount of information written to the screen.
-
-    Returns:
-    """
-    # vary the lower and upper end of the fit range
-    for lo in range(int(Y.shape[1]/4), Y.shape[1]-5):
-        for up in range(lo+5, X.shape[1]):
-            # fit the data
-            res, chi2, pval=fitting(fitfunc, X[lo:up], Y[:,lo:up], start_params,
-                                    correlated=correlated, verbose=False)
-            # calculate the weight
-            weight = ((1. - 2*np.abs(pval - 0.5)) * (1.0))**2
-            # calculate weighted median
-            median = quantile_1D(res[:,1], weight, 0.5)
-
-            # print some result on screen
-            print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, E %.7lf" % (lo, up,
-                  pval[0], chi2[0]/(len(X[lo:up])-len(start_params)),median))
-
-def scan_fit_range(fitfunc, X, Y, start_params, correlated=True, verbose=False):
-    """Fits the fitfunction to the data for different fit ranges and prints the
-       result.
-
-       Args:
-           fitfunc: The function to fit.
-           X: The time slices.
-           Y: The bootstrap samples of the data.
-           start_params: The start parameters for the fit.
-           correlated: Correlated or uncorrelated fit.
-           verbose: Verbosity of the fit function.
-
-       Returns:
-           Nothing.
-    """
-    ## vary the lower end of the fit range
-    #for lo in range(int(Y.shape[1]/4), Y.shape[1]-5):
-    #    # vary the upper end of the fit range
-    #    for up in range(lo+5, Y.shape[1]):
-    # vary the lower end of the fit range
-    for lo in range(10, 16):
-        # vary the upper end of the fit range
-        for up in range(20, 24):
-            # fir the data
-            res, chi2, pval=fitting(fitfunc, X[lo:up], Y[:,lo:up], start_params,
-                                    correlated=correlated, verbose=verbose)
-            # print some result on screen
-            print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, E %.7lf" % (lo, up,
-                  pval[0], chi2[0]/(len(X[lo:up])-len(start_params)),res[0,-1]))
-
-    return
-
-def set_fit_interval(_data, lolist, uplist, intervalsize):
+def set_fit_interval(_data, lolist, uplist, intervalsize, skip=1):
     """Initialize intervals to fit in with borders given for every principal
     correlator
 
@@ -302,6 +404,7 @@ def set_fit_interval(_data, lolist, uplist, intervalsize):
         uplist: List of upper interval borders for every gevp-eigenvalue.
         intervallsize: Minimal number of points to be contained in the 
                 interval
+        skip: stepping of the for loops
 
     Returns:
         fit_intervals: list of tuples (lo, up) for every gevp-eigenvalue.
@@ -315,8 +418,8 @@ def set_fit_interval(_data, lolist, uplist, intervalsize):
             print("upper bound for fit greater than time extent of data")
             print("using data time extend!")
             uplist[_l] = data.shape[1] - 1
-        for lo in range(lolist[_l], uplist[_l] + 1):
-            for up in range(lolist[_l], uplist[_l] + 1):
+        for lo in range(lolist[_l], uplist[_l] + 1, skip):
+            for up in range(lolist[_l], uplist[_l] + 1, skip):
                 # the +2 comes from the fact that the interval contains one
                 # more number than the difference between the boundaries and
                 # because python would exclude the upper boundary but we
@@ -326,24 +429,20 @@ def set_fit_interval(_data, lolist, uplist, intervalsize):
 
     return fit_intervals
 
-def genfit_comb(data, fitint_data, fitint_par, fitfunc, start_params, 
-                par, tmin, lattice, _label, path=".plots/", 
-                plotlabel="corr", verbose=True):
-    """Fit and plot a function. With varying parameter, determined in a previous
+def genfit_comb(_data, fitint_data, fitint_par, fitfunc, start_params, 
+                par, par_index=0, olddata=None, verbose=False):
+    """Fit a function. With varying parameter, determined in a previous
     fit
     
     Args:
-        data: The correlation functions.
+        _data: The correlation functions.
         fitint_data: List of intervals for the fit of the functions.
         fitint_par: List of intervals for the varying parameter
         fitfunc: The function to fit to the data.
         start_params: The starting parameters for the fit function.
         par: the varying parameter
-        tmin: Lower bound of the plot.
-        lattice: The name of the lattice, used for the output file.
-        label: Labels for the title and the axis.
-        path: Path to the saving place of the plot.
-        plotlabel: Label for the plot file.
+        par_index: which parameter or set of parameters to give to the fit function
+        olddata: if not None, reuses old data at the location specified, if possible
         verbose: Amount of information printed to screen.
 
     Returns:
@@ -353,8 +452,7 @@ def genfit_comb(data, fitint_data, fitint_par, fitfunc, start_params,
         pval: p-value for every fit.
     """
     # ensure at least 3d 
-    data = np.atleast_3d(data)
-    label = _label
+    data = np.atleast_3d(_data)
     # init variables
     # nboot: number of bootstrap samples
     # npar: number of parameters to fit to
@@ -378,6 +476,8 @@ def genfit_comb(data, fitint_data, fitint_par, fitfunc, start_params,
         print(nint_data)
         print(ncorr_par)
         print(nint_par)
+    # set fit data
+    tlist = np.linspace(0., float(T2), float(T2), endpoint=False)
     # initialize empty arrays with correct shape
     res, chi2, pval = [], [], []
     # loop over the correlators of the parameter
@@ -390,19 +490,34 @@ def genfit_comb(data, fitint_data, fitint_par, fitfunc, start_params,
             res[k].append(np.zeros((nboot, npar, nint_data[l], nint_par[k])))
             chi2[k].append(np.zeros((nboot, nint_data[l], nint_par[k])))
             pval[k].append(np.zeros((nboot, nint_data[l], nint_par[k])))
-    # set fit x data for fit
-    tlist = np.linspace(0., float(T2), float(T2), endpoint=False)
-    # outputfile for the plot
-    corrplot = PdfPages("%s/fit_%s_%s.pdf" % (path,plotlabel,lattice))
-    # check the labels
-    if len(label) < 3:
-        print("not enough labels, using standard labels.")
-        label = ["fit", "time", "C(t)", "", ""]
-    if len(label) < 4:
-        label.append("data")
-    if len(label) < 5:
-        label.append("")
-    label_save = label[0]
+    if olddata:
+        try:
+            print("reading old data from %s" % olddata)
+            _ranges, _par, _chi2, _pvals = read_fitresults(olddata)
+            # sanity checks
+            if len(_par) != ncorr_par:
+                print("old data has different ncorr_par")
+                sys.exit(-15)
+            for _i in range(ncorr_par):
+                if len(_par[_i]) != ncorr:
+                    print("old data has different ncorr")
+                    sys.exit(-15)
+                for _j in range(ncorr):
+                    if _par[_i][_j].shape[0] != nboot:
+                        print("old data has different nboot")
+                        sys.exit(-15)
+                    if _par[_i][_j].shape[1] != npar:
+                        print("old data has different number of parameter")
+                        sys.exit(-15)
+                    # since the fit intervals for the single particle are not available
+                    # nint_par has to be the same
+                    if _par[_i][_j].shape[-1] != nint_par[_i]:
+                        print("old data has different number of par fit intervals")
+                        sys.exit(-15)
+        except IOError as e:
+            print("could not read old data: %s" % e.message)
+            print("continuing")
+            olddata=None
     # loop over the correlation functions of the data
     for l in range(ncorr):
         # setup
@@ -410,19 +525,31 @@ def genfit_comb(data, fitint_data, fitint_par, fitfunc, start_params,
         # loop over the fit intervals
         for i in range(nint_data[l]):
             lo, up = fitint_data[l][i]
+            dofit=True
             if verbose:
                 print("Interval [%d, %d]" % (lo, up))
                 print("correlator %d" % l)
             # loop over the varying parameter and its fit intervals
             for k in range(ncorr_par):
+                if olddata:
+                    for ind, v in enumerate(_ranges[l]):
+                        if v[0] == lo and v[1] == up:
+                            print("found match at index %d (k %d, l %d)" % (ind, k, l))
+                            res[k][l][:,:,i] = _par[k][l][:,:,ind]
+                            chi2[k][l][:,i] = _chi2[k][l][:,ind]
+                            pval[k][l][:,i] = _pvals[k][l][:,ind]
+                            dofit=False
+                            # if a matching range was found stop searching
+                            break
                 for j in range(nint_par[k]):
-                    # fit the energy and print information
-                    if verbose:
-                        print("fitting correlation function")
-                    res[k][l][:,:,i,j], chi2[k][l][:,i,j], pval[k][l][:,i,j] = \
-                        fitting(fitfunc, tlist[lo:up+1], data[:,lo:up+1,l],
-                                start_params, E_single = par[k][:,:,j], 
-                                verbose=False)
+                    if dofit:
+                        # fit the energy and print information
+                        if verbose:
+                            print("fitting correlation function")
+                        res[k][l][:,:,i,j], chi2[k][l][:,i,j], pval[k][l][:,i,j] = \
+                            fitting(fitfunc, tlist[lo:up+1], data[:,lo:up+1,l],
+                                    start_params, E_single = par[k][:,par_index,j], 
+                                    verbose=False)
                     if verbose:
                         print("p-value %.7lf\nChi^2/dof %.7lf\nresults:"
                               % (pval[k][l][0,i,j], chi2[k][l][0,i,j]/(
@@ -430,26 +557,10 @@ def genfit_comb(data, fitint_data, fitint_par, fitfunc, start_params,
                         for p in enumerate(res[k][l][0,:,i,j]):
                             print("\tpar %d = %lf" % p)
                         print(" ")
-                    mres, dres = af.calc_error(res[k][l][:,:,i,j])
-
-                    # set up the plot labels
-                    fitlabel = r"fit %d:%d\nm$_{\pi}$ = %f" % (lo, up, par[k][0,0,j])
-                    title = "%s, %s, pc %d, [%d, %d]" % (label_save, lattice, l, lo, up)
-                    label[0] = title
-                    label[4] = fitlabel
-
-                    # plot the original data and the fit for every fit range
-                    if verbose:
-                        print("plotting")
-                    plot_data_with_fit(tlist, data[0,:,l], ddata, fitfunc,
-                        (mres, par[k][0,0,j]), [tmin,T2], label, corrplot,
-                        logscale=False,fitrange=fitint_data[l][i],addpars=True)
-    corrplot.close()
     return res, chi2, pval
 
-def genfit(_data, fit_intervals, fitfunc, start_params, tmin, lattice, d, label,
-            path=".plots/", plotlabel="corr", verbose=True):
-    """Fit and plot the correlation function.
+def genfit(_data, fit_intervals, fitfunc, start_params, olddata=None, verbose=True):
+    """Fit the correlation function.
     
     Args:
         _data: The correlation functions.
@@ -457,12 +568,7 @@ def genfit(_data, fit_intervals, fitfunc, start_params, tmin, lattice, d, label,
               correlation functions.
         fitfunc: The function to fit to the data.
         start_params: The starting parameters for the fit function.
-        tmin: Lower bound of the plot.
-        lattice: The name of the lattice, used for the output file.
-        d: The total momentum of the reaction.
-        label: Labels for the title and the axis.
-        path: Path to the saving place of the plot.
-        plotlabel: Label for the plot file.
+        olddata: if not None, reuses old data at the location specified, if possible
         verbose: Amount of information printed to screen.
 
     Returns:
@@ -476,8 +582,9 @@ def genfit(_data, fit_intervals, fitfunc, start_params, tmin, lattice, d, label,
     T2 = data.shape[1]
     ncorr = data.shape[2]
     npar = len(start_params)
-    d2 = np.dot(d,d)
     ninter = [len(fitint) for fitint in fit_intervals]
+    # set fit data
+    tlist = np.linspace(0., float(T2), float(T2), endpoint=False)
     # initialize empty arrays
     res = []
     chi2 = []
@@ -487,36 +594,58 @@ def genfit(_data, fit_intervals, fitfunc, start_params, tmin, lattice, d, label,
         res.append(np.zeros((nboot, npar, ninter[_l])))
         chi2.append(np.zeros((nboot, ninter[_l])))
         pval.append(np.zeros((nboot, ninter[_l])))
-    # set fit data
-    tlist = np.linspace(0., float(T2), float(T2), endpoint=False)
-    # outputfile for the plot
-    corrplot = PdfPages("%s/fit_%s_%s_TP%d.pdf" % (path,plotlabel,lattice,d2))
-    # check the labels
-    if len(label) < 3:
-        print("not enough labels, using standard labels.")
-        label = ["fit", "time", "C(t)", "", ""]
-    if len(label) < 4:
-        label.append("data")
-        label.append("")
-    if len(label) < 5:
-        label.append("")
-    label_save = label[0]
+    # read old data and incorporate if possible
+    if olddata:
+        try:
+            print("reading old data from %s" % olddata)
+            _ranges, _par, _chi2, _pvals = read_fitresults(olddata)
+            # sanity checks
+            if len(_par) is not ncorr:
+                print("old data has different ncorr")
+                sys.exit(-15)
+            if _par[0].shape[0] != nboot:
+                print("old data (%d) has different nboot (%d)" % (_par[0].shape[0],nboot))
+                sys.exit(-15)
+            if _par[0].shape[1] != npar:
+                print("old data has different number of parameter")
+                sys.exit(-15)
+            if _par[0].shape[1] != npar:
+                print("old data has different number of parameter")
+                sys.exit(-15)
+        except IOError as e:
+            print("could not read old data: %s" % e.message)
+            print("continuing")
+            olddata=None
     for _l in range(ncorr):
         # setup
         mdata, ddata = af.calc_error(data[:,:,_l])
         for _i in range(ninter[_l]):
             lo, up = fit_intervals[_l][_i]
+            dofit=True
             if verbose:
                 print("Interval [%d, %d]" % (lo, up))
                 print("correlator %d" % _l)
 
-            # fit the energy and print information
-            if verbose:
-                print("fitting correlation function")
-
-            print(tlist[lo:up+1])
-            res[_l][:,:,_i], chi2[_l][:,_i], pval[_l][:,_i] = fitting(fitfunc, 
-                    tlist[lo:up+1], data[:,lo:up+1,_l], start_params, verbose=False)
+            # check if already in old data
+            if olddata:
+                #print(_ranges[_l])
+                #print(fit_intervals[_l][_i])
+                for ind, v in enumerate(_ranges[_l]):
+                    if v[0] == lo and v[1] == up:
+                        print("found match at index %d" % ind)
+                        res[_l][:,:,_i] = _par[_l][:,:,ind]
+                        chi2[_l][:,_i] = _chi2[_l][:,ind]
+                        pval[_l][:,_i] = _pvals[_l][:,ind]
+                        dofit=False
+                        # stop if match was found
+                        break
+            if dofit:
+                # fit the energy and print information
+                if verbose:
+                    print("fitting correlation function")
+                    print(tlist[lo:up+1])
+                res[_l][:,:,_i], chi2[_l][:,_i], pval[_l][:,_i] = fitting(fitfunc, 
+                        tlist[lo:up+1], data[:,lo:up+1,_l], start_params, verbose=False)
             if verbose:
                 print("p-value %.7lf\nChi^2/dof %.7lf\nresults:"
                       % (pval[_l][ 0, _i], chi2[_l][0,_i]/( (up - lo + 1) -
@@ -524,23 +653,6 @@ def genfit(_data, fit_intervals, fitfunc, start_params, tmin, lattice, d, label,
                 for p in enumerate(res[_l][0,:,_i]):
                     print("\tpar %d = %lf" % p)
                 print(" ")
-
-            mres, dres = af.calc_error(res[_l][:,:,_i])
-
-            # set up the plot labels
-            fitlabel = "fit %d:%d" % (lo, up)
-            title="%s, %s, TP %d, pc %d, [%d, %d]" % (label_save, lattice, d2, 
-                                                      _l, lo, up)
-            label[0] = title
-            label[4] = fitlabel
-
-            # plot the data and the fit
-            if verbose:
-                print("plotting")
-            plot_data_with_fit(tlist, data[0,:,_l], ddata, fitfunc, mres,
-                                   [tmin,T2], label, corrplot, logscale=False,
-                                   fitrange=fit_intervals[_l][_i])
-    corrplot.close()
     return res, chi2, pval
 
 #def fit_ratio_samples(X, Y, start_parm, E_single, correlated=True, verbose=True):
@@ -578,14 +690,12 @@ def genfit(_data, fit_intervals, fitfunc, start_params, tmin, lattice, d, label,
 #            append(pval, pval_tmp)
 #    return res, chi2, pval
 
-# compute weights
-################################################################################
-# Input: corr      -> the correlator
-#          params -> contains the p-value for each correlator
-# Output: returns the weights or an empty array
-# corr is np-array  nb_boot, nb_inter
 def compute_weight(corr, params):
     """compute the weights for the histogram
+
+    Args:
+        corr: the correlation function
+        params: the p-values for each correlator
 
     Returns:
         list of weigths if len(params)!=0, else empty list
