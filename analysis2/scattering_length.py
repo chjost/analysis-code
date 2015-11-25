@@ -13,15 +13,13 @@ def calculate_scat_len(mass, massweight, energy, energyweight, L=24,
     c = [-2.837297, 6.375183, -8.311951]
     # prefactor of the equation
     pre = -4.*np.pi / (mass * float(L*L*L))
-    scatshape = (nsam, mass.shape[-1], energy.shape[-1])
-    scatshape_w = (mass.shape[-1], energy.shape[-1])
+    needed = np.zeros((nsam,))
     # loop over fitranges of self
     for i in range(energy.shape[-1]):
         # loop over fitranges of mass
         for j in range(mass.shape[-1]):
             result = np.zeros((nsam,))
             weight = np.zeros((nsam,))
-            needed = np.zeros((nsam,))
             # loop over samples
             for b in range(nsam):
                 p = np.asarray([pre[b,j]*c[1]/float(L*L),
@@ -30,21 +28,18 @@ def calculate_scat_len(mass, massweight, energy, energyweight, L=24,
                     p[3] = -1. * energy[b,j,i]
                 else:
                     if isdependend:
-                        p[3] = -1. * energy[b,j,i]-2*mass[b,j]
+                        p[3] = -1. * (energy[b,j,i]-2*mass[b,j])
                     else:
-                        p[3] = -1. * energy[b,i]-2*mass[b,j]
+                        p[3] = -1. * (energy[b,i]-2*mass[b,j])
                 # find the roots of the polynomial
                 root = np.roots(p)
                 # sort by absolute value of imaginary part
                 ind_root = np.argsort(np.fabs(root.imag))
                 # the first entry is the wanted
-                #self.scat_len[0][b,j,i] = root[ind_root][0].real
                 result[b] = root[ind_root][0].real
             if isratio or isdependend:
-                #self.scat_len_w[0][j,i] = _massweight[j] * _energyweight[j,i]
                 weight = massweight[j] * energyweight[j,i]
             else:
-                #self.scat_len_w[0][j,i] = _massweight[j] * _energyweight[i]
                 weight = massweight[j] * energyweight[i]
             yield (0, 0, j, i), result, needed, weight
 

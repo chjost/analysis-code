@@ -98,6 +98,33 @@ def func_single_corr(p, t, T2):
     """
     return 0.5*p[0]*p[0]*(np.exp(-p[1]*t)+np.exp(-p[1]*(T2-t)))
 
+def func_single_corr2(p, t, T2=None):
+    """A function that describes two point correlation functions.
+
+    The function is given by 0.5*p0^2*(exp(-p1*t)+exp(-p1*(T2-t))),
+    where
+    * p0 is the amplitude,
+    * p1 is the energy of the correlation function,
+    * t is the time, and
+    * T2 is the time around which the correlation function is symmetric,
+    usually half the lattice time extend.
+
+    Parameters
+    ----------
+    p : sequence of float
+        The parameters of the function.
+    t : float
+        The variable of the function.
+    T2 : float
+        The time around which the function is symmetric.
+
+    Returns
+    -------
+    float
+        The result.
+    """
+    return p[0]*(np.exp(-p[1]*t))
+
 def func_two_corr(p, t, o):
     """A function which describes the four point correlation
     function.

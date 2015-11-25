@@ -46,17 +46,22 @@ def fit_single(fitfunc, start, corr, franges, add=None, debug=0):
     for n in range(ncorr):
         if debug > 1:
             print("fitting correlator %d" % (n))
-        for i, r in enumerate(franges[n]):
-            if debug > 1:
-                print("fitting interval %d" % (i))
-            res, chi, pva = fitting(fitfunc, X[r[0]:r[1]],
-                corr.data[:,r[0]:r[1],n], start, add = add, correlated=True,
-                debug=debug)
-            if i==0:
-                print(res.shape)
-                print(chi.shape)
-                print(pva.shape)
-            yield (n, i), res, chi, pva
+        if isinstance(start[0], (tuple, list)) and len(start) == ncorr:
+            for i, r in enumerate(franges[n]):
+                if debug > 1:
+                    print("fitting interval %d" % (i))
+                res, chi, pva = fitting(fitfunc, X[r[0]:r[1]],
+                    corr.data[:,r[0]:r[1],n], start[n], add = add, correlated=True,
+                    debug=debug)
+                yield (n, i), res, chi, pva
+        else:
+            for i, r in enumerate(franges[n]):
+                if debug > 1:
+                    print("fitting interval %d" % (i))
+                res, chi, pva = fitting(fitfunc, X[r[0]:r[1]],
+                    corr.data[:,r[0]:r[1],n], start, add = add, correlated=True,
+                    debug=debug)
+                yield (n, i), res, chi, pva
 
 def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
         oldfitpar=None, useall=False, debug=0):
@@ -139,7 +144,7 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
                     correlated=True, debug=debug)
             yield item + ritem, res, chi, pva
 
-def calculate_ranges(ranges, shape, oldshape=None, step=2, min_size=4, debug=0):
+def calculate_ranges(ranges, shape, oldshape=None, dt_i=2, dt_f=2, dt=4, debug=0):
     """Calculates the fit ranges.
 
     Parameters
@@ -151,9 +156,9 @@ def calculate_ranges(ranges, shape, oldshape=None, step=2, min_size=4, debug=0):
         The shape of the data.
     oldshape : sequence, optional
         The fitranges of a fit before.
-    step : int, optional
-        The steps in the loops.
-    min_size : int, optional
+    dt_i, dt_f : ints, optional
+        The step size for the first and last time slice for the fitting.
+    dt : int, optional
         The minimal size of the interval.
     debug : int
         The amount of info printed.
@@ -174,7 +179,7 @@ def calculate_ranges(ranges, shape, oldshape=None, step=2, min_size=4, debug=0):
             if debug > 1:
                 print("the upper range exceeds the data range")
             ranges[1] = shape[1] - 1
-        r_tmp = get_ranges(ranges[0], ranges[1], step, min_size)
+        r_tmp = get_ranges(ranges[0], ranges[1], dt_i=dt_i, dt_f=dt_f, dt=dt)
         fit_ranges = [r_tmp for i in range(ncorr)]
         shape = [[r_tmp.shape[0]] * ncorr]
     else:
@@ -186,21 +191,21 @@ def calculate_ranges(ranges, shape, oldshape=None, step=2, min_size=4, debug=0):
             # check if we exceed the time extent
             if ran[1] > shape[1] - 1:
                 ran[1] = shape[1] - 1
-            fit_ranges.append(get_ranges(ran[0], ran[1], step, min_size))
+            fit_ranges.append(get_ranges(ran[0], ran[1], dt_i=dt_i, dt_f=dt_f, dt=dt))
         shape = [[ran.shape[0] for ran in fit_ranges]]
     if oldshape is not None:
         shape = oldshape + shape
     fit_ranges = np.asarray(fit_ranges)
     return fit_ranges, shape
 
-def get_ranges(lower, upper, step, minsize):
+def get_ranges(lower, upper, dt_i=2, dt_f=2, dt=4):
     """Get the intervals given a lower and upper bound, step size and
     the minimal size of the interval.
     """
     ran = []
-    for lo in range(lower, upper+1, step):
-        for up in range(lower, upper+1, step):
-            if (up - lo + 2) > minsize:
+    for lo in range(lower, upper+1, dt_i):
+        for up in range(upper, lower-1, -dt_f):
+            if (up - lo + 2) > dt:
                 # the +2 comes from the fact that the interval contains one
                 # more number than the difference between the boundaries and
                 # because python would exclude the upper boundary but we
@@ -297,6 +302,32 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, debug=0):
         print("p-value: %lf" % pvals[0]) 
 
     return res, chisquare, pvals
+
+def compute_dE(mass, mass_w, energy, energy_w, isdependend=False):
+    needed = np.zeros(mass.shape[0])
+    if isdependend:
+        for i in range(mass.shape[-1]):
+            for j in range(energy.shape[-1]):
+                tmp = energy[:,i,j] - 2.*mass[:,i]
+                tmp_w = mass_w[i] * energy_w[i,j]
+                yield (0,0,i,j), tmp, needed, tmp_w
+    else:
+        for i in range(mass.shape[-1]):
+            for j in range(energy.shape[-1]):
+                tmp = energy[:,j] - 2.*mass[:,i]
+                tmp_w = mass_w[i] * energy_w[j]
+                yield (0,0,i,j), tmp, needed, tmp_w
+        
+def compute_phaseshift(Ecm, Ecm_w, mass, mass_w, L=24, isdependend=True):
+    # setup variables
+    corr_num = [1, len(Ecm)]
+    nsamples = Ecm[0].shape[0]
+    needed = np.zeros((nsamples,))
+    nfits = [d.shape[1:] for d in Ecm]
+    print(corr_num)
+    print(nsamples)
+    print(nfits)
+    raise StopIteration
 
 if __name__ == "__main__":
     pass

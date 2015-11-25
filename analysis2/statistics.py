@@ -21,6 +21,7 @@ def compute_error(data, axis=0):
     ndarray
         The standard deviation of the data.
     """
+    m = np.mean(data, axis)
     return np.mean(data, axis), np.std(data, axis)
 
 def weighted_quantile(data, weights, quantile=0.5):
@@ -67,12 +68,12 @@ def sys_error(data, pvals, par=0):
         second dimension.
 
     Returns:
-    res : list
+    res : ndarray
         The weighted median value on the original data
-    res_std : list
+    res_std : ndarray
         The standard deviation derived from the deviation of medians on
         the bootstrapped data.
-    res_syst : list
+    res_syst : ndarray
         1 sigma systematic uncertainty is the difference (res-16%-quantile)
         and (84%-quantile-res) respectively
     weights : ndarray
