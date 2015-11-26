@@ -40,7 +40,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 import analysis as ana
 def main():
     # number of bootstrap samples
-    nbsamples = 250
+    nbsamples = 1500
     # temporal lattice extent
     tmin = 1
     T = 48
@@ -49,12 +49,12 @@ def main():
     #mk_unit = 0.26695
     #dmk_unit = 0.00052
     #A-ensemble strange quark masses, only needed for names
-    amu_s = ['186'] 
+    amu_s = ['225','2464'] 
     #B-ensemble strange quark masses
     #amu_s = [0.016, 0.01861, 0.021]
     p_zero = np.asarray([0,0,0])
     #amu_s = [0.0225]
-    ensemblelist = ['B85.24/']
+    ensemblelist = ['A40.24/']
     #ensemblelist = ['A40.24/','A60.24/','A80.24/','A100.24/']
     #ensemblelist = ['3_rnd_vec/','4_rnd_vec/','5_rnd_vec/']
     filelist = ['k_charged_p0.dat','kk_charged_A1_TP0_00.dat']

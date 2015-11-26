@@ -27,7 +27,7 @@ class LatticeFit(object):
         # chose the correct function if using predefined function
         if isinstance(fitfunc, int):
             if fitfunc > 3:
-                raise ValueError("No fit function choosen")
+                raise ValueError("No fit function chosen")
             functions = {0: func_single_corr, 1: func_ratio, 2: func_const,
                 3: func_two_corr}
             self.fitfunc = functions.get(fitfunc)

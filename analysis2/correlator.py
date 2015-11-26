@@ -276,8 +276,9 @@ class Correlators(object):
 
         if single_corr1 is None:
             obj = Correlators(debug=self.debug)
-            obj.data = ratiofunc(self.data, single_corr.data, single_corr.data,
-                shift, useall, usecomb)
+            #obj.data = ratiofunc(self.data, single_corr.data, single_corr.data,
+            #    shift, useall, usecomb)
+            obj.data = ratiofunc(self.data, single_corr.data, single_corr.data)
             obj.shape = obj.data.shape
         else:
             obj = Correlators(debug=self.debug)

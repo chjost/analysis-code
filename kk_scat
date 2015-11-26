@@ -1,0 +1,85 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+################################################################################
+#
+# Author: Christian Jost (jost@hiskp.uni-bonn.de)
+# Date:   Februar 2015
+#
+# Copyright (C) 2015 Christian Jost
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Function: A programm to use the fitted parameters of kk-scattering to
+# calculate the scattering length, Parameters are fitted with program fit_all
+#
+# For informations on input parameters see the description of the function.
+#
+################################################################################
+
+import sys
+import numpy as np
+import matplotlib
+matplotlib.use('Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+
+import analysis2 as ana
+
+def main():
+
+    # parse the input file
+    if len(sys.argv) < 2:
+        ens = ana.LatticeEnsemble.parse("A40.24.ini")
+    else:
+        ens = ana.LatticeEnsemble.parse(sys.argv[1])
+
+    # get data from input file
+    lat = ens.name()
+    quarks = [ens.get_data("quark1"),ens.get_data("quark2")]
+    datadir = [ens.get_data("datadir") + "/" + q for q in quarks]
+    plotdir = ens.get_data("plotdir")
+
+    print(datadir)
+    print(plotdir)
+
+    ## single particle correlator
+    #print("read single particle corrs")
+    #kcorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat))
+    #kfit = ana.FitResult.read("%s/fit_k_%s.npz" % (datadir, lat))
+    #kfit.print_data(1)
+
+    #print("\n\nread ratio")
+    #ratiofit = ana.FitResult.read("%s/fit_kk_ratio_TP%d_%s.npz" % (datadir, d2, lat))
+    #ratiofit.print_data(0)
+    #ratiofit.print_data(1)
+
+    #calca = True
+    #if calca:
+    #    print("calculate scattering length")
+    #    a_kk = ratiofit.calc_scattering_length(kfit, 1, 1, L=ens.L(), isratio=True)
+    #    a_kk.save("%s/scat_len_TP%d_%s.npz" % (datadir, d2, lat))
+    #else:
+    #    a_kk = ana.FitResult.read("%s/scat_len_TP%d_%s.npz" % (datadir, d2, lat))
+    #a_kk.print_data()
+    #plotter = ana.LatticePlot("%s/scat_len_TP%d_%s.pdf" % (plotdir, d2, lat))
+    #label = ["scattering length", "a$_{\k\k}$", "a$_{\k\k}$"]
+    #plotter.histogram(a_kk, label)
+    #del plotter
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass

@@ -237,7 +237,7 @@ def sys_error(data, pvals, d, lattice, par=0, path="./plots/",boot=False):
                                        weights[i][j].ravel(), 0.84) - res[i][j][0]
                 # keep only the median of the original data
                 res[i][j] = res[i][j][0]
-    return res, res_std, res_sys
+                return res, res_std, res_sys
 
 def sys_error(data, pvals, d, lattice, par=0, path="./plots/", absolute=False):
     """Calculates the statistical and systematic error of an np-array of 
