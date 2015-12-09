@@ -18,7 +18,7 @@ def main():
     plotsingle = True
     readtwodata = False
     readtwofit = False
-    plottwo = False
+    plottwo = True
 
     # get data from input file
     prefix = ens.get_data("path")
@@ -77,36 +77,36 @@ def main():
         range(gmax+1) for j in range(gmax+1)]
     print files
     if readtwodata == False:
-        pipicorr = ana.Correlators(files, matrix=False)
-        pipicorr.sym_and_boot(nboot)
+        kkcorr = ana.Correlators(files, matrix=False)
+        kkcorr.sym_and_boot(nboot)
         if d2 != 0:
             dE = pifit.error[1][0][1] - pifit.error[1][0][0]
             #print(dE)
-            pipicorr.shift(1, dE=dE)
+            kkcorr.shift(1, dE=dE)
         else:
-            #pipicorr.shift(1)
+            #kkcorr.shift(1)
             pass
-        ratio = pipicorr.ratio(picorr, ratio=2 )
-        pipicorr.save("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
-        #ratio = pipicorr.ratio(picorr, 1)
-        #ratio.save("%s/ratio_pipi_TP%d_%s.npy" % (datadir, d2, lat))
+        ratio = kkcorr.ratio(picorr, ratio=2 )
+        kkcorr.save("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
+        #ratio = kkcorr.ratio(picorr, 1)
+        #ratio.save("%s/ratio_kk_TP%d_%s.npy" % (datadir, d2, lat))
     else:
-        pipicorr = ana.Correlators.read("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
-        #ratio = ana.Correlators.read("%s/ratio_pipi_TP%d_%s.npy" % (datadir, d2, lat))
-
+        kkcorr = ana.Correlators.read("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
+        #ratio = ana.Correlators.read("%s/ratio_kk_TP%d_%s.npy" % (datadir,
+        d2, lTrue
     fit_ratio = ana.LatticeFit(1, True)
     start_ratio = [3., 1.]
     if readtwofit == False:
         print("fitting")
-        #pipifit = fit_ratio.fit(start_ratio, ratio, [[6,T2], [6,18], [5,15]],
+        #kkfit = fit_ratio.fit(start_ratio, ratio, [[6,T2], [6,18], [5,15]],
         #        corrid="dE", add=addT, oldfit=pifit, debug=debug, min_size=5)
-        #pipifit.save("%s/fit_pipi_ratio_TP%d_%s.npz" % (datadir, d2, lat))
+        #kkfit.save("%s/fit_kk_ratio_TP%d_%s.npz" % (datadir, d2, lat))
         ratiofit = fit_ratio.fit(start_ratio, ratio, [[9,T2]],
                 corrid="R", add=addT, oldfit=pifit, oldfitpar=1, debug=debug,
                 min_size=10)
         ratiofit.save("%s/fit_kk_TP%d_%s.npz" % (datadir, d2, lat))
     else:
-        #pipifit = ana.FitResult.read("%s/fit_pipi_ratio_TP%d_%s.npz" % (datadir,
+        #kkfit = ana.FitResult.read("%s/fit_kk_ratio_TP%d_%s.npz" % (datadir,
         #    d2, lat))
         ratiofit = ana.FitResult.read("%s/fit_kk_TP%d_%s.npz" % (datadir,
             d2, lat))
@@ -116,15 +116,15 @@ def main():
     if plottwo:
         print("plotting")
         plotter = ana.LatticePlot("%s/fit_ratio_kk_TP%d_%s.pdf" % (plotdir, d2, lat))
-        #plotter = ana.LatticePlot("%s/fit_pipi_ratio_TP%d_%s.pdf" % (plotdir, d2, lat))
+        #plotter = ana.LatticePlot("%s/fit_kk_ratio_TP%d_%s.pdf" % (plotdir, d2, lat))
         plotter.set_env(ylog=False)
         label = ["Ratio", "t", "R(t)", "data"]
-        #plotter.plot(pipicorr, label)
+        #plotter.plot(kkcorr, label)
         print "plotter set up"
         plotter.plot(ratio, label, ratiofit, fit_ratio, oldfit=pifit, add=addT, oldfitpar=1, debug=2)
         print "open new file for deltaE"
-        plotter.new_file("%s/hist_fit_pipi_TP%d_%s.pdf" % (plotdir, d2, lat))
-        #plotter.new_file("%s/hist_fit_pipi_ratio_TP%d_%s.pdf" % (plotdir, d2, lat))
+        plotter.new_file("%s/hist_fit_kk_TP%d_%s.pdf" % (plotdir, d2, lat))
+        #plotter.new_file("%s/hist_fit_kk_ratio_TP%d_%s.pdf" % (plotdir, d2, lat))
         label = ["ratio", "dE$_{KK}$/a", "dE$_{KK}$"]
         plotter.histogram(ratiofit, label, 1)
         del plotter
