@@ -19,24 +19,25 @@ def miss_confs(path,rng):
   return misslist
 
 def main():
-  T = 48
-  res_path='/hiskp2/helmes/contractions/kaon_scattering/B85.24/strange_186/data/'
+  T = 64
+  res_path='/hiskp2/helmes/contractions/kaon_scattering/B55.32/strange_186/data/'
   #res_path='/hiskp2/helmes/contractions/pion_scattering/A40.24/data/'
   Corrs = ana.inputnames('./charged.ini',['C2+', 'C4+C', 'C4+D'])
   #Corrs = ana.inputnames('./charged.ini',['C2+'])
-  res = '/hiskp2/helmes/analysis/scattering/k_charged/data/B85.24/amu_s_186/' 
+  res = '/hiskp2/helmes/analysis/scattering/k_charged/data/B55.32/amu_s_186/' 
   #res = '/hiskp2/helmes/analysis/scattering/pion_test/data/A40.24/' 
   inputlist = []
-  cfg_rng = [500,2900,8]
+  cfg_rng = [16,3985,16]
   missing = miss_confs(res_path,cfg_rng)
   for i in range(cfg_rng[0],cfg_rng[1],cfg_rng[2]):
     if i in missing:
       continue
     inputlist.append('cnfg%d/' % i)
   # Read in correlators
-  print("Reading Correlation functions from %s..." % res_path)
+  print("Reading Correlation functions %d - %d from %s..." % 
+      (cfg_rng[0],cfg_rng[1],res_path))
   print("C2")
-  C2 = ana.read_confs(res_path,Corrs[0],inputlist,T)
+  C2 = ana.read_confs(res_path,Corrs[0],inputlist,T,verb=True)
   print("C4")
   C4D = ana.read_confs(res_path,Corrs[1],inputlist,T)
   C4C = ana.read_confs(res_path,Corrs[2],inputlist,T)

@@ -172,8 +172,10 @@ def err_prop_gauss(_a,_b,oper='div'):
       Returns:
           err_der: a numpy array of the derived errors
   """
-  a,b = _a[:,0],_b[:,0]
-  da,db = _a[:,1], _b[:,1]
+  _A = np.atleast_2d(_a)
+  _B = np.atleast_2d(_b)
+  a,b = _A[:,0],_B[:,0]
+  da,db = _B[:,1], _B[:,1]
   if oper == 'div':
     sq_1 = np.square(np.divide(da,b))
     tmp_prod = np.multiply(a,db)

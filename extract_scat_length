@@ -1,0 +1,179 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+##!/usr/bin/python
+################################################################################
+#
+# Author: Christopher Helmes (helmes@hiskp.uni-bonn.de)
+# Date:   Februar 2015
+#
+# Copyright (C) 2015 Christopher Helmes
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Program to extract mk * a0 in case of only one strange quark mass 
+#
+# For informations on input parameters see the description of the function.
+#
+################################################################################
+
+# system imports
+import os.path as osp
+from scipy import stats
+from scipy import interpolate as ip
+import numpy as np
+from numpy.polynomial import polynomial as P
+import math
+import matplotlib
+matplotlib.use('Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+from matplotlib.backends.backend_pdf import PdfPages
+
+# Christian's packages
+import analysis as ana
+def main():
+  
+    ##----------- Define global parameters, like number of ensembles -------------
+    ## Datapath old data
+    #rootpath = '/hiskp2/helmes/k-k-scattering/data/'
+    ## Datapath new data
+    ##rootpath = '/hiskp2/helmes/analysis/scattering/k_charged/'
+    #datapath = rootpath+'results/'
+    ##-------------------- A Ensembles ----------------------------------------
+    ### name
+    ## ensemble = ['A40.24/','A60.24/','A80.24/','A100.24/']
+    #ensemble = ['A30.32/']
+
+    ## strange quark masses
+    #amu_s = np.asarray([0.0225,0.02464])
+    ## light masses
+    #amu_l = np.array([[0.004],[0.006],[0.008],[0.01]])
+    ## unitary observables 
+    #fk_unit = np.array([[0.07432, 0.0057], [0.07699 ,0.0046],
+    #          [0.07886 ,0.0046], [0.0805 ,0.0051]])
+    #r0_a = [[5.178,0.044],[5.209,0.058],
+    #      [4.989,0.040],[4.864,0.021]]
+    #mk_unit = np.array([[0.25884,0.00043], [0.26695,0.00052],
+    #          [0.27706,0.00061], [0.28807,0.00034]])
+    ## unitary kaon masses and decay constants from eta eta` paper
+    ## A40.24  0.25884(43)
+    ## A60.24  0.26695(52) 
+    ## A80.24  0.27706(61)
+    ##A100.24  0.28807(34)
+
+    #------------------------------ B Ensembles -------------------------------
+    # name 
+    ens = 'B85.24'
+    # strange quark masses
+    amu_s = '0.0186'
+    # light masses
+    amu_l = np.array([0.0085])
+    # unitary observables
+    fk_unit = np.array([0.07226,0.00042])
+    r0_a = np.array([5.493,0.041])
+    mk_unit = np.array([0.24392,0.00059])
+    # transform M_K^phys to lattice units for each ensemble by M_K^lat =
+    # M_K^lat = 0.5 fm * a/r_0 * M_K^phys / hc
+    hc = [197.326968]
+    lat_spac = np.divide(0.5,r0_a)
+    M_K_pdg = [493.677,0.016] 
+    mk_phys = np.divide(np.multiply(lat_spac,M_K_pdg),hc)
+    print mk_phys
+
+    # arrayfor final results stores for each ensemble light quark mass, amu_s
+    # from matching,unitary mass and mk_akk from interpolation
+    akk_mk_match = np.zeros((1,1))
+    fk_ipol = np.zeros((1,1))
+    # loop over Ensembles
+    
+    # Source path for data
+    src_path = "/hiskp2/helmes/analysis/scattering/k_charged/data/%s/" % ens 
+    # cache path for fit results
+    cache_path = "/hiskp2/helmes/analysis/scattering/k_charged/cache/%s/" % ens 
+    # Path for plots
+    plt_path = "/hiskp2/helmes/analysis/scattering/k_charged/plots/%s/" % ens
+  
+    # Numpy array for mass and scattering length (dim: nb_samples)
+    mk_sq_sum = np.zeros((1500))
+    ma_kk_sum = np.zeros_like(mk_sq_sum)
+  
+  
+    #----------- Read in samples: m_k, a0, mk_a0 --------------------------------
+    # loop over strange quark masses
+    # mk_a0 input
+    infile_ma_kk = "%smk_a0_%s.npy" % (src_path, amu_s[3:])
+    ma_kk = ana.read_data(infile_ma_kk)
+    # Kaon mass input
+    infile_mk = "%sm_k_%s.npy" % (src_path, amu_s[3:])
+    mk = ana.read_data(infile_mk)
+  
+    # Append read in results to arrays.
+    if(ma_kk.shape != ma_kk_sum[0].shape):
+      ma_kk = np.resize(ma_kk,(1500))
+      mk = np.resize(mk,(1500))
+    ma_kk_sum = ma_kk
+    mk_sq_sum = np.square(mk)
+    
+    #------------ Read in OS fk-data for each ensemble --------------------
+    # numpy array holding 3 strange quark masses, 3 kaon masses and 3 values
+    # fk
+    file_fk = "%s/OSfk_%s.dat" % (src_path, ens)
+    OS_fk = np.loadtxt(file_fk, skiprows=1,
+        usecols=(1,2,3,4,5,6))
+    # delete everything with wrong light quark mass
+    lqm = float(ens[1:-2])*0.0001
+    OS_fk = OS_fk[np.logical_not(OS_fk[:,0]!=lqm)]
+  
+    
+    b_roots_p1 = mk
+    # ----------------- linear interpolation of fk ------------------------ 
+    # interpolate fk to amu_s value
+    OS_fk_y = OS_fk[np.logical_and(OS_fk[:,1]>0.015,OS_fk[:,1]<0.02),4]
+    OS_fk_y = np.atleast_2d(OS_fk_y)
+    OS_fk_x = OS_fk[np.logical_and(OS_fk[:,1]>0.015,OS_fk[:,1]<0.02),1]
+    fk_coeff = ana.ipol_lin(OS_fk_y,OS_fk_x)
+    fk_coeff_match = ana.eval_lin(fk_coeff, b_roots_p1) 
+    print("lin. i-pol.:\tf_K = %f +/- %f" % (fk_coeff_match[0], 0))
+    fk_ipol = fk_coeff_match[0] 
+  
+    ma_kk_mean, ma_kk_std = ana.calc_error(ma_kk_sum, 0)
+    mk_sq_mean, mk_sq_std = ana.calc_error(mk_sq_sum, 0)
+    mk_mean, mk_std = ana.calc_error(mk, 0)
+
+    # form readable output
+    amu_l = np.array([lqm,0.])
+    amu_s_ipol = [0.0,0.0]
+    mk_match = np.array([mk_mean, mk_std])
+    rat_mf = np.divide(mk_match[0],fk_unit[0])
+    drat_mf = ana.err_prop_gauss(mk_match,fk_unit)
+    print rat_mf
+    print drat_mf
+    mk_by_fk = np.array([rat_mf,np.resize(drat_mf,(1))])
+    akk_mk_match = np.array([ma_kk_mean, ma_kk_std])
+
+    print amu_l, amu_s_ipol, mk_match, fk_unit, mk_by_fk, akk_mk_match
+  
+    res = np.r_[ amu_l, amu_s_ipol, mk_match, fk_unit, mk_by_fk,
+      akk_mk_match]
+    print res
+    save_head = 'amu_l\tamu_s_ipol d(amu_s_ipol)\tmk_match d(mk_match)\tfk_unit d(fk_unit)\tmk/fk d(mk/fk)\takk_mk_match d(akk_mk_match)'
+    np.savetxt(src_path+'ma_mk_match_B.dat', res.reshape(1,res.shape[0]), fmt='%.4e', header=save_head)
+
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Keyboard Interrupt")
