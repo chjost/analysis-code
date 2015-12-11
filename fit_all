@@ -53,7 +53,7 @@ def main():
     if readsinglefit == False:
         print("fitting")
         pifit = fit_single.fit(start_single, picorr, [9,24], corrid="ek",
-            add=addT, min_size=10)
+            add=addT, min_size=6)
         pifit.save("%s/fit_k_%s.npz" % (datadir, lat))
     else:
         pifit = ana.FitResult.read("%s/fit_k_%s.npz" % (datadir, lat))

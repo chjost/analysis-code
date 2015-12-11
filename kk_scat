@@ -74,6 +74,7 @@ def main():
     else:
         a_kk = ana.FitResult.read("%s/scat_len_TP%d_%s.npz" % (datadir, d2, lat))
     a_kk.print_data()
+    print a_kk.get_data(0).shape
     plotter = ana.LatticePlot("%s/scat_len_TP%d_%s.pdf" % (plotdir, d2, lat))
     label = ["scattering length", "a$_{\k\k}$", "a$_{\k\k}$"]
     plotter.histogram(a_kk, label)
