@@ -54,20 +54,20 @@ def main():
     #-------------------- A Ensembles ----------------------------------------
     ## name
     # ensemble = ['A40.24/','A60.24/','A80.24/','A100.24/']
-    #ensemble = ['A30.32/']
+    ensemble = ['A30.32/']
 
     # strange quark masses
-    #amu_s = np.asarray([0.0225,0.02464])
+    amu_s = np.asarray([0.0225,0.02464])
     # light masses
-    #amu_l = np.array([[0.003]])
+    amu_l = np.array([[0.003]])
     # unitary observables 
-    #fk_unit = np.array([[0.07236, 0.00045]])
+    fk_unit = np.array([[0.07236, 0.00045]])
     #fk_unit = np.array([[0.07432, 0.0057], [0.07699 ,0.0046],
     #          [0.07886 ,0.0046], [0.0805 ,0.0051]])
-    #r0_a = [[5.217,0.030]]
+    r0_a = [[5.217,0.030]]
     #r0_a = [[5.178,0.044],[5.209,0.058],
     #      [4.989,0.040],[4.864,0.021]]
-    #mk_unit = np.array([[0.2515,0.00029]])
+    mk_unit = np.array([[0.2515,0.00029]])
     #mk_unit = np.array([[0.25884,0.00043], [0.26695,0.00052],
     #          [0.27706,0.00061], [0.28807,0.00034]])
     # unitary kaon masses and decay constants from eta eta` paper
@@ -88,18 +88,18 @@ def main():
     #r0_a = np.array([[5.493,0.041]])
     #mk_unit = np.array([[0.24392,0.00059]])
 
-    #------------------------------ D Ensembles -------------------------------
-    ## name 
-    ensemble = ['D45.32/']
-    ## strange quark masses
-    amu_s = np.asarray([0.015])
-    ## light masses
-    amu_l = np.array([0.0045])
-    ## unitary observables
-    fk_unit = np.array([[0.04584,0.00037]])
-    r0_a = np.array([[7.310, 0.049]])
-    mk_unit = np.array([[0.17570,0.00084 ]])
-    b_mu_s = len(amu_s)
+    ##------------------------------ D Ensembles -------------------------------
+    ### name 
+    #ensemble = ['D45.32/']
+    ### strange quark masses
+    #amu_s = np.asarray([0.015])
+    ### light masses
+    #amu_l = np.array([0.0045])
+    ### unitary observables
+    #fk_unit = np.array([[0.04584,0.00037]])
+    #r0_a = np.array([[7.310, 0.049]])
+    #mk_unit = np.array([[0.17570,0.00084 ]])
+    #b_mu_s = len(amu_s)
     # transform M_K^phys to lattice units for each ensemble by M_K^lat =
     # M_K^lat = 0.5 fm * a/r_0 * M_K^phys / hc
     hc = [197.326968]
@@ -147,8 +147,8 @@ def main():
   
             # Append read in results to arrays.
             if(ma_kk.shape != ma_kk_sum[0].shape):
-              ma_kk = np.resize(ma_kk,(1200))
-              mk = np.resize(mk,(1200))
+              ma_kk = np.resize(ma_kk,(1500))
+              mk = np.resize(mk,(1500))
             ma_kk_sum[:,s] = ma_kk
             mk_sq_sum[:,s] = np.square(mk)
         
@@ -158,7 +158,7 @@ def main():
         OS_fk = np.loadtxt(src_path+"OSfk_"+ens[:-1]+".dat", skiprows=1,
             usecols=(1,2,3,4,5,6))
         # delete everything with wrong light quark mass
-        lqm = float(ens[1:-3])*0.0001
+        lqm = amu_l[0]
         OS_fk = OS_fk[np.logical_not(OS_fk[:,0]!=lqm)]
   
         ##------ Fit and interpolations to resorted data (Bootstrapsamplewise) -------

@@ -74,15 +74,15 @@ def main():
 
     #------------------------------ B Ensembles -------------------------------
     # name 
-    ens = 'B85.24'
+    ens = 'B55.32'
     # strange quark masses
     amu_s = '0.0186'
     # light masses
-    amu_l = np.array([0.0085])
+    amu_l = np.array([0.0055])
     # unitary observables
-    fk_unit = np.array([0.07226,0.00042])
-    r0_a = np.array([5.493,0.041])
-    mk_unit = np.array([0.24392,0.00059])
+    fk_unit = np.array([0.07001,0.00035])
+    r0_a = np.array([5.662,0.033])
+    mk_unit = np.array([0.22799,0.00034])
     # transform M_K^phys to lattice units for each ensemble by M_K^lat =
     # M_K^lat = 0.5 fm * a/r_0 * M_K^phys / hc
     hc = [197.326968]
@@ -132,7 +132,7 @@ def main():
     OS_fk = np.loadtxt(file_fk, skiprows=1,
         usecols=(1,2,3,4,5,6))
     # delete everything with wrong light quark mass
-    lqm = float(ens[1:-2])*0.0001
+    lqm = amu_l[0]
     OS_fk = OS_fk[np.logical_not(OS_fk[:,0]!=lqm)]
   
     
@@ -142,6 +142,7 @@ def main():
     OS_fk_y = OS_fk[np.logical_and(OS_fk[:,1]>0.015,OS_fk[:,1]<0.02),4]
     OS_fk_y = np.atleast_2d(OS_fk_y)
     OS_fk_x = OS_fk[np.logical_and(OS_fk[:,1]>0.015,OS_fk[:,1]<0.02),1]
+
     fk_coeff = ana.ipol_lin(OS_fk_y,OS_fk_x)
     fk_coeff_match = ana.eval_lin(fk_coeff, b_roots_p1) 
     print("lin. i-pol.:\tf_K = %f +/- %f" % (fk_coeff_match[0], 0))

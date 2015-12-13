@@ -20,14 +20,14 @@ def miss_confs(path,rng):
 
 def main():
   T = 64
-  res_path='/hiskp2/helmes/contractions/kaon_scattering/B55.32/strange_186/data/'
+  res_path='/hiskp2/helmes/contractions/kaon_scattering/A30.32/strange_2464/data/'
   #res_path='/hiskp2/helmes/contractions/pion_scattering/A40.24/data/'
   Corrs = ana.inputnames('./charged.ini',['C2+', 'C4+C', 'C4+D'])
   #Corrs = ana.inputnames('./charged.ini',['C2+'])
-  res = '/hiskp2/helmes/analysis/scattering/k_charged/data/B55.32/amu_s_186/' 
+  res = '/hiskp2/helmes/analysis/scattering/k_charged/data/A30.32/amu_s_2464/' 
   #res = '/hiskp2/helmes/analysis/scattering/pion_test/data/A40.24/' 
   inputlist = []
-  cfg_rng = [16,3985,16]
+  cfg_rng = [1000,3241,8]
   missing = miss_confs(res_path,cfg_rng)
   for i in range(cfg_rng[0],cfg_rng[1],cfg_rng[2]):
     if i in missing:
