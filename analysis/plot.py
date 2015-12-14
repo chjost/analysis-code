@@ -110,7 +110,7 @@ def plot_data_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
 #  plt.plot(x, scipy.stats.chi2.pdf(x, dof), 'r-', lw=2, alpha=1, label='chi2 pdf')
 #  plt.bar(center, hist, align='center', width=width)
 #  plt.show()
-def plot_data(X, Y, dY, pdfplot, label, plotrange=None, logscale=False, xlim=None, ylim=None):
+def plot_data(X, _Y, dY, pdfplot, label, plotrange=None, logscale=False, xlim=None, ylim=None):
     """A function that plots a correlation function.
 
     This function plots the given data points and the fit to the data. The plot
