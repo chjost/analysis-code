@@ -56,7 +56,7 @@ def main():
 
     ## single particle correlator
     print("read single particle corrs")
-    kcorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat))
+    #kcorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat))
     kfit = ana.FitResult.read("%s/fit_k_%s.npz" % (datadir, lat))
     kfit.print_data(1)
 
@@ -74,7 +74,6 @@ def main():
     else:
         a_kk = ana.FitResult.read("%s/scat_len_TP%d_%s.npz" % (datadir, d2, lat))
     a_kk.print_data()
-    print a_kk.get_data(0).shape
     plotter = ana.LatticePlot("%s/scat_len_TP%d_%s.pdf" % (plotdir, d2, lat))
     label = ["scattering length", "a$_{\k\k}$", "a$_{\k\k}$"]
     plotter.histogram(a_kk, label)
