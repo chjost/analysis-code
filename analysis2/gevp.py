@@ -40,20 +40,23 @@ def gevp_shift_1(data, dt, dE=None, debug=0):
 
     # weighting of the matrix
     if dE is not None:
-        for t in range(dshape[1]):
+        _data = np.zeros_like(data)
+        for t in range(_data.shape[1]):
             weight = np.exp(dE*t)
             if isinstance(dE, (int, float)):
-                data[:,t] = data[:,t] * weight
+                _data[:,t] = data[:,t] * weight
             else:
                 for b in range(dshape[0]):
-                    data[b,t] = data[b,t] * weight[b]
+                    _data[b,t] = data[b,t] * weight[b]
+    else:
+        _data = np.copy(data)
 
     # create the new array
     sdata = np.zeros(dshape)
 
     # fill the new array
     for i in range(dshape[1]):
-        sdata[:,i] = data[:,i] - data[:,i+dt]
+        sdata[:,i] = _data[:,i] - _data[:,i+dt]
 
     # reweighting of the matrix to cancel
     if dE is not None:

@@ -123,6 +123,7 @@ def func_single_corr2(p, t, T2=None):
     float
         The result.
     """
+    #return 0.5*p[0]*p[0]*(np.exp(-p[1]*t))
     return p[0]*(np.exp(-p[1]*t))
 
 def func_two_corr(p, t, o):

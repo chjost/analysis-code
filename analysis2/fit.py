@@ -94,6 +94,7 @@ class LatticeFit(object):
             franges, fshape = calculate_ranges(ranges, dshape, dt_i=dt_i, dt_f=dt_f,
                     dt=dt, debug=debug)
 
+            #print(franges)
             # prepare storage
             fitres = FitResult(corrid)
             fitres.set_ranges(franges, fshape)
@@ -102,14 +103,24 @@ class LatticeFit(object):
                 # set start parameter
                 start = []
                 for r in range(ncorr):
-                    tmp = np.nanmean(compute_eff_mass(corr.data[:,ranges[r][0]:ranges[r][1]+1,r])[0])
+                    # calculate effective mass
+                    if isinstance(ranges[0], (tuple, list)):
+                        tmp = np.nanmean(compute_eff_mass(
+                            corr.data[:,ranges[r][0]:ranges[r][1]+1,r])[0])
+                    else:
+                        tmp = np.nanmean(compute_eff_mass(
+                            corr.data[:,ranges[0]:ranges[1]+1,r])[0])
+                    # if only 1 parameter, set it to the effective mass
                     if self.npar == 1:
                         start.append([tmp])
+                    # for 3 parameters use the first value of X for the amplitude,
+                    # the effective mass and 1. as last parameter
                     elif self.npar == 3:
                         if isinstance(ranges[0], (list, tuple)):
                             start.append([corr.data[0,ranges[r][0],r], tmp, 1.])
                         else:
                             start.append([corr.data[0,ranges[0],r], tmp, 1.])
+                    # else use only the amplitude and the effective mass
                     else:
                         if isinstance(ranges[0], (list, tuple)):
                             start.append([corr.data[0,ranges[r][0],r], tmp])
@@ -506,7 +517,7 @@ class FitResult(object):
                             tmpstring = " ".join(("%2d:" % (j),
                                                   "add ranges %s" % str(item),
                                                   "weight %e" % (self.pval[i][select][0]),
-                                                  "par: %e" % (self.data[i][select][0])))
+                                                  "par: %e +- %e" % (self.data[i][select][0], np.std(self.data[i][select]))))
                             print(tmpstring)
         else:
             # iterate over the correlators
@@ -517,7 +528,7 @@ class FitResult(object):
                         # create a string containing the fit parameters
                         tmppar = ["par:"]
                         for p in range(self.data[i].shape[1]):
-                            tmppar.append("%e" % self.data[i][0,p,j])
+                          tmppar.append("%e +- %e" % (self.data[i][0,p,j], np.std(self.data[i][:,p,j])))
                         tmppar = " ".join(tmppar)
                         tmpstring = " ".join(("%d: range %2d:%2d" % (j, r[0],r[1]),
                                               "chi^2 %e" % (self.chi2[i][0,j]),

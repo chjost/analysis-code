@@ -1,0 +1,112 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+##!/usr/bin/python2
+
+import sys
+import numpy as np
+
+import analysis2 as ana
+
+def main():
+    # parse the input file
+    if len(sys.argv) < 2:
+        ens = ana.LatticeEnsemble.parse("A40.24.ini")
+    else:
+        ens = ana.LatticeEnsemble.parse(sys.argv[1])
+
+    # read settings
+    readdata = True
+    preparedata = False
+    readfit = False
+    plotdata = False
+
+    # get data from input file
+    prefix = ens.get_data("path")
+    lat = ens.name()
+    nboot = int(ens.get_data("nboot"))
+    gmax = int(ens.get_data("gmax"))
+    datadir = "/".join((ens.get_data("datadir"), lat))
+    plotdir = "/".join((ens.get_data("plotdir"), lat))
+    d2 = ens.get_data("d2")
+    T2 = ens.T2()
+    L = ens.L()
+    files = ["%s/pipi_pipi_A1_corr_TP%d_%d%d.dat" % (prefix, d2, i, j) for i in range(gmax) for j in range(gmax)]
+    addT2 = np.ones((nboot,)) * T2
+
+    # read pion data
+    #pi = ana.Correlators.read("%s/corr_pi.npy" % (datadir))
+    pifit = ana.FitResult.read("%s/fit_pi.npz" % (datadir))
+
+    print("read data")
+    if readdata == False:
+        corr = ana.Correlators(files)
+        corr.sym_and_boot(nboot)
+        corr.save("%s/corr_pipi_raw_TP%d.npy" % (datadir, d2))
+    else:
+        corr = ana.Correlators.read("%s/corr_pipi_raw_TP%d.npy" % (datadir, d2))
+    if preparedata:
+        #print(corr.data[0,9])
+        #print(corr.data[0,10])
+        if d2 != 0:
+            # get m_pi for fitrange
+            #mpi = pifit.data[0][:,1,85]
+            mpi = 0.1446
+            # WfromMass returns twice the energy
+            Epi = 0.5*ana.WfromMass_lat(mpi, 1, L)
+            dE = Epi - mpi
+            #pifit.calc_error()
+            # for pifit.error the indices are the following:
+            # * parameter
+            # * mean, statistic err., systematic err., num of fits
+            # * correlator number
+            #dE = pifit.error[1][0][1] - pifit.error[1][0][0]
+            #print(dE)
+            corr.shift(1, dE=dE)
+        else:
+            corr.shift(1)
+        #print(corr.data[0,9])
+        #print(corr.data[0,10])
+        corr.gevp(1)
+        corr.save("%s/corr_pipi_TP%d.npy" % (datadir, d2))
+        #ratio = corr.ratio(pi, 1)
+        #ratio.save("%s/ratio_pipi_TP%d.npy" % (datadir, d2))
+    else:
+        corr = ana.Correlators.read("%s/corr_pipi_TP%d.npy" % (datadir, d2))
+        #ratio = ana.Correlators.read("%s/ratio_pipi_TP%d.npy" % (datadir, d2))
+    #for t in range(corr.shape[1]):
+    #    print("%2d %2d %.6e %.6e" % (t, t+1, corr.data[0,t,0], np.std(corr.data[:,t,0])))
+    plotter = ana.LatticePlot("./fit_pipi_TP%d.pdf" % (d2))
+    plotter.set_env(ylog=True)
+    label = ["two pion energy", "t", "C(t)", "E$_{\pi\pi}$"]
+    plotter.plot(corr, label)
+    del plotter
+
+    print("fitting")
+    fitter = ana.LatticeFit(4, True)
+    #start = [1.088295, 0.4648782]
+    if readfit == False:
+        fitres = fitter.fit(None, corr, [[10,19], [6,15], [4,13], [3,12]], #[10,19],
+            corrid="E", dt_i=1, dt_f=1,dt=9)
+        fitres.save("%s/fit_pipi_TP%d.npz" % (datadir, d2))
+    else:
+        fitres = ana.FitResult.read("%s/fit_pipi_TP%d.npz" % (datadir, d2))
+    #fitres.print_data(0)
+    fitres.print_data(1)
+    fitres.print_details()
+
+    # plot the result
+    if plotdata:
+        print("plotting")
+        plotter = ana.LatticePlot("%s/fit_pipi_TP%d.pdf" % (plotdir, d2))
+        plotter.set_env(ylog=True)
+        label = ["two pion energy", "t", "C(t)", "E$_{\pi\pi}$"]
+        plotter.plot(corr, label, fitres, fitter)
+        plotter.new_file("%s/hist_fit_pipi_TP%d.pdf" % (plotdir, d2))
+        label = ["two pion energy", "E$_{\pi\pi}$/a", "E$_{\pi\pi}$"]
+        plotter.histogram(fitres, label, 1)
+        del plotter
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass

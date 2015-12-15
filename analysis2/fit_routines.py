@@ -10,7 +10,7 @@ import numpy as np
 
 from statistics import compute_error
 
-def fit_single(fitfunc, start, corr, franges, add=None, debug=0):
+def fit_single(fitfunc, start, corr, franges, add=None, debug=0, correlated=True):
     """Fits fitfunc to a Correlators object.
 
     The predefined functions describe a single particle correlation
@@ -50,21 +50,21 @@ def fit_single(fitfunc, start, corr, franges, add=None, debug=0):
             for i, r in enumerate(franges[n]):
                 if debug > 1:
                     print("fitting interval %d" % (i))
-                res, chi, pva = fitting(fitfunc, X[r[0]:r[1]],
-                    corr.data[:,r[0]:r[1],n], start[n], add = add, correlated=True,
+                res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
+                    corr.data[:,r[0]:r[1]+1,n], start[n], add = add, correlated=correlated,
                     debug=debug)
                 yield (n, i), res, chi, pva
         else:
             for i, r in enumerate(franges[n]):
                 if debug > 1:
                     print("fitting interval %d" % (i))
-                res, chi, pva = fitting(fitfunc, X[r[0]:r[1]],
-                    corr.data[:,r[0]:r[1],n], start, add = add, correlated=True,
+                res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
+                    corr.data[:,r[0]:r[1]+1,n], start, add = add, correlated=correlated,
                     debug=debug)
                 yield (n, i), res, chi, pva
 
 def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
-        oldfitpar=None, useall=False, debug=0):
+        oldfitpar=None, useall=False, debug=0, correlated=False):
     """Fits fitfunc to a Correlators object.
 
     The predefined functions describe a single particle correlation
@@ -139,9 +139,9 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
                 if add_data.ndim == 1:
                     add_data.shape = (-1, 1)
                 add_data = np.hstack((add_data, add))
-            res, chi, pva = fitting(fitfunc, X[r[0]:r[1]],
-                    corr.data[:,r[0]:r[1],item[-1]], start, add=add_data,
-                    correlated=True, debug=debug)
+            res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
+                    corr.data[:,r[0]:r[1]+1,item[-1]], start, add=add_data,
+                    correlated=correlated, debug=debug)
             yield item + ritem, res, chi, pva
 
 def calculate_ranges(ranges, shape, oldshape=None, dt_i=2, dt_f=2, dt=4, debug=0):
@@ -257,7 +257,10 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, debug=0):
         cov = np.diag(np.diagonal(np.cov(Y.T)))
     else:
         cov = np.cov(Y.T)
-    cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
+    #print(Y.shape)
+    #tmp = np.linalg.inv(np.cov(Y, rowvar=0))
+    #cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
+    #print(tmp)
 
     # degrees of freedom
     dof = float(Y.shape[1]-len(start)) 
@@ -271,13 +274,13 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, debug=0):
     if add is None:
         for b in range(samples):
             p,cov1,infodict,mesg,ier = leastsq(errfunc, start, args=(X, Y[b],
-                cov), full_output=1, factor=0.1)
+                cov), full_output=1, factor=.1)
             chisquare[b] = float(sum(infodict['fvec']**2.))
             res[b] = np.array(p)
     else:
         for b in range(samples):
             p,cov1,infodict,mesg,ier = leastsq(errfunc, start, args=(X, Y[b],
-                add[b], cov), full_output=1, factor=0.1)
+                add[b], cov), full_output=1, factor=.1)
             chisquare[b] = float(sum(infodict['fvec']**2.))
             res[b] = np.array(p)
     # calculate mean and standard deviation

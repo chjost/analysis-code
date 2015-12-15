@@ -3,6 +3,7 @@ Statistical functions.
 """
 
 import numpy as np
+import itertools
 
 def compute_error(data, axis=0):
     """Calculates the mean and standard deviation of the data.
@@ -51,6 +52,38 @@ def weighted_quantile(data, weights, quantile=0.5):
     # Get the value of the weighted median
     return np.interp(quantile, Pn, sorted_data)
 
+def compute_weight(data, pvals):
+    """Calculate the weight of each fit. The weight is only
+    calculated on the original data.
+
+    Parameters
+    ----------
+    data : ndarray
+        The data for which the weight is calculated.
+    pvals : ndarray
+        The p-value used in the weight function.
+
+    Returns
+    -------
+    weight : ndarray
+    """
+    # compute std/mean over bootstrap samples for every fit interval
+    errors = np.nanstd(data, axis=0)/np.nanmean(data, axis=0)
+    # get the minimum of the errors
+    min_err = np.amin(errors)
+    # prepare storage
+    weights = np.zeros((data.shape[1:]))
+    if weights.ndim == 1:
+        for i in range(weights.shape[0]):
+            weights[i] = ((1. - 2.*np.abs(pvals[0,i]-0.5)) *
+                min_err/errors[i])
+    else:
+        ranges = [[n for n in range(x)] for x in weights.shape]
+        for riter in itertools.product(*ranges):
+            weights[riter] = ((1. - 2.*np.abs(pvals[0,riter]-0.5)) *
+                min_err/errors[riter])
+    return weights
+
 def sys_error(data, pvals, par=0):
     """Calculates the statistical and systematic error of an np-array of 
     fit results on bootstrap samples of a quantity and the corresponding 
@@ -67,7 +100,8 @@ def sys_error(data, pvals, par=0):
         The parameter for which to calculate the errors, is applied to
         second dimension.
 
-    Returns:
+    Returns
+    -------
     res : ndarray
         The weighted median value on the original data
     res_std : ndarray
@@ -85,16 +119,13 @@ def sys_error(data, pvals, par=0):
     # loop over principal correlators
     for i, d in enumerate(data):
         # append the necessary data arrays
-        data_weight.append(np.zeros((d.shape[2:])))
+        #data_weight.append(np.zeros((d.shape[2:])))
         res.append(np.zeros(d.shape[0]))
         res_std.append(np.zeros((1,)))
         res_sys.append(np.zeros((2,)))
 
-        # calculate the weight for the fit ranges using the standard
-        # deviation and the p-values of the fit
-        data_std = np.std(d[:,par])
-        data_weight[i] = (1. - 2. * np.fabs(pvals[i][0] - 0.5) *
-                          np.amin(data_std) / data_std)**2
+        # calculate the weight for the fit ranges
+        data_weight.append(compute_weight(d[:,par], pvals[i]))
         # using the weights, calculate the median over all fit intervals
         # for every bootstrap sample.
         for b in range(d.shape[0]):
@@ -158,9 +189,7 @@ def sys_error_der(data, weights):
                 weights[i][0].ravel(), 0.16)
         res_sys[i][1] = weighted_quantile(d[0].ravel(), weights[i][0].ravel(),
                 0.84)-res[i][0]
-        # keep only the median of the original data
-        #res[i] = res[i][0]
     return res, res_std, res_sys, data_weight
 
-if __name__ == "main":
+if __name__ == "__main__":
     pass

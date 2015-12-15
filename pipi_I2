@@ -1,4 +1,3 @@
-#!/usr/bin/python2
 #!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
 #!/usr/bin/python2
 
@@ -19,47 +18,51 @@ def main():
     # get data from input file
     lat = ens.name()
     L = ens.L()
-    datadir = ens.get_data("datadir")
-    plotdir = ens.get_data("plotdir")
+    datadir = "/".join((ens.get_data("datadir"), lat))
+    plotdir = "/".join((ens.get_data("plotdir"), lat))
+    #datadir = ens.get_data("datadir")
+    #plotdir = ens.get_data("plotdir")
     d2 = ens.get_data("d2")
     d = ens.get_data("d")
 
     # single particle correlator
     print("read single particle corrs")
-    picorr = ana.Correlators.read("%s/corr_pi_%s.npy" % (datadir, lat))
-    pifit = ana.FitResult.read("%s/fit_pi_%s.npz" % (datadir, lat))
+    picorr = ana.Correlators.read("%s/corr_pi.npy" % (datadir))
+    pifit = ana.FitResult.read("%s/fit_pi.npz" % (datadir))
     pifit.print_data(1)
     #pifit.print_details()
 
     # two particle correlator
     print("\n\nread four point function")
-    pipifit = ana.FitResult.read("%s/fit_pipi_TP%d_%s.npz" % (datadir, d2, lat))
+    print(datadir)
+    pipifit = ana.FitResult.read("%s/fit_pipi_TP%d.npz" % (datadir, d2))
     pipifit.print_data(1)
     #pipifit.print_details()
 
     calcEcm = True
     if calcEcm:
         Ecm = pipifit.to_CM(1, L=L, d=d)
-        Ecm.save("%s/Ecm_TP%d_%s.npz" % (datadir, d2, lat))
+        Ecm.save("%s/Ecm_TP%d.npz" % (datadir, d2))
     else:
-        Ecm = ana.FitResult.read("%s/Ecm_TP%d_%s.npz" % (datadir, d2, lat))
+        Ecm = ana.FitResult.read("%s/Ecm_TP%d.npz" % (datadir, d2))
     Ecm.print_data()
+    #Ecm.print_details()
 
-    calcdelta = True
-    if calcdelta:
-        delta = Ecm.calc_cot_delta(pifit, 1)
-        delta.save("%s/delta_TP%d_%s.npz" % (datadir, d2, lat))
-    else:
-        delta = ana.FitResult.read("%s/delta_TP%d_%s.npz" % (datadir, d2, lat))
-
-    #calcdE = False
-    #if calcdE:
-    #    dE = pipifit.calc_dE(pifit, 1, 1, isdependend=False)
-    #    dE.save("%s/dE_TP%d_%s.npz" % (datadir, d2, lat))
+    #calcdelta = True
+    #if calcdelta:
+    #    delta = Ecm.calc_cot_delta(pifit, 1)
+    #    delta.save("%s/delta_TP%d.npz" % (datadir, d2))
     #else:
-    #    dE = ana.FitResult.read("%s/dE_TP%d_%s.npz" % (datadir, d2, lat))
-    #dE.print_data()
-    ##dE.print_details()
+    #    delta = ana.FitResult.read("%s/delta_TP%d.npz" % (datadir, d2))
+
+    calcdE = True
+    if calcdE:
+        dE = pipifit.calc_dE(pifit, 1, 1, isdependend=False)
+        dE.save("%s/dE_TP%d.npz" % (datadir, d2))
+    else:
+        dE = ana.FitResult.read("%s/dE_TP%d_%s.npz" % (datadir, d2, lat))
+    dE.print_data()
+    #dE.print_details()
     #plotter = ana.LatticePlot("%s/dE_TP%d_%s.pdf" % (plotdir, d2, lat))
     #label = ["dE", "dE$_{\pi\pi}$", "dE$_{\pi\pi}$"]
     #plotter.histogram(dE, label)
@@ -82,7 +85,6 @@ def main():
 
 if __name__ == '__main__':
     try:
-        print("starting")
         main()
     except KeyboardInterrupt:
         pass

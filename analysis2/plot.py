@@ -12,6 +12,8 @@ from matplotlib.backends.backend_pdf import PdfPages
 from fit import LatticeFit, FitResult
 from correlator import Correlators
 from statistics import compute_error
+from plot_functions import plot_data, plot_function, plot_histogram
+from in_out import check_write
 
 class LatticePlot(object):
     def __init__(self, filename):
@@ -22,6 +24,7 @@ class LatticePlot(object):
         filename : str
             The filename of the plot.
         """
+        check_write(filename)
         self.plotfile = PdfPages(filename)
         # plot environment variables
         self.xlog=False
@@ -35,11 +38,12 @@ class LatticePlot(object):
         self.plotfile.close()
 
     def new_file(self, filename):
-      """Open a new plot file.
-      """
-      self.plotfile.close()
-      plt.clf()
-      self.plotfile = PdfPages(filename)
+        """Open a new plot file.
+        """
+        self.plotfile.close()
+        plt.clf()
+        check_write(filename)
+        self.plotfile = PdfPages(filename)
 
     def save(self):
         if plt.get_fignums():
@@ -59,13 +63,9 @@ class LatticePlot(object):
             plt.xlim(self.xlim)
         if self.ylim:
             plt.ylim(self.ylim)
-        #if self.legend:
-        #    plt.legend()
 
     def _est_env_hist(self):
         plt.grid(self.grid)
-        #if self.legend:
-        #    plt.legend()
 
     def set_title(self, title, axis):
         """Set the title and axis labels of the plot.
@@ -81,295 +81,8 @@ class LatticePlot(object):
         plt.xlabel(axis[0])
         plt.ylabel(axis[1])
 
-    def plot_data_with_fit(self, X, Y, dY, fitfunc, args, label, plotrange=None,
-                       fitrange=None, addpars=None, pval=None):
-        """A function that plots data and the fit to the data.
-
-        Parameters
-        ----------
-        X : ndarray
-            The data for the x axis.
-        Y : ndarray
-            The data for the y axis.
-        dY : ndarray
-            The error on the y axis data.
-        fitfunc : callable
-            The function to fit to the data.
-        args : ndarray
-            The parameters of the fit function from the fit.
-        label : list of str
-            A list with labels for data and fit.
-        plotrange : list of ints, optional
-            The lower and upper range of the plot.
-        fitrange : list of ints, optional
-            A list with two entries, bounds of the fitted function.
-        addpars : bool, optional
-            if there are additional parameters for the fitfunction 
-                 contained in args, set to true
-        pval : float, optional
-            write the p-value in the plot if given
-        """
-        # plot the data
-        self.plot_data(X, Y, dY, label[0], plotrange=plotrange)
-
-        # plot the function
-        self.plot_function(fitfunc, X, args, label[1], addpars, fitrange)
-
-        # adjusting the plot style
-        plt.legend()
-
-        # print label if available
-        if pval is not None:
-            # x and y position of the label
-            x = np.max(X) * 0.7
-            y = np.max(Y) * 0.8
-            datalabel = "p-val = %.5f" % pval
-            try:
-                for k, d in enumerate(args[0]):
-                    datalabel = "".join((datalabel, "\npar %d = %.4e" % (k, d)))
-            except TypeError:
-                datalabel = "".join((datalabel, "\npar = %.4e" % (args[0])))
-            plt.text(x, y, datalabel)
-
-    def _print_label(self, keys, vals, xpos=0.7, ypos=0.8):
-        """Print a label in the plot.
-
-        Parameters
-        ----------
-        keys : list of str
-            The label of the data to print.
-        vals : list of floats
-            The data to print.
-        xpos, ypos : float, optional
-            The position in relativ to maximum of x and y axis,
-            respectively. Should be between 0 and 1.
-        """
-        datalabel = "%s = %.4f" %(keys[0], vals[0])
-        for k, v in zip(keys[1:], vals[1:]):
-            datalabel = "\n".join((datalabel, "%s = %.4f" %(k, v)))
-        x = xlim()[1] * xpos
-        y = ylim()[1] * ypos
-
-
-    def plot_function(self, func, X, args, label, add=None, plotrange=None):
-        """A function that plots a function.
-
-        Parameters
-        ----------
-        func : callable
-            The function to plot.
-        Y : ndarray
-            The data for the y axis.
-        args : ndarray
-            The arguments to the function.
-        label : list of str
-            A list with labels for data and fit.
-        add : ndarray, optional
-            Additional arguments to the fit function.
-        plotrange : list of ints, optional
-            The lower and upper range of the plot.
-        """
-        # check for plotting range
-        if isinstance(plotrange, (np.ndarray, list, tuple)):
-            _plotrange = np.asarray(plotrange).flatten()
-            if _plotrange.size < 2:
-                raise IndexError("fitrange has not enough indices")
-            else:
-                lfunc = int(_plotrange[0])
-                ufunc = int(_plotrange[1])
-        else:
-            lfunc = X[0]
-            ufunc = X[-1]
-        x1 = np.linspace(lfunc, ufunc, 1000)
-
-        # check dimensions of args, if more than one,
-        # iterate over first dimension
-        _args = np.asarray(args)
-        if add is not None:
-            _add = np.asarray(add)
-        if _args.ndim > 1:
-            # the first sample contains original data,
-            # also save min and max at each x
-            y1, ymin, ymax = [], [], []
-            # check for dimensions of add
-            if add is not None:
-                # need to check size of first axis
-                args0 = _args.shape[0]
-                add0 = _add.shape[0]
-                if args0 == add0:
-                    # first axis has same size for both
-                    # iterate over the x range
-                    for x in x1:
-                        # the actual value is given by the first sample
-                        y1.append(func(_args[0], x, _add[0]))
-                        tmp = [y1[-1]]
-                        # iterate over the rest of the arguments
-                        for i in range(1,args0):
-                            tmp.append(func(_args[i], x, _add[i]))
-                        ymin.append(np.min(tmp))
-                        ymax.append(np.max(tmp))
-                elif (args0 % add0) == 0:
-                    # size of add is a divisor of size of args
-                    # iterate over x
-                    for x in x1:
-                        # the actual value is given by the first sample
-                        y1.append(func(_args[0], x, _add[0]))
-                        tmp = [y1[-1]]
-                        # iterate over the rest of the arguments
-                        for i in range(1,args0):
-                            tmp.append(func(_args[i], x, _add[i%add0]))
-                        ymin.append(np.min(tmp))
-                        ymax.append(np.max(tmp))
-                elif (add0 % args0) == 0:
-                    # size of args is a divisor of size of add
-                    # iterate over x
-                    for x in x1:
-                        # the actual value is given by the first sample
-                        y1.append(func(_args[0], x, _add[0]))
-                        tmp = [y1[-1]]
-                        # iterate over the rest of the arguments
-                        for i in range(1,add0):
-                            tmp.append(func(_args[i%args0], x, _add[i]))
-                        ymin.append(np.min(tmp))
-                        ymax.append(np.max(tmp))
-            else:
-                # no additional arguments, iterate over args
-                #iterate over x
-                for x in x1:
-                    y1.append(func(_args[0], x))
-                    tmp = [y[-1]]
-                    for i in range(1, _args.shape[0]):
-                        tmp.append(func(_args[i], x))
-                    ymin.append(np.min(tmp))
-                    ymax.append(np.max(tmp))
-        # only one args
-        else:
-            # the first sample contains original data
-            y1 = []
-            # calculate minimal and maximal y1 for
-            # error checking
-            ymax = []
-            ymin = []
-            # iterate over x values
-            for x in x1:
-                # check for additional arguments
-                if add is not None:
-                    tmp = func(_args, x, _add)
-                    if np.asarray(tmp).size > 1:
-                        y1.append(tmp[0])
-                        ymax.append(np.max(tmp))
-                        ymin.append(np.min(tmp))
-                    else:
-                        y1.append(tmp)
-                else:
-                    # calculate on original data
-                    y1.append(func(_args, x))
-        plt.plot(x1, y1, "r", label=label)
-        if ymax and ymin:
-            plt.fill_between(x1, ymin, ymax, facecolor="red",
-                edgecolor="red", alpha=0.3)
-        plt.legend()
-
-    def plot_data(self, X, Y, dY, label, plotrange=None, fmt="xb"):
-        """A function that plots data.
-
-        Parameters
-        ----------
-        X : ndarray
-            The data for the x axis.
-        Y : ndarray
-            The data for the y axis.
-        dY : ndarray
-            The error on the y axis data.
-        label : list of str
-            A list with labels for data and fit.
-        plotrange : list of ints, optional
-            The lower and upper range of the plot.
-        """
-        # check boundaries for the plot
-        if isinstance(plotrange, (np.ndarray, list, tuple)):
-            plotrange = np.asarray(plotrange).flatten()
-            if plotrange.size < 2:
-                raise IndexError("plotrange is too small")
-            else:
-                l = int(plotrange[0])
-                u = int(plotrange[1])
-            # plot the data
-            plt.errorbar(X[l:u], Y[l:u], dY[l:u], fmt=fmt, label=label)
-        else:
-            # plot the data
-            plt.errorbar(X, Y, dY, fmt=fmt, label=label)
-        plt.legend()
-
-    def plot_histogram(self, data, data_weight, label, debug=0):
-        """Plots histograms for the given data set.
-
-        The function plots the weighted distribution of the data, the unweighted
-        distribution and a plot containing both the weighted and the unweighted
-        distribution.
-
-        Parameters
-        ----------
-        data : ndarray
-            Data set for the histogram.
-        data_weight : ndarray
-            The weights for the data, must have same shape as data.
-        label : list of strs
-            The title of the plots, the x-axis label and the label of the data.
-        debug : int
-            The amount of info printed.
-        """
-        # The histogram
-        # generate weighted histogram
-        hist, bins = np.histogram(data, 20, weights=data_weight, density=True)
-        # generate the unweighted histogram
-        uhist, ubins = np.histogram(data, 20, weights=np.ones_like(data_weight),
-                                    density=True)
-    
-        # prepare the plot
-        width = 0.7 * (bins[1] - bins[0])
-        uwidth = 0.7 * (ubins[1] - ubins[0])
-        center = (bins[:-1] + bins[1:]) / 2
-        ucenter = (ubins[:-1] + ubins[1:]) / 2
-    
-        # plot both histograms in same plot
-        plt.title(label[0])
-        plt.xlabel(label[1])
-        plt.ylabel("".join(("distribution of ", label[2])))
-        plt.grid(True)
-        # plot
-        plt.bar(center, hist, align='center', width=width, color='r', alpha=0.5,
-                label='weighted data')
-        plt.bar(center, uhist, align='center', width=width, color='b', alpha=0.5,
-                label='unweighted data')
-        plt.legend()
-        # save and clear
-        self.save()
-
-        # plot the weighted histogram
-        # set labels for axis
-        plt.title(label[0])
-        plt.xlabel(label[1])
-        plt.ylabel('weighted distribution')
-        plt.grid(True)
-        # plot
-        plt.bar(center, hist, align='center', width=width, color='r', alpha=0.5)
-        # save and clear
-        self.save()
-    
-        # plot the unweighted histogram
-        # the center and width stays the same for comparison
-        plt.title(label[0])
-        plt.xlabel(label[1])
-        plt.ylabel('unweighted distribution')
-        plt.grid(True)
-        # plot
-        plt.bar(ucenter, uhist, align='center', width=uwidth, color='b', alpha=0.5)
-        # save and clear
-        self.save()
-
     def _genplot_single(self, corr, label, fitresult=None, fitfunc=None,
-            add=None, debug=0):
+            add=None, ploterror=False, debug=0):
         """Plot the data of a Correlators object and a FitResult object
         together.
 
@@ -416,7 +129,7 @@ class LatticePlot(object):
                 self.set_title(label[0], label[1:3])
                 # plot
                 self._set_env_normal()
-                self.plot_data(X, corr.data[0,:,n], ddata, label[3],
+                plot_data(X, corr.data[0,:,n], ddata, label[3],
                         plotrange=[1,T])
                 plt.legend()
                 self.save()
@@ -435,16 +148,16 @@ class LatticePlot(object):
 
                     # plot
                     self._set_env_normal()
-                    self.plot_data(X, corr.data[0,:,n], ddata, label[3],
+                    plot_data(X, corr.data[0,:,n], ddata, label[3],
                             plotrange=[1,T])
-                    self.plot_function(fitfunc.fitfunc, X, mpar, label[4],
-                            add, fi)
+                    plot_function(fitfunc.fitfunc, X, mpar, label[4],
+                            add, fi, ploterror)
                     plt.legend()
                     self.save()
         label[0] = label_save
 
     def _genplot_comb(self, corr, label, fitresult, fitfunc, oldfit, add=None,
-            oldfitpar=None, debug=0):
+            oldfitpar=None, ploterror=False, debug=0):
         """Plot the data of a Correlators object and a FitResult object
         together.
 
@@ -524,15 +237,15 @@ class LatticePlot(object):
 
                 # plot
                 self._set_env_normal()
-                self.plot_data(X, corr.data[0,:,n], ddata, label[3],
+                plot_data(X, corr.data[0,:,n], ddata, label[3],
                         plotrange=[1,T])
-                self.plot_function(fitfunc.fitfunc, X, _par, label[4], 
-                        add_data, fi)
+                plot_function(fitfunc.fitfunc, X, _par, label[4], 
+                        add_data, fi, ploterror)
                 plt.legend()
                 self.save()
 
     def plot(self, corr, label, fitresult=None, fitfunc=None, oldfit=None,
-            add=None, oldfitpar=None, debug=0):
+            add=None, oldfitpar=None, ploterror=False, debug=0):
         """Plot the data of a Correlators object and a FitResult object
         together.
 
@@ -553,15 +266,17 @@ class LatticePlot(object):
             the third dimenstion to the oldfit data.
         oldfitpar : None, int or sequence of int, optional
             Which parameter of the old fit to use, if there is more than one.
+        ploterror : bool, optional
+            Plot the error of the fit function.
         debug : int, optional
             The amount of info printed.
         """
         if oldfit is None:
             self._genplot_single(corr, label, fitresult, fitfunc, add=add,
-                    debug=debug)
+                    ploterror=ploterror, debug=debug)
         else:
             self._genplot_comb(corr, label, fitresult, fitfunc, oldfit, add,
-                    oldfitpar, debug)
+                    oldfitpar, ploterror, debug)
 
     def histogram(self, fitresult, label, par=None):
         """Plot the histograms.
@@ -581,19 +296,31 @@ class LatticePlot(object):
             w = fitresult.weight[0]
             for i, d in enumerate(fitresult.data):
                 label[0] = " ".join((label_save, str(fitresult.label[i])))
-                self.plot_histogram(d[0], w[i], label)
+                plot_histogram(d[0], w[i], label)
+                plt.legend()
+                self.save()
         else:
             if par is None:
                 for p, w in enumerate(fitresult.weight):
                     for i, d in enumerate(fitresult.data):
                         label[0] = " ".join((label_save, str(fitresult.label[i])))
-                        self.plot_histogram(d[0,p], w[i], label)
+                        plot_histogram(d[0,p], w[i], label)
+                        plt.legend()
+                        self.save()
             else:
                 w = fitresult.weight[par]
                 for i, d in enumerate(fitresult.data):
                     label[0] = " ".join((label_save, str(fitresult.label[i])))
-                    self.plot_histogram(d[0,par], w[i], label)
+                    plot_histogram(d[0,par], w[i], label)
+                    plt.legend()
+                    self.save()
         label[0] = label_save
+
+    def plot_mass(self, corr, mass, fit, label, mass_shift, masspar):
+        """Plot two subplots, one for effective mass and one for
+        correlation function.
+        """
+        pass
 
     def set_env(self, xlog=False, ylog=False, xlim=None, ylim=None, grid=True):
         """Set different environment variables for the plot.

@@ -170,7 +170,7 @@ class Correlators(object):
             The amount to shift.
         dE : {None, float}, optional
             The weight factor.
-        shift : {1, 2}
+        shift : {1, 2}, optional
             Which shift to use, see above.
         """
         # if the data is not a matrix, do nothing
