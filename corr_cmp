@@ -132,7 +132,7 @@ def main():
     rel_err_2pt = np.divide(mean_corr_2pt[:,:,1], mean_corr_2pt[:,:,0])
 
     #rel_err_4pt = np.divide(mean_corr_4pt[:,:,1], mean_corr_4pt[:,:,0])
-    print rel_err_2pt[0].shape
+    print rel_err_2pt.shape
 
     # Noise to signal ratios i vs j configs
     nsr_2pt = np.divide(rel_err_2pt[1], rel_err_2pt[2] )
@@ -144,9 +144,9 @@ def main():
     print len(tlist_corr)
     pfit = PdfPages("%s%s_plot.pdf" % (plotpath_k,"rel_err_"))
     for _e in range(0,nb_obs):
-        rnd_lbl = cmp_quant[_e][4]+"rnd vecs"
+        rnd_lbl = "%d rnd vecs" % _e
         label_2pt = ["rel_error", "time", "dm_eff_2pt(t)/m_eff_2pt(t)",
-                    [rnd_lbl], cmp_quant[_e]]
+                    [rnd_lbl]]
         #label_4pt = ["rel_error", "time", "dm_eff_4pt(t)/m_eff_4pt(t)",
         #            [rnd_lbl], cmp_quant[_e]]
 
@@ -154,8 +154,7 @@ def main():
         #ana.plot_data(tlist_corr, rel_err_4pt[_e],dY,pfit, label_4pt, [1,T2])
     pfit.close()
     
-    label_2pt = ["Ratio rel. errors", "time", "NSR_2pt(t)", ["4:5 rnd vecs"],
-                cmp_quant[0] +" : "+ cmp_quant[2]]
+    label_2pt = ["Ratio rel. errors", "time", "NSR_2pt(t)", ["4:5 rnd vecs"]]
     #label_4pt = ["Ratio rel. errors", "time", "NSR_4pt(t)", ["4:5 rnd vecs"],
     #            cmp_quant[0] +" : "+ cmp_quant[2]]
     pfit = PdfPages("%s%s_plot.pdf" % (plotpath_k,"NSR_"))
