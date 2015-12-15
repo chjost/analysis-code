@@ -21,9 +21,9 @@
 #
 ################################################################################
 #
-# Function: Caclulates m_had * a_0 for one quark mass
-#           Takes fitted samples m_had with ranges and extracted values of a0
-#           and multiplies them
+# Function: Programm to match the strange quark mass with three methods for
+#           comparison: linear interpolation, linear fit, quadratic
+#           interpolation
 #
 # For informations on input parameters see the description of the function.
 #
@@ -54,29 +54,29 @@ def main():
     quark = ens.get_data("quark")
     datadir = ens.get_data("datadir") 
     plotdir = ens.get_data("plotdir") 
-    d2 = ens.get_data("d2")
+    strange = ens.get_data("strange")
+    
 
     print(datadir)
     print(plotdir)
 
     # Read in fitted masses, ranges and weights
+    print("Read fit results for single particle masses")
+    m0 = ana.FitResult.read("%s/%s/fit_k_%s.npz" % (datadir, strange[0], lat))
+    m0.print_data(par=1)
+
     print("Read fit results for single particle mass")
-    m = ana.FitResult.read("%s/fit_k_%s.npz" % (datadir, lat))
-    m.print_data(par=1)
+    m1 = ana.FitResult.read("%s/%s/fit_k_%s.npz" % (datadir, strange[1], lat))
+    m1.print_data(par=1)
 
-    # Read in results of scattering length
-    print("Read results for scattering length")
-    a0 = ana.FitResult.read("%s/scat_len_TP%d_%s.npz" % (datadir, d2, lat))
-    a0.print_data()
-    print(a0.data[0].shape)
-    if read_m_a0 == False:
-      mult_obs = a0.mult_obs(m, "m_a0")
-      mult_obs.save("%s/mk_akk_%s.npx" % (datadir,lat))
-    else:
-      mult_obs = ana.FitResult.read("%s/mk_akk_%s.npx" % (datadir.lat))
-    mult_obs.print_data()
+    print("Read fit results for single particle mass")
+    m2 = ana.FitResult.read("%s/%s/fit_k_%s.npz" % (datadir, strange[2], lat))
+    m2.print_data(par=1)
+    
+    # This should be a Fit Result
+    mu_s_match = ana.FitResult.interpol(m1, m2, m3)
 
-    if plot_hist:
+    if plot_match:
       print("plotting")
       plotter = ana.LatticePlot("%s/hist_mk_akk_%s.pdf" % (plotdir, lat))
       label = ["Scattering length", "M$_\k$ a$_\k\k$", "M$_\k$ a$_\k\k$"]

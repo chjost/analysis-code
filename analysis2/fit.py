@@ -578,7 +578,7 @@ class FitResult(object):
         for res in calculate_scat_len(_mass, _massweight, _energy, _energyweight,
                 L, isdependend, isratio):
             scat.add_data(*res)
-        print(scat.pval.shape)
+        #print(scat.pval.shape)
         return scat
 
     def mult_obs(self, other, corr_id="Product"):
