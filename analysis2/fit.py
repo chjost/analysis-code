@@ -581,6 +581,35 @@ class FitResult(object):
         #print(scat.pval.shape)
         return scat
 
+    def match_qm(self, obs1, obs2=None, obs3=None,):
+      """ Match the strange quark mass to an observable in lattice units.
+
+      Parameters
+      ----------
+      obs1, obs2, obs3: Up to 3 different Observables are supported at the
+          moment (should be easy to extend). Every Observable is a FitResult
+          object
+
+      """
+      if obs2==None and obs3==None:
+        raise ValueError("Matching not possible, check input of 2nd (and 3rd) observable!")
+      if obs3==None:
+
+      # Result has the same layout as one of the observables!
+      # TODO: If observables have different layouts break
+      layout = obs1.data[0].shape
+      boots = layout[0] 
+      ranges1 = layout[1]
+      if obs1.data[0].ndim == 3:
+        ranges2 = layout[2]
+      else:
+        ranges2 = 0
+      qm = FitResult("m_quark_match",True)
+      qm.create_empty(layout, layout, [1,1])
+      for res in match_quark_mass():
+          qm.add_data(*res)
+      return qm
+
     def mult_obs(self, other, corr_id="Product"):
       """Multiply two observables in order to treat them as a new observable.
 

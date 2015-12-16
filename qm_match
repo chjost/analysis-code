@@ -61,6 +61,7 @@ def main():
     print(plotdir)
 
     # Read in fitted masses, ranges and weights
+    # TODO: Automate this for the number of quark masses
     print("Read fit results for single particle masses")
     m0 = ana.FitResult.read("%s/%s/fit_k_%s.npz" % (datadir, strange[0], lat))
     m0.print_data(par=1)
@@ -74,7 +75,7 @@ def main():
     m2.print_data(par=1)
     
     # This should be a Fit Result
-    mu_s_match = ana.FitResult.interpol(m1, m2, m3)
+    mu_s_match = ana.FitResult.match_qm(m1, m2, m3)
 
     if plot_match:
       print("plotting")
