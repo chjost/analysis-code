@@ -175,8 +175,8 @@ class LatticePlot(object):
             if _plotrange.size < 2:
                 raise IndexError("fitrange has not enough indices")
             else:
-                lfunc = int(_plotrange[0])
-                ufunc = int(_plotrange[1])
+                lfunc = X[_plotrange[0]]
+                ufunc = X[_plotrange[1]]
         else:
             lfunc = X[0]
             ufunc = X[-1]
@@ -369,7 +369,7 @@ class LatticePlot(object):
         self.save()
 
     def _genplot_single(self, corr, label, fitresult=None, fitfunc=None,
-            add=None, debug=0):
+            add=None, xshift=0., debug=0):
         """Plot the data of a Correlators object and a FitResult object
         together.
 
@@ -386,6 +386,7 @@ class LatticePlot(object):
         add : ndarray, optional
             Additional arguments to the fit function. This is stacked along
             the third dimenstion to the oldfit data.
+        xshift : Optional scalar shift in xrange
         debug : int, optional
             The amount of info printed.
         """
@@ -401,7 +402,7 @@ class LatticePlot(object):
         if fitresult is not None:
             ranges = fitresult.fit_ranges
             shape = fitresult.fit_ranges_shape
-        X = np.linspace(0., float(corr.shape[1]), corr.shape[1], endpoint=False)
+        X = np.linspace(0.+xshift, float(corr.shape[1])+xshift, corr.shape[1], endpoint=False)
         label_save = label[0]
 
         # iterate over correlation functions
@@ -444,7 +445,7 @@ class LatticePlot(object):
         label[0] = label_save
 
     def _genplot_comb(self, corr, label, fitresult, fitfunc, oldfit, add=None,
-            oldfitpar=None, debug=0):
+            oldfitpar=None, xshift=0., debug=0):
         """Plot the data of a Correlators object and a FitResult object
         together.
 
@@ -465,6 +466,7 @@ class LatticePlot(object):
         oldfitpar : None, int or sequence of int, optional
             Which parameter of the old fit to use, if there is more than one.
                 the third dimenstion to the oldfit data.
+        xshift : Optional scalar shift for xdata
         debug : int, optional
             The amount of info printed.
         """
@@ -476,7 +478,7 @@ class LatticePlot(object):
             raise RuntimeError("Cannot plot correlation function matrix")
         # get needed data
         ncorrs = fitresult.corr_num
-        X = np.linspace(0., float(corr.shape[1]), corr.shape[1], endpoint=False)
+        X = np.linspace(0.+xshift, float(corr.shape[1])+xshift, corr.shape[1], endpoint=False)
         label_save = label[0]
         T = corr.shape[1]
         franges = fitresult.fit_ranges
@@ -525,14 +527,14 @@ class LatticePlot(object):
                 # plot
                 self._set_env_normal()
                 self.plot_data(X, corr.data[0,:,n], ddata, label[3],
-                        plotrange=[1,T])
+                        plotrange=[0,T])
                 self.plot_function(fitfunc.fitfunc, X, _par, label[4], 
                         add_data, fi)
                 plt.legend()
                 self.save()
 
     def plot(self, corr, label, fitresult=None, fitfunc=None, oldfit=None,
-            add=None, oldfitpar=None, debug=0):
+            add=None, oldfitpar=None, xshift=0., debug=0):
         """Plot the data of a Correlators object and a FitResult object
         together.
 
@@ -553,15 +555,16 @@ class LatticePlot(object):
             the third dimenstion to the oldfit data.
         oldfitpar : None, int or sequence of int, optional
             Which parameter of the old fit to use, if there is more than one.
+        xshift : optional shift of xrange
         debug : int, optional
             The amount of info printed.
         """
         if oldfit is None:
-            self._genplot_single(corr, label, fitresult, fitfunc, add=add,
-                    debug=debug)
+            self._genplot_single(corr, label, fitresult, fitfunc, add=add,\
+                    xshift=xshift, debug=debug)
         else:
-            self._genplot_comb(corr, label, fitresult, fitfunc, oldfit, add,
-                    oldfitpar, debug)
+            self._genplot_comb(corr, label, fitresult, fitfunc, oldfit, add,\
+                    oldfitpar, xshift=xshift, debug=debug)
 
     def histogram(self, fitresult, label, par=None):
         """Plot the histograms.

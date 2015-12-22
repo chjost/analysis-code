@@ -35,7 +35,7 @@ class LatticeFit(object):
             self.fitfunc = fitfunc
 
     def fit(self, start, corr, ranges, corrid="", add=None, oldfit=None,
-            oldfitpar=None, useall=False, step=2, min_size=4, debug=0):
+            oldfitpar=None, useall=False, step=2, min_size=4, xshift=0., debug=0):
         """Fits fitfunc to a Correlators object.
 
         The predefined functions describe a single particle correlation
@@ -68,6 +68,7 @@ class LatticeFit(object):
             The steps in the loops.
         min_size : int, optional
             The minimal size of the interval.
+        xshift : A scalar to shift the xrange of the fit. 
         debug : int, optional
             The amount of info printed.
 
@@ -133,11 +134,11 @@ class LatticeFit(object):
             # do the fitting
             if add is None:
                 for res in fit_comb(self.fitfunc, start, corr, franges, fshape,
-                        oldfit, None, oldfitpar, debug=debug):
+                        oldfit, None, oldfitpar, xshift, debug=debug):
                     fitres.add_data(*res)
             else:
                 for res in fit_comb(self.fitfunc, start, corr, franges, fshape,
-                        oldfit, add, oldfitpar, debug=debug):
+                        oldfit, add, oldfitpar, xshift, debug=debug):
                     fitres.add_data(*res)
 
         return fitres

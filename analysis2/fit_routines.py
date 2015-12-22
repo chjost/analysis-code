@@ -49,8 +49,8 @@ def fit_single(fitfunc, start, corr, franges, add=None, debug=0):
         for i, r in enumerate(franges[n]):
             if debug > 1:
                 print("fitting interval %d" % (i))
-            res, chi, pva = fitting(fitfunc, X[r[0]:r[1]],
-                corr.data[:,r[0]:r[1],n], start, add = add, correlated=True,
+            res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
+                corr.data[:,r[0]:r[1]+1,n], start, add = add, correlated=True,
                 debug=debug)
             if i==0:
                 print(res.shape)
@@ -59,7 +59,7 @@ def fit_single(fitfunc, start, corr, franges, add=None, debug=0):
             yield (n, i), res, chi, pva
 
 def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
-        oldfitpar=None, useall=False, debug=0):
+        oldfitpar=None, useall=False, xshift=0., debug=0):
     """Fits fitfunc to a Correlators object.
 
     The predefined functions describe a single particle correlation
@@ -89,6 +89,7 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
     useall : bool
         Using all correlators in the single particle correlator or
         use just the lowest.
+    xshift: a scalar to shift the X-linspace for the fitting
     debug : int, optional
         The amount of info printed.
     """
@@ -101,7 +102,7 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
     # prepare X data
     if debug > 0:
         print("Get X data")
-    X = np.linspace(0., float(dshape[1]), dshape[1], endpoint=False)
+    X = np.linspace(0.+xshift, float(dshape[1])+xshift, dshape[1], endpoint=False)
 
     if debug > 0:
         print("fitting the data")
@@ -134,8 +135,8 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
                 if add_data.ndim == 1:
                     add_data.shape = (-1, 1)
                 add_data = np.hstack((add_data, add))
-            res, chi, pva = fitting(fitfunc, X[r[0]:r[1]],
-                    corr.data[:,r[0]:r[1],item[-1]], start, add=add_data,
+            res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
+                    corr.data[:,r[0]:r[1]+1,item[-1]], start, add=add_data,
                     correlated=True, debug=debug)
             yield item + ritem, res, chi, pva
 

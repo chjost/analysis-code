@@ -287,5 +287,16 @@ class Correlators(object):
             obj.shape = obj.data.shape
         return obj
 
+    def hist(self, time):
+        """Returns the history over Configurations at a given time
+        WARNING : Works only before bootstrapping
+        Parameters:
+        -----------
+        time : the timeslice to view
+        """
+        nb_cfg = self.data.shape[0]
+        history = np.asarray([self.data[c][time][0] for c in range(nb_cfg)])
+        return history
+
 if __name__ == "main":
     pass
