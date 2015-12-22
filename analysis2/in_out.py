@@ -631,3 +631,100 @@ def inputnames(conf_file, corr_string):
             inputnames.append(corrname)
     return inputnames
 
+def _read_corr(_name, _T=48):
+  """ Uses numpy's openfile function to read in binary data and reshape it to
+  pairs of complex numbers
+
+  Args: 
+      _name: The file's name (best constructed in advance)
+      _T: The lattice's time extent defaults to 48
+
+  Returns: 
+      corr: The read in reshaped correlation function as T,2 Array
+  """
+  # C like array order is implied
+  tmp = np.fromfile(_name,dtype=float)
+  corr = tmp.reshape((_T,2))
+  return corr
+
+def read_confs(path,corrname,confs,_T=48,verb=False):
+  """ Wrapper to read in correlationfunctions of several configurations
+
+      This file assumes B. Knippschilds binary file layout with all the
+      Correlator information in the filename
+      Args: 
+           path: The path to the data to read
+           corrname: The name of the correlationfunction, should be built
+           separately
+           confs: alist of configuration folder names
+           _T: temporal time extent of the functions to read in
+
+      Returns: A numpy array holding the correlation functions. Shape is
+      (nb_cfg,T,2) for real and imaginary part
+  """
+  C = np.zeros((len(confs),_T,2))
+  for i,d in enumerate(confs):
+    #Generate filename from inputlist
+    if verb is True:
+      print path, d, corrname
+    _fname = path+d+corrname
+    _C_tmp = _read_corr(_fname,_T)
+    C[i] = _C_tmp
+  return C
+
+
+def confs_subtr(Corr1, Corr2):
+  """ function to subtract two diagrams columnwise 
+  
+  Subtracts two correlation functions like Corr1 - Corr2
+
+  Args:
+      Corr1, Corr2: Numpy arrays of one or more correlation functions
+
+  Returns:
+      A list of three tuples containing the difference C_1(t) - C_2(t)
+  """
+  Cdiff = np.zeros_like(Corr1)
+  for i in range(Corr1.shape[0]):
+    _re = np.subtract(Corr1[i,:,0],Corr2[i,:,0])
+    _im = np.subtract(Corr1[i,:,1],Corr2[i,:,1])
+    Cdiff[i] = np.column_stack((_re,_im))
+  return Cdiff
+
+
+def conf_abs(Corr):
+  """ Compute absolute value of Correlation function
+  
+  Gets rid of overall signs in Correlation functions
+
+  Args:
+      Corr: Numpy array of one or more correlation functions
+
+  Returns:
+      A list of three tuples containing abs(C1(t))
+  """
+  Cabs = np.zeros_like(Corr)
+  for i in range(Corr.shape[0]):
+    _re = np.absolute(Corr[i,:,0])
+    _im = np.absolute(Corr[i,:,1])
+    Cabs[i] = np.column_stack((_re,_im))
+  return Cabs 
+
+
+def confs_mult(Corr,scl):
+  """ Multiply Correlation function with scalar
+  
+
+  Args:
+      Corr: Numpy array of one or more correlation functions
+      scl: a python scalar (float or int)
+
+  Returns:
+      A list of three tuples containing scl*C1(t)
+  """
+  Cabs = np.zeros_like(Corr)
+  for i in range(Corr.shape[0]):
+    _re = np.multiply(scl,Corr[i,:,0])
+    _im = np.multiply(scl,Corr[i,:,1])
+    Cabs[i] = np.column_stack((_re,_im))
+  return Cabs 

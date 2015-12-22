@@ -46,7 +46,7 @@ def main():
 
     # get data from input file
     lat = ens.name()
-    quark = ens.get_data("quark")
+    #quark = ens.get_data("quark")
     datadir = ens.get_data("datadir") 
     plotdir = ens.get_data("plotdir") 
     d2 = ens.get_data("d2")

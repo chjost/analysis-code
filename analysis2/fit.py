@@ -444,7 +444,7 @@ class FitResult(object):
             r, rstd, rsys, nfits = self.error[par]
         for i, lab in enumerate(self.label):
             print("correlator %s, %d fits" %(str(lab), nfits[i]))
-            print("%.5f +- %.5f -%.5f +%.5f" % (r[i][0], rstd[i], rsys[i][0],
+            print("%.8f +- %.8f -%.5f +%.5f" % (r[i][0], rstd[i], rsys[i][0],
                 rsys[i][1]))
         print("------------------------------\n\n")
 
@@ -593,7 +593,7 @@ class FitResult(object):
       """
       if obs2==None and obs3==None:
         raise ValueError("Matching not possible, check input of 2nd (and 3rd) observable!")
-      if obs3==None:
+      #if obs3==None:
 
       # Result has the same layout as one of the observables!
       # TODO: If observables have different layouts break

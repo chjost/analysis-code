@@ -13,8 +13,8 @@ def main():
         ens = ana.LatticeEnsemble.parse(sys.argv[1])
 
     # read settings
-    readsingledata = False
-    readsinglefit = False
+    readsingledata = True 
+    readsinglefit = True
     plotsingle = True
     readtwodata = False
     readtwofit = False
@@ -40,7 +40,7 @@ def main():
 
     # single particle correlator
     print("read single particle corrs")
-    files = ["%s/k_corr_p%d.dat" % (datadir, d) for d in range(1)]
+    files = ["%s/k_charged_p%d.dat" % (datadir, d) for d in range(1)]
     if readsingledata == False:
         picorr = ana.Correlators(files, matrix=False)
         picorr.sym_and_boot(nboot)
@@ -52,7 +52,7 @@ def main():
     start_single = [1., 0.3]
     if readsinglefit == False:
         print("fitting")
-        pifit = fit_single.fit(start_single, picorr, [9,24], corrid="ek",
+        pifit = fit_single.fit(start_single, picorr, [9,T2], corrid="ek",
             add=addT, min_size=6)
         pifit.save("%s/fit_k_%s.npz" % (datadir, lat))
     else:
