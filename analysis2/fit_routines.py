@@ -51,16 +51,16 @@ def fit_single(fitfunc, start, corr, franges, add=None, debug=0, correlated=True
                 if debug > 1:
                     print("fitting interval %d" % (i))
                 res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
-                    corr.data[:,r[0]:r[1]+1,n], start[n], add = add, correlated=correlated,
-                    debug=debug)
+                    corr.data[:,r[0]:r[1]+1,n], start[n], add=add,
+                        correlated=correlated, debug=debug)
                 yield (n, i), res, chi, pva
         else:
             for i, r in enumerate(franges[n]):
                 if debug > 1:
                     print("fitting interval %d" % (i))
                 res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
-                    corr.data[:,r[0]:r[1]+1,n], start, add = add, correlated=correlated,
-                    debug=debug)
+                    corr.data[:,r[0]:r[1]+1,n], start, add=add,
+                        correlated=correlated, debug=debug)
                 yield (n, i), res, chi, pva
 
 def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
@@ -259,8 +259,8 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, debug=0):
         cov = np.cov(Y.T)
     #print(Y.shape)
     #tmp = np.linalg.inv(np.cov(Y, rowvar=0))
-    #cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
     #print(tmp)
+    cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
 
     # degrees of freedom
     dof = float(Y.shape[1]-len(start)) 

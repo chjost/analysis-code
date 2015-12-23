@@ -161,8 +161,9 @@ class LatticeFit(object):
                 for item in itertools.product(*ncorriter):
                     # create the iterator over the fit ranges
                     tmp = [fshape[i][x] for i,x in enumerate(item)]
-                    shapes_data.append((dshape[0], self.npar) + tmp)
-                    shapes_other.append((dshape[0],) + tmp)
+                    shapes_data.append((dshape[0], self.npar) + tuple(tmp))
+                    shapes_other.append((dshape[0],) + tuple(tmp))
+                    # TODO set start!
             else:
                 for item in itertools.product(*ncorriter):
                     # create the iterator over the fit ranges
@@ -176,6 +177,8 @@ class LatticeFit(object):
             fitres.create_empty(shapes_data, shapes_other, ncorr)
             del shapes_data, shapes_other
 
+            if start is None:
+                raise RuntimeError("start not set")
             # do the fitting
             if add is None:
                 for res in fit_comb(self.fitfunc, start, corr, franges, fshape,
@@ -713,3 +716,58 @@ class FitResult(object):
                 Ecm.add_data(tmp + item, res, gamma, weight)
         return Ecm
 
+    def mult_obs(self, other, corr_id="Product"):
+      """Multiply two observables in order to treat them as a new observable.
+
+        Warning
+        -------
+        This overwrites the data, so be careful to save the data before.
+      
+      Parameters
+      ----------
+      other: FitResult object that gets multiplied with self in a
+          weightpreserving way.
+      corr_id: Id of derived observable
+
+      """
+      # Self determines the resulting layout
+      layout = self.data[0].shape
+      boots = layout[0] 
+      ranges1 = layout[1]
+      if self.data[0].ndim == 3:
+        ranges2 = layout[2]
+      else:
+        ranges2 = 0
+      
+      # Check ranges and samples for compliance
+      if layout[0] != other.data[0].shape[0]:
+        raise ValueError("Number of Bootstrapsamples not compatible!")
+      if layout[1] != other.data[0][0].shape[1]:
+        raise ValueError("Number of same parameter fit ranges not compatible!\n"
+            + "%d vs. %d" % (layout[1], other.data[0][0].shape[1]))
+
+      # Deal with observables
+      product = np.zeros_like(self.data[0])
+      for b, arr0 in enumerate(other.data[0]):
+        for r_self, arr1 in enumerate(arr0[1]):
+          product[b][r_self] = np.multiply(arr1, self.data[0][b][r_self])
+
+      # Deal with observable weights
+      # Get weights for all fit ranges (1 sample is sufficient)
+      weights_0 = self.pval[0][0]
+      # prepare new weight array
+      weights_prod = np.zeros_like(weights_0)
+      # multiply weights of first observable with observable of second
+      for idx, weights_1 in enumerate(other.weight[1][0]):
+        weights_prod[idx] = np.multiply(weights_1, weights_0[idx])
+
+      # Get array into right shape for calculation
+      weights = np.tile( weights_prod.flatten(), boots ).reshape(boots, ranges1,
+          ranges2)
+
+      # prepare storage
+      mult_obs = FitResult(corr_id, True)
+      mult_obs.create_empty(layout, layout, [1,1])
+      mult_obs.data[0] = product
+      mult_obs.pval[0] = weights
+      return mult_obs

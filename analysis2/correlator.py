@@ -5,12 +5,14 @@ A class for correlation functions.
 import os
 
 import numpy as np
+import itertools
 
 import in_out
 import bootstrap as boot
 import gevp
 import functions as func
 from ratio import simple_ratio, ratio_shift, simple_ratio_subtract
+from energies import WfromMass_lat, WfromMass
 
 class Correlators(object):
     """Correlation function class.
@@ -153,7 +155,8 @@ class Correlators(object):
         self.data = boot.sym_and_boot(self.data, nsamples)
         self.shape = self.data.shape
 
-    def shift(self, dt, dE=None, shift=1):
+    def shift(self, dt, mass=None, shift=1, d2=0, L=24, irrep="A1",
+            uselattice=True):
         """Shift and weight the data.
 
         This function only works with matrices.
@@ -168,17 +171,49 @@ class Correlators(object):
         ----------
         dt : int
             The amount to shift.
-        dE : {None, float}, optional
+        mass : {None, float, ndarray}, optional
             The weight factor.
         shift : {1, 2}, optional
             Which shift to use, see above.
+        d2 : int, optional
+            The total momentum squared, used for determining dE.
+        L : int, optional
+            The spatial extent of the lattice.
+        irrep : string, optional
+            The lattice irrep to use, influences dE.
+        uselattice : bool, optional
+            Use the lattice version of the dispersion relation.
         """
         # if the data is not a matrix, do nothing
         if not self.matrix:
             return
 
+        # calculate the dE for weighting if needed
+        if mass is None:
+            dE=None
+        else:
+            # TODO: differentiate the different d2 and irreps
+            dE = np.asarray(0.5*WfromMass_lat(mass, d2, L) - mass)
+
+        # calculate the shift
         if shift == 1:
-            self.data = gevp.gevp_shift_1(self.data, dt, dE, self.debug)
+            # if dE has more than just 1 axis, add the axis to the correlation
+            # function
+            if dE is not None and dE.ndim > 1:
+                newshape = list(self.shape[:-2] + dE.shape[1:] + self.shape[-2:])
+                newshape[1] -= dt
+                tmp = np.zeros(newshape)
+                # iterate over the axis > 1 of dE
+                item = [[n for n in range(x)] for x in dE.shape[1:]]
+                for it in itertools.product(*item):
+                    # select the correct entries for tmp and dE
+                    #s = (Ellipsis,) + it
+                    s = (Ellipsis,) + it +(slice(None), slice(None))
+                    s1 = (slice(None),) + it
+                    tmp[s] = gevp.gevp_shift_1(self.data, dt, dE[s1], self.debug)
+                self.data = tmp
+            else:
+                self.data = gevp.gevp_shift_1(self.data, dt, dE, self.debug)
         elif dE is None:
             raise ValueError("dE is mandatory for the second implemented shift")
         else:

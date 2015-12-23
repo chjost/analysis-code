@@ -15,8 +15,8 @@ def main():
 
     # read settings
     readdata = True
-    readfit = True
-    plotdata = False
+    readfit = False
+    plotdata = True
 
     # get data from input file
     prefix = ens.get_data("path")
@@ -27,6 +27,11 @@ def main():
     T = ens.T()
     T2 = ens.T2()
     pmax = ens.get_data("pmax")
+    Ti = ens.get_data("ti")
+    Tf = ens.get_data("tf")
+    dti = ens.get_data("dti")
+    dtf = ens.get_data("dtf")
+    dt = ens.get_data("dt")
 
     files = ["%s/pi_corr_p%d.dat" % (prefix, d) for d in range(pmax)]
     addT = np.ones((nboot,)) * T
@@ -42,8 +47,8 @@ def main():
     print("fitting")
     fitter = ana.LatticeFit(0, True)
     if readfit == False:
-        fitres = fitter.fit(None, corr, [6, T2], corrid="epi", add=addT,
-              dt_i=1, dt_f=1, dt=5)
+        fitres = fitter.fit(None, corr, [Ti, Tf], corrid="epi", add=addT,
+              dt_i=dti, dt_f=dtf, dt=dt)
         fitres.save("%s/fit_pi.npz" % (datadir))
     else:
         fitres = ana.FitResult.read("%s/fit_pi.npz" % (datadir))
