@@ -102,7 +102,8 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
     # prepare X data
     if debug > 0:
         print("Get X data")
-    X = np.linspace(0.+xshift, float(dshape[1])+xshift, dshape[1], endpoint=False)
+        print("xshift is %f" % xshift)
+    X = np.linspace(0., float(dshape[1]), dshape[1], endpoint=False)+xshift
 
     if debug > 0:
         print("fitting the data")

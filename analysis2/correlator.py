@@ -298,5 +298,43 @@ class Correlators(object):
         history = np.asarray([self.data[c][time][0] for c in range(nb_cfg)])
         return history
 
+    def omit(self, par):
+      """Based on the first timeslice delete configurations with a certain value
+      TODO:This function should be improved. I do not know how to choose the
+      value to cut, perhaps by the mean over the first timeslice?
+
+      Parameters
+      ----------
+      par : Either the value to cut or a list of configurations to omit
+
+      Returns
+      -------
+      a list of the indices of the deleted configurations to ensure that
+      correlation is not lost
+      """
+      # Check whether to cut configurations or a value
+      if len(par) < 2:
+        omitted = []
+        # loop over configurations 
+        for c, v in enumerate(self.data):
+          if v[0] > par[0]:
+            omitted.append(c)
+      # Check for interval
+      if len(par) == 2 and isinstance(par[0],float):
+
+        par = sorted(par)
+
+        omitted = []
+        # loop over configurations 
+        for c, v in enumerate(self.data):
+          if  v[0] < par[0] or par[1] < v[0]:
+            omitted.append(c)
+
+      else: 
+        omitted = par
+      self.data = np.delete(self.data,omitted,0)
+      return omitted
+
+
 if __name__ == "main":
     pass

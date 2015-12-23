@@ -134,11 +134,11 @@ class LatticeFit(object):
             # do the fitting
             if add is None:
                 for res in fit_comb(self.fitfunc, start, corr, franges, fshape,
-                        oldfit, None, oldfitpar, xshift, debug=debug):
+                        oldfit, None, oldfitpar, xshift=xshift, debug=debug):
                     fitres.add_data(*res)
             else:
                 for res in fit_comb(self.fitfunc, start, corr, franges, fshape,
-                        oldfit, add, oldfitpar, xshift, debug=debug):
+                        oldfit, add, oldfitpar, xshift=xshift, debug=debug):
                     fitres.add_data(*res)
 
         return fitres

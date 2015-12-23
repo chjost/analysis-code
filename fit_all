@@ -2,7 +2,6 @@
 
 import sys
 import numpy as np
-
 import analysis2 as ana
 
 def main():
@@ -14,9 +13,9 @@ def main():
 
     # read settings
     readsingledata = True
-    readsinglefit = True
+    readsinglefit = False
     plotsingle = False
-    readtwodata = False
+    readtwodata = True
     readtwofit = False
     plottwo = True
 
@@ -93,12 +92,13 @@ def main():
         kkcorr.save("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
     else:
         kkcorr = ana.Correlators.read("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
+        ratio = kkcorr.ratio(picorr, ratio=2 )
     print(kkcorr.shape)
     fit_ratio = ana.LatticeFit(1, True)
     start_ratio = [3., 1.]
     if readtwofit == False:
         print("fitting")
-        ratiofit = fit_ratio.fit(start_ratio, ratio, [[14,30]],
+        ratiofit = fit_ratio.fit(start_ratio, ratio, [[15,31]],
                 corrid="R", add=addT, oldfit=pifit, oldfitpar=1, xshift=0.5, debug=debug,
                 min_size=17, step=1)
         ratiofit.save("%s/fit_kk_TP%d_%s.npz" % (datadir, d2, lat))

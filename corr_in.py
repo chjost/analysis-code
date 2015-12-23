@@ -47,12 +47,13 @@ def main():
     #res ='/hiskp2/helmes/analysis/scattering/test/s_3_rnd_vec/k_charged/data/A40.24/amu_s_225/'
     ##res = '/hiskp2/helmes/analysis/scattering/pion_test/data/A40.24/' 
     inputlist = []
-    cfg_rng = [4,1200,4]
+    cfg_rng = [1216,1217,1]
     missing = miss_confs(rawdir,cfg_rng)
     for i in range(cfg_rng[0],cfg_rng[1],cfg_rng[2]):
       if i in missing:
         continue
       inputlist.append('cnfg%d/' % i)
+    print(inputlist)
     # Read in correlators
     print("Reading Correlation functions from %s..." % rawdir)
     print("C2")
