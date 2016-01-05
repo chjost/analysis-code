@@ -1,37 +1,21 @@
-################################################################################
-#
-# Author: Christopher Helmes 
-# Date:   August 2015
-#
-# Copyright (C) 2015 Christopher Helmes
-# 
-# This program is free software: you can redistribute it and/or modify it under 
-# the terms of the GNU General Public License as published by the Free Software 
-# Foundation, either version 3 of the License, or (at your option) any later 
-# version.
-# 
-# This program is distributed in the hope that it will be useful, but WITHOUT 
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
-# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-# 
-# You should have received a copy of the GNU General Public License
-# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
-#
-################################################################################
-#
-# Function: Functions for linear and quadratic interpolation as well as
-# evaluation of functions at specific values, for use in  
-#
-# For informations on input parameters see the description of the function.
-#
-################################################################################
-
+"""
+The class for interpolation of results
+"""
 from scipy.optimize import leastsq
 import scipy.stats
 import math
 import numpy as np
 import analyze_fcts as af
 import chiral_fits as chf
+
+class InterPol(object):
+  def __init__(self, fitres, verbose=False):
+    """Create an object for the interpolation of FitResult
+    
+
+
+    """
+
 __all__=["ipol_lin","ipol_quad","eval_lin","eval_quad","err_prop_gauss",
          "eval_chi_pt_cont","sum_error_sym","sum_error_asym"]
 

@@ -14,7 +14,7 @@ def main():
     # read settings
     readsingledata = True
     readsinglefit = False
-    plotsingle = False
+    plotsingle = True
     readtwodata = True
     readtwofit = False
     plottwo = True
@@ -52,7 +52,7 @@ def main():
     start_single = [1., 0.3]
     if readsinglefit == False:
         print("fitting")
-        pifit = fit_single.fit(start_single, picorr, [15,32], corrid="ek",
+        pifit = fit_single.fit(start_single, picorr, [15,T2], corrid="ek",
             add=addT, min_size=18, step=1, debug=debug)
         pifit.save("%s/fit_k_%s.npz" % (datadir, lat))
     else:
@@ -98,7 +98,7 @@ def main():
     start_ratio = [3., 1.]
     if readtwofit == False:
         print("fitting")
-        ratiofit = fit_ratio.fit(start_ratio, ratio, [[15,31]],
+        ratiofit = fit_ratio.fit(start_ratio, ratio, [[14,30]],
                 corrid="R", add=addT, oldfit=pifit, oldfitpar=1, xshift=0.5, debug=debug,
                 min_size=17, step=1)
         ratiofit.save("%s/fit_kk_TP%d_%s.npz" % (datadir, d2, lat))

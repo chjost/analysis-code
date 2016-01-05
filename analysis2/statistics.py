@@ -174,5 +174,29 @@ def estimated_autocorrelation(x):
       assert np.allclose(r, np.array([(x[:n-k]*x[-(n-k):]).sum() for k in range(n)]))
       result = r/(variance*(np.arange(n, 0, -1)))
       return  result
+
+
+def draw_weighted(vals, samples=200, seed=1227):
+    """Function to draw weighted random numbers after distribution of weights
+    for fit ranges
+
+    Parameters
+    ----------
+    """
+    # get cumulated weights from sorted weights
+    vals_sort = np.sort(vals)
+    vals_cum = np.cumsum(vals_sort)
+    # Initialize with Bastians Seed
+    np.random.seed(seed)
+    # draw nbsample numbers from the interval [weigths_cum[0],weights_cum[-1]]
+    a,b = vals_cum[0], vals_cum[-1]
+    rnd_cum = np.sort(np.asarray([np.random.uniform(a, b) for i in range(0,
+      samples)]))
+    # get indices of values in rnd_cum which are nearest to the values in
+    # vals_cum, i from v_{i-1} <= r < v_i
+    indices = np.searchsorted(vals_cum, rnd_cum, side='right')
+    vals_take = np.take(vals_sort, indices)
+    return indices, vals_take
+
 if __name__ == "main":
     pass

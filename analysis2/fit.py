@@ -540,6 +540,13 @@ class FitResult(object):
         print(std)
         print(syst)
 
+    #def sort_res(self, )
+    #    """Function resorting a FitResult object by a specific axis
+
+    #    Parameters
+    #    ----------
+    #    """
+
     def calc_scattering_length(self, mass, parself=0, parmass=0, L=24,
             isratio=False, isdependend=True):
         """Calculate the scattering length.
@@ -667,5 +674,40 @@ class FitResult(object):
       mult_obs.pval[0] = weights
       return mult_obs
 
+    def res_reduced(self, vals, corr_id='reduced'):
+      """Take boolean 1d intersection of two arrays to choose certain fitranges and
+      corresponding data.
+  
+      This function flattens the data wrt the fit ranges. Thus the structure of
+      different observables will get lost.
+      
+      Parameters
+      ----------
+          vals : The chosen weights as result of draw_weighted
+      
+      Returns:
+          res_sorted : The intersected data and weights as a new FitResult object.
+      
+      """
+      # Self determines the resulting layout
+      layout = self.data[0].shape
+      boots = layout[0] 
+      ranges = vals.shape[0]
+      layout = (boots, ranges)
 
+      # indices of intersection, first bootstrapsample taken for intersection
+      flat_weights = self.pval[0][0].flatten()
+      # Get "histogram" of drawn weights
+      print(np.unique(vals,return_counts=True))
+      intersect = np.in1d(flat_weights, vals).nonzero()
+      # Get array into right shape for calculation
+      weights = np.tile( flat_weights[intersect], boots ).reshape(boots, ranges)
+      res_sorted = FitResult(corr_id)
+      # TODO: what is layout
+      res_sorted.create_empty(layout, layout, [1])
+      res_sorted.data[0] = self.data.flatten()[:,intersect]
+      # TODO: weights stored in pvals because they are not saved for
+      # whatever reason
+      res_sorted.pval[0] = self.pval[0][0].flatten()[intersect]
+      return res_sorted
       

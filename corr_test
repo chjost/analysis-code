@@ -38,6 +38,7 @@ def main():
     addT = np.ones((nboot,)) * T
     addT2 = np.ones((nboot,)) * T2
     ts = 0
+    c = 27
 
 
 
@@ -48,18 +49,17 @@ def main():
     print files
     if readtwodata == False:
         kkcorr = ana.Correlators(files, matrix=False)
+        print(kkcorr.data.shape)
 
         popped = kkcorr.omit([9e+5,2e+6])
-        kkhist = kkcorr.hist(ts)
         print(popped)
+        print(kkcorr.data.shape)
+        kkhist = kkcorr.hist(ts)
         plotter = ana.LatticePlot("%s/hist_ts%d_kk.pdf" % (plotdir,ts))
         label = ["4pt history","cfg","C(%d)"%ts, "data"]
-        plotter.set_title(label[0],label[1:3])
-        plotter.set_env()
-        plotter.plot_data(np.arange(kkhist.shape[0]),kkhist,np.zeros_like(kkhist),label[-1])
-        plotter.save()
-
+        plotter.history(kkhist,label)
         del plotter
+
         kkcorr.sym_and_boot(nboot)
         if d2 != 0:
             dE = pifit.error[1][0][1] - pifit.error[1][0][0]
@@ -68,7 +68,7 @@ def main():
         else:
             #kkcorr.shift(1)
             pass
-        kkcorr.save("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
+        #kkcorr.save("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
     else:
         kkcorr = ana.Correlators.read("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
 
@@ -77,22 +77,19 @@ def main():
     files = ["%s/k_charged_p%d.dat" % (datadir, d) for d in range(1)]
     if readsingledata == False:
         kcorr = ana.Correlators(files, matrix=False)
-        if isinstance(popped, list):
+        try:
           kcorr.omit(popped)
+        except: NameError
         khist = kcorr.hist(ts)
         plotter = ana.LatticePlot("%s/hist_ts%d_k.pdf" % (plotdir,ts))
         label = ["2pt history","cfg","C(%d)" % ts, "data"]
-        plotter.set_title(label[0],label[1:3])
-        plotter.set_env()
-        plotter.plot_data(np.arange(khist.shape[0]),khist,np.zeros_like(khist),label[-1])
-        plotter.save()
-
+        plotter.history(khist,label)
+        del plotter
         kcorr.sym_and_boot(nboot)
         kcorr.save("%s/corr_k_%s.npy" % (datadir, lat))
     else:
         kcorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat))
 
-        #ratio = kkcorr.ratio(kcorr, ratio=2 )
 
 if __name__ == '__main__':
     try:

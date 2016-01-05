@@ -495,7 +495,8 @@ class LatticePlot(object):
             tmp = [fshape[i][x] for i,x in enumerate(item)]
             rangesiter = [[x for x in range(m)] for m in tmp]
             # iterate over the fit ranges
-            for ritem in itertools.product(*rangesiter):
+            #for ritem in itertools.product(*rangesiter):
+            for ritem in rangesiter[0]:
                 if debug > 1:
                     print("plotting fit ranges %s" % str(ritem))
                 r = ritem[-1]
@@ -597,6 +598,14 @@ class LatticePlot(object):
                     label[0] = " ".join((label_save, str(fitresult.label[i])))
                     self.plot_histogram(d[0,par], w[i], label)
         label[0] = label_save
+
+    def history(self, data, label, par=None):
+        
+        self.set_title(label[0],label[1:3])
+        self.set_env(grid=True)
+        self.plot_data(np.arange(data.shape[0]),data,np.zeros_like(data),label[-1])
+        self.save()
+        
 
     def set_env(self, xlog=False, ylog=False, xlim=None, ylim=None, grid=True):
         """Set different environment variables for the plot.
