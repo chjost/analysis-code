@@ -694,12 +694,13 @@ class FitResult(object):
       # Self determines the resulting layout
       layout = self.data[0].shape
       boots = layout[0] 
-      # Reshape data
-      if len(layout) > 2:
+      # Reshape data in dependence of corr_id
+      if self.derived == True:
         ndim = self.data[0].shape[1]*self.data[0].shape[2]
+        flat_data = self.data[0].reshape((boots,ndim))
       else:
-        ndim = self.data[0].shape[1]
-      flat_data = self.data[0].reshape((boots,ndim))
+        ndim = self.data[0].shape[2]
+        flat_data = self.data[0][:,1].reshape((boots,ndim))
       flat_weights = self.pval[0][0].reshape(ndim)
       vals = draw_weighted(flat_weights, samples=samples)
       ranges = vals.shape[0]
