@@ -8,7 +8,7 @@ import numpy as np
 from fit_routines import fit_comb, fit_single, calculate_ranges
 from in_out import read_fitresults, write_fitresults
 from functions import func_single_corr, func_ratio, func_const, func_two_corr
-from statistics import compute_error, sys_error, sys_error_der
+from statistics import compute_error, sys_error, sys_error_der, freq_count
 from energies import calc_q2
 from zeta_wrapper import Z
 from scattering_length import calculate_scat_len
@@ -332,6 +332,8 @@ class FitResult(object):
         Parameters
         ----------
         shape1, shape2 : tuple of ints or sequence of tuples of ints
+        #TODO: The described layout did not work for me (Christopher), do I use
+        it wrongly?
             Shape of the data structures, where shape1 has an axis for
             the parameters and shape2 not.
         corr_num : int of sequence of ints.
@@ -693,21 +695,43 @@ class FitResult(object):
       layout = self.data[0].shape
       boots = layout[0] 
       ranges = vals.shape[0]
-      layout = (boots, ranges)
-
-      # indices of intersection, first bootstrapsample taken for intersection
-      flat_weights = self.pval[0][0].flatten()
-      # Get "histogram" of drawn weights
-      print(np.unique(vals,return_counts=True))
-      intersect = np.in1d(flat_weights, vals).nonzero()
-      # Get array into right shape for calculation
-      weights = np.tile( flat_weights[intersect], boots ).reshape(boots, ranges)
+      # Get frequency count of sorted vals 
+      freq_vals = freq_count(vals, verb=True)
+      # Reshape data
+      if len(layout) > 2:
+        ndim = self.data[0].shape[1]*self.data[0].shape[2]
+      else:
+        ndim = self.data[0].shape[1]
+      flat_data = self.data[0].reshape((boots,ndim))
+      flat_weights = self.pval[0][0].reshape(ndim)
+      # Create empty fitresult to add data
       res_sorted = FitResult(corr_id)
-      # TODO: what is layout
-      res_sorted.create_empty(layout, layout, [1])
-      res_sorted.data[0] = self.data.flatten()[:,intersect]
-      # TODO: weights stored in pvals because they are not saved for
-      # whatever reason
-      res_sorted.pval[0] = self.pval[0][0].flatten()[intersect]
+      store1 = (1,boots, ranges)
+      store2 = (boots,ranges)
+      res_sorted.create_empty(store1, store2 ,1)
+      # get frequencies and indices in original data
+      intersect = np.zeros_like(freq_vals)
+      print freq_vals
+      # replace first column
+      wght_draw_unq = freq_vals[:,0]
+      print(flat_weights, wght_draw_unq)
+      intersect[:,0] = np.asarray(np.nonzero(np.in1d(flat_weights, wght_draw_unq)))
+      intersect[:,1] = freq_vals[:,1]
+      print(freq_vals)
+      # TODO: solve this by an iterator
+      ind=0
+      for i,v in enumerate(intersect):
+        #print(i)
+        for cnt in range(int(v[1])):
+          #print(cnt)
+          targ_ind = (0,ind)
+          print(targ_ind)
+          print(i,freq_vals[i,0])
+          weight = np.tile(freq_vals[i,0],boots)
+          data = flat_data[:,v[0]]
+          chi2_dummy = np.zeros_like(weight)
+          res_sorted.add_data(targ_ind,data,chi2_dummy,weight)
+          ind += 1
+
       return res_sorted
       

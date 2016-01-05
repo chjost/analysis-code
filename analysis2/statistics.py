@@ -198,5 +198,25 @@ def draw_weighted(vals, samples=200, seed=1227):
     vals_take = np.take(vals_sort, indices)
     return indices, vals_take
 
+def freq_count(arr, verb=False):
+    """Get a frequency count for values in an array
+
+    Parameters
+    ----------
+    vals : The values to count
+
+    Returns
+    frequencies : a 2d numpy array with the unique sorted values on the first
+                  axis and the number of counts on the second axis
+    """
+    # intermediate uniqe array
+    arr_unq = np.unique(arr)
+    frequencies = np.zeros((arr_unq.shape[0],2))
+    for i,v in enumerate(arr_unq):
+      frequencies[i] = np.asarray([arr_unq[i],(arr == v).sum()])
+    if verb == True:
+      print(frequencies)
+    return frequencies
+
 if __name__ == "main":
     pass
