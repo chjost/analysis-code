@@ -196,7 +196,7 @@ def draw_weighted(vals, samples=200, seed=1227):
     # vals_cum, i from v_{i-1} <= r < v_i
     indices = np.searchsorted(vals_cum, rnd_cum, side='right')
     vals_take = np.take(vals_sort, indices)
-    return indices, vals_take
+    return vals_take
 
 def freq_count(arr, verb=False):
     """Get a frequency count for values in an array

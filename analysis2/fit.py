@@ -8,7 +8,7 @@ import numpy as np
 from fit_routines import fit_comb, fit_single, calculate_ranges
 from in_out import read_fitresults, write_fitresults
 from functions import func_single_corr, func_ratio, func_const, func_two_corr
-from statistics import compute_error, sys_error, sys_error_der, freq_count
+from statistics import compute_error, sys_error, sys_error_der, draw_weighted, freq_count
 from energies import calc_q2
 from zeta_wrapper import Z
 from scattering_length import calculate_scat_len
@@ -676,7 +676,7 @@ class FitResult(object):
       mult_obs.pval[0] = weights
       return mult_obs
 
-    def res_reduced(self, vals, corr_id='reduced'):
+    def res_reduced(self, samples=20, corr_id='reduced'):
       """Take boolean 1d intersection of two arrays to choose certain fitranges and
       corresponding data.
   
@@ -694,9 +694,6 @@ class FitResult(object):
       # Self determines the resulting layout
       layout = self.data[0].shape
       boots = layout[0] 
-      ranges = vals.shape[0]
-      # Get frequency count of sorted vals 
-      freq_vals = freq_count(vals, verb=True)
       # Reshape data
       if len(layout) > 2:
         ndim = self.data[0].shape[1]*self.data[0].shape[2]
@@ -704,6 +701,10 @@ class FitResult(object):
         ndim = self.data[0].shape[1]
       flat_data = self.data[0].reshape((boots,ndim))
       flat_weights = self.pval[0][0].reshape(ndim)
+      vals = draw_weighted(flat_weights, samples=samples)
+      ranges = vals.shape[0]
+      # Get frequency count of sorted vals 
+      freq_vals = freq_count(vals, verb=False)
       # Create empty fitresult to add data
       res_sorted = FitResult(corr_id)
       store1 = (1,boots, ranges)
@@ -711,22 +712,15 @@ class FitResult(object):
       res_sorted.create_empty(store1, store2 ,1)
       # get frequencies and indices in original data
       intersect = np.zeros_like(freq_vals)
-      print freq_vals
       # replace first column
       wght_draw_unq = freq_vals[:,0]
-      print(flat_weights, wght_draw_unq)
       intersect[:,0] = np.asarray(np.nonzero(np.in1d(flat_weights, wght_draw_unq)))
       intersect[:,1] = freq_vals[:,1]
-      print(freq_vals)
       # TODO: solve this by an iterator
       ind=0
       for i,v in enumerate(intersect):
-        #print(i)
         for cnt in range(int(v[1])):
-          #print(cnt)
           targ_ind = (0,ind)
-          print(targ_ind)
-          print(i,freq_vals[i,0])
           weight = np.tile(freq_vals[i,0],boots)
           data = flat_data[:,v[0]]
           chi2_dummy = np.zeros_like(weight)
