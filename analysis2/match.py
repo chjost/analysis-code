@@ -4,8 +4,7 @@ general function for matching procedure
 import numpy as np
 import interpol as ip
 
-def match_quark_mass(obs0, obs1, obs2=None, weight0, weight1, weight2=None,
-                     meth=0, amu_s, obs_match):
+def match_quark_mass(obs0, obs1, obs2=None, meth=0, amu_s, obs_match):
     """Matches the quark mass to a given observable as an iterator
 
     Parameters
@@ -37,8 +36,7 @@ def match_quark_mass(obs0, obs1, obs2=None, weight0, weight1, weight2=None,
     # Depending on the method "meth" calculate coefficients first and evaluate
     # the root of the function to find obs_match
     # Method 0 only applicable for 2 observables
-    if obs2 == None:
-        if meth == 0:
+    if meth == 0:
           print("Using linear interpolation")
           if weight0.ndim < 2:
           for i in range(obs0.shape[-1]):
@@ -48,12 +46,13 @@ def match_quark_mass(obs0, obs1, obs2=None, weight0, weight1, weight2=None,
 
 
 
-
+    yield (0, 0, i), result, needed, weight
     if meth == 1:
           print("Using linear fit")
 
+    yield (0, 0, i), result, needed, weight
     if meth == 2:
           print("Using quadratic interpolation")
+    yield (0, 0, i), result, needed, weight
           
 
-    yield (0, 0, i, j)

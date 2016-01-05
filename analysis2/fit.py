@@ -591,7 +591,7 @@ class FitResult(object):
         #print(scat.pval.shape)
         return scat
 
-    def match_qm(self, obs1, obs2=None, obs3=None,):
+    def match_quark_mass(self, obs1, obs2=None, obs3=None, meth=0, amu_s, obs_match):
       """ Match the strange quark mass to an observable in lattice units.
 
       Parameters
@@ -600,14 +600,25 @@ class FitResult(object):
           moment (should be easy to extend). Every Observable is a FitResult
           object
 
+      meth: How to match: 0: linear interpolation (only two values)
+                          1: linear fit
+                          2: quadratic interpolation
+
       """
       if obs2==None and obs3==None:
         raise ValueError("Matching not possible, check input of 2nd (and 3rd) observable!")
       #if obs3==None:
-
+      # Get the we
       # Result has the same layout as one of the observables!
       # TODO: If observables have different layouts break
       layout = obs1.data[0].shape
+      _obs1 = obs1.data[0]
+      _obs2 = obs2.data[0]
+      _obs3 = obs3.data[0]
+      _obsweight1 = obs1.pval[0][0]
+      _obsweight2 = obs2.pval[0][0]
+      _obsweight3 = obs3.pval[0][0]
+
       boots = layout[0] 
       ranges1 = layout[1]
       if obs1.data[0].ndim == 3:
@@ -616,8 +627,23 @@ class FitResult(object):
         ranges2 = 0
       qm = FitResult("m_quark_match",True)
       qm.create_empty(layout, layout, [1,1])
-      for res in match_quark_mass():
+      # Decide method beforehand, cheaper in the end
+
+      if meth == 0:
+      for res in match_lin(_obs1, _obs2, _obs3, _obsweight1,
+          _obsweight2, _obsweight3, amu_s, obs_match):
           qm.add_data(*res)
+
+      if meth == 1:
+      for res in match_quad(_obs1, _obs2, _obs3, _obsweight1,
+          _obsweight2, _obsweight3, amu_s, obs_match):
+          qm.add_data(*res)
+
+      if meth == 2:
+      for res in match_fit(_obs1, _obs2, _obs3, _obsweight1,
+          _obsweight2, _obsweight3, amu_s, obs_match):
+          qm.add_data(*res)
+
       return qm
 
     def mult_obs(self, other, corr_id="Product"):
@@ -694,14 +720,18 @@ class FitResult(object):
       # Self determines the resulting layout
       layout = self.data[0].shape
       boots = layout[0] 
-      # Reshape data in dependence of corr_id
+
+      # Reshape data in dependence of correlator type
       if self.derived == True:
         ndim = self.data[0].shape[1]*self.data[0].shape[2]
         flat_data = self.data[0].reshape((boots,ndim))
+        flat_weights = self.pval[0][0].reshape(ndim)
       else:
         ndim = self.data[0].shape[2]
         flat_data = self.data[0][:,1].reshape((boots,ndim))
-      flat_weights = self.pval[0][0].reshape(ndim)
+        self.calc_error()
+        flat_weights = self.weight[1]
+
       vals = draw_weighted(flat_weights, samples=samples)
       ranges = vals.shape[0]
       # Get frequency count of sorted vals 

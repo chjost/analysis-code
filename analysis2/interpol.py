@@ -8,18 +8,14 @@ import numpy as np
 import analyze_fcts as af
 import chiral_fits as chf
 
-class InterPol(object):
-  def __init__(self, fitres, verbose=False):
-    """Create an object for the interpolation of FitResult
-    
 
+def match_lin():
+  for i in range(_obsweight[-1]):
+    ipol_lin()
 
-    """
-
-__all__=["ipol_lin","ipol_quad","eval_lin","eval_quad","err_prop_gauss",
-         "eval_chi_pt_cont","sum_error_sym","sum_error_asym"]
-
-def ipol_lin(y_boot,x):
+      yield (0,0,i), result, needed, weight
+  
+def ipol_lin(_obs1, _obs2, _obs3, _obsweight1, _obsweight2, _obsweight3):
     """ Interpolate bootstrapsamples of data linearly
 
         This function calculates a linear interpolation from 2 x values and
@@ -34,12 +30,16 @@ def ipol_lin(y_boot,x):
             The interpolation coefficients c for all bootstrapsamples
             
     """
+    # check number of weights
+    if _obsweight1.shape != _obsweight2.shape:
+      raise ValueError("Shapes of observables incompatible")
+    # loop over fit ranges
+    for i in range(_obsweight1.shape[-1]):
     # Use a bootstrapsamplewise linear, newtonian interpolation 
-    b_m = np.divide((y_boot[:,1]-y_boot[:,0]),(x[1]-x[0]))
-    b_b = y_boot[:,0]-np.multiply(b_m,x[0])
-    interpol = np.zeros_like(y_boot)
-    interpol[:,0], interpol[:,1] = b_m, b_b
-    return interpol
+      b_m = np.divide((_obs1[:,1]-y_boot[:,0]),(x[1]-x[0]))
+      b_b = y_boot[:,0]-np.multiply(b_m,x[0])
+      interpol = np.zeros_like(y_boot)
+      interpol[:,0], interpol[:,1] = b_m, b_b
 
 def ipol_quad(y_boot, x):
     """ Interpolate bootstrapsamples of data quadratically
