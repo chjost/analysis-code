@@ -12,10 +12,10 @@ def main():
         ens = ana.LatticeEnsemble.parse(sys.argv[1])
 
     # read settings
-    readsingledata = True
+    readsingledata = False
     readsinglefit = False
     plotsingle = True
-    readtwodata = True
+    readtwodata = False
     readtwofit = False
     plottwo = True
 
@@ -52,8 +52,8 @@ def main():
     start_single = [1., 0.3]
     if readsinglefit == False:
         print("fitting")
-        pifit = fit_single.fit(start_single, picorr, [15,T2], corrid="ek",
-            add=addT, min_size=18, step=1, debug=debug)
+        pifit = fit_single.fit(start_single, picorr, [10,T2], corrid="ek",
+            add=addT, min_size=10, step=1, debug=debug)
         pifit.save("%s/fit_k_%s.npz" % (datadir, lat))
     else:
         pifit = ana.FitResult.read("%s/fit_k_%s.npz" % (datadir, lat))
@@ -98,9 +98,9 @@ def main():
     start_ratio = [3., 1.]
     if readtwofit == False:
         print("fitting")
-        ratiofit = fit_ratio.fit(start_ratio, ratio, [[14,30]],
+        ratiofit = fit_ratio.fit(start_ratio, ratio, [[9,T2]],
                 corrid="R", add=addT, oldfit=pifit, oldfitpar=1, xshift=0.5, debug=debug,
-                min_size=17, step=1)
+                min_size=10, step=1)
         ratiofit.save("%s/fit_kk_TP%d_%s.npz" % (datadir, d2, lat))
     else:
         #kkfit = ana.FitResult.read("%s/fit_kk_ratio_TP%d_%s.npz" % (datadir,

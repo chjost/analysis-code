@@ -7,6 +7,7 @@ import numpy as np
 
 from fit_routines import fit_comb, fit_single, calculate_ranges
 from in_out import read_fitresults, write_fitresults
+from interpol import match_lin
 from functions import func_single_corr, func_ratio, func_const, func_two_corr
 from statistics import compute_error, sys_error, sys_error_der, draw_weighted, freq_count
 from energies import calc_q2
@@ -591,7 +592,7 @@ class FitResult(object):
         #print(scat.pval.shape)
         return scat
 
-    def match_quark_mass(self, obs1, obs2=None, obs3=None, meth=0, amu_s, obs_match):
+    def match_quark_mass(self, amu_s, obs_match, obs1, obs2=None, obs3=None, meth=0 ):
       """ Match the strange quark mass to an observable in lattice units.
 
       Parameters
@@ -612,12 +613,15 @@ class FitResult(object):
       # Result has the same layout as one of the observables!
       # TODO: If observables have different layouts break
       layout = obs1.data[0].shape
+      print(layout)
       _obs1 = obs1.data[0]
-      _obs2 = obs2.data[0]
-      _obs3 = obs3.data[0]
       _obsweight1 = obs1.pval[0][0]
-      _obsweight2 = obs2.pval[0][0]
-      _obsweight3 = obs3.pval[0][0]
+      if obs2 is not None:
+        _obs2 = obs2.data[0]
+        _obsweight2 = obs2.pval[0][0]
+      if obs3 is not None:
+        _obs3 = obs3.data[0]
+        _obsweight3 = obs3.pval[0][0]
 
       boots = layout[0] 
       ranges1 = layout[1]
@@ -625,26 +629,24 @@ class FitResult(object):
         ranges2 = layout[2]
       else:
         ranges2 = 0
-      qm = FitResult("m_quark_match",True)
-      qm.create_empty(layout, layout, [1,1])
+      self.create_empty(layout, layout, 1)
       # Decide method beforehand, cheaper in the end
 
       if meth == 0:
-      for res in match_lin(_obs1, _obs2, _obs3, _obsweight1,
-          _obsweight2, _obsweight3, amu_s, obs_match):
-          qm.add_data(*res)
+        for res in match_lin(_obs1, _obs2, amu_s, _obsweight1,
+            _obsweight2, obs_match):
+            self.add_data(*res)
 
       if meth == 1:
-      for res in match_quad(_obs1, _obs2, _obs3, _obsweight1,
-          _obsweight2, _obsweight3, amu_s, obs_match):
-          qm.add_data(*res)
+        for res in match_quad(_obs1, _obs2, _obs3, _obsweight1,
+            _obsweight2, _obsweight3, amu_s, obs_match):
+            self.add_data(*res)
 
       if meth == 2:
-      for res in match_fit(_obs1, _obs2, _obs3, _obsweight1,
-          _obsweight2, _obsweight3, amu_s, obs_match):
-          qm.add_data(*res)
+        for res in match_fit(_obs1, _obs2, _obs3, _obsweight1,
+            _obsweight2, _obsweight3, amu_s, obs_match):
+            self.add_data(*res)
 
-      return qm
 
     def mult_obs(self, other, corr_id="Product"):
       """Multiply two observables in order to treat them as a new observable.
@@ -737,8 +739,8 @@ class FitResult(object):
       # Get frequency count of sorted vals 
       freq_vals = freq_count(vals, verb=False)
       # Create empty fitresult to add data
-      res_sorted = FitResult(corr_id)
-      store1 = (1,boots, ranges)
+      res_sorted = FitResult(corr_id, derived=True)
+      store1 = (boots, ranges)
       store2 = (boots,ranges)
       res_sorted.create_empty(store1, store2 ,1)
       # get frequencies and indices in original data
