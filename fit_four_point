@@ -16,7 +16,7 @@ def main():
     # read settings
     readdata = True
     preparedata = False
-    readfit = False
+    readfit = True
     plotdata = True
 
     # get data from input file
@@ -27,6 +27,10 @@ def main():
     datadir = "/".join((ens.get_data("datadir"), lat))
     plotdir = "/".join((ens.get_data("plotdir"), lat))
     d2 = ens.get_data("d2")
+    try:
+        debug = ens.get_data("debug")
+    except KeyError:
+        debug = 0
     T2 = ens.T2()
     L = ens.L()
     files = ["%s/pipi_pipi_A1_corr_TP%d_%d%d.dat" % (prefix, d2, i, j) for i in range(gmax) for j in range(gmax)]
@@ -74,18 +78,18 @@ def main():
     #del plotter
 
     print("fitting")
-    fitter = ana.LatticeFit(4, True)
+    fitter = ana.LatticeFit(4, 2, 2, 6, debug=debug)
     #start = [1.088295, 0.4648782]
     if readfit == False:
-        fitranges = [9,T2]
+        fitranges = [10,19]
+        #fitranges = [9,T2]
         #fitranges = [[9,T2], [9,T2-5], [9,T2-10], [9,T2-15]]
         #fitranges = [[9,20], [6,15], [4,13], [3,12]]
         if d2 != 0:
             fitres = fitter.fit(None, corr, fitranges, corrid="E", oldfit=pifit,
-                oldfitpar=1, dt_i=2, dt_f=2,dt=6)
+                oldfitpar=1, useall=False)
         else:
-            fitres = fitter.fit(None, corr, fitranges, corrid="E",
-                dt_i=2, dt_f=2,dt=6)
+            fitres = fitter.fit(None, corr, fitranges, corrid="E")
         fitres.save("%s/fit_pipi_TP%d.npz" % (datadir, d2))
     else:
         fitres = ana.FitResult.read("%s/fit_pipi_TP%d.npz" % (datadir, d2))

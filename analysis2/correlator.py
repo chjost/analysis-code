@@ -207,7 +207,6 @@ class Correlators(object):
                 item = [[n for n in range(x)] for x in dE.shape[1:]]
                 for it in itertools.product(*item):
                     # select the correct entries for tmp and dE
-                    #s = (Ellipsis,) + it
                     s = (Ellipsis,) + it +(slice(None), slice(None))
                     s1 = (slice(None),) + it
                     tmp[s] = gevp.gevp_shift_1(self.data, dt, dE[s1], self.debug)

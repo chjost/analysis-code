@@ -6,7 +6,7 @@ import itertools
 import numpy as np
 
 from fit_routines import (fit_comb, fit_single, calculate_ranges, compute_dE,
-    compute_phaseshift)
+    compute_phaseshift, get_start_values, get_start_values_comb)
 from in_out import read_fitresults, write_fitresults
 from functions import (func_single_corr, func_ratio, func_const, func_two_corr,
     func_single_corr2, compute_eff_mass)
@@ -16,16 +16,27 @@ from zeta_wrapper import Z
 from scattering_length import calculate_scat_len
 
 class LatticeFit(object):
-    def __init__(self, fitfunc, verbose=False):
+    def __init__(self, fitfunc, dt_i=2, dt_f=2, dt=4, xshift=0.,
+            correlated=True, debug=0):
         """Create a class for fitting fitfunc.
 
         Parameters
         ----------
-        fitfunc : {0, 1, 2, callable}
+        fitfunc : {0, 1, 2, 3, callable}
             Choose between three predefined functions or an own
             fit function.
+        dt_i, dt_f : ints, optional
+            The step size for the first and last time slice for the fitting.
+        dt : int, optional
+            The minimal size of the interval.
+        xshift : float, optional
+            A shift for the x values of the fit
+        correlated : bool
+            Use the full covariance matrix or just the errors.
+        debug : int, optional
+            The level of debugging output
         """
-        self.verbose = verbose
+        self.debug = debug
         # chose the correct function if using predefined function
         if isinstance(fitfunc, int):
             if fitfunc > 4:
@@ -41,9 +52,14 @@ class LatticeFit(object):
             self.fitfunc = functions.get(fitfunc)
         else:
             self.fitfunc = fitfunc
+        self.xshift = xshift
+        self.dt = dt
+        self.dt_i = dt_i
+        self.dt_f = dt_f
+        self.correlated = correlated
 
     def fit(self, start, corr, ranges, corrid="", add=None, oldfit=None,
-            oldfitpar=None, useall=False, dt_i=2, dt_f=2, dt=4, debug=0):
+            oldfitpar=None, useall=False):
         """Fits fitfunc to a Correlators object.
 
         The predefined functions describe a single particle correlation
@@ -73,12 +89,6 @@ class LatticeFit(object):
         useall : bool
             Using all correlators in the single particle correlator or
             use just the lowest.
-        dt_i, dt_f : ints, optional
-            The step size for the first and last time slice for the fitting.
-        dt : int, optional
-            The minimal size of the interval.
-        debug : int, optional
-            The amount of info printed.
 
         Returns
         -------
@@ -91,62 +101,32 @@ class LatticeFit(object):
             # get the fitranges
             dshape = corr.shape
             ncorr = dshape[-1]
-            franges, fshape = calculate_ranges(ranges, dshape, dt_i=dt_i, dt_f=dt_f,
-                    dt=dt, debug=debug)
+            franges, fshape = calculate_ranges(ranges, dshape, dt_i=self.dt_i,
+                    dt_f=self.dt_f, dt=self.dt, debug=self.debug)
 
-            #print(franges)
             # prepare storage
             fitres = FitResult(corrid)
             fitres.set_ranges(franges, fshape)
-            if start is None:
-                shapes_data = [(dshape[0], self.npar, fshape[0][i]) for i in range(ncorr)]
-                # set start parameter
-                start = []
-                for r in range(ncorr):
-                    # calculate effective mass
-                    if isinstance(ranges[0], (tuple, list)):
-                        tmp = np.nanmean(compute_eff_mass(
-                            corr.data[:,ranges[r][0]:ranges[r][1]+1,r])[0])
-                    else:
-                        tmp = np.nanmean(compute_eff_mass(
-                            corr.data[:,ranges[0]:ranges[1]+1,r])[0])
-                    # if only 1 parameter, set it to the effective mass
-                    if self.npar == 1:
-                        start.append([tmp])
-                    # for 3 parameters use the first value of X for the amplitude,
-                    # the effective mass and 1. as last parameter
-                    elif self.npar == 3:
-                        if isinstance(ranges[0], (list, tuple)):
-                            start.append([corr.data[0,ranges[r][0],r], tmp, 1.])
-                        else:
-                            start.append([corr.data[0,ranges[0],r], tmp, 1.])
-                    # else use only the amplitude and the effective mass
-                    else:
-                        if isinstance(ranges[0], (list, tuple)):
-                            start.append([corr.data[0,ranges[r][0],r], tmp])
-                        else:
-                            start.append([corr.data[0,ranges[0],r], tmp])
-            else:
-                shapes_data = [(dshape[0], len(start), fshape[0][i]) for i in range(ncorr)]
+            shapes_data = [(dshape[0], self.npar, fshape[0][i]) for i in range(ncorr)]
             shapes_other = [(dshape[0], fshape[0][i]) for i in range(ncorr)]
             fitres.create_empty(shapes_data, shapes_other, ncorr)
             del shapes_data, shapes_other
 
+            if start is None:
+                # set starting values
+                start = get_start_values(ncorr, franges, corr.data, self.npar)
+
             # do the fitting
-            if add is None:
-                for res in fit_single(self.fitfunc, start, corr, franges,
-                        debug=debug):
-                    fitres.add_data(*res)
-            else:
-                for res in fit_single(self.fitfunc, start, corr, franges, add,
-                        debug):
-                    fitres.add_data(*res)
+            for res in fit_single(self.fitfunc, start, corr, franges,
+                    add=add, debug=self.debug, correlated=self.correlated):
+                fitres.add_data(*res)
         else:
             # handle the fitranges
             dshape = corr.shape
             oldranges, oldshape = oldfit.get_ranges()
             franges, fshape = calculate_ranges(ranges, dshape, oldshape,
-                    dt_i=dt_i, dt_f=dt_f, dt=dt, debug=debug)
+                    dt_i=self.dt_i, dt_f=self.dt_f, dt=self.dt,
+                    debug=self.debug)
 
             # generate the shapes for the data
             shapes_data = []
@@ -157,20 +137,11 @@ class LatticeFit(object):
                 ncorr[-2] = 1
 
             ncorriter = [[x for x in range(n)] for n in ncorr]
-            if start is None:
-                for item in itertools.product(*ncorriter):
-                    # create the iterator over the fit ranges
-                    tmp = [fshape[i][x] for i,x in enumerate(item)]
-                    shapes_data.append((dshape[0], self.npar) + tuple(tmp))
-                    shapes_other.append((dshape[0],) + tuple(tmp))
-                    # TODO set start!
-            else:
-                for item in itertools.product(*ncorriter):
-                    # create the iterator over the fit ranges
-                    tmp = [fshape[i][x] for i,x in enumerate(item)]
-                    shapes_data.append(tuple([dshape[0], len(start)] + tmp))
-                    shapes_other.append(tuple([dshape[0]] + tmp))
-
+            for item in itertools.product(*ncorriter):
+                # create the iterator over the fit ranges
+                tmp = [fshape[i][x] for i,x in enumerate(item)]
+                shapes_data.append((dshape[0], self.npar) + tuple(tmp))
+                shapes_other.append((dshape[0],) + tuple(tmp))
             # prepare storage
             fitres = FitResult(corrid)
             fitres.set_ranges(franges, fshape)
@@ -178,16 +149,12 @@ class LatticeFit(object):
             del shapes_data, shapes_other
 
             if start is None:
-                raise RuntimeError("start not set")
+                start = get_start_values_comb(ncorr, franges, corr.data, self.npar)
             # do the fitting
-            if add is None:
-                for res in fit_comb(self.fitfunc, start, corr, franges, fshape,
-                        oldfit, None, oldfitpar, debug=debug):
-                    fitres.add_data(*res)
-            else:
-                for res in fit_comb(self.fitfunc, start, corr, franges, fshape,
-                        oldfit, add, oldfitpar, debug=debug):
-                    fitres.add_data(*res)
+            for res in fit_comb(self.fitfunc, start, corr, franges, fshape,
+                    oldfit, add, oldfitpar, useall, self.debug,
+                    self.correlated):
+                fitres.add_data(*res)
 
         return fitres
 
