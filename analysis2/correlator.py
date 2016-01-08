@@ -287,6 +287,49 @@ class Correlators(object):
             obj.shape = obj.data.shape
         return obj
 
+    def diff(self, single_corr=None):
+        """Calculates the difference between two correlators and returns a new Correlator object.
+
+        The implemented ratios are:
+        * corr/(single_corr^2)
+        * corr(t)/(single_corr(t)^2 - single_corr(t+shift)^2)
+        * (corr(t)-corr(t+1))/(single_corr(t)^2 - single_corr(t+1)^2)
+        where shift is an additional parameter.
+
+        If single_corr1 is given, single_corr^2 becomes
+        single_corr*single_corr1.
+
+        Parameters
+        ----------
+        single_corr : Correlators
+            The single particle correlators used for the ratio.
+        ratio : int
+            Chose the ratio to use.
+        shift : int
+            Additional parameter for the second ratio.
+        single_corr1 : Correlators
+            The single particle correlators used for the ratio.
+        useall : bool
+            Using all correlators in the single particle correlator or
+            use just the lowest.
+        usecomb : list of list of ints
+            The combinations of entries of single_corr (and single_corr1)
+            to use.
+        
+        Returns
+        -------
+        Correlators
+            The ratio.
+        """
+        obj = Correlators(debug=self.debug)
+        if self.data.shape[-1] == 2:
+          obj.data = func.simple_difference(self.data)
+        else:
+          obj.data = func.simple_difference(self.data, single_corr)
+        obj.shape = obj.data.shape
+        print(obj.shape)
+        return obj
+
     def hist(self, time):
         """Returns the history over Configurations at a given time
         WARNING : Works only before bootstrapping

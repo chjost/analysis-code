@@ -1,8 +1,36 @@
 """
-general function for matching procedure
+Class for matching procedures. It behaves similar to the FitResult class,
+perhaps make it a derived class of some Metaobject
 """
 import numpy as np
 import interpol as ip
+
+class MatchResult(object):
+    """Class to process FitResults for Interpolation
+
+    The data has a similar layout to FitResult
+    """
+    def __init__(self, obs_id):
+
+      """Allocate objects for initiated instance
+      Parameters
+      ----------
+        obs_id : Observable that is investigated
+      """
+
+      self.data = None
+      self.weight = None
+      self.error = None
+      self.label = None
+      self.obs_id = obs_id
+    
+    @classmethod
+    def read()
+    def save()
+    def create_empty()
+    def get_data()
+    def add_data()
+
 
 def match_quark_mass(obs0, obs1, obs2=None, meth=0, amu_s, obs_match):
     """Matches the quark mass to a given observable as an iterator
@@ -55,4 +83,3 @@ def match_quark_mass(obs0, obs1, obs2=None, meth=0, amu_s, obs_match):
           print("Using quadratic interpolation")
     yield (0, 0, i), result, needed, weight
           
-

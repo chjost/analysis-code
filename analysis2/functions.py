@@ -202,3 +202,30 @@ def compute_weight(corr, pvals, par=1):
             w = (1.-2*abs(pvals[i,par]-0.5))*max_err/errors[i]
             weights.append(w**2)
     return weigths
+
+def simple_difference(d1, d2=None):
+    """Calculates the difference of two data sets
+
+    Parameters
+    ----------
+    d1, d2 : three data sets
+    
+    Returns:
+      the difference between the data sets
+    """
+
+    # create array from dimensions of the data
+    rshape = d1.shape
+    print(d1)
+    print(rshape[0],rshape[1])
+    difference = np.zeros_like(d1)
+    if d2 is None:
+      for _s in range(rshape[0]):
+      
+        for _t in range(rshape[1]):
+          print(_s,_t)
+          # calculate difference
+          difference[_s,_t] = d1[_s,_t,0] - d1[_s,_t,1]
+
+    return difference
+    
