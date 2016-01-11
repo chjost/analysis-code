@@ -452,6 +452,25 @@ class FitResult(object):
                 rsys[i][1]))
         print("------------------------------\n\n")
 
+    def data_for_plot(self, par=0):
+        """Prints the errors etc of the data."""
+        self.calc_error()
+
+        #print("------------------------------")
+        #print("summary for %s" % self.corr_id)
+        if self.derived:
+            #print("derived values")
+            r, rstd, rsys, nfits = self.error[0]
+        else:
+            #print("parameter %d" % par)
+            r, rstd, rsys, nfits = self.error[par]
+        for i, lab in enumerate(self.label):
+            #print("correlator %s, %d fits" %(str(lab), nfits[i]))
+            res = np.array((r[i][0], rstd[i], rsys[i][0],
+                rsys[i][1]))
+        return res
+        #print("------------------------------\n\n")
+
     def calc_cot_delta(self, mass, parself=0, parmass=0, L=24, isratio=False):
         """Calculate the cotangent of the scattering phase.
 

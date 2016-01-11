@@ -47,7 +47,7 @@ def main():
     #res ='/hiskp2/helmes/analysis/scattering/test/s_3_rnd_vec/k_charged/data/A40.24/amu_s_225/'
     ##res = '/hiskp2/helmes/analysis/scattering/pion_test/data/A40.24/' 
     inputlist = []
-    cfg_rng = [1000,1001,1]
+    cfg_rng = [1000,2601,8]
     missing = miss_confs(rawdir,cfg_rng)
     for i in range(cfg_rng[0],cfg_rng[1],cfg_rng[2]):
       if i in missing:
@@ -67,9 +67,9 @@ def main():
     C4_tot = ana.confs_mult(C4_tot,2)
     print("Writing to: %s..." % datadir)
     ana.write_data_ascii(C2,datadir+'k_charged_p0.dat')
-    ana.write_data_ascii(C4_tot,datadir+'kk_charged_A1_TP0_00.dat')
-    #ana.write_data_ascii(C4D,datadir+'C4D.dat')
-    #ana.write_data_ascii(C4C,datadir+'C4C.dat')
+    #ana.write_data_ascii(C4_tot,datadir+'kk_charged_A1_TP0_00.dat')
+    ana.write_data_ascii(C4D,datadir+'C4D.dat')
+    ana.write_data_ascii(C4C,datadir+'C4C.dat')
     print("Finished")
 
 

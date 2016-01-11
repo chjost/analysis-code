@@ -43,7 +43,7 @@ def main():
     inputpath="/hiskp2/helmes/contractions/A60.24/k-k_test/separate_C4/strange_225/merged/"
     outputpath="/hiskp2/helmes/contractions/A60.24/k-k_test/separate_C4/strange_225/merged/"
     suffix='.dat'
-    inputlist=['C4_1','C4_2','C4_3','C4_4']
+    inputlist=['C4C','C4D']
 
     # get mass from correlation function
     #fitfunc = lambda p,t: p[0]*np.cosh((T/2.0-t)*p[1])

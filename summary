@@ -57,30 +57,36 @@ def main():
     print(datadir)
     print(plotdir)
     print("Summary for the A-ensembles")
-    for a in latA:
-      for s in strangeA:
-        print(datadir+a+"/"+s)
+    Aresults = np.zeros((len(strangeA),len(latA),16))
+    for i,s in enumerate(strangeA):
+      print(s)
+      for j,a in enumerate(latA):
+        #print(datadir+a+"/"+s)
         ## single particle fit
-        print("read single particle fit")
+        #print("read single particle fit")
         #kcorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat))
         kfit = ana.FitResult.read("%s%s/%s/fit_k_%s.npz" % (datadir, a,s, a))
-        kfit.print_data(1)
+        m = kfit.data_for_plot(1)
 
         # read ratio
-        print("\n\nread ratio")
+        #print("\n\nread ratio")
         ratiofit = ana.FitResult.read("%s%s/%s/fit_kk_TP%d_%s.npz" % (datadir, a, s, d2, a))
-        ratiofit.print_data(1)
+        dE = ratiofit.data_for_plot(1)
         
         # Read in results of scattering length
-        print("Read results for scattering length")
+        #print("Read results for scattering length")
         a0 = ana.FitResult.read("%s%s/%s/scat_len_TP%d_%s.npz" % (datadir, a, s, d2, a))
-        a0.print_data()
+        a0 = a0.data_for_plot()
         
         # Read m_a0
         mult_obs = ana.FitResult.read("%s%s/%s/mk_akk_%s.npz" % (datadir, a, s, a))
-        mult_obs.print_data()
-        print("#################################################################################")
-  
+        m_a0 = mult_obs.data_for_plot()
+        ens = np.vstack((m,dE,a0,m_a0)).reshape(len(latA)*4)
+        Aresults[i,j] = ens
+    Aresults = Aresults.reshape((8,16))
+    print Aresults
+    fmt = " ".join(['%1.4e']*16)
+    np.savetxt("kk_scat_b1.90.dat",Aresults, fmt=fmt)
     print("Summary for the B-ensembles")
     for a in latB:
       for s in strangeB:
@@ -89,21 +95,21 @@ def main():
         print("read single particle fit")
         #kcorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat))
         kfit = ana.FitResult.read("%s%s/%s/fit_k_%s.npz" % (datadir, a,s, a))
-        kfit.print_data(1)
+        kfit.data_for_plot(1)
 
         # read ratio
         print("\n\nread ratio")
         ratiofit = ana.FitResult.read("%s%s/%s/fit_kk_TP%d_%s.npz" % (datadir, a, s, d2, a))
-        ratiofit.print_data(1)
+        ratiofit.data_for_plot(1)
         
         # Read in results of scattering length
         print("Read results for scattering length")
         a0 = ana.FitResult.read("%s%s/%s/scat_len_TP%d_%s.npz" % (datadir, a, s, d2, a))
-        a0.print_data()
+        a0.data_for_plot()
         
         # Read m_a0
         mult_obs = ana.FitResult.read("%s%s/%s/mk_akk_%s.npz" % (datadir, a, s, a))
-        mult_obs.print_data()
+        mult_obs.data_for_plot()
         print("#################################################################################")
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':
