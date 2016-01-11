@@ -592,7 +592,8 @@ class FitResult(object):
         #print(scat.pval.shape)
         return scat
 
-    def match_quark_mass(self, amu_s, obs_match, obs1, obs2=None, obs3=None, meth=0 ):
+    def match_quark_mass(self, amu_s, obs_match, obs1, obs2=None, obs3=None,
+        meth=0, evaluate=False):
       """ Match the strange quark mass to an observable in lattice units.
 
       Parameters
@@ -622,6 +623,14 @@ class FitResult(object):
       if obs3 is not None:
         _obs3 = obs3.data[0]
         _obsweight3 = obs3.pval[0][0]
+      if evaluate is True:
+        _obs_match = obs_match.data[0]
+        _obs_match_weight = obs_match.pval[0][0]
+      else:
+        _obs_match = obs_match
+        _obs_match_weight = None
+      print("observable to match")
+      print(_obs_match)
 
       boots = layout[0] 
       ranges1 = layout[1]
@@ -634,7 +643,7 @@ class FitResult(object):
 
       if meth == 0:
         for res in match_lin(_obs1, _obs2, amu_s, _obsweight1,
-            _obsweight2, obs_match):
+            _obsweight2, _obs_match, _obs_match_weight, evaluate):
             self.add_data(*res)
 
       if meth == 1:

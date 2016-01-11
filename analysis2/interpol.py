@@ -5,11 +5,12 @@ from scipy.optimize import leastsq
 import scipy.stats
 import math
 import numpy as np
+import fit
 #import analyze_fcts as af
 #import chiral_fits as chf
 
 
-def match_lin(y1, y2, x, w1, w2, obs_match):
+def match_lin(y1, y2, x, w1, w2, obs_match, w_match=None, evaluate=False):
     """Function to match the quark mass using a linear interpolation (check if it
     is really interpolated)
 
@@ -29,9 +30,14 @@ def match_lin(y1, y2, x, w1, w2, obs_match):
     for i in range(w1.shape[-1]):
       # for each fit range interpolate the two bootstrapsamples
       coeff = ipol_lin(y1[:,i], y2[:,i], x)
-      # then interpolate the coefficients
-      result = solve_lin(coeff, obs_match)
-      weight = np.multiply(w1[i],w2[i])
+      # if obs_match is a FitResult, evaluate it at the coefficients
+      # else solve c0*mu_s + c1 - obs_match = 0 for mu_s
+      if evaluate is True:
+        result = eval_lin(coeff, obs_match[:,i])
+        weight = np.multiply(np.multiply(w1[i],w2[i]),w_match[i])
+      else:
+        result = solve_lin(coeff, obs_match)
+        weight = np.multiply(w1[i],w2[i])
       needed = np.zeros_like(weight)
 
       yield (0,i), result, needed, weight
