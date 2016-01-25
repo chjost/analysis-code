@@ -1,4 +1,4 @@
-set title "relative error A-, B- and D-Ensembles"
+set title "relative error delta E A-, B- and D-Ensembles"
 set xlabel "(r_0 M_K)^2" 
 set ylabel "relative error"
 set grid

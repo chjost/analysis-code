@@ -51,19 +51,23 @@ def main():
     obs_match = 0.02125
 
     print(datadir)
-    
+    # Place fit results in new empty fitresults objects
+    #qm_matched = ana.FitResult.create_empty(shape1,shape1,2)
+    #mk_a0_matched = ana.FitResult.create_empty(shape1,shape,1)
     for a in latA:
         # Read low m
         mk_low = ana.FitResult.read("%s/%s/%s/fit_k_%s.npz" % (datadir,a,strange[0],a))
         mk_low.print_data(par=1)
         mk_low.calc_error()
-        obs1 = mk_low.res_reduced(samples = 200)
+        obs1 = mk_low.mult_obs(mk_low, "m_low_sq")
+        obs1 = obs1.res_reduced(samples = 200)
 
         # Read high m
         mk_high = ana.FitResult.read("%s/%s/%s/fit_k_%s.npz" % (datadir,a,strange[1],a))
         mk_high.print_data(par=1)
         mk_high.calc_error()
-        obs2 = mk_high.res_reduced(samples = 200)
+        obs2 = mk_high.mult_obs(mk_high, "m_high_sq")
+        obs2 = obs2.res_reduced(samples = 200)
         
         qmatch = ana.FitResult('match',derived=True)
         qmatch.evaluate_quark_mass(amu_s,obs_match, obs1, obs2)
