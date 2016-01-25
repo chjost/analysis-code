@@ -44,7 +44,8 @@ def main():
     if isinstance(t_mass[0],int):
       print(t_mass)
     t_ratio = np.int_(ens.get_data("fitratio"))
-    fitmin = ens.get_data("fitmin")
+    min_size_mass = ens.get_data("tmin_mass")
+    min_size_ratio = ens.get_data("tmin_ratio")
 
 #######################################################################
 # Begin calculation
@@ -52,6 +53,7 @@ def main():
 
     # single particle correlator
     print("read single particle corrs")
+    #files = ["%s/k_charged_p%d.dat" % (datadir, d) for d in range(1)]
     files = ["%s/k_charged_p%d.dat" % (datadir, d) for d in range(1)]
     if readsingledata == False:
         picorr = ana.Correlators(files, matrix=False)
@@ -68,7 +70,7 @@ def main():
     if readsinglefit == False:
         print("fitting")
         pifit = fit_single.fit(start_single, picorr, [t_mass], corrid="ek",
-            add=addT, min_size=fitmin, step=1, debug=debug)
+            add=addT, min_size=min_size_mass, step=1, debug=debug)
         pifit.save("%s/fit_k_%s.npz" % (datadir, lat))
     else:
         pifit = ana.FitResult.read("%s/fit_k_%s.npz" % (datadir, lat))
@@ -80,18 +82,20 @@ def main():
     if plotsingle:
         print("plotting")
         # omit fit plotting for production
-        # plotter = ana.LatticePlot("%s/fit_k_%s.pdf" % (plotdir, lat))
-        plotter = ana.LatticePlot("%s/hist_fit_k_%s.pdf" % (plotdir, lat))
+        plotter = ana.LatticePlot("%s/fit_k_%s.pdf" % (plotdir, lat))
+        #plotter = ana.LatticePlot("%s/hist_fit_k_%s.pdf" % (plotdir, lat))
         plotter.set_env(ylog=True)
-        # label = ["single particle", "t", "C(t)", "kaon"]
-        # plotter.plot(picorr, label, pifit, fit_single, add=addT, debug=debug)
-        # plotter.new_file("%s/hist_fit_k_%s.pdf" % (plotdir, lat))
+        label = ["single particle", "t", "C(t)", "kaon"]
+        plotter.plot(picorr, label, pifit, fit_single, add=addT, debug=debug)
+        plotter.new_file("%s/hist_fit_k_%s.pdf" % (plotdir, lat))
         label = ["kaon energy", "E$_\k$/a", "E$_\k$"]
         plotter.histogram(pifit, label, 1)
         del plotter
 
     # two particle correlator
     print("read two particle corrs")
+    #files = ["%s/kk_charged_A1_TP%d_%d%d.dat" % (datadir, d2, i, j) for i in\
+    #    range(gmax+1) for j in range(gmax+1)]
     files = ["%s/kk_charged_A1_TP%d_%d%d.dat" % (datadir, d2, i, j) for i in\
         range(gmax+1) for j in range(gmax+1)]
     print files
@@ -117,7 +121,7 @@ def main():
         print("fitting")
         ratiofit = fit_ratio.fit(start_ratio, ratio, [t_ratio],
                 corrid="R", add=addT, oldfit=pifit, oldfitpar=1, xshift=0.5, debug=debug,
-                min_size=fitmin, step=1)
+                min_size=min_size_ratio, step=1)
         ratiofit.save("%s/fit_kk_TP%d_%s.npz" % (datadir, d2, lat))
     else:
         ratiofit = ana.FitResult.read("%s/fit_kk_TP%d_%s.npz" % (datadir,
@@ -130,16 +134,16 @@ def main():
     if plottwo:
         print("plotting")
         # omit ratio fit plots for production
-        # plotter = ana.LatticePlot("%s/fit_ratio_kk_TP%d_%s.pdf" % (plotdir, d2, lat))
+        #plotter = ana.LatticePlot("%s/fit_ratio_kk_TP%d_%s.pdf" % (plotdir, d2, lat))
         plotter = ana.LatticePlot("%s/hist_fit_kk_TP%d_%s.pdf" % (plotdir, d2, lat))
         plotter.set_env(ylog=False)
-        # label = ["Ratio", "t", "R(t)", "data"]
+        label = ["Ratio", "t", "R(t)", "data"]
         print "plotter set up"
-        # plotter.plot(ratio, label, ratiofit, fit_ratio, oldfit=pifit, add=addT,
-        #    oldfitpar=1, xshift=0.5, debug=debug)
-        # print "open new file for deltaE"
+        #plotter.plot(ratio, label, ratiofit, fit_ratio, oldfit=pifit, add=addT,
+        #   oldfitpar=1, xshift=0.5, debug=debug)
+        print "open new file for deltaE"
         # plotter.new_file("%s/hist_fit_kk_TP%d_%s.pdf" % (plotdir, d2, lat))
-        # plotter.new_file("%s/hist_fit_kk_ratio_TP%d_%s.pdf" % (plotdir, d2, lat))
+        #plotter.new_file("%s/hist_fit_kk_ratio_TP%d_%s.pdf" % (plotdir, d2, lat))
         label = ["ratio", "dE$_{KK}$/a", "dE$_{KK}$"]
         plotter.histogram(ratiofit, label, 1)
         del plotter

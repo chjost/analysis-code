@@ -287,6 +287,20 @@ class Correlators(object):
             obj.shape = obj.data.shape
         return obj
 
+    def back_derivative(self):
+        derive = Correlators(debug=self.debug)
+        derive.data = func.compute_derivative_back(self.data[0])
+        derive.shape = derive.data.shape
+        
+        return derive
+
+    def square_corr(self):
+        derive = Correlators(debug=self.debug)
+        derive.data = func.compute_square(self.data[0])
+        derive.shape = derive.data.shape
+        
+        return derive
+
     def diff(self, single_corr=None):
         """Calculates the difference between two correlators and returns a new Correlator object.
 

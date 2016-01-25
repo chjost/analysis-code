@@ -7,7 +7,7 @@ import numpy as np
 
 from fit_routines import fit_comb, fit_single, calculate_ranges
 from in_out import read_fitresults, write_fitresults
-from interpol import match_lin
+from interpol import match_lin, evaluate_lin
 from functions import func_single_corr, func_ratio, func_const, func_two_corr
 from statistics import compute_error, sys_error, sys_error_der, draw_weighted, freq_count
 from energies import calc_q2
@@ -36,7 +36,8 @@ class LatticeFit(object):
             self.fitfunc = fitfunc
 
     def fit(self, start, corr, ranges, corrid="", add=None, oldfit=None,
-            oldfitpar=None, useall=False, step=2, min_size=4, xshift=0., debug=0):
+            oldfitpar=None, useall=False, step=1, min_size=4, xshift=0.,
+            debug=0, fixend=False):
         """Fits fitfunc to a Correlators object.
 
         The predefined functions describe a single particle correlation
@@ -85,7 +86,7 @@ class LatticeFit(object):
             dshape = corr.shape
             ncorr = dshape[-1]
             franges, fshape = calculate_ranges(ranges, dshape, step=step,
-                    min_size=min_size, debug=debug)
+                    min_size=min_size, debug=debug, fixend=fixend)
 
             # prepare storage
             fitres = FitResult(corrid)
@@ -109,7 +110,7 @@ class LatticeFit(object):
             dshape = corr.shape
             oldranges, oldshape = oldfit.get_ranges()
             franges, fshape = calculate_ranges(ranges, dshape, oldshape,
-                    step=step, min_size=min_size, debug=debug)
+                    step=step, min_size=min_size, debug=debug, fixend=fixend)
 
             # generate the shapes for the data
             shapes_data = []
@@ -322,6 +323,18 @@ class FitResult(object):
                 return n
         else:
             raise ValueError("Index cannot be calculated")
+
+    def singularize(self, val):
+        singular = FitResult("singluar", True)
+        shape1 = self.data[0].shape
+        shape2 = shape1
+        singular.create_empty(shape1,shape2,1)
+        nboot = self.data[0].shape[0]
+        data = np.linspace(val,val,nboot)
+        chi2 = np.zeros_like(data)
+        pval = np.ones_like(data)
+        singular.add_data((0,0),np.linspace(val,val,nboot),chi2,pval)
+        return singular
 
     def create_empty(self, shape1, shape2, corr_num):
         """Create empty data structures.
@@ -611,6 +624,65 @@ class FitResult(object):
         #print(scat.pval.shape)
         return scat
 
+    def evaluate_quark_mass(self, amu_s, obs_eval, obs1, obs2=None, obs3=None,
+        meth=0):
+      """ evaluate the strange quark mass at obs_match
+
+      Parameters
+      ----------
+      obs1, obs2, obs3: Up to 3 different Observables are supported at the
+          moment (should be easy to extend). Every Observable is a FitResult
+          object
+
+      meth: How to match: 0: linear interpolation (only two values)
+                          1: linear fit
+                          2: quadratic interpolation
+
+      """
+      if obs2==None and obs3==None:
+        raise ValueError("Matching not possible, check input of 2nd (and 3rd) observable!")
+      #if obs3==None:
+      # Get the we
+      # Result has the same layout as one of the observables!
+      # TODO: If observables have different layouts break
+      layout = obs1.data[0].shape
+      print(layout)
+      _obs1 = obs1.data[0]
+      _obsweight1 = obs1.pval[0][0]
+      if obs2 is not None:
+        _obs2 = obs2.data[0]
+        _obsweight2 = obs2.pval[0][0]
+      if obs3 is not None:
+        _obs3 = obs3.data[0]
+        _obsweight3 = obs3.pval[0][0]
+      _obs_eval = obs_eval
+      print("observable to evaluate at")
+      print(_obs_eval)
+
+      boots = layout[0] 
+      ranges1 = layout[1]
+      if obs1.data[0].ndim == 3:
+        ranges2 = layout[2]
+      else:
+        ranges2 = 0
+      self.create_empty(layout, layout, 1)
+      # Decide method beforehand, cheaper in the end
+
+      if meth == 0:
+        for res in evaluate_lin(_obs1, _obs2, amu_s, _obsweight1,
+            _obsweight2, _obs_eval):
+            self.add_data(*res)
+
+      if meth == 1:
+        for res in evaluate_quad(_obs1, _obs2, _obs3, _obsweight1,
+            _obsweight2, _obsweight3, amu_s, obs_match):
+            self.add_data(*res)
+
+      if meth == 2:
+        for res in evaluate_fit(_obs1, _obs2, _obs3, _obsweight1,
+            _obsweight2, _obsweight3, amu_s, obs_match):
+            self.add_data(*res)
+
     def match_quark_mass(self, amu_s, obs_match, obs1, obs2=None, obs3=None,
         meth=0, evaluate=False):
       """ Match the strange quark mass to an observable in lattice units.
@@ -789,4 +861,4 @@ class FitResult(object):
           ind += 1
 
       return res_sorted
-      
+     

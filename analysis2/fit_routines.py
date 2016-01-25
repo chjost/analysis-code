@@ -141,7 +141,8 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
                     correlated=True, debug=debug)
             yield item + ritem, res, chi, pva
 
-def calculate_ranges(ranges, shape, oldshape=None, step=2, min_size=4, debug=0):
+def calculate_ranges(ranges, shape, oldshape=None, step=2, min_size=4, debug=0,
+    fixend=False):
     """Calculates the fit ranges.
 
     Parameters
@@ -157,6 +158,7 @@ def calculate_ranges(ranges, shape, oldshape=None, step=2, min_size=4, debug=0):
         The steps in the loops.
     min_size : int, optional
         The minimal size of the interval.
+    fixend : bool to fix the last point in the fit ranges
     debug : int
         The amount of info printed.
 
@@ -176,7 +178,7 @@ def calculate_ranges(ranges, shape, oldshape=None, step=2, min_size=4, debug=0):
             if debug > 1:
                 print("the upper range exceeds the data range")
             ranges[1] = shape[1] - 1
-        r_tmp = get_ranges(ranges[0], ranges[1], step, min_size)
+        r_tmp = get_ranges(ranges[0], ranges[1], step, min_size,fixend=fixend)
         fit_ranges = [r_tmp for i in range(ncorr)]
         shape = [[r_tmp.shape[0]] * ncorr]
     else:
@@ -188,19 +190,24 @@ def calculate_ranges(ranges, shape, oldshape=None, step=2, min_size=4, debug=0):
             # check if we exceed the time extent
             if ran[1] > shape[1] - 1:
                 ran[1] = shape[1] - 1
-            fit_ranges.append(get_ranges(ran[0], ran[1], step, min_size))
+            fit_ranges.append(get_ranges(ran[0], ran[1], step, min_size,
+              fixend=fixend))
         shape = [[ran.shape[0] for ran in fit_ranges]]
     if oldshape is not None:
         shape = oldshape + shape
     fit_ranges = np.asarray(fit_ranges)
     return fit_ranges, shape
 
-def get_ranges(lower, upper, step, minsize):
+def get_ranges(lower, upper, step, minsize, fixend=False):
     """Get the intervals given a lower and upper bound, step size and
     the minimal size of the interval.
     """
     ran = []
     for lo in range(lower, upper+1, step):
+      if fixend is True:
+        up = 32
+        ran.append((lo,up))
+      else:
         for up in range(lower, upper+1, step):
             if (up - lo + 2) > minsize:
                 # the +2 comes from the fact that the interval contains one
@@ -251,6 +258,7 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, debug=0):
 
     # compute inverse, cholesky decomposed covariance matrix
     if not correlated:
+        print(np.cov(Y.T))
         cov = np.diag(np.diagonal(np.cov(Y.T)))
     else:
         cov = np.cov(Y.T)

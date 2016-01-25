@@ -213,7 +213,7 @@ def plot_data_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
 ##  plt.bar(center, hist, align='center', width=width)
 ##  plt.show()
 
-def plot_data(X, _Y, dY, pdfplot, label, plotrange=None, logscale=False,
+def plot_data(X, _Y, _dY, pdfplot, label, plotrange=None, logscale=False,
     xlim=None, ylim=None, hann=None):
     """A function that plots a correlation function.
 
@@ -237,6 +237,9 @@ def plot_data(X, _Y, dY, pdfplot, label, plotrange=None, logscale=False,
         Nothing.
     """
     Y=np.atleast_2d(_Y)
+    if (_dY.shape[0] != Y.shape[0]):
+      dY = np.tile(_dY,Y.shape[0])
+    #dY=np.atleast_2d(dY)
     # check boundaries for the plot
     if isinstance(plotrange, (np.ndarray, list, tuple)):
         plotrange = np.asarray(plotrange).flatten()
@@ -248,10 +251,14 @@ def plot_data(X, _Y, dY, pdfplot, label, plotrange=None, logscale=False,
         # plot the data
         print l,u
         col=['red','blue','black']
-        for a,y in enumerate(Y):
-          p1 = plt.errorbar(X[l:u], y[l:u], dY[l:u], marker='x',
+        print("this will get plotted")
+        print(Y.shape)
+        print(dY.shape)
+        for a in range(Y.shape[0]):
+          print Y[a][l:u]
+          print dY[a][l:u]
+          p1 = plt.errorbar(X[l:u], Y[a][l:u], dY[a][l:u], marker='x',
               color=col[a],linestyle='', label=label[3][a])
-          print y[l:u]
     else:
         # plot the data
         p1 = plt.errorbar(X, Y, dY, marker='x', color='teal', linestyle='',  label=label[3])

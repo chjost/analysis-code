@@ -10,7 +10,7 @@ import fit
 #import chiral_fits as chf
 
 
-def match_lin(y1, y2, x, w1, w2, obs_match, w_match=None, evaluate=False):
+def match_lin(y1, y2, x, w1, w2, obs_match, w_match=None):
     """Function to match the quark mass using a linear interpolation (check if it
     is really interpolated)
 
@@ -26,18 +26,41 @@ def match_lin(y1, y2, x, w1, w2, obs_match, w_match=None, evaluate=False):
     # check number of weights
     if w1.shape != w2.shape:
       raise ValueError("Shapes of observables incompatible")
-    print y1.shape
+    #print y1.shape
     for i in range(w1.shape[-1]):
       # for each fit range interpolate the two bootstrapsamples
       coeff = ipol_lin(y1[:,i], y2[:,i], x)
       # if obs_match is a FitResult, evaluate it at the coefficients
       # else solve c0*mu_s + c1 - obs_match = 0 for mu_s
-      if evaluate is True:
-        result = eval_lin(coeff, obs_match[:,i])
-        weight = np.multiply(np.multiply(w1[i],w2[i]),w_match[i])
-      else:
-        result = solve_lin(coeff, obs_match)
-        weight = np.multiply(w1[i],w2[i])
+      result = solve_lin(coeff, obs_match)
+      weight = np.multiply(w1[i],w2[i])
+      needed = np.zeros_like(weight)
+
+      yield (0,i), result, needed, weight
+
+def evaluate_lin(y1, y2, x, w1, w2, obs_eval):
+    """Function to match the quark mass using a linear interpolation (check if it
+    is really interpolated)
+
+    This function calls ipol_lin, and afterwards eval_lin to get the interpolated
+    quark mass value per fit range. Should be usable for other observables as
+    well.
+
+    Parameters
+    ----------
+    Returns
+    """
+
+    # check number of weights
+    if w1.shape != w2.shape:
+      raise ValueError("Shapes of observables incompatible")
+    for i in range(w1.shape[-1]):
+      # for each fit range interpolate the two bootstrapsamples
+      coeff = ipol_lin(y1[:,i], y2[:,i], x)
+      # if obs_match is a FitResult, evaluate it at the coefficients
+      # else solve c0*mu_s + c1 - obs_match = 0 for mu_s
+      result = eval_lin(coeff, obs_eval)
+      weight = np.multiply(w1[i],w2[i])
       needed = np.zeros_like(weight)
 
       yield (0,i), result, needed, weight
@@ -57,7 +80,7 @@ def ipol_lin(y1, y2, x):
             The interpolation coefficients c for all bootstrapsamples
             
     """
-    print(y1.shape)
+    #print(y1.shape)
     # Use a bootstrapsamplewise linear, newtonian interpolation 
     c0 = np.divide((y2-y1),(x[1]-x[0]))
     c1 = y1-np.multiply(c0,x[0])

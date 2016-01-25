@@ -226,6 +226,72 @@ def simple_difference(d1, d2=None):
           print(_s,_t)
           # calculate difference
           difference[_s,_t] = d1[_s,_t,0] - d1[_s,_t,1]
+    else:
+      if rshape != d2.shape:
+        raise ValueError("data sets have different shapes")
+      for _s in range(rshape[0]):
+      
+        for _t in range(rshape[1]):
+          print(_s,_t)
+          # calculate difference
+          difference[_s,_t] = d1[_s,_t,0] - d2[_s,_t,0]
+
 
     return difference
     
+def compute_derivative_back(data):
+    """Computes the backward derivative of a correlation function.
+    as used for example in the ratios
+
+    The data is assumed to a numpy array. The derivative is calculated
+    along the second axis.
+
+    Parameter
+    ---------
+    data : ndarray
+        The data.
+
+    Returns
+    -------
+    ndarray
+        The derivative of the data.
+
+    Raises
+    ------
+    IndexError
+        If array has only 1 axis.
+    """
+    # creating derivative array from data array
+    dshape = list(data.shape)
+    print dshape
+    dshape[0] = data.shape[1] - 1
+    derv = np.zeros(dshape, dtype=float)
+    # computing the derivative
+    for b, row in enumerate(data):
+        for t in range(len(row)-1):
+            derv[b,t] = row[t] - row[t+1]
+    return derv
+
+def compute_square(data):
+    """ Compute the squared correlator
+    
+    Parameter
+    ---------
+    data : ndarray
+        The data.
+
+    Returns
+    -------
+    ndarray
+        The derivative of the data.
+
+    Raises
+    ------
+    IndexError
+        If array has only 1 axis.
+    """
+    # creating square array from data array
+    dshape = list(data.shape)
+    # computing the square
+    square = np.square(data)
+    return square

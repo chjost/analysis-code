@@ -46,17 +46,20 @@ def main():
     print("read two particle corrs")
     files = ["%s/kk_charged_A1_TP%d_%d%d.dat" % (datadir, d2, i, j) for i in\
         range(gmax+1) for j in range(gmax+1)]
+    #files = ["%s/pipi_pipi_A1_corr_TP%d_%d%d.dat" % (datadir, d2, i, j) for i in\
+    #    range(gmax+1) for j in range(gmax+1)]
     print files
     if readtwodata == False:
         kkcorr = ana.Correlators(files, matrix=False)
         print(kkcorr.data.shape)
 
-        popped = kkcorr.omit([9e+5,2e+6])
-        print(popped)
+        #popped = kkcorr.omit([9e+5,2e+6])
+        #print(popped)
         print(kkcorr.data.shape)
         kkhist = kkcorr.hist(ts)
         plotter = ana.LatticePlot("%s/hist_ts%d_kk.pdf" % (plotdir,ts))
         label = ["4pt history","cfg","C(%d)"%ts, "data"]
+        plotter.set_env(grid=True,ylog=True)
         plotter.history(kkhist,label)
         del plotter
 
@@ -75,6 +78,7 @@ def main():
     # single particle correlator
     print("read single particle corrs")
     files = ["%s/k_charged_p%d.dat" % (datadir, d) for d in range(1)]
+    #files = ["%s/pi_corr_p%d.dat" % (datadir, d) for d in range(1)]
     if readsingledata == False:
         kcorr = ana.Correlators(files, matrix=False)
         try:
@@ -82,11 +86,12 @@ def main():
         except: NameError
         khist = kcorr.hist(ts)
         plotter = ana.LatticePlot("%s/hist_ts%d_k.pdf" % (plotdir,ts))
+        plotter.set_env(grid=True,ylog=True)
         label = ["2pt history","cfg","C(%d)" % ts, "data"]
         plotter.history(khist,label)
         del plotter
         kcorr.sym_and_boot(nboot)
-        kcorr.save("%s/corr_k_%s.npy" % (datadir, lat))
+        #kcorr.save("%s/corr_k_%s.npy" % (datadir, lat))
     else:
         kcorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat))
 

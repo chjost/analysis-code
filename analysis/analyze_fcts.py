@@ -31,18 +31,18 @@ import plot as plt
 import _quantiles as qlt
 
 def compute_derivative(data):
-    """Computes the derivative of a correlation function.
+    """computes the derivative of a correlation function.
 
-    The data is assumed to a numpy array with datastrap samples as first axis
-    and time as second axis.  The time extend of the mass reduced by one
+    the data is assumed to a numpy array with datastrap samples as first axis
+    and time as second axis.  the time extend of the mass reduced by one
     compared with the original data since the energy cannot be calculated on
     the first slice.
 
-    Args:
-        data: The bootstrapped correlation function.
+    args:
+        data: the bootstrapped correlation function.
 
-    Returns:
-        The derivative of the correlation function and its mean and standard
+    returns:
+        the derivative of the correlation function and its mean and standard
         deviation.
     """
     # creating derivative array from data array
@@ -54,6 +54,42 @@ def compute_derivative(data):
             derv[b, t] = row[t+1] - row[t]
     mean, err = calc_error(derv)
     return derv, mean, err
+
+def compute_back_derivative(data):
+    """computes the derivative of a correlation function.
+
+    the data is assumed to a numpy array with datastrap samples as first axis
+    and time as second axis.  the time extend of the mass reduced by one
+    compared with the original data since the energy cannot be calculated on
+    the first slice.
+
+    args:
+        data: the bootstrapped correlation function.
+
+    returns:
+        the derivative of the correlation function and its mean and standard
+        deviation.
+    """
+    # creating derivative array from data array
+    derv = np.zeros_like(data[:,:-1], dtype=float)
+    # computing the derivative
+    for b in range(0, data.shape[0]):
+        row = data[b]
+        for t in range(0, len(row)-1):
+            derv[b, t] = row[t] - row[t+1]
+    mean, err = calc_error(derv)
+    return derv, mean, err
+
+def compute_square(data):
+    """Square a bootstrapped correlation function
+    """
+    square = np.zeros_like(data, dtype=float)
+    #compute the elementwise square of every bootstrapsample
+    for b in range(0, data.shape[0]):
+      square[b] = np.square(data[b])
+    mean, err = calc_error(square)
+    return square, mean, err
+
 
 def compute_mass(data, usecosh=True):
     """Computes the energy of a correlation function.
