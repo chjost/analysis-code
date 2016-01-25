@@ -1,0 +1,127 @@
+#!/usr/bin/python
+################################################################################
+#
+# Author: Christian Jost (jost@hiskp.uni-bonn.de)
+# Date:   Februar 2015
+#
+# Copyright (C) 2015 Christian Jost
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Function: A short analysis of the single pion.
+#
+# For informations on input parameters see the description of the function.
+#
+################################################################################
+
+import matplotlib
+matplotlib.use('Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+import numpy as np
+
+import analysis as ana
+
+def main():
+    ## definition of some variables
+    nbsamples = 500
+    #inputpath="/hiskp2/helmes/contractions/A40.24/k-k_test/strange_225/merged/"
+    inputpath="/hiskp2/helmes/k-k-scattering/tests/A40.24/bastians_code/dsg4/data/"
+    #outputpath="/hiskp2/helmes/contractions/A40.24/kaon/strange_225/merged/scratch/"
+    #inputpath = "/hiskp2/helmes/contractions/A30.32/k-k_test/strange_225/merged/"
+    outputpath = inputpath+"scratch/"
+    suffix="k+_corr0_p0.dat"
+    suffix1="k+k+_A1_TP0_00.dat"
+    suffix2="k+_p0_mass.dat"
+    inputlist=[""]
+    #inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/"
+    #outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D15_new/"
+    #suffix="pi_corr_p0.dat"
+    #suffix1="pi_corr_average.dat"
+    #suffix2="pi_corr_mass.dat"
+    #inputlist=["D15_new/"]
+    #inputlist=["D15_new/", "D15_old/", "D15_combined/"]
+
+    # get mass from correlation function
+    #fitfunc = lambda p,t: p[0]*np.cosh((T/2.0-t)*p[1])
+    fitfunc = lambda p,t: 10e6 if p[1] < 0.0 else 0.5*p[0]*p[0]*(np.exp(-p[1]*t) + np.exp(-p[1]*(T-t)))
+    massfunc = lambda p,t: p
+    for _i in inputlist:
+        # read in data
+        print("".join((inputpath, inputlist[0], suffix)))
+        corrs = ana.read_data_ascii("".join((inputpath, inputlist[0], suffix)))
+        corrs_kk = ana.read_data_ascii("".join((inputpath, inputlist[0], suffix1)))
+        T = corrs.shape[1]
+        nbcfg = corrs.shape[0]
+        T2=int(T/2)+1
+        #average = af.average_corr_fct(corrs, nbcfg, T)
+        #for t in range(T):
+        #    print(corrs[t*nbcfg:(t+1)*nbcfg])
+        tlist = np.linspace(0., float(T2), float(T2), endpoint=False)
+        # create bootstrap samples
+        bsamples = ana.sym_and_boot(corrs, nbsamples)
+        bsamples_kk = ana.sym_and_boot(corrs_kk, nbsamples)
+        # compute ratio
+        tlist_ratio = np.linspace(0.5, float(T2-0.5), float(T2-1), endpoint=False)
+        R_boot, R_mean, R_stdev, = ana.simple_ratio_subtract(bsamples_kk, bsamples, bsamples)
+        # compare single kaon and kk effective masses
+        mass, mmass, dmass = ana.compute_mass(bsamples, True)
+        mass_kk, mmass_kk, dmass_kk = ana.compute_mass(bsamples_kk, True)
+        m_cmp = np.zeros((2,T2-2))
+        dm_cmp = np.zeros_like(m_cmp)
+        m_cmp[0] = mass[0]
+        dm_cmp[0] = dmass
+        m_cmp[1] = mass_kk[0]
+        dm_cmp[1] = dmass_kk
+        # plot correlationfunctions
+        ana.check_corrs("C2",outputpath,T,corrs)
+        # plot correlationfunctions
+        ana.check_corrs("C4",outputpath,T,corrs_kk)
+
+        # plot effective masses in 1 plot
+        label = ["kk and k, A40.24, amu_s = 0.225", "time",
+        r'm_eff(t)',
+            "data", [r'$C_2(t)$', r'$C_4(t)$' ]]
+        pfit = PdfPages("%sm_k_eff_plot.pdf" % outputpath)
+        plt.title(label[0])
+        plt.xlabel(label[1])
+        plt.ylabel(label[2])
+        p1 = plt.errorbar(tlist[:-2],
+            np.multiply(1,m_cmp[0]), dm_cmp[0], marker='x',
+            color='red',linestyle='', label=label[4][0])
+
+        p1 = plt.errorbar(tlist[:-2], m_cmp[1], dm_cmp[1], marker='x',
+            color='blue',linestyle='', label=label[4][1])
+        plt.grid(True)
+        plt.legend(loc='best')
+        pfit.savefig()
+        plt.clf()
+        label = ["Ratio K-K", "time", "R(t)", "data", ""]
+        plt.title(label[0])
+        plt.xlabel(label[1])
+        plt.ylabel(label[2])
+        p2 = plt.errorbar(tlist_ratio, R_boot[0], R_stdev,
+            marker='x',color='black',linestyle='',label=label[3])
+        plt.grid(True)
+        plt.legend(loc='best')
+        pfit.savefig()
+        pfit.close()
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Keyboard Interrupt")

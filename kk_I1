@@ -40,7 +40,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 import analysis as ana
 def main():
     # number of bootstrap samples
-    nbsamples = 500
+    nbsamples = 1500
     # temporal lattice extent
     tmin = 1
     T = 48
@@ -48,37 +48,39 @@ def main():
     # Strange quark masses and unitary kaon mass
     #mk_unit = 0.26695
     #dmk_unit = 0.00052
-    #A-ensemble strange quark masses
-    #amu_s = [0.0185,0.0225,0.02464]
+    #A-ensemble strange quark masses, only needed for names
+    amu_s = ['225','2464'] 
     #B-ensemble strange quark masses
     #amu_s = [0.016, 0.01861, 0.021]
     p_zero = np.asarray([0,0,0])
-    amu_s = [0.0225]
-    #ensemblelist = ['A60.24/','A80.24/']
-    ensemblelist = ['3_rnd_vec/','4_rnd_vec/','5_rnd_vec/']
-    filelist = ['k_corr_p0.dat','kk_A1_TP0_00.dat']
+    #amu_s = [0.0225]
+    ensemblelist = ['A40.24/']
+    #ensemblelist = ['A40.24/','A60.24/','A80.24/','A100.24/']
+    #ensemblelist = ['3_rnd_vec/','4_rnd_vec/','5_rnd_vec/']
+    filelist = ['k_charged_p0.dat','kk_charged_A1_TP0_00.dat']
     #filelist = ['C2.dat','kpi_4.dat']
     #pathroot = "/hiskp2/helmes/k-k-scattering/tests/5_rnd_vec/"
-    pathroot ="/hiskp2/helmes/k-k-scattering/tests/A40.24/"
+    pathroot = "/hiskp2/helmes/analysis/scattering/k_charged/"
+    #pathroot ="/hiskp2/helmes/k-k-scattering/tests/A40.24/"
 
     for ens in ensemblelist:
-        # Constructing all needed paths
-        datapath = pathroot+ens+"data/"
-        cachepath = pathroot+ens+"cache/"
-        plotpath = pathroot+ens+"plots/"
 
+        # Constructing all needed paths
+        datapath = pathroot+"data/"+ens
+        cachepath = pathroot+"cache/"+ens
+        plotpath = pathroot+"plots/"+ens
+        save_res=open(datapath+"res.dat","w")
+        save_res.write("amu_s\tm_k d_stat(m_k) +d_sys(m_k) -d_sys(m_k)\t delE d_stat(delE) +d_sys(delE) -d_sys(delE)\ta_kk d_stat(a_kk)\tm_k*a_kk d_stat(m_k*a_kk)\n") 
         #print datapath
         #Numpy array to hold all data at end
         m_k_dat = [] #np.zeros((len(amu_s), nbsamples))
         a_k_dat = [] #np.zeros((len(amu_s), nbsamples))
-        save_res=open(datapath+"res.dat","w")
-        save_res.write("amu_s\tm_k d_stat(m_k) +d_sys(m_k) -d_sys(m_k)\t delE d_stat(delE) +d_sys(delE) -d_sys(delE)\ta_kk d_stat(a_kk)\tm_k*a_kk d_stat(m_k*a_kk)\n") 
-        for s in range(0,len(amu_s)):
+        for mu_s in amu_s:
             # need two cachepaths
             #name_cache_k = cachepath
             #name_cache_kk = cachepath
-            name_cache_k = cachepath+ens[:-1]+"_"+str(amu_s[s])[3:]+"_"+filelist[0]
-            name_cache_kk = cachepath+ens[:-1]+"_"+str(amu_s[s])[3:]+"_"+filelist[1]
+            name_cache_k = cachepath+ens[:-1]+"_"+mu_s+"_"+filelist[0]
+            name_cache_kk = cachepath+ens[:-1]+"_"+mu_s+"_"+filelist[1]
             print name_cache_k
             #set up paths for data read in and result storage
             path = datapath
@@ -110,8 +112,10 @@ def main():
             else:
             # else read data anew
                 print("Starting from scratch")
-                corrs_k = ana.read_data_ascii("".join((datapath, filelist[0])))
-                corrs_kk = ana.read_data_ascii("".join((datapath, filelist[1])))
+                in_path ="/".join((datapath,'amu_s_'+ mu_s)) 
+                print("Reading samples from %s" % in_path)
+                corrs_k = ana.read_data_ascii(in_path + "/" + filelist[0])
+                corrs_kk = ana.read_data_ascii(in_path + "/" +filelist[1])
                 nbcfg = corrs_k.shape[0]
                 # Create symmetrized bootstrap samples of 2pt and 4pt Corr-function
                 bsamples_k = ana.sym_and_boot(corrs_k, nbsamples)
@@ -139,8 +143,7 @@ def main():
             # For mass use one parameter fit
             # res has shape (nb_samples, nb_pars, ncorr, nb_fitranges)
             print str(ens[:-1])
-            print amu_s[s]
-            prefix = "_"+str(ens[:-1])+str(amu_s[s])[3:]
+            prefix = "_"+str(ens[:-1])+mu_s
 
             # Check and conditionally read cache of fit
             genfit_mass_cache = name_cache_k+"genfit_mass"
@@ -156,12 +159,12 @@ def main():
                 ana.write_fitresults(genfit_mass_cache, ranges, res, chi2, pval)
           
             np.append(m_k_dat,res)
-            prefix = ens[:-1]+"_mass_"+str(amu_s[s])[3:] 
+            prefix = ens[:-1]+"_mass_"+mu_s 
             m_k_w, dm_stat, dm_sys, _weights_m_k = ana.sys_error(res,pval,
                 p_zero,prefix,
                 path=tmp_out,boot=True)
             # save weighted kaon mass samples
-            m_k_path = datapath + "m_k_" + str(amu_s[s])[3:] + ".npy" 
+            m_k_path = datapath + "m_k_" + mu_s + ".npy" 
             ana.write_data(m_k_w, m_k_path)
             print("m_k +/- d_stat(m_k) + d_sys(m_k) -d_sys(m_k)\n%f +/- %f +%f-%f\n" 
                 %(m_k_w[0][0], dm_stat[0], dm_sys[0][0], dm_sys[0][1]))
@@ -171,7 +174,7 @@ def main():
             #----- Calc 4 pt mean correlator and effective mass ---------------
 
             label = ["KK 4pt func", "time", "C4(t)", "data", ""]
-            pfit = PdfPages("%s%sC4_%s_plot.pdf" % (tmp_out,"m_eff_",str(amu_s[s]))) 
+            pfit = PdfPages("%s%sC4_%s_plot.pdf" % (tmp_out,"m_eff_",mu_s)) 
             ana.plot_data_with_fit(tlist_corr, corr_kk_data, d_kk_data, massfunc, [0], [1,T2-2], label, pfit, logscale=True )
             label[2] = "m_eff_4pt(t)"
             m_eff_C4, mm_eff_C4, dm_eff_C4 = ana.compute_mass(bsamples_kk, True)
@@ -185,7 +188,7 @@ def main():
             R_boot, R_mean, R_stdev, = ana.simple_ratio_subtract(bsamples_kk, bsamples_k, bsamples_k)
             label = ["Ratio K-K", "time", "R(t)", "data", ""]
             # plot mean ratio
-            pfit = PdfPages("./A40_orig_Ratio_%s.pdf" % str(amu_s[s]))
+            pfit = PdfPages("./"+ens[:-1]+"_orig_Ratio_%s.pdf" % mu_s)
             ana.plot_data(tlist_ratio, R_boot[0], R_stdev, pfit, label,[1,T2-2])
             pfit.close()
             # define the ratiofunction, Using fitted energies seems to make more
@@ -207,7 +210,7 @@ def main():
                 # Save fit results
                 ana.write_fitresults(genfit_ratio_cache, ranges1, res_R, chi2_R, pvals_R)
 
-            prefix = ens[:-1]+"ratio_"+str(amu_s[s])[3:]
+            prefix = ens[:-1]+"ratio_"+mu_s
             del_E_w, ddel_E_stat, ddel_E_sys , weights_del_E = ana.sys_error(res_R,
                 pvals_R, p_zero,
                 prefix,par=1,
@@ -231,7 +234,7 @@ def main():
 
             # Using bootstrapped median of a_kk and m_k
             ma_k = np.multiply(a_kk, m_k_w)
-            scat_length_path = datapath + "mk_a0_" + str(amu_s[s])[3:] + ".npy" 
+            scat_length_path = datapath + "mk_a0_" + mu_s + ".npy" 
             ana.write_data(ma_k, scat_length_path)
             print ma_k.shape
             mean_mak, std_mak = ana.calc_error(ma_k[0][0])

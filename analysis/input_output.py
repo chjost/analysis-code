@@ -28,20 +28,15 @@
 
 __all__ = ["write_data", "read_data", "write_data_ascii", "read_data_ascii",
            "write_data_w_err_ascii", "read_data_w_err_ascii",
-           "extract_bin_corr_fct", "write_fitresults", "read_fitresults"]
+           "extract_bin_corr_fct", "write_fitresults",
+           "read_fitresults","_read_corr","read_confs","confs_subtr","confs_mult",
+           "conf_abs","inputnames"]
 
+import ConfigParser as cp
 import os
 import numpy as np
 
 ### MAIN FUNCTIONS ###
-# available:
-# write_data
-# read_data
-# write_data_ascii
-# read_data_ascii
-# write_data_w_err_ascii
-# read_data_w_err_ascii
-# extract_bin_corr_fct <- NOT TESTED
 
 def write_data(data, filename, verbose=False):
     """Write numpy array to binary numpy format.
@@ -63,7 +58,11 @@ def read_data(filename, verbose=False):
         filename: The name of the file from which the data is read
         verbose: Changes the amount of information written.
     """
-    check_read(filename)
+    try:
+        check_read(filename)
+    except IOError as e:
+        raise e
+
     if verbose:
         print("reading from file " + str(filename))
     data = np.load(filename)
@@ -125,7 +124,11 @@ def read_data_ascii(filename, column=(1,), noheader=False, verbose=False):
         the array is three dimensional.
     """
     # check file
-    check_read(filename)
+    try:
+        check_read(filename)
+    except IOError as e:
+        raise e
+
     if verbose:
         print("reading from file " + str(filename))
 
@@ -210,7 +213,8 @@ def read_data_w_err_ascii(filename, datacol=(1,), errcol=(2,), verbose=False):
     _data = read_data_ascii(filename, column=cols, verbose=verbose)
     return _data[:,:,:len(datacol)], _data[:,:,len(datacol):]
 
-def write_fitresults(filename, fitint, par, chi2, pvals, verbose=True):
+def write_fitresults(filename, fitint, par, chi2, pvals, fitint2=None,
+    verbose=False):
     """Writes the fitresults to a numpy file.
 
     The function takes lists of numpy arrays and writes them in the npz format.
@@ -221,6 +225,7 @@ def write_fitresults(filename, fitint, par, chi2, pvals, verbose=True):
         par: the results of the fits
         chi2: the chi^2 values of the fit
         pvals: the p-values of the fit.
+        fitint2: save an additional list with fit intervals
         verbose: amount of information written to screen
 
     Returns:
@@ -242,6 +247,8 @@ def write_fitresults(filename, fitint, par, chi2, pvals, verbose=True):
     if d is 1:
         # create a dictionary to pass to savez
         dic = {'fi' : fitint}
+        if fitint2 is not None:
+            dic.update({'fi2' : fitint2})
         dic.update({'pi%02d' % i: p for (i, p) in enumerate(par)})
         dic.update({'ch%02d' % i: p for (i, p) in enumerate(chi2)})
         dic.update({'pv%02d' % i: p for (i, p) in enumerate(pvals)})
@@ -249,6 +256,8 @@ def write_fitresults(filename, fitint, par, chi2, pvals, verbose=True):
     elif d is 2:
         # create a dictionary to pass to savez
         dic = {'fi' : fitint}
+        if fitint2 is not None:
+            dic.update({'fi2' : fitint2})
         dic.update({'pi%02d%02d' % (i, j): p for (i, s) in enumerate(par) for
                    (j, p) in enumerate(s)})
         dic.update({'ch%02d%02d' % (i, j): p for (i, s) in enumerate(chi2) for
@@ -261,7 +270,7 @@ def write_fitresults(filename, fitint, par, chi2, pvals, verbose=True):
         print("NOTHING IS SAVED!")
     return
 
-def read_fitresults(filename, verbose=True):
+def read_fitresults(filename, verbose=False):
     """Reads the fit results from file.
 
     Args:
@@ -274,7 +283,12 @@ def read_fitresults(filename, verbose=True):
         chi2: list of arrays of chi^2
         pvals: list of arrays of p-values
     """
-    check_read(filename)
+    # check filename
+    try:
+        check_read(filename)
+    except IOError as e:
+        raise e
+
     if verbose:
         print("reading from file " + str(filename))
     with np.load(filename) as f:
@@ -287,9 +301,13 @@ def read_fitresults(filename, verbose=True):
         L = f.files
         Lmax = max([len(s) for s in L])
         d = int((Lmax - 2) / 2)
-        n = (len(L) - 1) / 3
+        n = int(np.floor((len(L) - 1) / 3))
         if d is 1:
             fitint = f['fi']
+            try:
+                fitint2 = f['fi2']
+            except KeyError:
+                fitint2 = None
             par, chi2, pvals = [], [], []
             for i in range(n):
                 par.append(f['pi%02d' % i])
@@ -297,6 +315,10 @@ def read_fitresults(filename, verbose=True):
                 pvals.append(f['pv%02d' % i])
         elif d is 2:
             fitint = f['fi']
+            try:
+                fitint2 = f['fi2']
+            except KeyError:
+                fitint2 = None
             par, chi2, pvals = [], [], []
             for i in range(n):
                 if 'pi%02d00' % i in L:
@@ -309,10 +331,14 @@ def read_fitresults(filename, verbose=True):
                             chi2[i].append(f['ch%02d%02d' % (i,j)])
                             pvals[i].append(f['pv%02d%02d' % (i,j)])
         else:
+            raise RuntimeError("the read function only covers two-level lists")
             print("the read function only covers up to two levels if lists")
             print("RETURNING NONE")
             return None
-    return fitint, par, chi2, pvals
+    if fitint2 is None:
+        return (fitint, par, chi2, pvals)
+    else:
+        return (fitint, par, chi2, pvals, fitint2)
 
 #TODO(CJ): still needed?
 def extract_bin_corr_fct(name='', start_cfg=0, delta_cfg=0, nb_cfg=0, T=0,
@@ -357,6 +383,116 @@ def extract_bin_corr_fct(name='', start_cfg=0, delta_cfg=0, nb_cfg=0, T=0,
         corr[(_t%T)*nb_cfg + _t/T] = complex(_x[0], _y[0])
         _t += 1
     return corr
+  
+#------------------------------------------------------------------------------
+
+
+def _read_corr(_name, _T=48):
+  """ Uses numpy's openfile function to read in binary data and reshape it to
+  pairs of complex numbers
+
+  Args: 
+      _name: The file's name (best constructed in advance)
+      _T: The lattice's time extent defaults to 48
+
+  Returns: 
+      corr: The read in reshaped correlation function as T,2 Array
+  """
+  # C like array order is implied
+  tmp = np.fromfile(_name,dtype=float)
+  corr = tmp.reshape((_T,2))
+  return corr
+
+#------------------------------------------------------------------------------
+
+
+def read_confs(path,corrname,confs,_T=48,verb=False):
+  """ Wrapper to read in correlationfunctions of several configurations
+
+      This file assumes B. Knippschilds binary file layout with all the
+      Correlator information in the filename
+      Args: 
+           path: The path to the data to read
+           corrname: The name of the correlationfunction, should be built
+           separately
+           confs: alist of configuration folder names
+           _T: temporal time extent of the functions to read in
+
+      Returns: A numpy array holding the correlation functions. Shape is
+      (nb_cfg,T,2) for real and imaginary part
+  """
+  C = np.zeros((len(confs),_T,2))
+  for i,d in enumerate(confs):
+    #Generate filename from inputlist
+    if verb is True:
+      print path, d, corrname
+    _fname = path+d+corrname
+    _C_tmp = _read_corr(_fname,_T)
+    C[i] = _C_tmp
+  return C
+
+#------------------------------------------------------------------------------
+
+
+def confs_subtr(Corr1, Corr2):
+  """ function to subtract two diagrams columnwise 
+  
+  Subtracts two correlation functions like Corr1 - Corr2
+
+  Args:
+      Corr1, Corr2: Numpy arrays of one or more correlation functions
+
+  Returns:
+      A list of three tuples containing the difference C_1(t) - C_2(t)
+  """
+  Cdiff = np.zeros_like(Corr1)
+  for i in range(Corr1.shape[0]):
+    _re = np.subtract(Corr1[i,:,0],Corr2[i,:,0])
+    _im = np.subtract(Corr1[i,:,1],Corr2[i,:,1])
+    Cdiff[i] = np.column_stack((_re,_im))
+  return Cdiff
+
+#------------------------------------------------------------------------------
+
+def conf_abs(Corr):
+  """ Compute absolute value of Correlation function
+  
+  Gets rid of overall signs in Correlation functions
+
+  Args:
+      Corr: Numpy array of one or more correlation functions
+
+  Returns:
+      A list of three tuples containing abs(C1(t))
+  """
+  Cabs = np.zeros_like(Corr)
+  for i in range(Corr.shape[0]):
+    _re = np.absolute(Corr[i,:,0])
+    _im = np.absolute(Corr[i,:,1])
+    Cabs[i] = np.column_stack((_re,_im))
+  return Cabs 
+
+#------------------------------------------------------------------------------
+
+def confs_mult(Corr,scl):
+  """ Multiply Correlation function with scalar
+  
+
+  Args:
+      Corr: Numpy array of one or more correlation functions
+      scl: a python scalar (float or int)
+
+  Returns:
+      A list of three tuples containing scl*C1(t)
+  """
+  Cabs = np.zeros_like(Corr)
+  for i in range(Corr.shape[0]):
+    _re = np.multiply(scl,Corr[i,:,0])
+    _im = np.multiply(scl,Corr[i,:,1])
+    Cabs[i] = np.column_stack((_re,_im))
+  return Cabs 
+
+#------------------------------------------------------------------------------
 
 ### HELPER FUNCTIONS ###
 
@@ -397,17 +533,17 @@ def write_header(outfile, nsam, T, L, x=0, y=0):
 
 def check_read(filename):
     """Do some checks before opening a file.
+    Raises IOErrors on fails.
     """
     # get path
     _dir = os.path.dirname(filename)
     # check if path exists, if not raise an error
-    if not os.path.exists(_dir):
-        print("ERROR: could not read data from file, path not existent")
-        os.sys.exit(-1)
+    if _dir and not os.path.exists(_dir):
+        print(_dir)
+        raise IOError("directory %s not found" % _dir)
     # check whether file exists
     if not os.path.isfile(filename):
-        print(filename + " does not exist. Aborting...")
-        os.sys.exit(-1)
+        raise IOError("file %s not found" % os.path.basename(filename))
 
 def check_write(filename):
     """Do some checks before writing a file.
@@ -517,3 +653,55 @@ def savetxt(fname, X, fmt='%.18e', delimiter=' ', newline='\n', header='',
     finally:
         if own_fh:
             fh.close()
+
+#------------------------------------------------------------------------------
+
+def inputnames(conf_file, corr_string):
+    """ Function to build Correlator input names conformal with B. Knippschilds
+    naming scheme
+        
+    The function invokes a config parser which reads the config file (config.ini) regarding the
+    specified correlation functions and returns a list of input names
+
+    Args:
+        conf_file: string with path to the configuration file 
+        corr_string: array of identifiers for correlation functions to be
+                    read in
+    Returns:
+        A list of inputnames
+
+    """
+    # invoke config parser and read config file
+    config = cp.SafeConfigParser()
+    config.read(conf_file)
+    # set section names for get operations, have to be the same in configfile
+    #quarks = config.get('quarks')
+    #operators = config.get('operator_lists')
+    #corr_list = config.get('correlator_lists')
+    # result list
+    inputnames = []
+    # Loop over correlation function names
+    for key in config.options('correlator_lists'):
+        # get value of each key splited by ':'
+        tmp = config.get('correlator_lists',key)
+        c0 = tmp.split(':')
+        # read only functions in corr_string, sort them into q and op arrays
+        if c0[0] in corr_string:
+            q_list = []
+            op_list = []
+            for val in c0[1:]:
+                if val[0] == 'Q':
+                    q_list.append(config.get('quarks',val))
+                elif val[0] == 'O':
+                    op_list.append(config.get('operator_lists',val))
+                else:
+                    print("Identifier not found")
+            # TODO: expand entrys in operator lists
+            # join single lists together for filename
+            join_q = ''.join(q_list)
+            join_op = '_'.join(op_list)
+            # build the filename
+            corrname = c0[0]+"/"+c0[0]+"_"+join_q+"_"+join_op+".dat"
+            print corrname
+            inputnames.append(corrname)
+    return inputnames

@@ -1,0 +1,22 @@
+    # number of bootstrap samples
+    nbsamples = 1500
+    # temporal lattice extent
+    tmin = 1
+    T = 48
+    L = 24
+    # Strange quark masses and unitary kaon mass
+    #mk_unit = 0.26695
+    #dmk_unit = 0.00052
+    #A-ensemble strange quark masses
+    #amu_s = [0.0185,0.0225,0.02464]
+    #B-ensemble strange quark masses
+    #amu_s = [0.016, 0.01861, 0.021]
+    p_zero = np.asarray([0,0,0])
+    amu_s = [0.0225]
+    #ensemblelist = ['A60.24/','A80.24/']
+    ensemblelist = ['5_rnd_vec/']
+    filelist = ['k_corr_p0.dat','kk_A1_TP0_00.dat']
+    #filelist = ['C2.dat','kpi_4.dat']
+    #pathroot = "/hiskp2/helmes/k-k-scattering/tests/5_rnd_vec/"
+    pathroot ="/hiskp2/helmes/k-k-scattering/tests/A40.24/"
+

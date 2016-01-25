@@ -1,0 +1,91 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+
+################################################################################
+#
+# Author: Christopher Helmes (helmes@hiskp.uni-bonn.de)
+# Date:   Februar 2015
+#
+# Copyright (C) 2015 Christopher Helmes
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Function: Caclulates m_had * a_0 for one quark mass
+#           Takes fitted samples m_had with ranges and extracted values of a0
+#           and multiplies them
+#
+# For informations on input parameters see the description of the function.
+#
+################################################################################
+
+import sys
+import numpy as np
+import matplotlib
+matplotlib.use('Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+
+import analysis2 as ana
+
+def main():
+    # read settings
+    read_m_a0 = False
+    plot_hist = True
+
+    # parse the input file
+    if len(sys.argv) < 2:
+        ens = ana.LatticeEnsemble.parse("A40.24.ini")
+    else:
+        ens = ana.LatticeEnsemble.parse(sys.argv[1])
+
+    # get data from input file
+    lat = ens.name()
+#    quark = ens.get_data("quark")
+    datadir = ens.get_data("datadir") 
+    plotdir = ens.get_data("plotdir") 
+    d2 = ens.get_data("d2")
+
+    print(datadir)
+    print(plotdir)
+
+    # Read in fitted masses, ranges and weights
+    print("Read fit results for single particle mass")
+    m = ana.FitResult.read("%s/fit_k_%s.npz" % (datadir, lat))
+    m.print_data(par=1)
+
+    # Read in results of scattering length
+    print("Read results for scattering length")
+    a0 = ana.FitResult.read("%s/scat_len_TP%d_%s.npz" % (datadir, d2, lat))
+    a0.print_data()
+    print(a0.data[0].shape)
+    if read_m_a0 == False:
+      mult_obs = a0.mult_obs(m, "m_a0")
+      mult_obs.save("%s/mk_akk_%s.npz" % (datadir,lat))
+    else:
+      mult_obs = ana.FitResult.read("%s/mk_akk_%s.npx" % (datadir.lat))
+    mult_obs.print_data()
+
+    if plot_hist:
+      print("plotting")
+      plotter = ana.LatticePlot("%s/hist_mk_akk_%s.pdf" % (plotdir, lat))
+      label = ["Scattering length", "M$_\k$ a$_\k\k$", "M$_\k$ a$_\k\k$"]
+      plotter.histogram(mult_obs, label, 1)
+      del plotter
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass

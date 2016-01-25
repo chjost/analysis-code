@@ -1,0 +1,79 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+
+################################################################################
+#
+# Author: Christian Jost (jost@hiskp.uni-bonn.de)
+# Date:   Februar 2015
+#
+# Copyright (C) 2015 Christian Jost
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Function: Program to compare the different 4pt function diagrams.
+#
+# For informations on input parameters see the description of the function.
+#
+################################################################################
+
+import matplotlib
+matplotlib.use('QT4Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+import numpy as np
+
+import analysis as ana
+
+def main():
+    ## definition of some variables
+    nbsamples = 1
+    #inputpath="/hiskp2/helmes/contractions/A40.24/kaon/strange_225/merged/"
+    #outputpath="/hiskp2/helmes/contractions/A40.24/kaon/strange_225/merged/scratch/"
+    inputpath="/hiskp2/helmes/contractions/A60.24/k-k_test/separate_C4/strange_225/merged/"
+    outputpath="/hiskp2/helmes/contractions/A60.24/k-k_test/separate_C4/strange_225/merged/"
+    suffix='.dat'
+    inputlist=['C4C','C4D']
+
+    # get mass from correlation function
+    #fitfunc = lambda p,t: p[0]*np.cosh((T/2.0-t)*p[1])
+    fitfunc = lambda p,t: 10e6 if p[1] < 0.0 else 0.5*p[0]*p[0]*(np.exp(-p[1]*t) + np.exp(-p[1]*(T-t)))
+    massfunc = lambda p,t: p
+    # Open PDFpages objectp
+    pfit = PdfPages("%s%sdiag_comp.pdf" % (outputpath,"_corr_"))
+    for _i in inputlist:
+        # read in data
+        print("".join((inputpath, _i, suffix)))
+        corrs_kk = ana.read_data_ascii("".join((inputpath, _i, suffix)))
+        T = corrs_kk.shape[1]
+        nbcfg = corrs_kk.shape[0]
+        T2=T
+        diag_mean, diag_err = ana.calc_error(corrs_kk)
+        #for t in range(T):
+        #    print(corrs[t*nbcfg:(t+1)*nbcfg])
+        tlist = np.linspace(0., float(T2), float(T2), endpoint=False)
+
+        ana.plot_data(tlist, diag_mean, diag_err, pfit, logscale=True)
+        print("Diagram: %s\nt\tval\terr\n" % _i)
+        for val in zip(diag_mean, diag_err):
+            print val
+    # Close PDFpages object
+    pfit.close()
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Keyboard Interrupt")
+

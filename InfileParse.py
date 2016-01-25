@@ -25,7 +25,7 @@
 #
 ###############################################################################
 
-import configparser as cp
+import ConfigParser as cp
 
 def inputnames(conf_file, corr_string):
     """ Function to build Correlator input names conformal with B. Knippschilds
@@ -54,7 +54,7 @@ def inputnames(conf_file, corr_string):
     # Loop over correlation function names
     for c in corr_list:
         # get value of each key splited by ':'
-        c0 = corr_list.get(c).split(sep=':')
+        c0 = corr_list.get(c).split(':')
         # read only functions in corr_string, sort them into q and op arrays
         if c0[0] in corr_string:
             q_list = []

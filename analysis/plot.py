@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
 import analyze_fcts as af
-
 def plot_data_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
                        logscale=False, xlim=None, ylim=None, fitrange=None,
                        addpars=False, pval=None, hconst=None, vconst=None):
@@ -108,19 +107,114 @@ def plot_data_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
     pdfplot.savefig()
     plt.clf()
 
-# this can be used to plot the chisquare distribution of the fits
-#  x = np.linspace(scipy.stats.chi2.ppf(1e-6, dof), scipy.stats.chi2.ppf(1.-1e-6, dof), 1000)
-#  hist, bins = np.histogram(chisquare, 50, density=True)
-#  width = 0.7 * (bins[1] - bins[0])
-#  center = (bins[:-1] + bins[1:]) / 2
-#  plt.xlabel('x')
-#  plt.ylabel('chi^2(x)')
-#  plt.grid(True)
-#  plt.plot(x, scipy.stats.chi2.pdf(x, dof), 'r-', lw=2, alpha=1, label='chi2 pdf')
-#  plt.bar(center, hist, align='center', width=width)
-#  plt.show()
 
-def plot_data(X, _Y, dY, pdfplot, label, plotrange=None, logscale=False, xlim=None, ylim=None):
+#def plot_data_with_fit(X, Y, dY, fitfunc, args, plotrange, label, pdfplot,
+#                       logscale=False, xlim=None, ylim=None, fitrange=None,
+#                       addpars=False, pval=None):
+#    """A function that plots data and the fit to the data.
+#
+#    The plot is saved to pdfplot. It is assumed that pdfplot is a pdf backend to
+#    matplotlib so that multiple plots can be saved to the object.
+#
+#    Args:
+#        X: The data for the x axis.
+#        Y: The data for the y axis.
+#        dY: The error on the y axis data.
+#        fitfunc: The function to fit to the data.
+#        args: The parameters of the fit function from the fit.
+#        plotrange: A list with two entries, the lower and upper range of the
+#                   plot.
+#        label: A list with labels for title, x axis, y axis, data and fit.
+#        pdfplot: A PdfPages object in which to save the plot.
+#        logscale: Make the y-scale a logscale.
+#        xlim, ylim: limits for the x and y axis, respectively
+#        setLimits: Set limits to the y range of the plot.
+#        fitrange: A list with two entries, bounds of the fitted function.
+#        addpars: if there are additional parameters for the fitfunction 
+#                 contained in args, set to true
+#        pval: write the p-value in the plot if given
+#
+#    Returns:
+#        Nothing.
+#    """
+#    # check boundaries for the plot
+#    if isinstance(plotrange, (np.ndarray, list, tuple)):
+#        plotrange = np.asarray(plotrange).flatten()
+#        if plotrange.size < 2:
+#            raise IndexError("plotrange is too small")
+#        else:
+#            l = int(plotrange[0])
+#            u = int(plotrange[1])
+#        # plot the data
+#        p1 = plt.errorbar(X[l:u], Y[l:u], dY[l:u], fmt='x' + 'b', label = label[3])
+#    else:
+#        # plot the data
+#        p1 = plt.errorbar(X, Y, dY, fmt='x' + 'b', label = label[3])
+#
+#    # plotting the fit function, check for seperate range
+#    if isinstance(fitrange, (np.ndarray, list, tuple)):
+#        fitrange = np.asarray(fitrange).flatten()
+#        if fitrange.size < 2:
+#            raise IndexError("fitrange has not enough indices")
+#        else:
+#            lfunc = int(fitrange[0])
+#            ufunc = int(fitrange[1])
+#    else:
+#        lfunc = X[0]
+#        ufunc = X[-1]
+#    x1 = np.linspace(lfunc, ufunc, 1000)
+#    y1 = []
+#    if addpars:
+#        for i in x1:
+#            # the star in front of the args is needed
+#            y1.append(fitfunc(args[0],i,*args[1:]))
+#    else:    
+#        for i in x1:
+#            y1.append(fitfunc(args,i))
+#    y1 = np.asarray(y1)
+#    p2, = plt.plot(x1, y1, "r", label = label[4])
+#    # adjusting the plot style
+#    plt.grid(True)
+#    plt.title(label[0])
+#    plt.xlabel(label[1])
+#    plt.ylabel(label[2])
+#    plt.legend()
+#    if pval is not None:
+#        # x and y position of the label
+#        x = np.max(X) * 0.7
+#        y = np.max(Y) * 0.8
+#        datalabel = "p-val = %.5f" % pval
+#        try:
+#            for k, d in enumerate(args[0]):
+#                datalabel = "".join((datalabel, "\npar %d = %.4e" % (k, d)))
+#        except TypeError:
+#            datalabel = "".join((datalabel, "\npar = %.4e" % (args[0])))
+#        plt.text(x, y, datalabel)
+#    if logscale:
+#        plt.yscale("log")
+#    # set the axis ranges
+#    if xlim:
+#        plt.xlim(xlim)
+#    if ylim:
+#        plt.ylim(ylim)
+#    # save pdf
+#    pdfplot.savefig()
+#    plt.clf()
+#
+## this can be used to plot the chisquare distribution of the fits
+##  x = np.linspace(scipy.stats.chi2.ppf(1e-6, dof), scipy.stats.chi2.ppf(1.-1e-6, dof), 1000)
+##  hist, bins = np.histogram(chisquare, 50, density=True)
+##  width = 0.7 * (bins[1] - bins[0])
+##  center = (bins[:-1] + bins[1:]) / 2
+##  plt.xlabel('x')
+##  plt.ylabel('chi^2(x)')
+##  plt.grid(True)
+##  plt.plot(x, scipy.stats.chi2.pdf(x, dof), 'r-', lw=2, alpha=1, label='chi2 pdf')
+##  plt.bar(center, hist, align='center', width=width)
+##  plt.show()
+
+def plot_data(X, _Y, _dY, pdfplot, label, plotrange=None, logscale=False,
+    xlim=None, ylim=None, hann=None):
     """A function that plots a correlation function.
 
     This function plots the given data points and the fit to the data. The plot
@@ -143,6 +237,9 @@ def plot_data(X, _Y, dY, pdfplot, label, plotrange=None, logscale=False, xlim=No
         Nothing.
     """
     Y=np.atleast_2d(_Y)
+    if (_dY.shape[0] != Y.shape[0]):
+      dY = np.tile(_dY,Y.shape[0])
+    #dY=np.atleast_2d(dY)
     # check boundaries for the plot
     if isinstance(plotrange, (np.ndarray, list, tuple)):
         plotrange = np.asarray(plotrange).flatten()
@@ -154,14 +251,20 @@ def plot_data(X, _Y, dY, pdfplot, label, plotrange=None, logscale=False, xlim=No
         # plot the data
         print l,u
         col=['red','blue','black']
-        for a,y in enumerate(Y):
-          p1 = plt.errorbar(X[l:u], y[l:u], dY[l:u], marker='x',
+        print("this will get plotted")
+        print(Y.shape)
+        print(dY.shape)
+        for a in range(Y.shape[0]):
+          print Y[a][l:u]
+          print dY[a][l:u]
+          p1 = plt.errorbar(X[l:u], Y[a][l:u], dY[a][l:u], marker='x',
               color=col[a],linestyle='', label=label[3][a])
-          print y[l:u]
     else:
         # plot the data
         p1 = plt.errorbar(X, Y, dY, marker='x', color='teal', linestyle='',  label=label[3])
-
+    if hann is not None:
+        p1 = plt.axhline(y=np.sqrt(hann[0]/hann[1]),color = 'green', ls='-',
+            label = 'expct.')
     # adjusting the plot style
     plt.grid(True)
     plt.xlabel(label[1])
@@ -180,6 +283,63 @@ def plot_data(X, _Y, dY, pdfplot, label, plotrange=None, logscale=False, xlim=No
     plt.clf()
 
     return
+
+#def plot_data(X, _Y, dY, pdfplot, label, plotrange=None, logscale=False, xlim=None, ylim=None):
+#    """A function that plots a correlation function.
+#
+#    This function plots the given data points and the fit to the data. The plot
+#    is saved to pdfplot. It is assumed that pdfplot is a pdf backend to
+#    matplotlib so that multiple plots can be saved to the object.
+#
+#    Args:
+#        X: The data for the x axis.
+#        Y: The data for the y axis.
+#        dY: The error on the y axis data.
+#        pdfplot: A PdfPages object in which to save the plot.
+#        label: label for the plot
+#        plotrange: A list with two entries, the lower and upper range of the
+#                   plot.
+#        logscale: Make the y-scale a logscale.
+#        xlim: tuple of the limits on the x axis
+#        ylim: tuple of the limits on the y axis
+#
+#    Returns:
+#        Nothing.
+#    """
+#    Y=np.atleast_2d(_Y)
+#    # check boundaries for the plot
+#    if isinstance(plotrange, (np.ndarray, list, tuple)):
+#        plotrange = np.asarray(plotrange).flatten()
+#        if plotrange.size < 2:
+#            raise IndexError("plotrange is too small")
+#        else:
+#            l = int(plotrange[0])
+#            u = int(plotrange[1])
+#        # plot the data
+#        p1 = plt.errorbar(X[l:u], Y[0,l:u], dY[l:u], fmt='x' + 'b', label=label[3])
+#    else:
+#        # plot the data
+#        p1 = plt.errorbar(X, Y[0], dY, fmt='x' + 'b', label=label[3])
+#
+#    # adjusting the plot style
+#    plt.grid(True)
+#    plt.ticklabel_format(style='sci', axis='y')
+#    plt.xlabel(label[1])
+#    plt.ylabel(label[2])
+#    plt.title(label[0])
+#    plt.legend()
+#    if logscale:
+#        plt.yscale('log')
+#    if xlim:
+#        plt.xlim(xlim)
+#    if ylim:
+#        plt.ylim(ylim)
+#
+#    # save pdf and clear plot
+#    pdfplot.savefig()
+#    plt.clf()
+#
+#    return
 
 def plot_histogram(data, data_weight, lattice, d, label, path="./plots/", 
                    plotlabel="hist", verbose=True):

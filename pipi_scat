@@ -1,0 +1,220 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+##!/usr/bin/python
+################################################################################
+#
+# Author: Christian Jost (jost@hiskp.uni-bonn.de)
+# Date:   Februar 2015
+#
+# Copyright (C) 2015 Christian Jost
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Function: This is the start of the eta/eta' analysis program
+#
+# For informations on input parameters see the description of the function.
+#
+################################################################################
+
+import sys
+import numpy as np
+import matplotlib
+matplotlib.use('Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+
+import analysis as ana
+
+def analyse(ensemble, datafolder, plotfolder):
+    """pi-pi scattering analysis for I=2.
+
+    Args:
+        ensemble: the ensemble to work on
+        datafolder: where to store raw data
+        plotfolder: where to store the plots
+    """
+    ## define main variables
+    calculatea=True
+    calculateampi=True
+    # verbose prints all the shapes of the different arrays
+    verbose=False
+
+    ## other variables
+    lattice = ensemble.get_data("name")
+    d = ensemble.get_data("d")
+    d2 = ensemble.get_data("d2")
+    d2 = np.dot(d, d)
+    L = ensemble.get_data("L")
+    T = ensemble.get_data("T")
+    T2 = ensemble.get_data("T2")
+    path = ensemble.get_data("path")
+    slist = ensemble.get_data("s")
+
+    ## read pion data
+    fname = "%s/fit_results_%s_TP%d.npz" % (datafolder, lattice, d2)
+    pionranges, pi, pichi2, pipvals = ana.read_fitresults(fname)
+    # calculate statistic and systematic error of the pion
+    plotname="".join(("pion_", lattice))
+    mpi, dmpi_stat, dmpi_syst, weights_mpi = ana.sys_error(pi, pipvals, d, 
+                                                 plotname, path=plotfolder)
+    print("mpi with errors")
+    for p, dp, ddp in zip(mpi, dmpi_stat, dmpi_syst):
+        print("%.5f +- %.5f -%.5f +%.5f" % (p, dp, ddp[0], ddp[1]))
+
+    for s in slist:
+        print("shift %d" % s)
+
+        ## read ratio fit data
+        fname = "%s/fit_ratio_%s_TP%d_s%d.npz" % (datafolder, lattice, d2, s)
+        ratioranges, rres, rchi2, rpvals = ana.read_fitresults(fname)
+        #ratioranges, rres, rchi2, rpvals, _tmp = ana.read_fitresults(fname)
+
+        # calculate statistic and systematic error for delta E
+        plotname = "ratio_s%d_%s" % (s, lattice)
+        dE, ddE_stat, ddE_syst, weights_dE = ana.sys_error(rres, rpvals, d, 
+            plotname, par=1, path=plotfolder, absolute=True)
+        # calculate statistic and systematic error for the amplitude
+        plotname = "ampl_s%d_%s" % (s, lattice)
+        dR, ddR_stat, ddR_syst, weights_dR = ana.sys_error(rres, rpvals, d, 
+            plotname, par=0, path=plotfolder, absolute=True)
+
+        print("dE with errors")
+        for p, dp, ddp in zip(dE, ddE_stat, ddE_syst):
+            for q, dq, ddq in zip(p, dp, ddp):
+                print("%.4f +- %.4f -%.4f +%.4f" % (q, dq, ddq[0], ddq[1]))
+        print("dR with errors")
+        for p, dp, ddp in zip(dR, ddR_stat, ddR_syst):
+            for q, dq, ddq in zip(p, dp, ddp):
+                print("%.4e +- %.4e -%.4e +%.4e" % (q, dq, ddq[0], ddq[1]))
+
+        # calculate scattering length
+        print("calculate scattering length")
+        fname = "%s/scat_len_%s_TP%d_s%d.npz" % (datafolder, lattice, d2, s)
+        # since a is a list of lists of arrays, hack the fit results
+        # routines to read
+        if calculatea:
+            a, weights_a = ana.calc_scat_length(rres, pi, weights_dE, weights_mpi, L)
+            ana.write_fitresults(fname, np.zeros((10,)), a, weights_a, a)
+        else:
+            _u, _a, weights_a, a = ana.read_fitresults(fname)
+
+        if verbose:
+            print("a")
+            print(len(a))
+            for p in a:
+                print(len(p))
+                for q in p:
+                    print(q.shape)
+            print("weights_a")
+            print(len(weights_a))
+            for p in weights_a:
+                print(len(p))
+                for q in p:
+                    print(q.shape)
+
+        # statistical error for scattering length
+        plotname = "scatlen_s%d_%s" % (s, lattice)
+        a_pipi, da_stat, da_syst = ana.sys_error_der(a, weights_a, d, plotname,
+                                                     path=plotfolder, absolute=False)
+
+        ensemble.add_data("a_pipi I=2, s%d" % s, a_pipi)
+        ensemble.add_data("da_pipi_stat I=2, s%d" % s, da_stat)
+        ensemble.add_data("da_pipi_syst I=2, s%d" % s, da_syst)
+
+        if verbose:
+            print("a_pipi")
+            print(len(a_pipi))
+            for p in a_pipi:
+                print(len(p))
+                for q in p:
+                    print(q.shape)
+        print("a_pipi with errors")
+        for p, dp, ddp in zip(a_pipi, da_stat, da_syst):
+            for q, dq, ddq in zip(p, dp, ddp):
+                print("%.4f +- %.4f -%.4f +%.4f" % (q, dq, ddq[0], ddq[1]))
+
+        # calculate mpi * a
+        print("calculating a * mpi")
+        fname = "%s/ampi_%s_TP%d_s%d.npz" % (datafolder, lattice, d2, s)
+        # since a is a list of lists of arrays, hack the fit results
+        # routines to read
+        if calculateampi:
+            ampi, weights_ampi = ana.multiply(a, pi, weights_a, weights_mpi,
+                                              pars=(None, 0))
+            ana.write_fitresults(fname,np.zeros((9,)), ampi, weights_ampi, ampi)
+        else:
+            _u, _ampi, weights_ampi, ampi = ana.read_fitresults(fname)
+
+        # statistical and systematic error for a*mpi
+        plotname = "ampi_s%d_%s" % (s, lattice)
+        am_pipi, dam_stat, dam_syst = ana.sys_error_der(ampi, weights_ampi, d,
+            plotname, path=plotfolder, absolute=False)
+        ensemble.add_data("m*a_pipi I=2, s%d" % s, am_pipi)
+        ensemble.add_data("dm*a_pipi_stat I=2, s%d" % s, dam_stat)
+        ensemble.add_data("dm*a_pipi_syst I=2, s%d" % s, dam_syst)
+        if verbose:
+            print("a_pipi * m_pi")
+            print(len(ampi))
+            for p in ampi:
+                print(len(p))
+                for q in p:
+                    print(q.shape)
+        print("a_pipi * m_pi with errors")
+        for p, dp, ddp in zip(am_pipi, dam_stat, dam_syst):
+            for q, dq, ddq in zip(p, dp, ddp):
+                print("%.4f +- %.4f -%.4f +%.4f" % (q, dq, ddq[0], ddq[1]))
+    return
+
+def main():
+    lattices=["A30.32", "A40.20", "A40.24", "A40.32", "A60.24",
+              "A80.24", "A100.24", "B25.32", "B35.32", "B35.48",
+              "B55.32", "B85.24", "D15.48", "D30.48", "D45.32"]
+    if len(sys.argv) < 2:
+        ens = 2
+    elif int(sys.argv[1]) >= len(lattices):
+        print("ensemble not known, the following are known.")
+        print(lattices)
+        sys.exit(-11)
+    else:
+        ens = int(sys.argv[1])
+        if lattices[ens] == "D30.48":
+            print("D30.48 not calculated yet")
+            sys.exit(-11)
+    if len(sys.argv) < 3:
+        s = 0
+    elif int(sys.argv[2]) < 4:
+        s = int(sys.argv[2])
+    else:
+        print("shift of %d does not make sense" % (sys.argv[2]))
+        sys.exit(-11)
+    datafolder = "./raw_data/"
+    plotfolder = "./plots/"
+
+    # read lattice ensemble
+    filename = "%s/%s_TP%d_s%d_data" % (datafolder, lattices[ens], 0., s)
+    ensemble = ana.LatticeEnsemble.from_file(filename)
+
+    # calculate lattice ensemble
+    print("calculating %s" % (lattices[ens]))
+    analyse(ensemble, datafolder, plotfolder)
+    # save lattice ensemble
+    ensemble.save(filename)
+    return
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass

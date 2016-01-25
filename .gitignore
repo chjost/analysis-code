@@ -1,6 +1,10 @@
 *.pyc
 *.swp
 *.npy
+*.npz
 *.dat
 *.pdf
+*.bkp
+*.pkl
+note
 __pycache__/

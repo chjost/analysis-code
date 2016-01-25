@@ -1,0 +1,81 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+##!/usr/bin/python2
+
+import sys
+import numpy as np
+
+import analysis2 as ana
+
+def main():
+    # parse the input file
+    if len(sys.argv) < 2:
+        ens = ana.LatticeEnsemble.parse("A40.24.ini")
+    else:
+        ens = ana.LatticeEnsemble.parse(sys.argv[1])
+
+    # read settings
+    readratio = True
+
+    # get data from input file
+    prefix = ens.get_data("path")
+    lat = ens.name()
+    nboot = int(ens.get_data("nboot"))
+    datadir = ens.get_data("datadir")
+    gmax = int(ens.get_data("gmax"))
+    plotdir = ens.get_data("plotdir")
+    d2 = ens.get_data("d2")
+    T2 = ens.T2()
+    files = ["%s/pipi_pipi_A1_corr_TP0_%d%d.dat" % (prefix, i, j) for i in range(gmax) for j in range(gmax)]
+    addT2 = np.ones((nboot,)) * T2
+
+    # read pion data
+    pi = ana.Correlators.read("%s/corr_pi_%s.npy" % (datadir, lat))
+    pifit = ana.FitResult.read("%s/fit_pi_%s.npz" % (datadir, lat))
+
+    # prepare the fitting of data
+    # 0 is single particle correlation function
+    # 1 is ratio fit
+    # 2 is constant fit
+    print("prepare fit")
+    fitter = ana.LatticeFit(1, True)
+    start = [1., 0.01]
+
+    print("prepare ratio")
+    if readratio == False:
+        corr = ana.Correlators(files)
+        corr.sym_and_boot(nboot)
+        corr.shift(1)
+        corr.gevp(1)
+        corr.save("%s/corr_pipi_TP%d_%s.npy" % (datadir, d2, lat))
+        ratio = corr.ratio(pi, 1)
+        ratio.save("%s/ratio_pipi_TP%d_%s.npy" % (datadir, d2, lat))
+    else:
+        corr = ana.Correlators.read("%s/corr_pipi_TP%d_%s.npy" % (datadir, d2, lat))
+        ratio = ana.Correlators.read("%s/ratio_pipi_TP%d_%s.npy" % (datadir, d2, lat))
+
+    print("fitting")
+    fitres = fitter.fit(start, ratio, [[6, T2], [10,17], [10,17]], corrid="dE",
+            add=addT2, oldfit=pifit, min_size=6)
+
+    print("save")
+    # save the fit result
+    fitres.save("%s/fit_pipi_ratio_TP%d_%s.npz" % (datadir, d2, lat))
+    #fitres = ana.FitResult.read("%s/fit_pipi_ratio_TP%d_%s.npz" % (datadir, d2, lat))
+    fitres.print_data(0)
+    fitres.print_data(1)
+
+    # plot the result
+    plotter = ana.LatticePlot("%s/fit_ratio_%s.pdf" % (plotdir, lat))
+    #plotter.set_env(ylog=True)
+    label = ["ratio", "t", "R(t)", "dE"]
+    plotter.plot(ratio, label, fitres, fitter, oldfit=pifit, add=addT2)
+    histo = ana.LatticePlot("%s/hist_fit_ratio_%s.pdf" % (plotdir, lat))
+    label = ["ratio", "dE$_\pi$/a", "dE$_\pi$"]
+    histo.histogram(fitres, label, 1)
+    del plotter, histo
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass

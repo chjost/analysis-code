@@ -1,0 +1,163 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+import sys
+import numpy as np
+import analysis2 as ana
+
+#Luescher's formula
+def e_shift_luescher(E,L,a0):
+  c = np.array((-2.837297,6.375183))
+  pre = -4.*np.pi*a0 / (E * float(L*L*L))
+  a0L = a0/float(L)
+  parenth = 1+c[0]*a0L+c[1]*(a0L**2)
+  return pre*parenth
+
+
+def e_shift_ratio(R,t2,A,E,T=48):
+  """Returns the energy shift evaluated at a value set of R,t+1/2,A,E and
+  lattice Time extent T
+
+  Parameters:
+  -----------
+  R : array like the values of the ratio at t2
+  t2 : t+1/2, array like, careful with the shift!
+  A : Amplitued from fit
+  E : single particle energy
+  T : lattice time extent
+  Returns:
+  An array holding the energy shift for all timeslices
+  """
+  
+  # Construct time arguments and inverse
+  T2=T/2.
+  t_prime = np.subtract(t2, T2)
+  t_prime_inv = np.divide(1.,t_prime)
+
+  # this is the sinh part of the equation 
+  sinh = np.sinh(np.multiply(2*E,t_prime))
+  # Coefficients to the sinh
+  coeff = np.divide(R,A)
+  # the arsinh 
+  arsinh = np.arcsinh(np.multiply(coeff,sinh))
+  # Return the multiplication of those
+  return np.multiply(t_prime_inv, arsinh) 
+
+def derive_e_shift_ratio(R,t2,A,E,T=48):
+  """ Returns an array of the derivative of the energy shift
+  Arguments are the same as above
+  Returns
+  An array with the derivatives
+  """
+  T2=T/2.
+  t_prime = np.subtract(t2, T2)
+  t_prime_A = np.multiply(t_prime,A)
+  sinh = np.sinh(np.multiply(2*E,t_prime))
+  coeff = np.divide(R,A)
+  sqrt = np.sqrt( np.add(np.square(np.multiply(coeff,sinh)),1) )
+  den = np.multiply(2,sinh)
+  num = np.multiply(t_prime_A,sqrt)
+
+  return np.divide(den,num)
+
+def eval_ratio(A,t2,dE,E,T=48):
+  
+  T2=T/2.
+  t_prime = np.subtract(t2, T2)
+  coth_arg = np.multiply(2*E,t_prime)
+  coth = np.divide( np.cosh(coth_arg),
+         np.sinh(coth_arg))
+  hyp_arg = np.multiply(dE,t_prime)
+  sum2 = np.multiply(np.sinh(hyp_arg),coth)
+  return np.multiply(A,np.add(np.cosh(hyp_arg),sum2))
+  
+  
+def main():
+
+
+# Parse input parameters
+  if len(sys.argv) < 2:
+      ens = ana.LatticeEnsemble.parse("kk_I1_TP0_A40.24.ini")
+  else:
+      ens = ana.LatticeEnsemble.parse(sys.argv[1])
+  # get data from input file
+  prefix = ens.get_data("path")
+  print prefix
+  lat = ens.name()
+  nboot = ens.get_data("nboot")
+  datadir = ens.get_data("datadir")
+  plotdir = ens.get_data("plotdir")
+  gmax = ens.get_data("gmax")
+  d2 = ens.get_data("d2")
+  try:
+      debug = ens.get_data("debug")
+  except KeyError:
+      debug = 2
+  T = ens.T()
+  T2 = ens.T2()
+  addT = np.ones((nboot,)) * T
+  addT2 = np.ones((nboot,)) * T2
+
+# read in 2pt correlators
+  #kcorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat)) 
+  kcorr = ana.Correlators.read("%s/corr_pi.npy" % (datadir))
+  print kcorr.shape
+# read in 4pt correlators
+  #kkcorr = ana.Correlators.read("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
+  kkcorr = ana.Correlators.read("%s/corr_pipi_TP%d.npy" % (datadir, d2))
+  print kkcorr.shape
+# construct ratio
+  #ratio = kkcorr.ratio(kcorr, ratio=2 )
+  ratio = ana.Correlators.read("%s/ratio_pipi_TP0.npy" % datadir)
+  rmean, rerr = ana.compute_error(ratio.data[:,:,0])
+  # Read in the ratiofit to get R(t+1/2), E, delta E and A 
+  #ratiofit = ana.FitResult.read("%s/fit_kk_TP%d_%s.npz" % (datadir,
+  #          d2, lat))
+  ratiofit = ana.FitResult.read("%s/fit_pipi_TP%d.npz" % (datadir,
+            d2))
+  ratiofit.calc_error()
+  ratiofit.print_data(1)
+
+  #A = 2.0
+  #E = 0.145
+  #dE = 0.008
+  #L=24
+  #a0 = -0.164/E
+  #Dataset for 32^3 kaon data Order : E_single, A_Ratio, a0, T,L
+  #data = np.array((2.4925e-01, 1.83975372, -1.4043, 64, 32))
+  #Dataset for 32^3 pipi data Order : E_single, A_Ratio, a0, T,L
+  #data = np.array((2.4925e-01, 1.83975372, -1.4043, 64, 32))
+
+  #Dataset for 24^3 kaon data Order : E_single, A_Ratio, a0, T,L
+  #data = np.array((2.5612e-01, 1.72606912, -1.4352 ,48 ,24))
+  #Dataset for 24^3 pipi data Order : E_single, A_Ratio, a0, T,L
+  data = np.array((1.446e-01, 1.72606912, -0.164/0.1446 ,48 ,24))
+  
+
+  # Get model data for delta E from Lueschers formula
+  model_dE = e_shift_luescher(data[0], data[4], data[2])
+  print(model_dE)
+  # Plug that into the Ratio function at specific t -> get ratio at t
+  #t2 = np.linspace(0.5,32.5,32,endpoint=False)
+  t2 = np.asarray([10.5,15.5])
+  print t2
+  # Test ratio function
+  print rmean[12], rerr[12], eval_ratio(data[1], t2[0], model_dE, data[0],
+      data[3])
+  R = eval_ratio(data[1], t2, model_dE, data[0], data[3])
+  # take error from data of ratio(?)
+  #print(R)
+  #print(np.subtract(ratio.data[0,:,0],rmean))
+  stdev_R = np.asarray([rerr[10],rerr[15]])
+  # Calculate delta E and its derivative from rewritten formulae
+  dE = e_shift_ratio(R, t2, data[1], data[0], data[3])
+  dE_dR = derive_e_shift_ratio(R, t2, data[1], data[0], data[3])
+  # calculate error on that with gaussian propagation
+  err_prop = np.sqrt(np.square(np.multiply(dE_dR,stdev_R)))
+  rel_err_deltaE = np.divide(err_prop,dE)
+  print(rel_err_deltaE)
+
+if __name__ == '__main__':
+    try:
+        print("starting")
+        main()
+    except KeyboardInterrupt:
+        pass

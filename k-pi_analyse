@@ -1,0 +1,112 @@
+#!/usr/bin/python
+################################################################################
+#
+# Author: Christian Jost (jost@hiskp.uni-bonn.de)
+# Date:   Februar 2015
+#
+# Copyright (C) 2015 Christian Jost
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Function: A short analysis of the single pion.
+#
+# For informations on input parameters see the description of the function.
+#
+################################################################################
+
+import matplotlib
+matplotlib.use('QT4Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+import input_output as io
+import analyze_fcts as af
+import fit
+import plot
+import bootstrap
+import numpy as np
+
+def main():
+    ## definition of some variables
+    nbsamples = 2500
+    inputpath="/hiskp2/helmes/contractions/A40.24/kaon/merged/"
+    outputpath="/hiskp2/helmes/correlators/A40.24/kaon/"
+    suffix="kpi_p0.dat"
+    suffix1="kaon_corr_average.dat"
+    suffix2="kaon_corr_mass.dat"
+    #inputlist=["D15_new/"]
+    inputlist=["/"]
+    rnd_name="kaon_test"
+    outputname=outputpath+rnd_name
+
+    # get mass from correlation function
+    #fitfunc = lambda p,t: p[0]*np.cosh((T/2.0-t)*p[1])
+    fitfunc = lambda p,t: 0.5*p[0]*p[0]*(np.exp(-p[1]*t) + np.exp(-p[1]*(T-t)))
+    #fitfunc = lambda p,t: 10e6 if p[1] < 0.0 else 0.5*p[0]*p[0]*(np.exp(-p[1]*t) + np.exp(-p[1]*(T-t)))
+    for _i in inputlist:
+        pfit = PdfPages("%splots/%s_plot.pdf" % (outputpath,rnd_name))
+        print("dir " + _i)
+        # read in data
+        corrs, nbcfg, T = io.extract_corr_fct("".join((inputpath, inputlist[0],
+                                                     suffix)),verbose=1,skipSorting=False)
+        T2=int(T/2)+1
+        #average = af.average_corr_fct(corrs, nbcfg, T)
+        #for t in range(T):
+        #    print(corrs[t*nbcfg:(t+1)*nbcfg])
+        tlist = np.linspace(0., float(T2), float(T2), endpoint=False)
+        # create bootstrap samples
+        bsamples = bootstrap.sym_and_boot(corrs, T, nbcfg, nbsamples)
+        mdata, ddata = af.return_mean_corr(bsamples)
+        #print(bsamples.shape)
+        #for t in range(bsamples.shape[1]):
+        #    print(bsamples[:,t])
+        #for s in range(bsamples.shape[0]):
+        #    print(bsamples[s])
+        #print(bsamples.shape)
+        # choose fitrange
+        lo, up = 11,25
+        label = ["k-pi, A40.24", "time", "m_eff(t)", "data", ""]
+        res, chi2, pval = fit.fitting(fitfunc, tlist[lo:up],
+             bsamples[:,lo:up], [1., 0.07], verbose=True,
+             correlated=False)
+        #print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, E %.7lf" % (lo, up, pval[0], chi2[0]/(len(tlist[lo:up])-2), res[0,1]))
+        #fitlabel = "fit %d:%d" % (lo, up-1)
+        #label[3] = fitlabel
+        massfct = lambda p,t: p
+        #plot.corr_fct_with_fit(tlist, bsamples[0], ddata, fitfunc, res[0],
+        #                        [1,T2], label, pfit, True)
+        #mass, mmass, dmass = af.compute_mass(bsamples,False)
+        #plot.corr_fct_with_fit(tlist[:-2], mass[0], dmass, massfct, res[0,1],
+        #                        [1,T2-2], label, pfit)
+        #pfit.close()
+        #for lo in range(8, 20):
+        #    for up in range(lo+5, 30):
+        #        res, chi2, pval = fit.fitting(fitfunc, tlist[lo:up],
+        #            bsamples[:,lo:up], [1., 0.1], verbose=False,
+        #            correlated=False)
+        #        print("%2d-%2d: p-value %.7lf, chi2/dof %.7lf, E %.7lf" % (lo, up, pval[0], chi2[0]/(len(tlist[lo:up])-2), res[0,1]))
+        #        fitlabel = "fit %d:%d" % (lo, up-1)
+        #        label[3] = fitlabel
+        #        plot.corr_fct_with_fit(tlist, bsamples[0], ddata, fitfunc, res[0],
+        #                               [1,T2], label, pfit, True)
+        mass, mmass, dmass = af.compute_mass(bsamples)
+        plot.corr_fct_with_fit(tlist[:-2], mass[0], dmass, massfct, res[0,1],
+                                [1,T2-2], label, pfit)
+        io.write_mass(mmass, dmass, outputname)
+
+        pfit.close()
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    main()
