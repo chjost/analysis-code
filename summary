@@ -61,37 +61,37 @@ def main():
     -d_sys(a0) mka0 +/- d_stat(mka0) + d_sys(mka0) -d_sys(mka0)" 
     print(datadir)
     print(plotdir)
-    #print("Summary for the A-ensembles")
-    #Aresults = np.zeros((len(strangeA),len(latA),16))
-    #for i,s in enumerate(strangeA):
-    #  print(s)
-    #  for j,a in enumerate(latA):
-    #    #print(datadir+a+"/"+s)
-    #    ## single particle fit
-    #    #print("read single particle fit")
-    #    #kcorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat))
-    #    kfit = ana.FitResult.read("%s%s/%s/fit_k_%s.npz" % (datadir, a,s, a))
-    #    m = kfit.data_for_plot(1)
+    print("Summary for the A-ensembles")
+    Aresults = np.zeros((len(strangeA),len(latA),16))
+    for i,s in enumerate(strangeA):
+      print(s)
+      for j,a in enumerate(latA):
+        #print(datadir+a+"/"+s)
+        ## single particle fit
+        #print("read single particle fit")
+        #kcorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat))
+        kfit = ana.FitResult.read("%s%s/%s/fit_k_%s.npz" % (datadir, a,s, a))
+        m = kfit.data_for_plot(1)
 
-    #    # read ratio
-    #    #print("\n\nread ratio")
-    #    ratiofit = ana.FitResult.read("%s%s/%s/fit_kk_TP%d_%s.npz" % (datadir, a, s, d2, a))
-    #    dE = ratiofit.data_for_plot(1)
-    #    
-    #    # Read in results of scattering length
-    #    #print("Read results for scattering length")
-    #    a0 = ana.FitResult.read("%s%s/%s/scat_len_TP%d_%s.npz" % (datadir, a, s, d2, a))
-    #    a0 = a0.data_for_plot()
-    #    
-    #    # Read m_a0
-    #    mult_obs = ana.FitResult.read("%s%s/%s/mk_akk_%s.npz" % (datadir, a, s, a))
-    #    m_a0 = mult_obs.data_for_plot()
-    #    ens = np.vstack((m,dE,a0,m_a0)).reshape(16)
-    #    Aresults[i,j] = ens
-    #Aresults = Aresults.reshape((len(latA)*len(strangeA),16))
-    #print Aresults
-    #fmt = " ".join(['%1.4e']*16)
-    #np.savetxt("kk_scat_b1.90.dat",Aresults, fmt=fmt, header=header)
+        # read ratio
+        #print("\n\nread ratio")
+        ratiofit = ana.FitResult.read("%s%s/%s/fit_kk_TP%d_%s.npz" % (datadir, a, s, d2, a))
+        dE = ratiofit.data_for_plot(1)
+        
+        # Read in results of scattering length
+        #print("Read results for scattering length")
+        a0 = ana.FitResult.read("%s%s/%s/scat_len_TP%d_%s.npz" % (datadir, a, s, d2, a))
+        a0 = a0.data_for_plot()
+        
+        # Read m_a0
+        mult_obs = ana.FitResult.read("%s%s/%s/mk_akk_%s.npz" % (datadir, a, s, a))
+        m_a0 = mult_obs.data_for_plot()
+        ens = np.vstack((m,dE,a0,m_a0)).reshape(16)
+        Aresults[i,j] = ens
+    Aresults = Aresults.reshape((len(latA)*len(strangeA),16))
+    print Aresults
+    fmt = " ".join(['%1.4e']*16)
+    np.savetxt("kk_scat_b1.90.dat",Aresults, fmt=fmt, header=header)
 
     #print("Summary for the B-ensembles")
     #Bresults = np.zeros((len(strangeB),len(latB),16))

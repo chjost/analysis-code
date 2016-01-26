@@ -561,6 +561,10 @@ class LatticePlot(object):
                         plotrange=[4,T])
                 self.plot_function(fitfunc.fitfunc, X, _par, label[4], 
                         add_data, fi)
+                keys = [r'$\delta E$:',r'$\Delta\delta E$:']
+                print _par
+                #vals = 
+                #self._print_label(, vals, xpos=0.7, ypos=0.8)
                 plt.legend()
                 self.save()
 

@@ -1,8 +1,13 @@
 #!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
-import sys
+import matplotlib
+matplotlib.use('Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
-import analysis2 as ana
+import sys
 
+import analysis2 as ana
 #Luescher's formula
 def e_shift_luescher(E,L,a0):
   c = np.array((-2.837297,6.375183))
@@ -97,63 +102,77 @@ def main():
   addT2 = np.ones((nboot,)) * T2
 
 # read in 2pt correlators
-  #kcorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat)) 
-  kcorr = ana.Correlators.read("%s/corr_pi.npy" % (datadir))
+  kcorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat)) 
+  #kcorr = ana.Correlators.read("%s/corr_pi.npy" % (datadir))
   print kcorr.shape
 # read in 4pt correlators
-  #kkcorr = ana.Correlators.read("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
-  kkcorr = ana.Correlators.read("%s/corr_pipi_TP%d.npy" % (datadir, d2))
+  kkcorr = ana.Correlators.read("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
+  #kkcorr = ana.Correlators.read("%s/corr_pipi_TP%d.npy" % (datadir, d2))
   print kkcorr.shape
 # construct ratio
-  #ratio = kkcorr.ratio(kcorr, ratio=2 )
-  ratio = ana.Correlators.read("%s/ratio_pipi_TP0.npy" % datadir)
+  ratio = kkcorr.ratio(kcorr, ratio=2 )
+  #ratio = ana.Correlators.read("%s/ratio_pipi_TP0.npy" % datadir)
   rmean, rerr = ana.compute_error(ratio.data[:,:,0])
   # Read in the ratiofit to get R(t+1/2), E, delta E and A 
-  #ratiofit = ana.FitResult.read("%s/fit_kk_TP%d_%s.npz" % (datadir,
-  #          d2, lat))
-  ratiofit = ana.FitResult.read("%s/fit_pipi_TP%d.npz" % (datadir,
-            d2))
+  ratiofit = ana.FitResult.read("%s/fit_kk_TP%d_%s.npz" % (datadir,
+            d2, lat))
+  #ratiofit = ana.FitResult.read("%s/fit_pipi_TP%d.npz" % (datadir,
+  #          d2))
   ratiofit.calc_error()
   ratiofit.print_data(1)
-
-  #A = 2.0
-  #E = 0.145
-  #dE = 0.008
-  #L=24
-  #a0 = -0.164/E
-  #Dataset for 32^3 kaon data Order : E_single, A_Ratio, a0, T,L
-  #data = np.array((2.4925e-01, 1.83975372, -1.4043, 64, 32))
-  #Dataset for 32^3 pipi data Order : E_single, A_Ratio, a0, T,L
-  #data = np.array((2.4925e-01, 1.83975372, -1.4043, 64, 32))
-
-  #Dataset for 24^3 kaon data Order : E_single, A_Ratio, a0, T,L
-  #data = np.array((2.5612e-01, 1.72606912, -1.4352 ,48 ,24))
-  #Dataset for 24^3 pipi data Order : E_single, A_Ratio, a0, T,L
-  data = np.array((1.446e-01, 1.72606912, -0.164/0.1446 ,48 ,24))
+  # prin original data with standard deviation
+  dE_orig = ratiofit.data[0][0,1,0,:]
+  dE_stat = np.std(ratiofit.data[0][:,1,0:],0)
+  dE_rel_err = np.divide(dE_stat,dE_orig)
+  fr = np.linspace(1,dE_orig.shape[0]+1,dE_orig.shape[0]+1,endpoint=False)
+  for i, v in enumerate(dE_rel_err[0]):
+    print i,v
+  #plot = PdfPages("./rel_err_deltaE.pdf")
+  #lbl = [r'Relative error of $\delta E$ for fit ranges','Number of fit range','A30.32']
+  #plt.plot(fr, dE_rel_err, lbl,'r')
+  ##lbl[3] = 'A40.24'
+  ##err_plot(x_etm, y_etm,lbl,'b')
+  #plot.savefig()
+  #plot.close()
   
+  ##A = 2.0
+  ##E = 0.145
+  ##dE = 0.008
+  ##L=24
+  ##a0 = -0.164/E
+  ##Dataset for 32^3 kaon data Order : E_single, A_Ratio, a0, T,L
+  #data = np.array((2.4925e-01, 1.83975372, -1.4043, 64, 32))
+  ##Dataset for 32^3 pipi data Order : E_single, A_Ratio, a0, T,L
+  ##data = np.array((2.4925e-01, 1.83975372, -1.4043, 64, 32))
 
-  # Get model data for delta E from Lueschers formula
-  model_dE = e_shift_luescher(data[0], data[4], data[2])
-  print(model_dE)
-  # Plug that into the Ratio function at specific t -> get ratio at t
-  #t2 = np.linspace(0.5,32.5,32,endpoint=False)
-  t2 = np.asarray([10.5,15.5])
-  print t2
-  # Test ratio function
-  print rmean[12], rerr[12], eval_ratio(data[1], t2[0], model_dE, data[0],
-      data[3])
-  R = eval_ratio(data[1], t2, model_dE, data[0], data[3])
-  # take error from data of ratio(?)
-  #print(R)
-  #print(np.subtract(ratio.data[0,:,0],rmean))
-  stdev_R = np.asarray([rerr[10],rerr[15]])
-  # Calculate delta E and its derivative from rewritten formulae
-  dE = e_shift_ratio(R, t2, data[1], data[0], data[3])
-  dE_dR = derive_e_shift_ratio(R, t2, data[1], data[0], data[3])
-  # calculate error on that with gaussian propagation
-  err_prop = np.sqrt(np.square(np.multiply(dE_dR,stdev_R)))
-  rel_err_deltaE = np.divide(err_prop,dE)
-  print(rel_err_deltaE)
+  ##Dataset for 24^3 kaon data Order : E_single, A_Ratio, a0, T,L
+  ##data = np.array((2.5612e-01, 1.72606912, -1.4352 ,48 ,24))
+  ##Dataset for 24^3 pipi data Order : E_single, A_Ratio, a0, T,L
+  ##data = np.array((1.446e-01, 1.72606912, -0.164/0.1446 ,48 ,24))
+  #
+
+  ## Get model data for delta E from Lueschers formula
+  #model_dE = e_shift_luescher(data[0], data[4], data[2])
+  #print(model_dE)
+  ## Plug that into the Ratio function at specific t -> get ratio at t
+  ##t2 = np.linspace(0.5,32.5,32,endpoint=False)
+  #t2 = np.asarray([10.5,15.5])
+  #print t2
+  ## Test ratio function
+  #print rmean[12], rerr[12], eval_ratio(data[1], t2[0], model_dE, data[0],
+  #    data[3])
+  #R = eval_ratio(data[1], t2, model_dE, data[0], data[3])
+  ## take error from data of ratio(?)
+  ##print(R)
+  ##print(np.subtract(ratio.data[0,:,0],rmean))
+  #stdev_R = np.asarray([rerr[10],rerr[15]])
+  ## Calculate delta E and its derivative from rewritten formulae
+  #dE = e_shift_ratio(R, t2, data[1], data[0], data[3])
+  #dE_dR = derive_e_shift_ratio(R, t2, data[1], data[0], data[3])
+  ## calculate error on that with gaussian propagation
+  #err_prop = np.sqrt(np.square(np.multiply(dE_dR,stdev_R)))
+  #rel_err_deltaE = np.divide(err_prop,dE)
+  #print(rel_err_deltaE)
 
 if __name__ == '__main__':
     try:

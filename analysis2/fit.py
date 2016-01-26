@@ -427,8 +427,12 @@ class FitResult(object):
         """Returns the fit ranges."""
         return self.fit_ranges, self.fit_ranges_shape
 
-    def calc_error(self):
-        """Calculates the error and weight of data."""
+    def calc_error(self, rel=False):
+        """Calculates the error and weight of data.
+        Parameters:
+        -----------
+          rel : Boolean to control whether the relative error is used
+        """
         if self.error is None:
             self.error = []
             self.weight = []
@@ -437,13 +441,21 @@ class FitResult(object):
             else:
                 nfits = [d[0,0].size for d in self.data]
             if self.derived:
-                r, r_std, r_syst, w = sys_error_der(self.data, self.pval)
+                if rel is False:
+                  r, r_std, r_syst, w = sys_error_der(self.data, self.pval,rel=rel)
+                else:
+                  r, r_std, r_syst, w = sys_error_der_rel(self.data, self.pval,rel=rel)
                 self.error.append((r, r_std, r_syst, nfits))
                 self.weight.append(w)
             else:
                 npar = self.data[0].shape[1]
                 for i in range(npar):
-                    r, r_std, r_syst, w = sys_error(self.data, self.pval, i)
+                    if rel is False:
+                      r, r_std, r_syst, w = sys_error(self.data, self.pval,
+                          i)
+                    else:
+                      r, r_std, r_syst, w = sys_error_rel(self.data, self.pval,
+                          i)
                     self.error.append((r, r_std, r_syst, nfits))
                     self.weight.append(w)
 
@@ -804,7 +816,61 @@ class FitResult(object):
       mult_obs.pval[0] = weights
       return mult_obs
 
-    def res_reduced(self, samples=20, corr_id='reduced'):
+    def mult_obs_single(self, other, corr_id="Product"):
+      """Multiply two observables in order to treat them as a new observable.
+
+        Warning
+        -------
+        This overwrites the data, so be careful to save the data before.
+      
+      Parameters
+      ----------
+      other: FitResult object that gets multiplied with self in a
+          weightpreserving way.
+      corr_id: Id of derived observable
+
+      """
+      # Self determines the resulting layout
+      layout = self.data[0].shape
+      boots = layout[0] 
+      ranges1 = layout[2]
+      if self.data[0].ndim == 3:
+        ranges2 = layout[2]
+      else:
+        ranges2 = 0
+      
+      # Check ranges and samples for compliance
+      if layout[0] != other.data[0].shape[0]:
+        raise ValueError("Number of Bootstrapsamples not compatible!")
+      if layout[1] != other.data[0].shape[1]:
+        raise ValueError("Number of same parameter fit ranges not compatible!\n"
+            + "%d vs. %d" % (layout[1], other.data[0].shape[1]))
+
+      # Deal with observables
+      product = np.zeros_like(self.data[0])
+      for b, arr0 in enumerate(other.data[0]):
+        for r_self, arr1 in enumerate(arr0):
+          product[b][r_self] = np.multiply(arr1, self.data[0][b][r_self])
+
+      # Deal with observable weights
+      # Get weights for all fit ranges (1 sample is sufficient)
+      weights_0 = self.pval[0][0]
+      # prepare new weight array
+      weights_prod = np.zeros_like(weights_0)
+      # multiply weights of first observable with observable of second
+      for idx, weights_1 in enumerate(other.weight[1][0]):
+        weights_prod[idx] = np.multiply(weights_1, weights_0[idx])
+
+      # Get array into right shape for calculation
+      weights = np.tile( weights_prod.flatten(), boots ).reshape(boots, ranges1)
+
+      # prepare storage
+      mult_obs = FitResult(corr_id, True)
+      mult_obs.create_empty(layout, layout, [1,1])
+      mult_obs.data[0] = product
+      mult_obs.pval[0] = weights
+      return mult_obs
+    def res_reduced(self, samples=20, corr_id='reduced', m_a0 = False):
       """Take boolean 1d intersection of two arrays to choose certain fitranges and
       corresponding data.
   
@@ -825,9 +891,16 @@ class FitResult(object):
 
       # Reshape data in dependence of correlator type
       if self.derived == True:
-        ndim = self.data[0].shape[1]*self.data[0].shape[2]
-        flat_data = self.data[0].reshape((boots,ndim))
-        flat_weights = self.pval[0][0].reshape(ndim)
+        if m_a0 is True:
+          ndim = self.data[0].shape[1]*self.data[0].shape[2]
+          flat_data = self.data[0].reshape((boots,ndim))
+          flat_weights = self.pval[0][0].reshape(ndim)
+        else:
+          ndim = self.data[0].shape[2]
+          print ndim
+          print self.data[0][:,1].shape
+          flat_data = self.data[0][:,1].reshape((boots,ndim))
+          flat_weights = self.pval[0][0].reshape(ndim)
       else:
         ndim = self.data[0].shape[2]
         flat_data = self.data[0][:,1].reshape((boots,ndim))
