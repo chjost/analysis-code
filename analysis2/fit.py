@@ -9,7 +9,7 @@ from fit_routines import fit_comb, fit_single, calculate_ranges
 from in_out import read_fitresults, write_fitresults
 from interpol import match_lin, evaluate_lin
 from functions import func_single_corr, func_ratio, func_const, func_two_corr
-from statistics import compute_error, sys_error, sys_error_der, draw_weighted, freq_count
+from statistics import compute_error, sys_error, sys_error_rel, sys_error_der, draw_weighted, freq_count
 from energies import calc_q2
 from zeta_wrapper import Z
 from scattering_length import calculate_scat_len
@@ -442,9 +442,9 @@ class FitResult(object):
                 nfits = [d[0,0].size for d in self.data]
             if self.derived:
                 if rel is False:
-                  r, r_std, r_syst, w = sys_error_der(self.data, self.pval,rel=rel)
+                  r, r_std, r_syst, w = sys_error_der(self.data, self.pval)
                 else:
-                  r, r_std, r_syst, w = sys_error_der_rel(self.data, self.pval,rel=rel)
+                  r, r_std, r_syst, w = sys_error_der_rel(self.data, self.pval)
                 self.error.append((r, r_std, r_syst, nfits))
                 self.weight.append(w)
             else:

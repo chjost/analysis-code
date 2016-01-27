@@ -262,6 +262,8 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, debug=0):
         cov = np.diag(np.diagonal(np.cov(Y.T)))
     else:
         cov = np.cov(Y.T)
+        print(cov)
+        print(Y[0])
     cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
 
     # degrees of freedom

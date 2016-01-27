@@ -3,6 +3,7 @@ Statistical functions.
 """
 
 import numpy as np
+import itertools
 
 def compute_error(data, axis=0):
     """Calculates the mean and standard deviation of the data.
@@ -67,19 +68,21 @@ def compute_weight(data, pvals):
     """
     # compute std/mean over bootstrap samples for every fit interval
     errors = np.nanstd(data, axis=0)/np.nanmean(data, axis=0)
+    print errors.shape
     # get the minimum of the errors
     min_err = np.amin(errors)
+    print min_err
     # prepare storage
     weights = np.zeros((data.shape[1:]))
     if weights.ndim == 1:
         for i in range(weights.shape[0]):
             weights[i] = ((1. - 2.*np.abs(pvals[0,i]-0.5)) *
-                min_err/errors[i])
+                min_err/errors[i])**2
     else:
         ranges = [[n for n in range(x)] for x in weights.shape]
         for riter in itertools.product(*ranges):
-            weights[riter] = ((1. - 2.*np.abs(pvals[0,riter]-0.5)) *
-                min_err/errors[riter])
+            weights[riter] = ((1. - 2.*np.abs(pvals[(0,)+riter]-0.5)) *
+                min_err/errors[riter])**2
     return weights
 
 def sys_error_rel(data, pvals, par=0):
@@ -245,9 +248,12 @@ def sys_error(data, pvals, par=0):
 
         # calculate the weight for the fit ranges using the standard
         # deviation and the p-values of the fit
-        data_std = np.std(d[:,par])
-        data_weight[i] = (1. - 2. * np.fabs(pvals[i][0] - 0.5) *
-                          np.amin(data_std) / data_std)**2
+        data_std = np.std(d[:,par],0)
+        if par == 1:
+          print("Standard deviation in sys_error:")
+          print(data_std)
+        data_weight[i] = np.square(((1. - 2. * np.fabs(pvals[i][0] - 0.5)) *
+                          np.amin(data_std) / data_std))
         # using the weights, calculate the median over all fit intervals
         # for every bootstrap sample.
         for b in range(d.shape[0]):
