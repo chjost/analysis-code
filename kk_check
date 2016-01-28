@@ -1,0 +1,79 @@
+#!/usr/bin/python
+################################################################################
+#
+# Author: Christian Jost (jost@hiskp.uni-bonn.de)
+# Date:   Februar 2015
+#
+# Copyright (C) 2015 Christian Jost
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Function: A short analysis of the single pion.
+#
+# For informations on input parameters see the description of the function.
+#
+################################################################################
+
+import matplotlib
+matplotlib.use('Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+import numpy as np
+
+import analysis as ana
+
+def main():
+    #inputlist = ['ref/spbard_gamma5_corr_p0.conf714.dat',
+    #             'check/k_corr0_p0.0714.dat']
+    #inputlist = ['ref/KK_corr0_A1_TP0_00.conf714.dat',
+    #             'check/C4D_p0.0714.dat']
+    inputlist = ['ref/KK_corr2_A1_TP0_00.conf714.dat',
+                 'check_change/C4C_p0.0714.dat']
+
+    inputpath = '/hiskp2/helmes/kaon_check/'
+    outputpath = inputpath
+    ref_corrs_in = ana.read_data_ascii("".join((inputpath, inputlist[0])))
+    check_corrs_in = ana.read_data_ascii("".join((inputpath, inputlist[1])))
+    T=48
+    # normalise corrs to first value
+    ref_corrs = np.divide(ref_corrs_in[0],ref_corrs_in[0][0])
+    check_corrs = np.divide(check_corrs_in[0],check_corrs_in[0][0])
+    # Flip and shift correlation functions
+    #check_corrs_orig = np.divide(check_corrs_in[0],check_corrs_in[0][0])
+    #print check_corrs_orig
+    #check_corrs_rev = np.fliplr([check_corrs_orig])[0]
+    #print check_corrs_rev
+    #check_corrs = np.roll(check_corrs_rev,1)
+    corrs = [ref_corrs,check_corrs]
+    y = np.zeros_like(corrs)
+    tlist = np.linspace(0.,float(T),float(T),endpoint=False)
+    label = [r' 4pt function crossed, cfg714', r'$t$',
+        r'$C_4^C(t)/C_4^C(0)$',[r'ref',r'check']]
+    plot = PdfPages('%sC4_C.pdf'%outputpath)
+    ana.plot_data(tlist, corrs, y ,plot,label,[0,48],logscale=True)
+    #plot.close()
+    corrs = np.subtract(ref_corrs,check_corrs)
+    y = np.zeros_like(corrs)
+    label = [r'difference in $C_4^C$', r'$t$',
+        r'$C_4^{ref}-C_4^{check}(t)$',[r'data']]
+    #plot = PdfPages('%sC4_c_diff.pdf'%outputpath)
+    ana.plot_data(tlist, corrs, y ,plot,label,[0,47])
+    plot.close()
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Keyboard Interrupt")

@@ -108,7 +108,7 @@ def simple_ratio_subtract(d1, d2, d3):
         for _t in range(rshape[1]):
             # calculate ratio
             ratio[_s,_t] = (d1[_s,_t] - d1[_s,_t+1]) / ((d2[_s,_t]*d3[_s,_t]) -
-                            (d2[_s,_t+1]*d3[_s,_t+1]))
+                           (d2[_s,_t+1]*d3[_s,_t+1]))
     return ratio
 
 def ratio(d1, d2, d3, dE):

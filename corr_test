@@ -1,0 +1,104 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+
+import sys
+import numpy as np
+
+import analysis2 as ana
+
+def main():
+    # parse the input file
+    if len(sys.argv) < 2:
+        ens = ana.LatticeEnsemble.parse("kk_I1_TP0_A40.24.ini")
+    else:
+        ens = ana.LatticeEnsemble.parse(sys.argv[1])
+
+    # read settings
+    readsingledata = False 
+    readsinglefit = False
+    plotsingle = False
+    readtwodata = False
+    readtwofit = False
+    plottwo = True
+
+    # get data from input file
+    prefix = ens.get_data("path")
+    print prefix
+    lat = ens.name()
+    nboot = ens.get_data("nboot")
+    datadir = ens.get_data("datadir")
+    plotdir = ens.get_data("plotdir")
+    gmax = ens.get_data("gmax")
+    d2 = ens.get_data("d2")
+    try:
+        debug = ens.get_data("debug")
+    except KeyError:
+        debug = 0
+    T = ens.T()
+    T2 = ens.T2()
+    addT = np.ones((nboot,)) * T
+    addT2 = np.ones((nboot,)) * T2
+    ts = 0
+    c = 27
+
+
+
+    # two particle correlator
+    print("read two particle corrs")
+    files = ["%s/kk_charged_A1_TP%d_%d%d.dat" % (datadir, d2, i, j) for i in\
+        range(gmax+1) for j in range(gmax+1)]
+    #files = ["%s/pipi_pipi_A1_corr_TP%d_%d%d.dat" % (datadir, d2, i, j) for i in\
+    #    range(gmax+1) for j in range(gmax+1)]
+    print files
+    if readtwodata == False:
+        kkcorr = ana.Correlators(files, matrix=False)
+        print(kkcorr.data.shape)
+
+        #popped = kkcorr.omit([9e+5,2e+6])
+        #print(popped)
+        print(kkcorr.data.shape)
+        kkhist = kkcorr.hist(ts)
+        plotter = ana.LatticePlot("%s/hist_ts%d_kk.pdf" % (plotdir,ts))
+        label = ["4pt history","cfg","C(%d)"%ts, "data"]
+        plotter.set_env(grid=True,ylog=True)
+        plotter.history(kkhist,label)
+        del plotter
+
+        kkcorr.sym_and_boot(nboot)
+        if d2 != 0:
+            dE = pifit.error[1][0][1] - pifit.error[1][0][0]
+            #print(dE)
+            kkcorr.shift(1, dE=dE)
+        else:
+            #kkcorr.shift(1)
+            pass
+        #kkcorr.save("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
+    else:
+        kkcorr = ana.Correlators.read("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
+
+    # single particle correlator
+    print("read single particle corrs")
+    files = ["%s/k_charged_p%d.dat" % (datadir, d) for d in range(1)]
+    #files = ["%s/pi_corr_p%d.dat" % (datadir, d) for d in range(1)]
+    if readsingledata == False:
+        kcorr = ana.Correlators(files, matrix=False)
+        try:
+          kcorr.omit(popped)
+        except: NameError
+        khist = kcorr.hist(ts)
+        plotter = ana.LatticePlot("%s/hist_ts%d_k.pdf" % (plotdir,ts))
+        plotter.set_env(grid=True,ylog=True)
+        label = ["2pt history","cfg","C(%d)" % ts, "data"]
+        plotter.history(khist,label)
+        del plotter
+        kcorr.sym_and_boot(nboot)
+        #kcorr.save("%s/corr_k_%s.npy" % (datadir, lat))
+    else:
+        kcorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat))
+
+
+if __name__ == '__main__':
+    try:
+        print("starting")
+        main()
+    except KeyboardInterrupt:
+        pass

@@ -28,8 +28,11 @@
 
 __all__ = ["write_data", "read_data", "write_data_ascii", "read_data_ascii",
            "write_data_w_err_ascii", "read_data_w_err_ascii",
-           "extract_bin_corr_fct", "write_fitresults", "read_fitresults"]
+           "extract_bin_corr_fct", "write_fitresults",
+           "read_fitresults","_read_corr","read_confs","confs_subtr","confs_mult",
+           "conf_abs","inputnames"]
 
+import ConfigParser as cp
 import os
 import numpy as np
 
@@ -380,6 +383,116 @@ def extract_bin_corr_fct(name='', start_cfg=0, delta_cfg=0, nb_cfg=0, T=0,
         corr[(_t%T)*nb_cfg + _t/T] = complex(_x[0], _y[0])
         _t += 1
     return corr
+  
+#------------------------------------------------------------------------------
+
+
+def _read_corr(_name, _T=48):
+  """ Uses numpy's openfile function to read in binary data and reshape it to
+  pairs of complex numbers
+
+  Args: 
+      _name: The file's name (best constructed in advance)
+      _T: The lattice's time extent defaults to 48
+
+  Returns: 
+      corr: The read in reshaped correlation function as T,2 Array
+  """
+  # C like array order is implied
+  tmp = np.fromfile(_name,dtype=float)
+  corr = tmp.reshape((_T,2))
+  return corr
+
+#------------------------------------------------------------------------------
+
+
+def read_confs(path,corrname,confs,_T=48,verb=False):
+  """ Wrapper to read in correlationfunctions of several configurations
+
+      This file assumes B. Knippschilds binary file layout with all the
+      Correlator information in the filename
+      Args: 
+           path: The path to the data to read
+           corrname: The name of the correlationfunction, should be built
+           separately
+           confs: alist of configuration folder names
+           _T: temporal time extent of the functions to read in
+
+      Returns: A numpy array holding the correlation functions. Shape is
+      (nb_cfg,T,2) for real and imaginary part
+  """
+  C = np.zeros((len(confs),_T,2))
+  for i,d in enumerate(confs):
+    #Generate filename from inputlist
+    if verb is True:
+      print path, d, corrname
+    _fname = path+d+corrname
+    _C_tmp = _read_corr(_fname,_T)
+    C[i] = _C_tmp
+  return C
+
+#------------------------------------------------------------------------------
+
+
+def confs_subtr(Corr1, Corr2):
+  """ function to subtract two diagrams columnwise 
+  
+  Subtracts two correlation functions like Corr1 - Corr2
+
+  Args:
+      Corr1, Corr2: Numpy arrays of one or more correlation functions
+
+  Returns:
+      A list of three tuples containing the difference C_1(t) - C_2(t)
+  """
+  Cdiff = np.zeros_like(Corr1)
+  for i in range(Corr1.shape[0]):
+    _re = np.subtract(Corr1[i,:,0],Corr2[i,:,0])
+    _im = np.subtract(Corr1[i,:,1],Corr2[i,:,1])
+    Cdiff[i] = np.column_stack((_re,_im))
+  return Cdiff
+
+#------------------------------------------------------------------------------
+
+def conf_abs(Corr):
+  """ Compute absolute value of Correlation function
+  
+  Gets rid of overall signs in Correlation functions
+
+  Args:
+      Corr: Numpy array of one or more correlation functions
+
+  Returns:
+      A list of three tuples containing abs(C1(t))
+  """
+  Cabs = np.zeros_like(Corr)
+  for i in range(Corr.shape[0]):
+    _re = np.absolute(Corr[i,:,0])
+    _im = np.absolute(Corr[i,:,1])
+    Cabs[i] = np.column_stack((_re,_im))
+  return Cabs 
+
+#------------------------------------------------------------------------------
+
+def confs_mult(Corr,scl):
+  """ Multiply Correlation function with scalar
+  
+
+  Args:
+      Corr: Numpy array of one or more correlation functions
+      scl: a python scalar (float or int)
+
+  Returns:
+      A list of three tuples containing scl*C1(t)
+  """
+  Cabs = np.zeros_like(Corr)
+  for i in range(Corr.shape[0]):
+    _re = np.multiply(scl,Corr[i,:,0])
+    _im = np.multiply(scl,Corr[i,:,1])
+    Cabs[i] = np.column_stack((_re,_im))
+  return Cabs 
+
+#------------------------------------------------------------------------------
 
 ### HELPER FUNCTIONS ###
 
@@ -540,3 +653,55 @@ def savetxt(fname, X, fmt='%.18e', delimiter=' ', newline='\n', header='',
     finally:
         if own_fh:
             fh.close()
+
+#------------------------------------------------------------------------------
+
+def inputnames(conf_file, corr_string):
+    """ Function to build Correlator input names conformal with B. Knippschilds
+    naming scheme
+        
+    The function invokes a config parser which reads the config file (config.ini) regarding the
+    specified correlation functions and returns a list of input names
+
+    Args:
+        conf_file: string with path to the configuration file 
+        corr_string: array of identifiers for correlation functions to be
+                    read in
+    Returns:
+        A list of inputnames
+
+    """
+    # invoke config parser and read config file
+    config = cp.SafeConfigParser()
+    config.read(conf_file)
+    # set section names for get operations, have to be the same in configfile
+    #quarks = config.get('quarks')
+    #operators = config.get('operator_lists')
+    #corr_list = config.get('correlator_lists')
+    # result list
+    inputnames = []
+    # Loop over correlation function names
+    for key in config.options('correlator_lists'):
+        # get value of each key splited by ':'
+        tmp = config.get('correlator_lists',key)
+        c0 = tmp.split(':')
+        # read only functions in corr_string, sort them into q and op arrays
+        if c0[0] in corr_string:
+            q_list = []
+            op_list = []
+            for val in c0[1:]:
+                if val[0] == 'Q':
+                    q_list.append(config.get('quarks',val))
+                elif val[0] == 'O':
+                    op_list.append(config.get('operator_lists',val))
+                else:
+                    print("Identifier not found")
+            # TODO: expand entrys in operator lists
+            # join single lists together for filename
+            join_q = ''.join(q_list)
+            join_op = '_'.join(op_list)
+            # build the filename
+            corrname = c0[0]+"/"+c0[0]+"_"+join_q+"_"+join_op+".dat"
+            print corrname
+            inputnames.append(corrname)
+    return inputnames

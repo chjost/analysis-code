@@ -1,0 +1,158 @@
+#!/usr/bin/python
+################################################################################
+#
+# Author: Christian Jost (jost@hiskp.uni-bonn.de),
+#         Christopher Helmes (helmes@hiskp.uni-bonn.de)
+# Date:   October 2015
+#
+# Copyright (C) 2015 Christian Jost, Christopher Helmes
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Function: A short comparison of 2 pt and 4 pt correlation functions.
+#
+# For informations on input parameters see the description of the function.
+#
+################################################################################
+
+import matplotlib
+matplotlib.use('Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+import numpy as np
+import math
+import analysis as ana
+
+def main():
+  ## definition of some variables
+    nbsamples = 1000
+    T = 64
+    T2 = int(T/2)+1
+    massfunc = lambda p, t: p
+
+    # get mean correlators of 2 and 4pt function to compare
+
+    parent = "/hiskp2/helmes/analysis/scattering/test/"
+    #var = ["s_3_rnd_vec/","s_4_rnd_vec/","s_5_rnd_vec/"]
+    var = "s_3_rnd_vec/"
+    suff = ["/k_charged/data/A30.32/amu_s_225/","/k_charged/data/A40.24/amu_s_225/"]
+
+    corr_2pt = np.zeros((len(suff), 1000, T2))
+    corr_4ptc = np.zeros((len(suff),1000, T2))
+    corr_4ptd = np.zeros_like(corr_4ptc)
+    corr_4pt = np.zeros_like(corr_4ptc)
+    
+    corr_2pt_tmp = np.zeros((1000,48))
+    corr_4ptc_tmp = np.zeros((1000,48))
+    corr_4ptd_tmp = np.zeros((1000,48))
+
+    mean_2pt = np.zeros((len(suff),T2))
+    err_2pt = np.zeros_like(mean_2pt)
+    mean_4pt_d = np.zeros_like(mean_2pt)
+    err_4pt_d = np.zeros_like(mean_2pt)
+    mean_4pt_c = np.zeros_like(mean_2pt)
+    err_4pt_c = np.zeros_like(mean_2pt)
+    mean_4pt = np.zeros_like(mean_2pt)
+    err_4pt = np.zeros_like(mean_2pt)
+
+    corr_2pt_square = np.zeros((len(suff), 1000, T2))
+    mmean = np.zeros((len(suff),T2))
+    merr = np.zeros_like(mmean)
+    ratio = np.zeros((len(suff),1000,T2-1)) 
+    ratio_mean = np.zeros((len(suff),T2-1))
+    ratio_err = np.zeros_like(ratio_mean)
+    ratio_num = np.zeros((len(suff),1000,T2-1))
+    num_mean = np.zeros((len(suff),T2-1))
+    num_err = np.zeros_like(num_mean)
+    ratio_den = np.zeros((len(suff),1000,T2-1))
+    den_mean = np.zeros((len(suff),T2-1))
+    den_err = np.zeros_like(den_mean)
+
+    #32^3 input with symmetrizing and bootstrap
+    curr = parent+var+suff[0]
+    corr_2pt[0] = ana.sym_and_boot(ana.read_data_ascii(curr+"k_charged_p0.dat"))
+    corr_4ptc[0] = ana.sym_and_boot(ana.read_data_ascii(curr+"C4C.dat"))
+    corr_4ptd[0] = ana.sym_and_boot(ana.read_data_ascii(curr+"C4D.dat"))
+    corr_4pt[0] = np.multiply(2,corr_4ptd[0]-corr_4ptc[0])
+
+    #24^3 input with symmetrizing and bootstrap
+    curr = parent+var+suff[1]
+    corr_2pt_tmp = ana.sym_and_boot(ana.read_data_ascii(curr+"k_charged_p0.dat")[0:200,:])
+    corr_4ptc_tmp = ana.sym_and_boot(ana.read_data_ascii(curr+"C4C.dat")[0:200,:])
+    corr_4ptd_tmp = ana.sym_and_boot(ana.read_data_ascii(curr+"C4D.dat")[0:200,:])
+    corr_4pt_tmp = np.multiply(2,corr_4ptd_tmp-corr_4ptc_tmp)
+
+    #Bring arrays to same length
+    for b in range(nbsamples):
+      corr_2pt[1,b] = np.append(corr_2pt_tmp[b],np.zeros((8)),axis=1)
+      corr_4ptc[1,b] = np.append(corr_4ptc_tmp[b],np.zeros((8)),axis=1)
+      corr_4ptd[1,b] = np.append(corr_4ptd_tmp[b],np.zeros((8)),axis=1)
+      corr_4pt[1,b] = np.append(corr_4pt_tmp[b],np.zeros((8)),axis=1)
+
+    # compute ratio and its components
+    for i in range(len(suff)):
+      mean_2pt[i], err_2pt[i] = ana.calc_error(corr_2pt[i])
+      mean_4pt_d[i], err_4pt_d[i] = ana.calc_error(corr_4ptd[i])
+      mean_4pt_c[i], err_4pt_c[i] = ana.calc_error(corr_4ptc[i])
+      mean_4pt[i], err_4pt[i] = ana.calc_error(corr_4pt[i])
+
+      ratio_num[i], num_mean[i], num_err[i] = ana.compute_back_derivative(corr_4pt[i])
+      corr_2pt_square[i], mmean[i], merr[i] = ana.compute_square(corr_2pt[i])
+      ratio_den[i], den_mean[i], den_err[i] = ana.compute_back_derivative(corr_2pt_square[i])
+      ratio[i], ratio_mean[i], ratio_err[i] = ana.simple_ratio_subtract(corr_4pt[i], corr_2pt[i],corr_2pt[i])
+    #print("These are the ratios:")
+    print(np.divide(num_err,num_mean)[0][3:33])
+    print(np.divide(num_err,num_mean)[1][3:33])
+    #print(ratio_mean)
+    # plot relative errors first
+    #print(np.divide(mean_2pt[0],mean_2pt[1]))
+    #print(err_2pt.shape)
+    err_single = PdfPages(parent+"Compare_ratio_rel_err.pdf")
+    label = ['Ratio rel error',r'$t/a$',r'$\delta (C_2)/C_2$',['A30.32','A40.24']]
+    tlist = np.linspace(0., float(T2), float(T2), endpoint=False)
+    yerr = np.zeros_like(tlist)
+    label[2] = r'$\delta (R_{num})/R_{num}$'
+    ana.plot_data(tlist[0:-1], np.divide(num_err,num_mean), yerr[0:-1], err_single, label,[3,T2])
+    #label[2] = r'$\delta (R_{den})/R_{den}$'
+    #ana.plot_data(tlist[0:-1], np.divide(den_err,den_mean), yerr[0:-1], err_single, label,[3,T2])
+    #label[2] = r'$R(t)$'
+    #ana.plot_data(tlist[0:-1], ratio_mean, ratio_err, err_single, label,[3,T2])
+    err_single.close()
+   
+    
+    #y = np.divide(np.divide(err_2pt,mean_2pt)[0],np.divide(err_2pt,mean_2pt)[1])
+    #ana.plot_data(tlist, np.divide(err_2pt,mean_2pt), yerr, err_single, label,[0,T])
+    #ana.plot_data(tlist, mean_2pt, err_2pt, err_single, label,[0,T2], logscale=True)
+    #mass_3, m_mean_3, m_err_3 = ana.compute_mass(corr_2pt[0,:,:])
+    #mass_5, m_mean_5, m_err_5 = ana.compute_mass(corr_2pt[1,:,:])
+    #label[2] = r'$\delta (m^{eff}_{2pt})/m^{eff}_{2pt}$'
+    #ana.plot_data(tlist[0:-2], np.divide(merr, mmean), yerr[0:-2], err_single, label,[3,T2])
+    #label[2] = r'$\delta (C_{4C})/C_{4C}$'
+    #ana.plot_data(tlist, np.divide(err_4pt_c,mean_4pt_c), yerr, err_single, label,[3,T2])
+    #label[2] = r'$\delta (C_{4D})/C_{4D}$'
+    #ana.plot_data(tlist, np.divide(err_4pt_d,mean_4pt_d), yerr, err_single, label,[3,T2])
+    #label[2] = r'$\delta (C_{4})/C_{4}$'
+    #ana.plot_data(tlist, np.divide(err_4pt,mean_4pt), yerr, err_single, label,[3,T2])
+
+
+
+
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+  try:
+    main()
+  except KeyboardInterrupt:
+    print("Keyboard Interrupt")

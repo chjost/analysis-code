@@ -81,8 +81,49 @@ class LatticePlot(object):
         plt.xlabel(axis[0])
         plt.ylabel(axis[1])
 
+    def _print_label(self, keys, vals, xpos=0.7, ypos=0.8):
+        """Print a label in the plot.
+
+        Parameters
+        ----------
+        keys : list of str
+            The label of the data to print.
+        vals : list of floats
+            The data to print.
+        xpos, ypos : float, optional
+            The position in relativ to maximum of x and y axis,
+            respectively. Should be between 0 and 1.
+        """
+        datalabel = "%s = %.4f" %(keys[0], vals[0])
+        for k, v in zip(keys[1:], vals[1:]):
+            datalabel = "\n".join((datalabel, "%s = %.4f" %(k, v)))
+        x = xlim()[1] * xpos
+        y = ylim()[1] * ypos
+
+    def plot_data_annotate(self, X, Y, dY, fitfunc, args, label, plotrange=None,
+              fitrange=None, addpars=None, pval=None, hconst=None, vconst=None):
+        """Plot data with an optional annotation on x and y axis
+        """
+        plot_data_with_fit(self, X, Y, dY, fitfunc, args, label, plotrange=None,
+               fitrange=fitrange, addpars=addpars, pval=pval)
+        self.decorate_plot(hconst=hconst, vconst=vconst)
+        
+    def decorate_plot(self, hconst=None, vconst=None):
+        """Decorate the plot with an optional horizontal and vertical constant
+        """
+        # Plotting an additional constant
+        if isinstance(hconst, (np.ndarray,list,tuple)):
+            plt.axhline(hconst[0],color='#b58900')
+            plt.text(X[0],hconst[0]+X[0]/100.,label[5])
+            plt.axhspan(hconst[0]+hconst[1],hconst[0]-hconst[1],alpha=0.35,color='gray')
+        if isinstance(vconst, (np.ndarray,list,tuple)):
+            plt.axvline(vconst[0],color='#859900')
+            plt.text(vconst[0],Y[0],label[6])
+            plt.axvspan(vconst[0]+vconst[1],vconst[0]-vconst[1],alpha=0.35,color='gray')
+
+
     def _genplot_single(self, corr, label, fitresult=None, fitfunc=None,
-            add=None, ploterror=False, xshift=0., debug=0):
+            add=None, xshift=0., rel=False, debug=0):
         """Plot the data of a Correlators object and a FitResult object
         together.
 
@@ -99,6 +140,7 @@ class LatticePlot(object):
         add : ndarray, optional
             Additional arguments to the fit function. This is stacked along
             the third dimenstion to the oldfit data.
+        xshift : Optional scalar shift in xrange
         debug : int, optional
             The amount of info printed.
         """
@@ -129,8 +171,13 @@ class LatticePlot(object):
                 self.set_title(label[0], label[1:3])
                 # plot
                 self._set_env_normal()
-                plot_data(X, corr.data[0,:,n], ddata, label[3],
-                        plotrange=[1,T])
+                # plot the relative error instead of data and error
+                if rel is True:
+                    plot_data(X, np.divide(ddata,corr.data[0,:,n]),
+                        np.zeros_like(ddata), label=label[3], plotrange=[3,T])
+                else:
+                    self.plot_data(X, corr.data[0,:,n], ddata, label[3],
+                        plotrange=[3,T])
                 plt.legend()
                 self.save()
             else:
@@ -178,6 +225,7 @@ class LatticePlot(object):
         oldfitpar : None, int or sequence of int, optional
             Which parameter of the old fit to use, if there is more than one.
                 the third dimenstion to the oldfit data.
+        xshift : Optional scalar shift for xdata
         debug : int, optional
             The amount of info printed.
         """
@@ -194,6 +242,7 @@ class LatticePlot(object):
         T = corr.shape[1]
         franges = fitresult.fit_ranges
         fshape = fitresult.fit_ranges_shape
+        print(fshape)
 
         # iterate over correlation functions
         ncorriter = [[x for x in range(n)] for n in ncorrs]
@@ -204,12 +253,16 @@ class LatticePlot(object):
             mdata, ddata = compute_error(corr.data[:,:,n])
             # create the iterator over the fit ranges
             tmp = [fshape[i][x] for i,x in enumerate(item)]
-            rangesiter = [[x for x in range(m)] for m in tmp]
+            print(tmp)
+            #limit fitranges to be plotted
+            rangesiter = [[x for x in range(m)] for m in [10,10] ]
+            #rangesiter = [[x for x in range(m)] for m in tmp ]
             # iterate over the fit ranges
             for ritem in itertools.product(*rangesiter):
                 if debug > 1:
                     print("plotting fit ranges %s" % str(ritem))
                 r = ritem[-1]
+                print r
                 # get fit interval
                 fi = franges[n][r]
                 _par = fitresult.get_data(item + ritem)
@@ -268,6 +321,8 @@ class LatticePlot(object):
             Which parameter of the old fit to use, if there is more than one.
         ploterror : bool, optional
             Plot the error of the fit function.
+        xshift : float
+            optional shift of xrange
         debug : int, optional
             The amount of info printed.
         """
@@ -316,15 +371,15 @@ class LatticePlot(object):
                     self.save()
         label[0] = label_save
 
-    def plot_mass(self, corr, mass, fit, label, mass_shift, masspar):
-        """Plot two subplots, one for effective mass and one for
-        correlation function.
-        """
-        pass
-
     def plot_func(self, func, args, interval, label, fmt="k"):
         X = np.linspace(interval[0], interval[1], 1000)
         plot_function(func, X, args, label, ploterror=False, fmt=fmt)
+
+    def history(self, data, label, par=None):
+        self._set_env_normal()
+        self.set_title(label[0],label[1:3])
+        self.plot_data(np.arange(data.shape[0]),data,np.zeros_like(data),label[-1])
+        self.save()
 
     def set_env(self, xlog=False, ylog=False, xlim=None, ylim=None, grid=True):
         """Set different environment variables for the plot.
@@ -343,6 +398,79 @@ class LatticePlot(object):
         self.xlim=xlim
         self.ylim=ylim
         self.grid=grid
+
+    def cov_plot(self, data, label, cut=False, inverse=False, norm=True):
+        """ This function is used as a wrapper to plot_covariance
+        """
+        print(label)
+        self.plot_covariance(data, label, cut=cut, inverse=inverse, norm=norm)
+
+    def corr_plot(self, data, label,inverse=False):
+        """ This function is used as a wrapper to plot_covariance
+        """
+        print(label)
+        self.plot_correlation(data, label, inverse=inverse)
+
+    def plot_correlation(self, data, label, inverse=False):
+        """Plots the covariance matrix of given data
+
+        Parameters
+        ----------
+        data : The data to plot the covariance matrix from
+        """
+        cov = np.corrcoef(data)
+        print cov.shape
+        if inverse is True:
+          cov = np.linalg.inv(cov)
+        print cov
+        self.set_title(label[0],label[1])
+        self.set_env(xlim=[0,cov.shape[0]],ylim = [0,cov.shape[0]])
+        plt.pcolor(cov, cmap=matplotlib.cm.bwr, vmin=np.amin(cov),
+            vmax=np.amax(cov))
+        plt.colorbar()
+        self.save()
+        plt.clf()
+        
+    def plot_covariance(self, data, label, cut=False, inverse=False, norm=True):
+        """Plots the covariance matrix of given data
+
+        Parameters
+        ----------
+        data : The data to plot the covariance matrix from
+        """
+        cov1 = np.cov(data)
+        print cov1.shape
+        cov = np.empty(cov1.shape)
+        # building the heat map of covariance matrix and filter all unwanted parts out
+        if norm is True:
+          for i in range(0, cov.shape[0]):
+              for j in range(0, cov.shape[1]):
+                    #cov[i,j] = cov1[i,j]/np.sqrt(cov1[i,i]*cov1[j,j])
+                    cov[i,j] = cov1[i,j]
+                    if cut is True:
+                      if cov[i,j] < 0.2 and cov[i,j] > -0.2:
+                          cov1[i,j] = 0.0
+                    #cov[i,j] = cov1[i,j]/np.sqrt(cov1[i,i]*cov1[j,j])
+                    cov[i,j] = cov1[i,j]/(data[i,0]*data[j,0])
+        else:
+          for i in range(0, cov.shape[0]):
+              for j in range(0, cov.shape[1]):
+                    cov[i,j] = cov1[i,j]
+                    if cut is True:
+                      if cov[i,j] < 0.2 and cov[i,j] > -0.2:
+                          cov1[i,j] = 0.0
+                    cov[i,j] = cov1[i,j]
+
+        if inverse is True:
+          cov = np.linalg.inv(cov)
+        print(np.linalg.cond(cov))
+        self.set_title(label[0],label[1])
+        self.set_env(xlim=[0,cov.shape[0]],ylim = [0,cov.shape[0]])
+        plt.pcolor(cov, cmap=matplotlib.cm.bwr, vmin=np.amin(cov),
+            vmax=np.amax(cov))
+        plt.colorbar()
+        self.save()
+        plt.clf()
 
 if __name__ == "__main__":
     pass

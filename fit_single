@@ -1,0 +1,87 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+
+import sys
+import numpy as np
+
+import analysis2 as ana
+
+def main():
+    # parse the input file
+    if len(sys.argv) < 2:
+        ens = ana.LatticeEnsemble.parse("kk_I1_TP0_A40.24.ini")
+    else:
+        ens = ana.LatticeEnsemble.parse(sys.argv[1])
+
+    # read settings
+    readsingledata = False 
+    readsinglefit = False
+    plotsingle = False
+
+    # get data from input file
+    prefix = ens.get_data("path")
+    print prefix
+    lat = ens.name()
+    nboot = ens.get_data("nboot")
+    datadir = ens.get_data("datadir")
+    plotdir = ens.get_data("plotdir")
+    gmax = ens.get_data("gmax")
+    d2 = ens.get_data("d2")
+    t_mass = np.int_(ens.get_data("fitmass"))
+    if isinstance(t_mass[0],int):
+      print(t_mass)
+    min_size_mass = ens.get_data("tmin_mass")
+    try:
+        debug = ens.get_data("debug")
+    except KeyError:
+        debug = 0
+    T = ens.T()
+    T2 = ens.T2()
+    addT = np.ones((nboot,)) * T
+    addT2 = np.ones((nboot,)) * T2
+
+    # single particle correlator
+    print("read single particle corrs")
+    files = ["%s/k_charged_p%d.dat" % (datadir, d) for d in range(1)]
+    #files = ["%s/eta_s.dat" % datadir] 
+    if readsingledata == False:
+        picorr = ana.Correlators(files, matrix=False)
+        picorr.sym_and_boot(nboot)
+        print(picorr.shape)
+        #picorr.save("%s/corr_eta_%s.npy" % (datadir, lat))
+    else:
+        picorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat))
+
+    fit_single = ana.LatticeFit(0, True)
+    start_single = [1., 0.3]
+    if readsinglefit == False:
+        print("fitting")
+        pifit = fit_single.fit(start_single, picorr, [t_mass], corrid="ek",
+            add=addT, min_size=min_size_mass, step=1,
+            debug=debug)
+        #pifit.save("%s/fit_eta_%s.npz" % (datadir, lat))
+    else:
+        pifit = ana.FitResult.read("%s/fit_k_%s.npz" % (datadir, lat))
+    pifit.print_data(1)
+    pifit.calc_error()
+    for i in zip(pifit.fit_ranges[0],pifit.weight[0]):
+      print(i)
+
+    # plot the result
+    if plotsingle:
+        print("plotting")
+        plotter = ana.LatticePlot("%s/fit_eta_%s.pdf" % (plotdir, lat))
+        plotter.set_env(ylog=True)
+        label = ["single particle", "t", "C(t)", "eta"]
+        plotter.plot(picorr, label, pifit, fit_single, add=addT, debug=2)
+        plotter.new_file("%s/hist_fit_eta_%s.pdf" % (plotdir, lat))
+        label = ["eta energy", "E$_\eta$/a", "E$_\eta$"]
+        plotter.histogram(pifit, label, 1)
+        del plotter
+
+
+if __name__ == '__main__':
+    try:
+        print("starting")
+        main()
+    except KeyboardInterrupt:
+        pass

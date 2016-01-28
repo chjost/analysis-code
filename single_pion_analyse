@@ -1,5 +1,8 @@
 #!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+<<<<<<< HEAD
+=======
 ##!/usr/bin/python
+>>>>>>> analysis_devel
 ################################################################################
 #
 # Author: Christian Jost (jost@hiskp.uni-bonn.de)
@@ -231,4 +234,4 @@ if __name__ == '__main__':
     try:
         main()
     except KeyboardInterrupt:
-        print("Keyboard Interrupt")
+      print("Keyboard Interrupt")

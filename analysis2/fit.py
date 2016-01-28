@@ -8,9 +8,10 @@ import numpy as np
 from fit_routines import (fit_comb, fit_single, calculate_ranges, compute_dE,
     compute_phaseshift, get_start_values, get_start_values_comb, fitting)
 from in_out import read_fitresults, write_fitresults
+from interpol import match_lin, evaluate_lin
 from functions import (func_single_corr, func_ratio, func_const, func_two_corr,
     func_single_corr2, func_sinh, compute_eff_mass)
-from statistics import compute_error, sys_error, sys_error_der
+from statistics import compute_error, sys_error, sys_error_der, draw_weighted, freq_count
 from energies import calc_q2, calc_Ecm
 from zeta_wrapper import Z
 from scattering_length import calculate_scat_len
@@ -386,6 +387,18 @@ class FitResult(object):
         else:
             raise ValueError("Index cannot be calculated")
 
+    def singularize(self, val):
+        singular = FitResult("singluar", True)
+        shape1 = self.data[0].shape
+        shape2 = shape1
+        singular.create_empty(shape1,shape2,1)
+        nboot = self.data[0].shape[0]
+        data = np.linspace(val,val,nboot)
+        chi2 = np.zeros_like(data)
+        pval = np.ones_like(data)
+        singular.add_data((0,0),np.linspace(val,val,nboot),chi2,pval)
+        return singular
+
     def create_empty(self, shape1, shape2, corr_num):
         """Create empty data structures.
 
@@ -396,6 +409,8 @@ class FitResult(object):
         Parameters
         ----------
         shape1, shape2 : tuple of ints or sequence of tuples of ints
+        #TODO: The described layout did not work for me (Christopher), do I use
+        it wrongly?
             Shape of the data structures, where shape1 has an axis for
             the parameters and shape2 not.
         corr_num : int of sequence of ints.
@@ -475,21 +490,24 @@ class FitResult(object):
         """Returns the fit ranges."""
         return self.fit_ranges, self.fit_ranges_shape
 
-    def calc_error(self):
-        """Calculates the error and weight of data."""
+    def calc_error(self, rel=False):
+        """Calculates the error and weight of data.
+        Parameters:
+        -----------
+          rel : Boolean to control whether the relative error is used
+        """
         if self.error is None:
             self.error = []
             self.weight = []
             if self.derived:
                 nfits = [d[0].size for d in self.data]
-                r, r_std, r_syst, w = sys_error_der(self.data, self.pval)
                 self.error.append((r, r_std, r_syst, nfits))
                 self.weight.append(w)
             else:
                 nfits = [d[0,0].size for d in self.data]
                 npar = self.data[0].shape[1]
                 for i in range(npar):
-                    r, r_std, r_syst, w = sys_error(self.data, self.pval, i)
+                    r, r_std, r_syst, w = sys_error(self.data, self.pval, i, rel=rel)
                     self.error.append((r, r_std, r_syst, nfits))
                     self.weight.append(w)
 
@@ -507,7 +525,7 @@ class FitResult(object):
             r, rstd, rsys, nfits = self.error[par]
         for i, lab in enumerate(self.label):
             print("correlator %s, %d fits" %(str(lab), nfits[i]))
-            print("%.5f +- %.5f -%.5f +%.5f" % (r[i][0], rstd[i], rsys[i][0],
+            print("%.8f +- %.8f -%.5f +%.5f" % (r[i][0], rstd[i], rsys[i][0],
                 rsys[i][1]))
         print("------------------------------\n\n")
 
@@ -574,7 +592,26 @@ class FitResult(object):
                                                   tmppar))
                             print(tmpstring)
 
-    def calc_cot_delta(self, mass, parmass=0, L=24):
+    def data_for_plot(self, par=0):
+        """Prints the errors etc of the data."""
+        self.calc_error()
+
+        #print("------------------------------")
+        #print("summary for %s" % self.corr_id)
+        if self.derived:
+            #print("derived values")
+            r, rstd, rsys, nfits = self.error[0]
+        else:
+            #print("parameter %d" % par)
+            r, rstd, rsys, nfits = self.error[par]
+        for i, lab in enumerate(self.label):
+            #print("correlator %s, %d fits" %(str(lab), nfits[i]))
+            res = np.array((r[i][0], rstd[i], rsys[i][0],
+                rsys[i][1]))
+        return res
+        #print("------------------------------\n\n")
+
+    def calc_cot_delta(self, mass, parself=0, parmass=0, L=24, isratio=False):
         """Calculate the cotangent of the scattering phase.
 
         Warning
@@ -654,6 +691,13 @@ class FitResult(object):
             dE.add_data(*res)
         return dE
 
+    #def sort_res(self, )
+    #    """Function resorting a FitResult object by a specific axis
+
+    #    Parameters
+    #    ----------
+    #    """
+
     def calc_scattering_length(self, mass, parself=0, parmass=0, L=24,
             isratio=False, isdependend=True):
         """Calculate the scattering length.
@@ -695,6 +739,7 @@ class FitResult(object):
         for res in calculate_scat_len(_mass, _massweight, _energy, _energyweight,
                 L, isdependend, isratio):
             scat.add_data(*res)
+        #print(scat.pval.shape)
         return scat
 
     def to_CM(self, par, L=24, d=np.array([0., 0., 1.]), uselattice=True):
@@ -732,6 +777,129 @@ class FitResult(object):
                 #    print("%s: Ecm over 4*mpi" % str(tmp+item))
                 Ecm.add_data(tmp + item, res, gamma, weight)
         return Ecm
+
+    def evaluate_quark_mass(self, amu_s, obs_eval, obs1, obs2=None, obs3=None,
+        meth=0):
+      """ evaluate the strange quark mass at obs_match
+
+      Parameters
+      ----------
+      obs1, obs2, obs3: Up to 3 different Observables are supported at the
+          moment (should be easy to extend). Every Observable is a FitResult
+          object
+
+      meth: How to match: 0: linear interpolation (only two values)
+                          1: linear fit
+                          2: quadratic interpolation
+
+      """
+      if obs2==None and obs3==None:
+        raise ValueError("Matching not possible, check input of 2nd (and 3rd) observable!")
+      #if obs3==None:
+      # Get the we
+      # Result has the same layout as one of the observables!
+      # TODO: If observables have different layouts break
+      layout = obs1.data[0].shape
+      print(layout)
+      _obs1 = obs1.data[0]
+      _obsweight1 = obs1.pval[0][0]
+      if obs2 is not None:
+        _obs2 = obs2.data[0]
+        _obsweight2 = obs2.pval[0][0]
+      if obs3 is not None:
+        _obs3 = obs3.data[0]
+        _obsweight3 = obs3.pval[0][0]
+      _obs_eval = obs_eval
+      print("observable to evaluate at")
+      print(_obs_eval)
+
+      boots = layout[0] 
+      ranges1 = layout[1]
+      if obs1.data[0].ndim == 3:
+        ranges2 = layout[2]
+      else:
+        ranges2 = 0
+      self.create_empty(layout, layout, 1)
+      # Decide method beforehand, cheaper in the end
+
+      if meth == 0:
+        for res in evaluate_lin(_obs1, _obs2, amu_s, _obsweight1,
+            _obsweight2, _obs_eval):
+            self.add_data(*res)
+
+      if meth == 1:
+        for res in evaluate_quad(_obs1, _obs2, _obs3, _obsweight1,
+            _obsweight2, _obsweight3, amu_s, obs_match):
+            self.add_data(*res)
+
+      if meth == 2:
+        for res in evaluate_fit(_obs1, _obs2, _obs3, _obsweight1,
+            _obsweight2, _obsweight3, amu_s, obs_match):
+            self.add_data(*res)
+
+    def match_quark_mass(self, amu_s, obs_match, obs1, obs2=None, obs3=None,
+        meth=0, evaluate=False):
+      """ Match the strange quark mass to an observable in lattice units.
+
+      Parameters
+      ----------
+      obs1, obs2, obs3: Up to 3 different Observables are supported at the
+          moment (should be easy to extend). Every Observable is a FitResult
+          object
+
+      meth: How to match: 0: linear interpolation (only two values)
+                          1: linear fit
+                          2: quadratic interpolation
+
+      """
+      if obs2==None and obs3==None:
+        raise ValueError("Matching not possible, check input of 2nd (and 3rd) observable!")
+      #if obs3==None:
+      # Get the we
+      # Result has the same layout as one of the observables!
+      # TODO: If observables have different layouts break
+      layout = obs1.data[0].shape
+      print(layout)
+      _obs1 = obs1.data[0]
+      _obsweight1 = obs1.pval[0][0]
+      if obs2 is not None:
+        _obs2 = obs2.data[0]
+        _obsweight2 = obs2.pval[0][0]
+      if obs3 is not None:
+        _obs3 = obs3.data[0]
+        _obsweight3 = obs3.pval[0][0]
+      if evaluate is True:
+        _obs_match = obs_match.data[0]
+        _obs_match_weight = obs_match.pval[0][0]
+      else:
+        _obs_match = obs_match
+        _obs_match_weight = None
+      print("observable to match")
+      print(_obs_match)
+
+      boots = layout[0] 
+      ranges1 = layout[1]
+      if obs1.data[0].ndim == 3:
+        ranges2 = layout[2]
+      else:
+        ranges2 = 0
+      self.create_empty(layout, layout, 1)
+      # Decide method beforehand, cheaper in the end
+
+      if meth == 0:
+        for res in match_lin(_obs1, _obs2, amu_s, _obsweight1,
+            _obsweight2, _obs_match, _obs_match_weight, evaluate):
+            self.add_data(*res)
+
+      if meth == 1:
+        for res in match_quad(_obs1, _obs2, _obs3, _obsweight1,
+            _obsweight2, _obsweight3, amu_s, obs_match):
+            self.add_data(*res)
+
+      if meth == 2:
+        for res in match_fit(_obs1, _obs2, _obs3, _obsweight1,
+            _obsweight2, _obsweight3, amu_s, obs_match):
+            self.add_data(*res)
 
     def mult_obs(self, other, corr_id="Product"):
       """Multiply two observables in order to treat them as a new observable.
@@ -788,3 +956,126 @@ class FitResult(object):
       mult_obs.data[0] = product
       mult_obs.pval[0] = weights
       return mult_obs
+
+    def mult_obs_single(self, other, corr_id="Product"):
+      """Multiply two observables in order to treat them as a new observable.
+
+        Warning
+        -------
+        This overwrites the data, so be careful to save the data before.
+      
+      Parameters
+      ----------
+      other: FitResult object that gets multiplied with self in a
+          weightpreserving way.
+      corr_id: Id of derived observable
+
+      """
+      # Self determines the resulting layout
+      layout = self.data[0].shape
+      boots = layout[0] 
+      ranges1 = layout[2]
+      if self.data[0].ndim == 3:
+        ranges2 = layout[2]
+      else:
+        ranges2 = 0
+      
+      # Check ranges and samples for compliance
+      if layout[0] != other.data[0].shape[0]:
+        raise ValueError("Number of Bootstrapsamples not compatible!")
+      if layout[1] != other.data[0].shape[1]:
+        raise ValueError("Number of same parameter fit ranges not compatible!\n"
+            + "%d vs. %d" % (layout[1], other.data[0].shape[1]))
+
+      # Deal with observables
+      product = np.zeros_like(self.data[0])
+      for b, arr0 in enumerate(other.data[0]):
+        for r_self, arr1 in enumerate(arr0):
+          product[b][r_self] = np.multiply(arr1, self.data[0][b][r_self])
+
+      # Deal with observable weights
+      # Get weights for all fit ranges (1 sample is sufficient)
+      weights_0 = self.pval[0][0]
+      # prepare new weight array
+      weights_prod = np.zeros_like(weights_0)
+      # multiply weights of first observable with observable of second
+      for idx, weights_1 in enumerate(other.weight[1][0]):
+        weights_prod[idx] = np.multiply(weights_1, weights_0[idx])
+
+      # Get array into right shape for calculation
+      weights = np.tile( weights_prod.flatten(), boots ).reshape(boots, ranges1)
+
+      # prepare storage
+      mult_obs = FitResult(corr_id, True)
+      mult_obs.create_empty(layout, layout, [1,1])
+      mult_obs.data[0] = product
+      mult_obs.pval[0] = weights
+      return mult_obs
+
+    def res_reduced(self, samples=20, corr_id='reduced', m_a0 = False):
+      """Take boolean 1d intersection of two arrays to choose certain fitranges and
+      corresponding data.
+  
+      This function flattens the data wrt the fit ranges. Thus the structure of
+      different observables will get lost.
+      
+      Parameters
+      ----------
+          vals : The chosen weights as result of draw_weighted
+      
+      Returns:
+          res_sorted : The intersected data and weights as a new FitResult object.
+      
+      """
+      # Self determines the resulting layout
+      layout = self.data[0].shape
+      boots = layout[0] 
+
+      # Reshape data in dependence of correlator type
+      if self.derived == True:
+        if m_a0 is True:
+          ndim = self.data[0].shape[1]*self.data[0].shape[2]
+          flat_data = self.data[0].reshape((boots,ndim))
+          flat_weights = self.pval[0][0].reshape(ndim)
+        else:
+          ndim = self.data[0].shape[2]
+          print ndim
+          print self.data[0][:,1].shape
+          flat_data = self.data[0][:,1].reshape((boots,ndim))
+          flat_weights = self.pval[0][0].reshape(ndim)
+      else:
+        ndim = self.data[0].shape[2]
+        flat_data = self.data[0][:,1].reshape((boots,ndim))
+        self.calc_error()
+        flat_weights = self.weight[1]
+
+      vals = draw_weighted(flat_weights, samples=samples)
+      ranges = vals.shape[0]
+      # Get frequency count of sorted vals 
+      freq_vals = freq_count(vals, verb=False)
+      # Create empty fitresult to add data
+      res_sorted = FitResult(corr_id, derived=True)
+      store1 = (boots, ranges)
+      store2 = (boots,ranges)
+      res_sorted.create_empty(store1, store2 ,1)
+      # get frequencies and indices in original data
+      intersect = np.zeros_like(freq_vals)
+      # replace first column
+      wght_draw_unq = freq_vals[:,0]
+      intersect[:,0] = np.asarray(np.nonzero(np.in1d(flat_weights, wght_draw_unq)))
+      intersect[:,1] = freq_vals[:,1]
+      # TODO: solve this by an iterator
+      ind=0
+      for i,v in enumerate(intersect):
+        for cnt in range(int(v[1])):
+          targ_ind = (0,ind)
+          weight = np.tile(freq_vals[i,0],boots)
+          data = flat_data[:,v[0]]
+          chi2_dummy = np.zeros_like(weight)
+          res_sorted.add_data(targ_ind,data,chi2_dummy,weight)
+          ind += 1
+
+      return res_sorted
+
+if __name__ == "__main__":
+    pass

@@ -31,18 +31,18 @@ import plot as plt
 import _quantiles as qlt
 
 def compute_derivative(data):
-    """Computes the derivative of a correlation function.
+    """computes the derivative of a correlation function.
 
-    The data is assumed to a numpy array with datastrap samples as first axis
-    and time as second axis.  The time extend of the mass reduced by one
+    the data is assumed to a numpy array with datastrap samples as first axis
+    and time as second axis.  the time extend of the mass reduced by one
     compared with the original data since the energy cannot be calculated on
     the first slice.
 
-    Args:
-        data: The bootstrapped correlation function.
+    args:
+        data: the bootstrapped correlation function.
 
-    Returns:
-        The derivative of the correlation function and its mean and standard
+    returns:
+        the derivative of the correlation function and its mean and standard
         deviation.
     """
     # creating derivative array from data array
@@ -54,6 +54,42 @@ def compute_derivative(data):
             derv[b, t] = row[t+1] - row[t]
     mean, err = calc_error(derv)
     return derv, mean, err
+
+def compute_back_derivative(data):
+    """computes the derivative of a correlation function.
+
+    the data is assumed to a numpy array with datastrap samples as first axis
+    and time as second axis.  the time extend of the mass reduced by one
+    compared with the original data since the energy cannot be calculated on
+    the first slice.
+
+    args:
+        data: the bootstrapped correlation function.
+
+    returns:
+        the derivative of the correlation function and its mean and standard
+        deviation.
+    """
+    # creating derivative array from data array
+    derv = np.zeros_like(data[:,:-1], dtype=float)
+    # computing the derivative
+    for b in range(0, data.shape[0]):
+        row = data[b]
+        for t in range(0, len(row)-1):
+            derv[b, t] = row[t] - row[t+1]
+    mean, err = calc_error(derv)
+    return derv, mean, err
+
+def compute_square(data):
+    """Square a bootstrapped correlation function
+    """
+    square = np.zeros_like(data, dtype=float)
+    #compute the elementwise square of every bootstrapsample
+    for b in range(0, data.shape[0]):
+      square[b] = np.square(data[b])
+    mean, err = calc_error(square)
+    return square, mean, err
+
 
 def compute_mass(data, usecosh=True):
     """Computes the energy of a correlation function.
@@ -120,7 +156,7 @@ def sys_error_der(data, weights, d, lattice, path="./plots/", absolute=False):
         absolute: calculate with the absolute values of data
 
     Returns:
-        res: The weighted median value on the original data
+        res: The weighted median value on the original data, see flag "boot"
         res_std: The standard deviation derived from the deviation of 
               medians on the bootstrapped data.
         res_syst: 1 sigma systematic uncertainty is the difference 
@@ -213,6 +249,17 @@ def sys_error_der(data, weights, d, lattice, path="./plots/", absolute=False):
                 res_std[i][j] = np.std(res[i][j])
                 # the systematic error is given by difference between the median 
                 # on the original data and the 16%- or 84%-quantile respectively
+                res_sys[i][j][0]=res[i][j][0]-qlt.weighted_quantile(q[0].ravel(),weights[i][j].ravel(),0.16)
+                res_sys[i][j][1]=qlt.weighted_quantile(q[0].ravel(),weights[i][j].ravel(),0.84)-res[i][j][0]
+                if not boot:
+                    # keep only the median of the original data
+                    res[i][j] = res[i][j][0]
+                else:
+                    # keep bootstrapsamples
+                    res[i][j] = res[i][j]
+    return res, res_std, res_sys
+
+def sys_error(data, pvals, d, lattice, par=0, path="./plots/",boot=False):
                 if absolute:
                     res_sys[i][j][0] = res[i][j][0] - qlt.weighted_quantile(
                                        np.fabs(q[0]).ravel(), weights[i][j].ravel(),
@@ -226,7 +273,7 @@ def sys_error_der(data, weights, d, lattice, path="./plots/", absolute=False):
                                        weights[i][j].ravel(), 0.84) - res[i][j][0]
                 # keep only the median of the original data
                 res[i][j] = res[i][j][0]
-    return res, res_std, res_sys
+                return res, res_std, res_sys
 
 def sys_error(data, pvals, d, lattice, par=0, path="./plots/", absolute=False):
     """Calculates the statistical and systematic error of an np-array of 
@@ -245,7 +292,7 @@ def sys_error(data, pvals, d, lattice, par=0, path="./plots/", absolute=False):
         absolute: calculate with the absolute values of data
 
     Returns:
-        res: The weighted median value on the original data
+        res: The weighted median value on the original data, see flag "boot"
         res_std: The standard deviation derived from the deviation of 
               medians on the bootstrapped data.
         res_syst: 1 sigma systematic uncertainty is the difference 
@@ -468,6 +515,74 @@ def calc_scat_length(dE, E, weight_dE, weight_E, L, pars=(1, 0)):
                         weight[_r][_s][_g, _f] = weight_dE[_r][_s][_g,_f] * weight_E[_r][_f]
     return a, weight
 
+def calc_scat_length_bare(dE, E, L):
+    """Finds root of the Energyshift function up to order L^{-5} only applicable
+    in 0 momentum case, effective range not included!
+    Only working for lists of lists.
+
+    Args:
+        dE: the energy shift of the system due to interaction
+        E: the single particle energy
+        L: The spatial lattice extent
+    Returns:
+        a: roots of the function
+    """
+    ncorr_single = len(E)
+    print len(E)
+    # check if dE has same length
+    if len(dE) is not ncorr_single:
+        print("error in calc_scat_length, data shapes incompatible")
+        print(len(dE), len(E))
+        os.sys.exit(-10)
+    ncorr_ratio = [len(d) for d in dE]
+    print "ncorr_ratio:\n" 
+    print ncorr_ratio
+    # check number of bootstrap samples and fit intervals for single particle
+    for i in xrange(ncorr_single):
+        for j in xrange(ncorr_ratio[i]):
+            print len(dE[0])
+            print E[0].shape, dE[0][0].shape
+            if E[i].shape[0] != dE[i][j].shape[0]:
+                print("number of bootstrap samples is different in calc_scat_length")
+                print(E[i].shape[0], dE[i][j].shape[0])
+                os.sys.exit(-10)
+            if E[i].shape[-1] != dE[i][j].shape[-1]:
+                print("number of fit intervals is different in calc_scat_length")
+                print(E[i].shape[-1], dE[i][j].shape[-1])
+                os.sys.exit(-10)
+    #print("scat length begin")
+    ## number of correlation functions for the single particle energy
+    #print(len(dE), len(E))
+    ## number of correlation functions for the ratio
+    #print(len(dE[0]))
+    ## shape of the fit results
+    #print(dE[0][0].shape, E[0].shape)
+    # coefficients according to Luescher
+    c=[-2.837297, 6.375183, -8.311951]
+    # creating data array from empty array
+    a = [[[ 0 for b in range(E[0].shape[0])] for s in range(len(dE))] for r in range(len(E))]
+    # loop over the correlation functions
+    for _r in xrange(ncorr_single): # single particle
+        for _s in xrange(ncorr_ratio[_r]): # ratio
+            # calculate prefactor
+            # TODO(CJ): can the shape of E[i] change?
+            pre = -4.*np.pi/(E[_r]*float(L*L*L))
+            # loop over bootstrap samples
+            print "delta E is %f" %dE[_r][_s][0]
+            for _b in xrange(E[_r].shape[0]):
+                p = np.asarray((pre[_b]*c[1]/float(L*L), 
+                    pre[_b]*c[0]/float(L), pre[_b],
+                    -1.*dE[_r][_s][_b]))
+                # calculate roots
+                root = np.roots(p)
+                # sort according to absolute value of the imaginary part
+                ind_root = np.argsort(np.fabs(root.imag))
+                if(root[ind_root][0].imag) > 1e-6:
+                    print("imaginary part of root > 1e-6 for c1 %d, c2 %d, f1 %d, f2 %d, b %d" % (_r, _s, _f, _g, _b))
+                # the first entry of the sorted array is the one we want
+                a[_r][_s][_b] = root[ind_root][0].real
+    return a
+
 def multiply(data1, data2, w1, w2, pars=(1, 0)):
     """Multiply a list of lists of numpy arrays with a list of numpy arrays.
     Needed for the calculation of scattering length and single particle mass.
@@ -531,3 +646,64 @@ def multiply(data1, data2, w1, w2, pars=(1, 0)):
                 a[r][s][:,g] = d1 * d2
                 weight[r][s][g] = w1[r][s][g] * w2[r]
     return a, weight
+
+
+def match_qm(pars, par_match):
+    """ Quark mass matching for a given matching parameter
+
+        Matching the quark mass on nb bootstrapsamples by finding the roots of a
+        given linear function
+
+        Args:
+            pars: dim-d numpy array of parameters (m, b) of bootstrapsamples assuming
+                  linear behaviour (2 coefficients per sample)
+            par_match: the parameter to match to
+
+        Returns:
+            b_roots: The root of m*amu_s+b-par_match for every bootstrapsample
+    """
+    # empty array same size as the parameters
+    b_roots = np.zeros_like(pars[:,0])
+    # Loop over the bootstrapsamples
+    if (pars.shape[1] == 2):
+        for _b in range(pars.shape[0]):
+            p = np.asarray([pars[_b,0],pars[_b,1]-par_match[0]])
+            b_roots[_b] = np.roots(p)
+    elif (pars.shape[1] == 3):
+        for _b in range(pars.shape[0]):
+            p = np.asarray([pars[_b,0],pars[_b,1],pars[_b,2]-par_match[0]])
+            b_roots[_b] = np.roots(p)[1]
+    else:
+        print("Dimension not implemented yet")
+
+    return b_roots
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

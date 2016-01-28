@@ -107,6 +107,7 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
     useall : bool
         Using all correlators in the single particle correlator or
         use just the lowest.
+    xshift: a scalar to shift the X-linspace for the fitting
     debug : int, optional
         The amount of info printed.
     correlated : bool
@@ -121,7 +122,8 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
     # prepare X data
     if debug > 0:
         print("Get X data")
-    X = np.linspace(0., float(dshape[1]), dshape[1], endpoint=False)
+        print("xshift is %f" % xshift)
+    X = np.linspace(0., float(dshape[1]), dshape[1], endpoint=False)+xshift
 
     if debug > 0:
         print("fitting the data")
@@ -202,6 +204,7 @@ def calculate_ranges(ranges, shape, oldshape=None, dt_i=2, dt_f=2, dt=4, debug=0
         The step size for the first and last time slice for the fitting.
     dt : int, optional
         The minimal size of the interval.
+    fixend : bool to fix the last point in the fit ranges
     debug : int
         The amount of info printed.
 
@@ -245,14 +248,30 @@ def get_ranges(lower, upper, dt_i=2, dt_f=2, dt=4):
     the minimal size of the interval.
     """
     ran = []
-    for lo in range(lower, upper+1, dt_i):
-        for up in range(upper, lower-1, -dt_f):
+    # keep initial time slice fixed
+    if dt_i < 0:
+        # keep upper time slice fixed
+        if dt_f < 0:
             if (up - lo + 2) > dt:
-                # the +2 comes from the fact that the interval contains one
-                # more number than the difference between the boundaries and
-                # because python would exclude the upper boundary but we
-                # include it explicitly
-                ran.append((lo, up))
+                ran.append((lower, upper))
+        else:
+            for up in range(upper, lower-1, -dt_f):
+                if (up - lower + 2) > dt:
+                    ran.append((lower, up))
+    # keep upper time slice fixed
+    elif dt_f < 0:
+        for lo in range(lower, upper+1, dt_i):
+            if (upper - lo + 2) > dt:
+                ran.append((lo, upper))
+    else:
+        for lo in range(lower, upper+1, dt_i):
+            for up in range(upper, lower-1, -dt_f):
+                if (up - lo + 2) > dt:
+                    # the +2 comes from the fact that the interval contains one
+                    # more number than the difference between the boundaries and
+                    # because python would exclude the upper boundary but we
+                    # include it explicitly
+                    ran.append((lo, up))
     return np.asarray(ran)
 
 def fitting(fitfunc, X, Y, start, add=None, correlated=True, debug=0):
@@ -295,14 +314,13 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, debug=0):
         errfunc = lambda p, x, y, e, error: np.dot(error, (y-fitfunc(p,x,e)).T)
 
     # compute inverse, cholesky decomposed covariance matrix
-    if correlated:
+    if not correlated:
         cov = np.diag(np.diagonal(np.cov(Y.T)))
     else:
         cov = np.cov(Y.T)
     cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
 
     # degrees of freedom
-    #print(start)
     dof = float(Y.shape[1]-len(start)) 
     samples = Y.shape[0]
     # create results arrays

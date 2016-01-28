@@ -310,8 +310,9 @@ class Correlators(object):
 
         if single_corr1 is None:
             obj = Correlators(debug=self.debug)
-            obj.data = ratiofunc(self.data, single_corr.data, single_corr.data,
-                shift, useall, usecomb)
+            #obj.data = ratiofunc(self.data, single_corr.data, single_corr.data,
+            #    shift, useall, usecomb)
+            obj.data = ratiofunc(self.data, single_corr.data, single_corr.data)
             obj.shape = obj.data.shape
         else:
             obj = Correlators(debug=self.debug)
@@ -319,6 +320,112 @@ class Correlators(object):
                 shift, useall, usecomb)
             obj.shape = obj.data.shape
         return obj
+
+    def back_derivative(self):
+        derive = Correlators(debug=self.debug)
+        derive.data = func.compute_derivative_back(self.data[0])
+        derive.shape = derive.data.shape
+        
+        return derive
+
+    def square_corr(self):
+        derive = Correlators(debug=self.debug)
+        derive.data = func.compute_square(self.data[0])
+        derive.shape = derive.data.shape
+        
+        return derive
+
+    def diff(self, single_corr=None):
+        """Calculates the difference between two correlators and returns a new Correlator object.
+
+        The implemented ratios are:
+        * corr/(single_corr^2)
+        * corr(t)/(single_corr(t)^2 - single_corr(t+shift)^2)
+        * (corr(t)-corr(t+1))/(single_corr(t)^2 - single_corr(t+1)^2)
+        where shift is an additional parameter.
+
+        If single_corr1 is given, single_corr^2 becomes
+        single_corr*single_corr1.
+
+        Parameters
+        ----------
+        single_corr : Correlators
+            The single particle correlators used for the ratio.
+        ratio : int
+            Chose the ratio to use.
+        shift : int
+            Additional parameter for the second ratio.
+        single_corr1 : Correlators
+            The single particle correlators used for the ratio.
+        useall : bool
+            Using all correlators in the single particle correlator or
+            use just the lowest.
+        usecomb : list of list of ints
+            The combinations of entries of single_corr (and single_corr1)
+            to use.
+        
+        Returns
+        -------
+        Correlators
+            The ratio.
+        """
+        obj = Correlators(debug=self.debug)
+        if self.data.shape[-1] == 2:
+          obj.data = func.simple_difference(self.data)
+        else:
+          obj.data = func.simple_difference(self.data, single_corr)
+        obj.shape = obj.data.shape
+        print(obj.shape)
+        return obj
+
+    def hist(self, time):
+        """Returns the history over Configurations at a given time
+        WARNING : Works only before bootstrapping
+        Parameters:
+        -----------
+        time : the timeslice to view
+        """
+        nb_cfg = self.data.shape[0]
+        history = np.asarray([self.data[c][time][0] for c in range(nb_cfg)])
+        return history
+
+    def omit(self, par):
+      """Based on the first timeslice delete configurations with a certain value
+      TODO:This function should be improved. I do not know how to choose the
+      value to cut, perhaps by the mean over the first timeslice?
+
+      Parameters
+      ----------
+      par : Either the value to cut or a list of configurations to omit
+
+      Returns
+      -------
+      a list of the indices of the deleted configurations to ensure that
+      correlation is not lost
+      """
+      # Check whether to cut configurations or a value
+      if len(par) < 2:
+        omitted = []
+        # loop over configurations 
+        for c, v in enumerate(self.data):
+          if v[0] > par[0]:
+            omitted.append(c)
+      # Check for interval
+      if len(par) == 2 and isinstance(par[0],float):
+
+        par = sorted(par)
+
+        omitted = []
+        # loop over configurations 
+        for c, v in enumerate(self.data):
+          if  v[0] < par[0] or par[1] < v[0]:
+            omitted.append(c)
+
+      else: 
+        omitted = par
+      self.data = np.delete(self.data,omitted,0)
+      return omitted
+
 
 if __name__ == "main":
     pass
