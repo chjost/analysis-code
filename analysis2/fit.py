@@ -6,10 +6,10 @@ import itertools
 import numpy as np
 
 from fit_routines import (fit_comb, fit_single, calculate_ranges, compute_dE,
-    compute_phaseshift, get_start_values, get_start_values_comb)
+    compute_phaseshift, get_start_values, get_start_values_comb, fitting)
 from in_out import read_fitresults, write_fitresults
 from functions import (func_single_corr, func_ratio, func_const, func_two_corr,
-    func_single_corr2, compute_eff_mass)
+    func_single_corr2, func_sinh, compute_eff_mass)
 from statistics import compute_error, sys_error, sys_error_der
 from energies import calc_q2, calc_Ecm
 from zeta_wrapper import Z
@@ -39,7 +39,7 @@ class LatticeFit(object):
         self.debug = debug
         # chose the correct function if using predefined function
         if isinstance(fitfunc, int):
-            if fitfunc > 4:
+            if fitfunc > 5:
                 raise ValueError("No fit function choosen")
             if fitfunc == 2:
                 self.npar = 1
@@ -48,7 +48,7 @@ class LatticeFit(object):
             else:
                 self.npar = 2
             functions = {0: func_single_corr, 1: func_ratio, 2: func_const,
-                3: func_two_corr, 4: func_single_corr2}
+                3: func_two_corr, 4: func_single_corr2, 5: func_sinh}
             self.fitfunc = functions.get(fitfunc)
         else:
             self.fitfunc = fitfunc
@@ -118,7 +118,8 @@ class LatticeFit(object):
 
             # do the fitting
             for res in fit_single(self.fitfunc, start, corr, franges,
-                    add=add, debug=self.debug, correlated=self.correlated):
+                    add=add, debug=self.debug, correlated=self.correlated,
+                    xshift=self.xshift, npar=self.npar):
                 fitres.add_data(*res)
         else:
             # handle the fitranges
@@ -149,13 +150,62 @@ class LatticeFit(object):
             del shapes_data, shapes_other
 
             if start is None:
+                #print("ncorr")
+                #print(ncorr)
                 start = get_start_values_comb(ncorr, franges, corr.data, self.npar)
             # do the fitting
             for res in fit_comb(self.fitfunc, start, corr, franges, fshape,
-                    oldfit, add, oldfitpar, useall, self.debug,
+                    oldfit, add, oldfitpar, useall, self.debug, self.xshift,
                     self.correlated):
                 fitres.add_data(*res)
 
+        return fitres
+
+    def chiral_fit(self, X, Y, corrid="", start=None, xcut=None, debug=0):
+        """Fit function to data.
+        
+        Parameters
+        ----------
+        X, Y : ndarrays
+            The data arrays for X and Y. Assumes ensemble as first axis
+            and bootstrap samples as second axis.
+        corrid : str
+            Identifier for the fit result.
+        start : list or tuple or ndarray
+            Start value for the fit.
+        xcut : float
+            A maximal value for the X values. Everything above will not
+            be used in the fit.
+        debug : int
+            The amount of information printed to screen.
+        """
+        # if no start value given, take an arbitrary value
+        if start is None:
+            _start = [3.8]
+        # make sure start is a tuple, list, or ndarray for leastsq to work
+        elif not isinstance(start, (np.ndarray, tuple, list)):
+            _start = list(start)
+        else:
+            _start = start
+        # implement a cut on the data if given
+        if xcut:
+            tmp = X[:,0] < xcut
+            _X = X[tmp].T
+            _Y = Y[tmp].T
+        else:
+            _X = X.T
+            _Y = Y.T
+
+        # create FitResults
+        fitres = FitResult("chiral_fit")
+        shape1 = (_X.shape[0], 1, _X[:3].shape[0])
+        shape2 = (_X.shape[0], _X[:3].shape[0])
+        fitres.create_empty(shape1, shape2, 1)
+        # fit the data
+        dof = _X.shape[1] - len(_start)
+        for i, x in enumerate(_X[:3]):
+            tmpres, tmpchi2, tmppval = fitting(self.fitfunc, x, _Y, _start, debug=debug)
+            fitres.add_data((0,i), tmpres, tmpchi2, tmppval)
         return fitres
 
 class FitResult(object):

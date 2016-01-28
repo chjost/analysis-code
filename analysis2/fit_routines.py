@@ -12,7 +12,8 @@ from statistics import compute_error
 from functions import compute_eff_mass
 from utils import loop_iterator
 
-def fit_single(fitfunc, start, corr, franges, add=None, debug=0, correlated=True):
+def fit_single(fitfunc, start, corr, franges, add=None, debug=0,
+        correlated=True, xshift=0., npar=2):
     """Fits fitfunc to a Correlators object.
 
     The predefined functions describe a single particle correlation
@@ -76,7 +77,7 @@ def fit_single(fitfunc, start, corr, franges, add=None, debug=0, correlated=True
                 yield (n, i), res, chi, pva
 
 def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
-        oldfitpar=None, useall=False, debug=0, correlated=True):
+        oldfitpar=None, useall=False, debug=0, xshift=0., correlated=True, npar=1):
     """Fits fitfunc to a Correlators object.
 
     The predefined functions describe a single particle correlation
@@ -158,7 +159,8 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
                     add_data.shape = (-1, 1)
                 add_data = np.hstack((add_data, add))
             # HACK, to be removed
-            if corr.data.ndim == 4:
+            if False:
+            #if corr.data.ndim == 4:
                 if isinstance(start[0], (tuple, list)):
                     res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
                         corr.data[:,r[0]:r[1]+1,ritem[-2],n], start[n],
@@ -168,13 +170,15 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
                         corr.data[:,r[0]:r[1]+1,ritem[-2],n], start,
                         add=add_data, correlated=correlated, debug=debug)
             else:
-                if isinstance(start[0], (tuple, list)) and len(start[0]) == 1:
+                #print(len(start[0]))
+                if isinstance(start[0], (tuple, list)) and len(start[0]) == npar:
                     res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
                         corr.data[:,r[0]:r[1]+1,n], start[n],
                         add=add_data, correlated=correlated, debug=debug)
                 elif isinstance(start[0], (tuple, list)):
                     res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
-                        corr.data[:,r[0]:r[1]+1,n], start[n][m],
+                        corr.data[:,...,r[0]:r[1]+1,n], start[n],
+                        #corr.data[:,r[0]:r[1]+1,n], start[n][m],
                         add=add_data, correlated=correlated, debug=debug)
                 else:
                     res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
@@ -298,6 +302,7 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, debug=0):
     cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
 
     # degrees of freedom
+    #print(start)
     dof = float(Y.shape[1]-len(start)) 
     samples = Y.shape[0]
     # create results arrays
@@ -424,8 +429,6 @@ def get_start_values_comb(ncorr, ranges, data, npar=2):
     start : list of list of floats
         The start values for each fit.
     """
-    print(ncorr)
-    print(data.shape)
     start = []
     for n in range(ncorr[-1]):
         # calculate effective values for correlator

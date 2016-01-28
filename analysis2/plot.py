@@ -82,7 +82,7 @@ class LatticePlot(object):
         plt.ylabel(axis[1])
 
     def _genplot_single(self, corr, label, fitresult=None, fitfunc=None,
-            add=None, ploterror=False, debug=0):
+            add=None, ploterror=False, xshift=0., debug=0):
         """Plot the data of a Correlators object and a FitResult object
         together.
 
@@ -114,7 +114,7 @@ class LatticePlot(object):
         if fitresult is not None:
             ranges = fitresult.fit_ranges
             shape = fitresult.fit_ranges_shape
-        X = np.linspace(0., float(corr.shape[1]), corr.shape[1], endpoint=False)
+        X = np.linspace(0., float(corr.shape[1]), corr.shape[1], endpoint=False) + xshift
         label_save = label[0]
 
         # iterate over correlation functions
@@ -157,7 +157,7 @@ class LatticePlot(object):
         label[0] = label_save
 
     def _genplot_comb(self, corr, label, fitresult, fitfunc, oldfit, add=None,
-            oldfitpar=None, ploterror=False, debug=0):
+            oldfitpar=None, ploterror=False, xshift=0., debug=0):
         """Plot the data of a Correlators object and a FitResult object
         together.
 
@@ -189,7 +189,7 @@ class LatticePlot(object):
             raise RuntimeError("Cannot plot correlation function matrix")
         # get needed data
         ncorrs = fitresult.corr_num
-        X = np.linspace(0., float(corr.shape[1]), corr.shape[1], endpoint=False)
+        X = np.linspace(0., float(corr.shape[1]), corr.shape[1], endpoint=False) + xshift
         label_save = label[0]
         T = corr.shape[1]
         franges = fitresult.fit_ranges
@@ -245,7 +245,7 @@ class LatticePlot(object):
                 self.save()
 
     def plot(self, corr, label, fitresult=None, fitfunc=None, oldfit=None,
-            add=None, oldfitpar=None, ploterror=False, debug=0):
+            add=None, oldfitpar=None, ploterror=False, xshift=0., debug=0):
         """Plot the data of a Correlators object and a FitResult object
         together.
 
@@ -273,10 +273,10 @@ class LatticePlot(object):
         """
         if oldfit is None:
             self._genplot_single(corr, label, fitresult, fitfunc, add=add,
-                    ploterror=ploterror, debug=debug)
+                    ploterror=ploterror, xshift=xshift, debug=debug)
         else:
             self._genplot_comb(corr, label, fitresult, fitfunc, oldfit, add,
-                    oldfitpar, ploterror, debug)
+                    oldfitpar, ploterror, xshift, debug)
 
     def histogram(self, fitresult, label, par=None):
         """Plot the histograms.
@@ -321,6 +321,10 @@ class LatticePlot(object):
         correlation function.
         """
         pass
+
+    def plot_func(self, func, args, interval, label, fmt="k"):
+        X = np.linspace(interval[0], interval[1], 1000)
+        plot_function(func, X, args, label, ploterror=False, fmt=fmt)
 
     def set_env(self, xlog=False, ylog=False, xlim=None, ylim=None, grid=True):
         """Set different environment variables for the plot.

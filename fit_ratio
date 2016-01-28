@@ -31,6 +31,7 @@ def main():
         debug = ens.get_data("debug")
     except KeyError:
         debug = 0
+    T2 = ens.T2()
     L = ens.L()
     Ti = ens.get_data("ti")
     Tf = ens.get_data("tf")
@@ -39,10 +40,11 @@ def main():
     dt = ens.get_data("dt")
 
     files = ["%s/pipi_pipi_A1_corr_TP%d_%d%d.dat" % (prefix, d2, i, j) for i in range(gmax) for j in range(gmax)]
+    addT2 = np.ones((nboot,)) * T2
     addT = np.ones((nboot,)) * ens.T()
 
     # read pion data
-    #pi = ana.Correlators.read("%s/corr_pi.npy" % (datadir))
+    pi = ana.Correlators.read("%s/corr_pi.npy" % (datadir))
     pifit = ana.FitResult.read("%s/fit_pi.npz" % (datadir))
 
     print("read data")
@@ -68,11 +70,11 @@ def main():
         #print(corr.data[0,10])
         corr.gevp(1)
         corr.save("%s/corr_pipi_TP%d.npy" % (datadir, d2))
-        #ratio = corr.ratio(pi, 1)
-        #ratio.save("%s/ratio_pipi_TP%d.npy" % (datadir, d2))
+        ratio = corr.ratio(pi, 1)
+        ratio.save("%s/ratio_pipi_TP%d.npy" % (datadir, d2))
     else:
         corr = ana.Correlators.read("%s/corr_pipi_TP%d.npy" % (datadir, d2))
-        #ratio = ana.Correlators.read("%s/ratio_pipi_TP%d.npy" % (datadir, d2))
+        ratio = ana.Correlators.read("%s/ratio_pipi_TP%d.npy" % (datadir, d2))
     #print(corr.shape)
     #for t in range(corr.shape[1]):
     #    print("%2d %2d %.6e %.6e" % (t, t+1, corr.data[0,t,0], np.std(corr.data[:,t,0])))
@@ -83,35 +85,32 @@ def main():
     #del plotter
 
     print("fitting")
-    fitter = ana.LatticeFit(5, dt_i=dti, dt_f=dtf, dt=dt, correlated=True, xshift=0.5)
+    fitter = ana.LatticeFit(1, dt_i=dti, dt_f=dtf, dt=dt, correlated=True, xshift=0.5)
     #start = [1.088295, 0.4648782]
     if readfit == False:
         fitranges = [Ti,Tf]
         #fitranges = [9,T2]
         #fitranges = [[9,T2], [9,T2-5], [9,T2-10], [9,T2-15]]
         #fitranges = [[9,20], [6,15], [4,13], [3,12]]
-        if d2 != 0:
-            fitres = fitter.fit(None, corr, fitranges, corrid="E", oldfit=pifit,
-                oldfitpar=1, useall=False, add=addT)
-        else:
-            fitres = fitter.fit(None, corr, fitranges, corrid="E", add=addT)
-        fitres.save("%s/fit_pipi_TP%d.npz" % (datadir, d2))
+        fitres = fitter.fit(None, ratio, fitranges, corrid="E", oldfit=pifit,
+            oldfitpar=1, useall=False, add=addT)
+        fitres.save("%s/fit_pipi_ratio_TP%d.npz" % (datadir, d2))
     else:
-        fitres = ana.FitResult.read("%s/fit_pipi_TP%d.npz" % (datadir, d2))
-    fitres.print_data(0)
+        fitres = ana.FitResult.read("%s/fit_pipi_ratio_TP%d.npz" % (datadir, d2))
+    #fitres.print_data(0)
     fitres.print_data(1)
-    print(corr.data[0,:,0])
     #fitres.print_details()
 
     # plot the result
     if plotdata:
         print("plotting")
-        plotter = ana.LatticePlot("%s/fit_pipi_TP%d.pdf" % (plotdir, d2))
+        plotter = ana.LatticePlot("%s/fit_pipi_ratio_TP%d.pdf" % (plotdir, d2))
         plotter.set_env(ylog=True)
-        label = ["two pion energy", "t", "C(t)", "E$_{\pi\pi}$"]
-        plotter.plot(corr, label, fitres, fitter, add=addT, xshift=0.5)
-        plotter.new_file("%s/hist_fit_pipi_TP%d.pdf" % (plotdir, d2))
-        label = ["two pion energy", "E$_{\pi\pi}$/a", "E$_{\pi\pi}$"]
+        label = ["ratio fit", "t", "R(t)", "dE"]
+        plotter.plot(corr, label, fitres, fitter, oldfit=pifit, oldfitpar=1,
+            add=addT)
+        plotter.new_file("%s/hist_fit_pipi_ratio_TP%d.pdf" % (plotdir, d2))
+        label = ["ratio hist", "dE$_{\pi\pi}$/a", "dE$_{\pi\pi}$"]
         plotter.histogram(fitres, label, 1)
         del plotter
 

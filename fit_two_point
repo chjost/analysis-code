@@ -15,7 +15,7 @@ def main():
 
     # read settings
     readdata = True
-    readfit = False
+    readfit = True
     plotdata = True
 
     # get data from input file
@@ -32,6 +32,10 @@ def main():
     dti = ens.get_data("dti")
     dtf = ens.get_data("dtf")
     dt = ens.get_data("dt")
+    try:
+        debug = ens.get_data("debug")
+    except KeyError:
+        debug = 0
 
     files = ["%s/pi_corr_p%d.dat" % (prefix, d) for d in range(pmax)]
     addT = np.ones((nboot,)) * T
@@ -45,26 +49,30 @@ def main():
         corr = ana.Correlators.read("%s/corr_pi.npy" % (datadir))
 
     print("fitting")
-    fitter = ana.LatticeFit(0, True)
+    fitter = ana.LatticeFit(0, dt_i=dti, dt_f=dtf, dt=dt, correlated=True)
     if readfit == False:
-        fitres = fitter.fit(None, corr, [Ti, Tf], corrid="epi", add=addT,
-              dt_i=dti, dt_f=dtf, dt=dt)
+        fitres = fitter.fit(None, corr, [Ti, Tf], corrid="epi", add=addT)
         fitres.save("%s/fit_pi.npz" % (datadir))
     else:
         fitres = ana.FitResult.read("%s/fit_pi.npz" % (datadir))
     #fitres.print_data(0)
     fitres.print_data(1)
-    fitres.print_details()
+    #fitres.print_details()
 
     # plot the result
     if plotdata:
-        plotter = ana.LatticePlot("%s/fit_pi.pdf" % (plotdir))
-        plotter.set_env(ylog=True)
-        label = ["single pion energy", "t", "C(t)", "E$_{\pi}$"]
-        plotter.plot(corr, label, fitres, fitter, add=addT)
-        plotter.new_file("%s/hist_fit_pi.pdf" % (plotdir))
+        #plotter = ana.LatticePlot("%s/fit_pi.pdf" % (plotdir))
+        #plotter.set_env(ylog=True)
+        #label = ["single pion energy", "t", "C(t)", "E$_{\pi}$"]
+        #plotter.plot(corr, label, fitres, fitter, add=addT)
+        #plotter.new_file("%s/hist_fit_pi.pdf" % (plotdir))
+        plotter = ana.LatticePlot("%s/hist_fit_pi.pdf" % (plotdir))
         label = ["single pion energy", "E$_\pi$/a", "E$_\pi$"]
         plotter.histogram(fitres, label, 1)
+        plotter.new_file("%s/eff_mass_pi.pdf" % (plotdir))
+        corr.mass()
+        label = ["single pion effective mass", "m$_{\pi,eff}$/a", "m$_\pi$", ""]
+        plotter.plot(corr, label)
         del plotter
 
 if __name__ == '__main__':

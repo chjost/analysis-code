@@ -205,6 +205,34 @@ def func_const(p, t):
     """
     return p
 
+def func_sinh(p, t, o):
+    """A function which describes the ratio of a four and a two point
+    function.
+
+    The function is given by p0*(cosh(p1*(t-o0-1))+sinh(p1*(t-o0/2))/
+    (tanh(2*o1*(t-o0/2)))), where
+    * p0 is the amplitude
+    * p1 is the energy difference
+    * t is the time,
+    * o1 is the time extent of the lattice, and
+    * o0 is the single particle energy.
+
+    Parameters
+    ----------
+    p : sequence of float
+        The parameters of the function.
+    t : float
+        The variable of the function.
+    o : sequence of float
+        The constants of the function.
+
+    Returns
+    -------
+    float
+        The result.
+    """
+    return p[0]*np.sinh(p[1]/2.) * np.sinh(p[1]*(t-o/2.))
+
 def compute_weight(corr, pvals, par=1):
     """compute the weights for the histogram
 

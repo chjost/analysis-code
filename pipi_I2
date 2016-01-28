@@ -39,13 +39,20 @@ def main():
     pipifit.print_data(1)
     #pipifit.print_details()
 
-    calcEcm = True
-    if calcEcm:
-        Ecm = pipifit.to_CM(1, L=L, d=d)
-        Ecm.save("%s/Ecm_TP%d.npz" % (datadir, d2))
-    else:
-        Ecm = ana.FitResult.read("%s/Ecm_TP%d.npz" % (datadir, d2))
-    Ecm.print_data()
+    print("\n\nread ratio")
+    print(datadir)
+    ratiofit = ana.FitResult.read("%s/fit_pipi_ratio_TP%d.npz" % (datadir, d2))
+    ratiofit.print_data(0)
+    ratiofit.print_data(1)
+    #ratiofit.print_details()
+
+    #calcEcm = True
+    #if calcEcm:
+    #    Ecm = pipifit.to_CM(1, L=L, d=d)
+    #    Ecm.save("%s/Ecm_TP%d.npz" % (datadir, d2))
+    #else:
+    #    Ecm = ana.FitResult.read("%s/Ecm_TP%d.npz" % (datadir, d2))
+    #Ecm.print_data()
     #Ecm.print_details()
 
     #calcdelta = True
@@ -62,30 +69,42 @@ def main():
     else:
         dE = ana.FitResult.read("%s/dE_TP%d.npz" % (datadir, d2))
     dE.print_data()
+    #print(dE.data[0][0])
     #dE.print_details()
     #plotter = ana.LatticePlot("%s/dE_TP%d_%s.pdf" % (plotdir, d2, lat))
     #label = ["dE", "dE$_{\pi\pi}$", "dE$_{\pi\pi}$"]
     #plotter.histogram(dE, label)
     #del plotter
 
-    #calca = False
-    #if calca:
-    #    print("calculate scattering length")
-    #    #a_pipi = ratiofit.calc_scattering_length(pifit, 1, 1, L=ens.L(), isratio=True)
-    #    a_pipi = pipifit.calc_scattering_length(pifit, 1, 1, L=ens.L(), isdependend=False)
-    #    #cotd = ratiofit.calc_cot_delta(pifit, 1, 1, L=ens.L(), isratio=True)
-    #    a_pipi.save("%s/scat_len_TP%d.npz" % (datadir, d2))
-    #else:
-    #    a_pipi = ana.FitResult.read("%s/scat_len_TP%d.npz" % (datadir, d2))
-    #a_pipi.print_data()
+    calca = True
+    if calca:
+        print("calculate scattering length")
+        a_pipi = pipifit.calc_scattering_length(pifit, 1, 1, L=ens.L(), isdependend=False)
+        r_a_pipi = ratiofit.calc_scattering_length(pifit, 1, 1, L=ens.L(), isratio=True)
+        a_pipi.save("%s/scat_len_TP%d.npz" % (datadir, d2))
+        r_a_pipi.save("%s/scat_len_ratio_TP%d.npz" % (datadir, d2))
+    else:
+        a_pipi = ana.FitResult.read("%s/scat_len_TP%d.npz" % (datadir, d2))
+        r_a_pipi = ana.FitResult.read("%s/scat_len_ratio_TP%d.npz" % (datadir, d2))
+    a_pipi.print_data()
+    r_a_pipi.print_data()
+    #a_pipi.print_details()
+    #r_a_pipi.print_details()
     #plotter = ana.LatticePlot("%s/scat_len_TP%d.pdf" % (plotdir, d2))
     #label = ["scattering length", "a$_{\pi\pi}$", "a$_{\pi\pi}$"]
     #plotter.histogram(a_pipi, label)
+    #plotter.new_file("%s/scat_len_ratio_TP%d.pdf" % (plotdir, d2))
+    #label = ["scattering length from ratio", "a$_{\pi\pi}$", "a$_{\pi\pi}$"]
+    #plotter.histogram(r_a_pipi, label)
     #del plotter
 
-    ## multiply a*m_pi
-    #am_pi = a_pipi.mult_obs(pifit)
-    #am_pi.print_data()
+    # multiply a*m_pi
+    am_pi = a_pipi.mult_obs(pifit)
+    am_pi.save("%s/am_pi_TP%d.npz" % (datadir, d2))
+    am_pi.print_data()
+    r_am_pi = r_a_pipi.mult_obs(pifit)
+    r_am_pi.save("%s/am_pi_ratio_TP%d.npz" % (datadir, d2))
+    r_am_pi.print_data()
 
 
 if __name__ == '__main__':

@@ -92,12 +92,12 @@ def main():
             #pass
         pipicorr.gevp(1)
         pipicorr.save("%s/corr_pipi_TP%d_%s.npy" % (datadir, d2, lat))
-        #ratio = pipicorr.ratio(picorr, 1)
-        #ratio.save("%s/ratio_pipi_TP%d_%s.npy" % (datadir, d2, lat))
+        ratio = pipicorr.ratio(picorr, 1)
+        ratio.save("%s/ratio_pipi_TP%d_%s.npy" % (datadir, d2, lat))
     else:
         #pipicorr = ana.Correlators.read("%s/%s/corr_pipi_TP%d.npy" % (datadir, lat, d2))
         pipicorr = ana.Correlators.read("%s/corr_pipi_TP%d_%s.npy" % (datadir, d2, lat))
-        #ratio = ana.Correlators.read("%s/ratio_pipi_TP%d_%s.npy" % (datadir, d2, lat))
+        ratio = ana.Correlators.read("%s/ratio_pipi_TP%d_%s.npy" % (datadir, d2, lat))
     #plotter = ana.LatticePlot("%s/data_pipi_TP%d_%s_s1_nodE.pdf" % (plotdir, d2, lat))
     #plotter.set_env(ylog=True)
     #label = ["two pions", "t", "C$_4$(t)", "E$_{\pi\pi}$"]
@@ -112,7 +112,7 @@ def main():
       print("%2d %2d %.6e %6e" % (i+2, i+1, pipicorr.data[0,i,1], np.std(pipicorr.data[:,i,1])))
 
     return
-    fit_ratio = ana.LatticeFit(4, True)
+    fit_ratio = ana.LatticeFit(1, True)
     #start_ratio = [0.01, 0.3, 1.2]
     if readtwofit == False:
         print("fitting")

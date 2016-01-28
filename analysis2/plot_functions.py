@@ -3,7 +3,6 @@ Functions for plotting.
 """
 
 import numpy as np
-import matplotlib
 import matplotlib.pyplot as plt
 
 from functions import (func_single_corr, func_ratio, func_const, func_two_corr,
@@ -28,7 +27,8 @@ def print_label(keys, vals, xpos=0.7, ypos=0.8):
     x = xlim()[1] * xpos
     y = ylim()[1] * ypos
 
-def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=False):
+def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=False,
+        fmt="r", col="red"):
     """A function that plots a function.
 
     Parameters
@@ -54,12 +54,11 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
         if _plotrange.size < 2:
             raise IndexError("fitrange has not enough indices")
         else:
-            lfunc = int(_plotrange[0])
-            ufunc = int(_plotrange[1])
+            lfunc = _plotrange[0]
+            ufunc = _plotrange[1]
+            x1 = np.linspace(X[lfunc], X[ufunc], 1000)
     else:
-        lfunc = X[0]
-        ufunc = X[-1]
-    x1 = np.linspace(lfunc, ufunc, 1000)
+        x1 = np.linspace(X[0], X[-1], 1000)
 
     # check dimensions of args, if more than one,
     # iterate over first dimension
@@ -148,10 +147,10 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
             else:
                 # calculate on original data
                 y1.append(func(_args, x))
-    plt.plot(x1, y1, "r", label=label)
+    plt.plot(x1, y1, fmt, label=label)
     if ymax and ymin:
-        plt.fill_between(x1, ymin, ymax, facecolor="red",
-            edgecolor="red", alpha=0.3)
+        plt.fill_between(x1, ymin, ymax, facecolor=col,
+            edgecolor=col, alpha=0.3)
     plt.legend()
 
 def plot_data(X, Y, dY, label, plotrange=None, fmt="xb"):
@@ -265,6 +264,10 @@ def plot_histogram(data, data_weight, label, debug=0):
     uwidth = 0.7 * (ubins[1] - ubins[0])
     center = (bins[:-1] + bins[1:]) / 2
     ucenter = (ubins[:-1] + ubins[1:]) / 2
+
+    #print(bins)
+    #print(width)
+    #print(center)
 
     # plot both histograms in same plot
     plt.title(label[0])

@@ -52,7 +52,7 @@ def weighted_quantile(data, weights, quantile=0.5):
     # Get the value of the weighted median
     return np.interp(quantile, Pn, sorted_data)
 
-def compute_weight(data, pvals):
+def compute_weight(data, pvals, rel=True):
     """Calculate the weight of each fit. The weight is only
     calculated on the original data.
 
@@ -68,7 +68,10 @@ def compute_weight(data, pvals):
     weight : ndarray
     """
     # compute std/mean over bootstrap samples for every fit interval
-    errors = np.nanstd(data, axis=0)/np.nanmean(data, axis=0)
+    if rel:
+        errors = np.nanstd(data, axis=0)/np.nanmean(data, axis=0)
+    else:
+        errors = np.nanstd(data, axis=0)
     # get the minimum of the errors
     min_err = np.amin(errors)
     # prepare storage
@@ -76,12 +79,12 @@ def compute_weight(data, pvals):
     if weights.ndim == 1:
         for i in range(weights.shape[0]):
             weights[i] = ((1. - 2.*np.abs(pvals[0,i]-0.5)) *
-                min_err/errors[i])
+                min_err/errors[i])**2
     else:
         ranges = [[n for n in range(x)] for x in weights.shape]
         for riter in itertools.product(*ranges):
-            weights[riter] = ((1. - 2.*np.abs(pvals[0,riter]-0.5)) *
-                min_err/errors[riter])
+            weights[riter] = ((1. - 2.*np.abs(pvals[(0,)+riter]-0.5)) *
+                min_err/errors[riter])**2
     return weights
 
 def sys_error(data, pvals, par=0):
