@@ -501,6 +501,7 @@ class FitResult(object):
             self.weight = []
             if self.derived:
                 nfits = [d[0].size for d in self.data]
+                r, r_std, r_syst, w = sys_error_der(self.data, self.pval)
                 self.error.append((r, r_std, r_syst, nfits))
                 self.weight.append(w)
             else:
