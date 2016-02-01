@@ -30,12 +30,14 @@ def main():
     addT2 = np.ones((nboot,)) * T2
 
 # read in 2pt correlators
-    kcorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat)) 
+    #kcorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat)) 
+    kcorr = ana.Correlators.read("%s/corr_eta_%s.npy" % (datadir, lat)) 
+    #kcorr = ana.Correlators.read("%s/corr_pi_%s.npy" % (datadir, lat)) 
 # read in 4pt correlators
-    kkcorr = ana.Correlators.read("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
+#    kkcorr = ana.Correlators.read("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
 # construct ratio
-    ratio = kkcorr.ratio(kcorr, ratio=2 )
-    print(ratio.data[0])
+#    ratio = kkcorr.ratio(kcorr, ratio=2 )
+#    print(ratio.data[0])
 ## fit 2pt for one range
 #    print("fit single")
 #    fit_single = ana.LatticeFit(0, True)
@@ -59,23 +61,23 @@ def main():
     #label = [r"$(Cov_{ij})^{-1}$ of $R(t_i)$ with $R(t_j)$",['i','j']]
     #plotter.cov_plot(ratio.data[:,:,0].T, label, cut=False, inverse=True,
     #    norm=False)
-    #label = [r"$(Cov_{ij}/\sqrt{Cov_{ii}Cov_{jj}})^{-1}$ of $R(t_i)$ with $R(t_j)$",['i','j']]
-    #plotter.cov_plot(ratio.data[:,:,0].T, label, cut=False, inverse=True,
+    #label = [r"$(Cov_{ij}/\sqrt{Cov_{ii}Cov_{jj}})^{-1}$ of $C2(t_i)$ with $C2(t_j)$",['i','j']]
+    #plotter.cov_plot(kcorr.data[:,:,0].T, label, cut=False, inverse=True,
     #    norm=True)
-    #label = [r"$Cov_{ij}/\sqrt{Cov_{ii}Cov_{jj}}$ of $R(t_i)$ with $R(t_j)$",['i','j']]
-    #plotter.cov_plot(ratio.data[:,:,0].T, label, cut=False, inverse=False,
+    #label = [r"$Cov_{ij}/\sqrt{Cov_{ii}Cov_{jj}}$ of $C2(t_i)$ with $C2(t_j)$",['i','j']]
+    #plotter.cov_plot(kcorr.data[:,:,0].T, label, cut=False, inverse=False,
     #    norm=True)
-    label = [r"$Cov_{ij}*R(t_i)*R(t_j)$ of $R(t_i)$ with $R(t_j)$",['i','j']]
-    plotter.cov_plot(ratio.data[:,:,0].T, label, cut=False, inverse=False,
-        norm=True)
-    label = [r"$(Cov_{ij}*R(t_i)*R(t_j))^{-1}$ of $R(t_i)$ with $R(t_j)$",['i','j']]
-    plotter.cov_plot(ratio.data[:,:,0].T, label, cut=False, inverse=True,
-        norm=True)
-    #plotter.new_file("%s/corrcoeff_heatmap_ratio_%s.pdf" % (plotdir,lat))
-    #label = [r"$(Cov_{ij}/\sqrt{Cov_{ii}Cov_{jj}})^{-1}$ of $R(t_i)$ with $R(t_j)$",['i','j']]
-    #plotter.corr_plot(ratio.data[:,:,0].T, label,inverse=True)
-    #label = [r"$Cov_{ij}/\sqrt{Cov_{ii}Cov_{jj}}$ of $R(t_i)$ with $R(t_j)$",['i','j']]
-    #plotter.corr_plot(ratio.data[:,:,0].T, label,inverse=False)
+    #label = [r"$Cov_{ij}*C2(t_i)*C2(t_j)$ of $C2(t_i)$ with $C2(t_j)$",['i','j']]
+    #plotter.cov_plot(kcorr.data[:,:,0].T, label, cut=False, inverse=False,
+    #    norm=True)
+    #label = [r"$(Cov_{ij}*C2(t_i)*C2(t_j))^{-1}$ of $C2(t_i)$ with $C2(t_j)$",['i','j']]
+    #plotter.cov_plot(kcorr.data[:,:,0].T, label, cut=False, inverse=True,
+    #    norm=True)
+    plotter.new_file("%s/corrcoeff_heatmap_ratio_%s.pdf" % (plotdir,lat))
+    label = [r"$(Cov_{ij}/\sqrt{Cov_{ii}Cov_{jj}})^{-1}$ of $C2(t_i)$ with $C2(t_j)$",['i','j']]
+    plotter.corr_plot(kcorr.data[:,:,0].T, label,inverse=True)
+    label = [r"$Cov_{ij}/\sqrt{Cov_{ii}Cov_{jj}}$ of $C2(t_i)$ with $C2(t_j)$",['i','j']]
+    plotter.corr_plot(kcorr.data[:,:,0].T, label,inverse=False)
     #plotter.new_file("%s/cov_heatmap_2pt_%s.pdf" % (plotdir, lat))
     #plotter.cov_plot(kcorr.data[:,:,0].T,label)
     #plotter.new_file("%s/cov_heatmap_4pt_%s.pdf" % (plotdir, lat))

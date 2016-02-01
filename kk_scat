@@ -58,10 +58,12 @@ def main():
     print("read single particle corrs")
     #kcorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat))
     kfit = ana.FitResult.read("%s/fit_k_%s.npz" % (datadir, lat))
+    kfit.error=None
     kfit.print_data(1)
 
     print("\n\nread ratio")
     ratiofit = ana.FitResult.read("%s/fit_kk_TP%d_%s.npz" % (datadir, d2, lat))
+    ratiofit.error=None
     ratiofit.print_data(0)
     ratiofit.print_data(1)
 

@@ -477,8 +477,10 @@ class FitResult(object):
                 rsys[i][1]))
         print("------------------------------\n\n")
 
-    def data_for_plot(self, par=0):
+    def data_for_plot(self, par=0,new=True):
         """Prints the errors etc of the data."""
+        if new is True:
+          self.error=None
         self.calc_error()
 
         #print("------------------------------")

@@ -252,8 +252,9 @@ def sys_error(data, pvals, par=0):
         if par == 1:
           print("Standard deviation in sys_error:")
           print(data_std)
-        data_weight[i] = np.square(((1. - 2. * np.fabs(pvals[i][0] - 0.5)) *
-                          np.amin(data_std) / data_std))
+        data_weight[i] = compute_weight(d[:,par], pvals[i])
+        #data_weight[i] = np.square(((1. - 2. * np.fabs(pvals[i][0] - 0.5)) *
+        #                  np.amin(data_std) / data_std))
         # using the weights, calculate the median over all fit intervals
         # for every bootstrap sample.
         for b in range(d.shape[0]):

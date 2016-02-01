@@ -390,7 +390,7 @@ class LatticePlot(object):
         self.save()
 
     def _genplot_single(self, corr, label, fitresult=None, fitfunc=None,
-            add=None, xshift=0., rel=False, debug=0):
+            add=None, xshift=0., rel=False, debug=0, join=False):
         """Plot the data of a Correlators object and a FitResult object
         together.
 
@@ -446,7 +446,8 @@ class LatticePlot(object):
                   self.plot_data(X, corr.data[0,:,n], ddata, label[3],
                           plotrange=[3,T])
                 plt.legend()
-                self.save()
+                if join is False:
+                  self.save()
             else:
                 # iterate over fit intervals
                 for r in range(shape[0][n]):
@@ -467,7 +468,8 @@ class LatticePlot(object):
                     self.plot_function(fitfunc.fitfunc, X, mpar, label[4],
                             add, fi)
                     plt.legend()
-                    self.save()
+                    if join is False:
+                      self.save()
         label[0] = label_save
 
     def _genplot_comb(self, corr, label, fitresult, fitfunc, oldfit, add=None,

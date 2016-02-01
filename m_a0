@@ -62,6 +62,7 @@ def main():
     # Read in fitted masses, ranges and weights
     print("Read fit results for single particle mass")
     m = ana.FitResult.read("%s/fit_k_%s.npz" % (datadir, lat))
+    m.error=None
     m.print_data(par=1)
 
     # Read in results of scattering length

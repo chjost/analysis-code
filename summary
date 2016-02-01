@@ -157,25 +157,25 @@ def main():
     #fmt = " ".join(['%1.4e']*16)
     #np.savetxt("kk_scat_b2.10.dat",Dresults, fmt=fmt, header=header)
 
-    header = "# m_k +/- d_stat(m_k) + d_sys(m_k) -d_sys(m_k) mka0 +/- d_stat(mka0) + d_sys(mka0) -d_sys(mka0)" 
-    Aresults = np.zeros((len(latA),8))
-    for j,a in enumerate(latA):
-      #print(datadir+a+"/"+s)
-      ## single particle fit
-      #print("read single particle fit")
-      #kcorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat))
-      kfit = ana.FitResult.read("%s%s/match_k_%s.npz" % (datadir, a, a))
-      m = kfit.data_for_plot(1)
+    #header = "# m_k +/- d_stat(m_k) + d_sys(m_k) -d_sys(m_k) mka0 +/- d_stat(mka0) + d_sys(mka0) -d_sys(mka0)" 
+    #Aresults = np.zeros((len(latA),8))
+    #for j,a in enumerate(latA):
+    #  #print(datadir+a+"/"+s)
+    #  ## single particle fit
+    #  #print("read single particle fit")
+    #  #kcorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat))
+    #  kfit = ana.FitResult.read("%s%s/match_k_%s.npz" % (datadir, a, a))
+    #  m = kfit.data_for_plot(1)
 
-      # Read m_a0
-      mult_obs = ana.FitResult.read("%s%s/match_mk_akk_%s.npz" % (datadir, a, a))
-      m_a0 = mult_obs.data_for_plot()
-      ens = np.vstack((m,m_a0)).reshape(8)
-      Aresults[j] = ens
-    Aresults = Aresults.reshape((len(latA),8))
-    print Aresults
-    fmt = " ".join(['%1.4e']*8)
-    np.savetxt("kk_scat_b1.90_match_b1.95.dat",Aresults, fmt=fmt, header=header)
+    #  # Read m_a0
+    #  mult_obs = ana.FitResult.read("%s%s/match_mk_akk_%s.npz" % (datadir, a, a))
+    #  m_a0 = mult_obs.data_for_plot()
+    #  ens = np.vstack((m,m_a0)).reshape(8)
+    #  Aresults[j] = ens
+    #Aresults = Aresults.reshape((len(latA),8))
+    #print Aresults
+    #fmt = " ".join(['%1.4e']*8)
+    #np.savetxt("kk_scat_b1.90_match_b1.95.dat",Aresults, fmt=fmt, header=header)
 
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':
