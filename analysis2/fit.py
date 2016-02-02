@@ -509,7 +509,7 @@ class FitResult(object):
         """Returns the fit ranges."""
         return self.fit_ranges, self.fit_ranges_shape
 
-    def calc_error(self):
+    def calc_error(self, rel=False):
         """Calculates the error and weight of data.
         Parameters:
         -----------
@@ -524,10 +524,12 @@ class FitResult(object):
                 self.error.append((r, r_std, r_syst, nfits))
                 self.weight.append(w)
             else:
+                print(self.data)
                 nfits = [d[0,0].size for d in self.data]
                 npar = self.data[0].shape[1]
                 for i in range(npar):
-                    r, r_std, r_syst, w = sys_error(self.data, self.pval, i, rel=rel)
+                    r, r_std, r_syst, w = sys_error(self.data, self.pval,
+                        i,rel=rel)
                     self.error.append((r, r_std, r_syst, nfits))
                     self.weight.append(w)
 
@@ -604,6 +606,7 @@ class FitResult(object):
                             for p in range(self.data[i].shape[1]):
                                 select = (slice(None), p) + item + (j,)
                                 tmppar.append("%e" % (self.data[i][select])[0])
+                            select = (slice(None),) + item + (j,)
                             tmppar = " ".join(tmppar)
                             tmpstring = " ".join(("%d: range %2d:%2d" % (j, r[0],r[1]),
                                                   "add ranges %s" % str(item),
