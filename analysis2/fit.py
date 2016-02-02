@@ -116,8 +116,10 @@ class LatticeFit(object):
             shapes_data = []
             shapes_other = []
             # iterate over the correlation functions
+            print(fshape)
             ncorr = [len(s) for s in fshape]
             if not useall:
+                print(ncorr)
                 ncorr[-2] = 1
 
             ncorriter = [[x for x in range(n)] for n in ncorr]
@@ -324,16 +326,33 @@ class FitResult(object):
         else:
             raise ValueError("Index cannot be calculated")
 
-    def singularize(self, val):
-        singular = FitResult("singluar", True)
-        shape1 = self.data[0].shape
-        shape2 = shape1
-        singular.create_empty(shape1,shape2,1)
+    def singularize(self):
+        """ Set data of self to weighted medians over fit ranges and weights to
+        1. This makes combined fits faster
+
+        WARNING,
+        data gets overwritten
+
+        Parameters:
+        -----------
+        par : Parameter to use to singularize (usually it is not the Amplitude
+        but the first one)
+        """
+        self.calc_error()
+        singular = FitResult("singular", False)
         nboot = self.data[0].shape[0]
-        data = np.linspace(val,val,nboot)
-        chi2 = np.zeros_like(data)
-        pval = np.ones_like(data)
-        singular.add_data((0,0),np.linspace(val,val,nboot),chi2,pval)
+        npars = self.data[0].shape[1]
+        shape1 = (nboot,npars,1)
+        print(shape1)
+        shape2 = (nboot,1)
+        singular.create_empty(shape1,shape2,1)
+        # usually only one correlator is taken into account
+        res, res_std, res_sys, data_weight = self.error[0]
+        singular.data[0][:,0,0] = res[0]
+        singular.set_ranges(np.array([[[10,15]]]),[[1,]])
+        res, res_std, res_sys, data_weight = self.error[1]
+        singular.weight = np.ones(nboot)
+        singular.data[0][:,1,0] = res[0]
         return singular
 
     def create_empty(self, shape1, shape2, corr_num):
@@ -427,7 +446,7 @@ class FitResult(object):
         """Returns the fit ranges."""
         return self.fit_ranges, self.fit_ranges_shape
 
-    def calc_error(self, rel=False):
+    def calc_error(self):
         """Calculates the error and weight of data.
         Parameters:
         -----------
@@ -441,21 +460,13 @@ class FitResult(object):
             else:
                 nfits = [d[0,0].size for d in self.data]
             if self.derived:
-                if rel is False:
-                  r, r_std, r_syst, w = sys_error_der(self.data, self.pval)
-                else:
-                  r, r_std, r_syst, w = sys_error_der_rel(self.data, self.pval)
+                r, r_std, r_syst, w = sys_error_der(self.data, self.pval)
                 self.error.append((r, r_std, r_syst, nfits))
                 self.weight.append(w)
             else:
                 npar = self.data[0].shape[1]
                 for i in range(npar):
-                    if rel is False:
-                      r, r_std, r_syst, w = sys_error(self.data, self.pval,
-                          i)
-                    else:
-                      r, r_std, r_syst, w = sys_error_rel(self.data, self.pval,
-                          i)
+                    r, r_std, r_syst, w = sys_error(self.data, self.pval, i)
                     self.error.append((r, r_std, r_syst, nfits))
                     self.weight.append(w)
 

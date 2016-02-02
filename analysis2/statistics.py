@@ -220,8 +220,6 @@ def sys_error(data, pvals, par=0):
     par : int
         The parameter for which to calculate the errors, is applied to
         second dimension.
-    rel : bool
-        Decides if the relative error is used in weight calculation
 
     Returns:
     res : list
@@ -249,12 +247,7 @@ def sys_error(data, pvals, par=0):
         # calculate the weight for the fit ranges using the standard
         # deviation and the p-values of the fit
         data_std = np.std(d[:,par],0)
-        if par == 1:
-          print("Standard deviation in sys_error:")
-          print(data_std)
         data_weight[i] = compute_weight(d[:,par], pvals[i])
-        #data_weight[i] = np.square(((1. - 2. * np.fabs(pvals[i][0] - 0.5)) *
-        #                  np.amin(data_std) / data_std))
         # using the weights, calculate the median over all fit intervals
         # for every bootstrap sample.
         for b in range(d.shape[0]):

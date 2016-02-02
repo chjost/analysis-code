@@ -524,8 +524,7 @@ class LatticePlot(object):
             tmp = [fshape[i][x] for i,x in enumerate(item)]
             print(tmp)
             #limit fitranges to be plotted
-            rangesiter = [[x for x in range(m)] for m in [10,10] ]
-            #rangesiter = [[x for x in range(m)] for m in tmp ]
+            rangesiter = [[x for x in range(m)] for m in tmp ]
             # iterate over the fit ranges
             for ritem in itertools.product(*rangesiter):
                 if debug > 1:
@@ -571,7 +570,7 @@ class LatticePlot(object):
                 self.save()
 
     def plot(self, corr, label, fitresult=None, fitfunc=None, oldfit=None,
-            add=None, oldfitpar=None, xshift=0., rel=False, debug=0):
+            add=None, oldfitpar=None, xshift=0., rel=False, join=False, debug=0):
         """Plot the data of a Correlators object and a FitResult object
         together.
 
@@ -598,7 +597,7 @@ class LatticePlot(object):
         """
         if oldfit is None:
             self._genplot_single(corr, label, fitresult, fitfunc, add=add,\
-                    xshift=xshift, rel=rel, debug=debug)
+                    xshift=xshift, rel=rel, join=join, debug=debug)
         else:
             self._genplot_comb(corr, label, fitresult, fitfunc, oldfit, add,\
                     oldfitpar, xshift=xshift, debug=debug)

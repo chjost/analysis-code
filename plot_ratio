@@ -1,0 +1,118 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+
+# Script to plot (intermediate) fitresults
+
+import sys
+import numpy as np
+import analysis2 as ana
+
+def main():
+####################################################
+# parse the input file and setup parameters
+#####################################################
+    if len(sys.argv) < 2:
+        ens = ana.LatticeEnsemble.parse("kk_I1_TP0_A40.24.ini")
+    else:
+        ens = ana.LatticeEnsemble.parse(sys.argv[1])
+
+    # read settings
+    plotsingle = True
+    plotratio = True
+    plothist = False
+
+
+    # get data from input file
+    prefix = ens.get_data("path")
+    print prefix
+    lat = ens.name()
+    nboot = ens.get_data("nboot")
+    datadir = ens.get_data("datadir")
+    plotdir = ens.get_data("plotdir")
+    gmax = ens.get_data("gmax")
+    d2 = ens.get_data("d2")
+    try:
+        debug = ens.get_data("debug")
+    except KeyError:
+        debug = 0
+    T = ens.T()
+    T2 = ens.T2()
+    addT = np.ones((nboot,)) * T
+    addT2 = np.ones((nboot,)) * T2
+
+
+#######################################################################
+# Begin calculation
+#######################################################################
+    debug =3
+    print("data read from: %s" % datadir)
+    print("plots saved to: %s" % plotdir)
+    picorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat))
+
+    if plothist:
+      fit_single = ana.LatticeFit(0, True)
+      pifit = ana.FitResult.read("%s/fit_k_%s.npz" % (datadir, lat))
+      pifit.print_data(1)
+      range_mk, r_mk_shape = pifit.get_ranges()
+      print(range_mk)
+
+    # plot the result
+    if plotsingle:
+        print("plotting")
+        if plothist:
+            plotter = ana.LatticePlot("%s/fit_k_%s.pdf" % (plotdir, lat))
+        else:
+            plotter = ana.LatticePlot("%s/corr_k_%s.pdf" % (plotdir, lat))
+        plotter.set_env(ylog=True)
+        label = ["single particle", "t", "C(t)", "kaon"]
+        plotter.plot(picorr, label, add=addT, rel=False, join=False, debug=debug)
+        label = ["single particle", "t", r"$\Delta(C(t))/C(t)$", "kaon"]
+        plotter.plot(picorr, label, add=addT, rel=True, join=False, debug=debug)
+        if plothist:
+            plotter.new_file("%s/hist_fit_k_%s.pdf" % (plotdir, lat))
+            label = ["kaon energy", "E$_\k$/a", "E$_\k$"]
+            plotter.histogram(pifit, label, 1)
+        del plotter
+
+    # two particle correlator
+    kkcorr = ana.Correlators.read("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
+    ratio = kkcorr.ratio(picorr, ratio=2 )
+    if plothist:
+        fit_ratio = ana.LatticeFit(1, True)
+        start_ratio = [3., 1.]
+        # ratiofit
+        ratiofit = ana.FitResult.read("%s/fit_kk_TP%d_%s.npz" % (datadir,
+                d2, lat))
+        range_r, r_r_shape = ratiofit.get_ranges()
+        print(range_r)
+        ratiofit.print_data(0)
+        ratiofit.print_data(1)
+        print(ratiofit.corr_num)
+
+    if plotratio:
+        print("plotting")
+        if plothist:
+            plotter = ana.LatticePlot("%s/fit_ratio_kk_TP%d_%s.pdf" % (plotdir, d2, lat))
+        else:
+            plotter = ana.LatticePlot("%s/ratio_kk_TP%d_%s.pdf" % (plotdir, d2, lat))
+        plotter.set_env(ylog=False)
+        label = ["Ratio", "t", "R(t)", "data"]
+        print "plotter set up"
+        plotter.plot(ratio, label, add=addT,
+            oldfitpar=1, xshift=0.5,rel=False, join=False, debug=debug)
+        label = ["Ratio", "t", r"$\Delta(R(t))/R(t)$", "data"]
+        plotter.plot(ratio, label, add=addT,
+            oldfitpar=1, xshift=0.5,rel=True, join=False, debug=debug)
+        if plothist:
+            print "open new file for deltaE"
+            plotter.new_file("%s/hist_fit_kk_ratio_TP%d_%s.pdf" % (plotdir, d2, lat))
+            label = ["ratio", "dE$_{KK}$/a", "dE$_{KK}$"]
+            plotter.histogram(ratiofit, label, 1)
+        del plotter
+
+if __name__ == '__main__':
+    try:
+        print("starting")
+        main()
+    except KeyboardInterrupt:
+        pass
+
