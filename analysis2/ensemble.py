@@ -76,7 +76,7 @@ class LatticeEnsemble(object):
                 obj.data.update({opt: config.getfloat("floats", opt)}) 
         if config.has_section("bools"):
             for opt in config.options("bools"):
-                obj.data.update({opt: config.getbool("bools", opt)}) 
+                obj.data.update({opt: config.getboolean("bools", opt)}) 
         if config.has_section("lists"):
             for opt in config.options("lists"):
                 li = config.get("lists", opt).split(",")

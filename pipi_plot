@@ -1,0 +1,270 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+##!/usr/bin/python
+################################################################################
+#
+# Author: Christian Jost (jost@hiskp.uni-bonn.de)
+# Date:   Februar 2015
+#
+# Copyright (C) 2015 Christian Jost
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Function: This is the start of the eta/eta' analysis program
+#
+# For informations on input parameters see the description of the function.
+#
+################################################################################
+
+import sys
+import numpy as np
+import matplotlib
+matplotlib.use('Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+
+import analysis2 as ana
+
+def ottnad_f_pi():
+    """The values of f_pi from Konstantins diss."""
+    p_fpi = {"A30.32": (0.06452, 0.00021),
+             "A40.20": (0.06198, 0.00057),
+             "A40.24": (0.06577, 0.00024),
+             "A40.32": (0.06839, 0.00018),
+             "A60.24": (0.07209, 0.00020),
+             "A80.24": (0.07581, 0.00013),
+             "A100.24": (0.07936, 0.00014),
+             "A80.24s": (0.07845, 0.00016),
+             "A100.24s": (0.07857, 0.00014),
+             "B25.32": (0.05728, 0.00021),
+             "B35.48": (0.06158, 0.00008),
+             "B35.32": (0.06105, 0.00017),
+             "B55.32": (0.06545, 0.00011),
+             "B85.24": (0.07039, 0.00026),
+             "D15.48": (0.04373, 0.00019),
+             "D30.48": (0.04735, 0.00015),
+             "D45.32": (0.04825, 0.00014)}
+    return p_fpi
+
+def K_fpi():
+    """The values for K_fpi."""
+    k_fpi = {"A30.32": (0.9757, 0.0061),
+            "A40.20": (np.nan,)*2,
+            "A40.24": (0.9406, 0.0084),
+            "A40.32": (0.9853, 0.0048),
+            "A60.24": (0.9716, 0.0037),
+            "A80.24": (0.9839, 0.0022),
+            "A100.24": (0.9900, 0.0015),
+            "A80.24s": (np.nan,)*2,
+            "A100.24s": (np.nan,)*2,
+            "B25.32": (0.9695, 0.0065),
+            "B35.48": (1.0, 0.01,),
+            "B35.32": (0.9794, 0.0027),
+            "B55.32": (0.9920, 0.0010),
+            "B85.24": (0.9795, 0.0024),
+            "D15.48": (0.9762, 0.0025),
+            "D30.48": (0.9938, 0.0005),
+            "D45.32": (0.9860, 0.0013)} # values for D20.48
+    return k_fpi
+
+def K_mpi():
+    """The values of f_pi from Konstantins diss."""
+    k_mpi = {"A30.32": (1.0081, 0.0052),
+             "A40.20": (np.nan,)*2,
+             "A40.24": (1.0206, 0.0095),
+             "A40.32": (1.0039, 0.0028),
+             "A60.24": (1.0099, 0.0049),
+             "A80.24": (1.0057, 0.0029),
+             "A100.24": (1.0037, 0.0019),
+             "A80.24s": (np.nan,)*2,
+             "A100.24s": (np.nan,)*2,
+             "B25.32": (1.0136, 0.0060),
+             "B35.48": (1.0, 0.01),
+             "B35.32": (1.0069, 0.0032),
+             "B55.32": (1.0027, 0.0014),
+             "B85.24": (1.0083, 0.0028),
+             "D15.48": (1.0081, 0.0022),
+             "D30.48": (1.0021, 0.0007),
+             "D45.32": (1.0047, 0.0013)} # values for D20.48
+    return k_mpi
+
+def mf_paper():
+    """The m_pi/f_pi values from the paper."""
+    p_mf = {"A30.32": (1.915, 0.010),
+             "A40.20": (np.nan,)*2,
+             "A40.24": (2.202, 0.013),
+             "A40.32": (2.068, 0.008),
+             "A60.24": (2.396, 0.011),
+             "A80.24": (2.623, 0.007),
+             "A100.24": (2.788, 0.007),
+             "A80.24s": (np.nan,)*2,
+             "A100.24s": (np.nan,)*2,
+             "B25.32": (1.865, 0.010),
+             "B35.48": (2.014, 0.010),
+             "B35.32": (2.047, 0.011),
+             "B55.32": (2.352, 0.007),
+             "B85.24": (2.736, 0.015),
+             "D15.48": (1.590, 0.010),
+             "D30.48": (2.070, 0.010),
+             "D45.32": (2.485, 0.012)}
+    return p_mf
+
+
+def print_summary(datafolder, plotfolder, lattices, d2=0):
+    """Print a summary of the lattices given.
+
+    Args:
+        datafolder: where the raw data is stored
+        plotfolder: where to store the plots
+        lattices: list of lattices to work on
+    """
+    verbose=False
+    ## other variables
+    filempi = "fit_pi.npz"
+    par_mpi=1
+    #fileam = "am_pi_TP%d.npz" % d2
+    fileam = "am_pi_ratio_TP%d.npz" % d2
+
+    fpi = ottnad_f_pi()
+    k_fpi = K_fpi()
+    k_mpi = K_mpi()
+    p_mf = mf_paper()
+    # read data
+    readnewdata = True
+    if readnewdata:
+        summ_mpi, summ_ampi, summ_mf = [], [], []
+        for l, latt in enumerate(lattices):
+            summ_mpi.append([])
+            summ_ampi.append([])
+            summ_mf.append([])
+            for lat in latt:
+                print("read data for %s" % lat)
+                # get m_pi data
+                #mpi = ana.FitResult.read("%s/%s/%s" % (datafolder, lat, filempi))
+                #mpi.calc_error()
+                # get m_pi*a_0 data
+                ampi = ana.FitResult.read("%s/%s/%s" % (datafolder, lat, fileam))
+                ampi.calc_error()
+
+                # m_pi is not derived, so choose correct parameter
+                #summ_mpi[-1].append([mpi.error[par_mpi][0][0]/k_mpi[lat][0],
+                #                     mpi.error[par_mpi][1][0] + k_mpi[lat][1],
+                #                     mpi.error[par_mpi][2][0][0],
+                #                     mpi.error[par_mpi][2][0][0]])
+                #summ_mf[-1].append([summ_mpi[-1][-1][0] / fpi[lat][0] * k_fpi[lat][0],
+                #                    summ_mpi[-1][-1][1] + fpi[lat][1] + k_fpi[lat][1],
+                #                    summ_mpi[-1][-1][2], summ_mpi[-1][-1][3]])
+                summ_mf[-1].append([np.asarray((p_mf[lat][0] * k_fpi[lat][0] / k_mpi[lat][0],)*1500),
+                                    p_mf[lat][1] + k_fpi[lat][1] + k_mpi[lat][1],
+                                    0., 0.])
+
+                # a_0*m_pi is derived, no need to choose parameter
+                summ_ampi[-1].append([ampi.error[0][0][0]/k_mpi[lat][0],
+                                      ampi.error[0][1][0] + k_mpi[lat][1],
+                                      ampi.error[0][2][0][0],
+                                      ampi.error[0][2][0][1]])
+
+    # regroup data for fit
+    all_data_x, all_data_y = [], []
+    for mf in summ_mf:
+        for d in mf:
+            all_data_x.append(d[0])
+            print(d[0][0])
+    for ampi in summ_ampi:
+        for d in ampi:
+            all_data_y.append(d[0])
+            print(d[0][0])
+    all_data_x = np.asarray(all_data_x)
+    all_data_y = np.asarray(all_data_y)
+    fchiptLO = lambda p, x: -x*x/(8.*np.pi)
+    fchiptNLO = lambda p, x: -x*x/(8.*np.pi)*(1+x*x/(16*np.pi*np.pi)*(3.*np.log(x*x)-1.-p))
+    xcut = 2.5
+
+    # fit
+    fit_chi = ana.LatticeFit(fchiptNLO)
+    fitres = fit_chi.chiral_fit(all_data_x, all_data_y, xcut=xcut)
+    fitres.print_data()
+    if xcut:
+        dof = np.count_nonzero(all_data_x[:,0] < xcut)
+    else:
+        dof = all_data_x.shape[0]
+    print("chi2 / dof = %.3f / %d" % (fitres.chi2[0][0][0], dof - 1))
+    retval = fitres.error[0]
+
+    # get the physical value of a_0*m_pi
+    # m_pi/f_pi|phys = 1.0385
+    mf_phys = fchiptNLO(retval[0][0][0], 1.0385)
+    print(mf_phys)
+
+    # plot everything
+    plotter = ana.LatticePlot("%s/ampi_mfpi_TP%d.pdf" % (plotfolder, 0))
+    # set title etc.
+    plotter.set_title("", ["M$_\pi$/f$_\pi$", "M$_\pi$a$_0$"])
+
+    # plot the data
+    fmt = ["or", "sb", "Dg"]
+    labels = ["A ensembles", "B ensembles", "D ensembles"]
+    for i, mf in enumerate(summ_mf):
+        x = [d[0][0] for d in mf]
+        y = [d[0][0] for d in summ_ampi[i]]
+        dx = [d[1] for d in mf]
+        dy = [d[1] for d in summ_ampi[i]]
+        plt.errorbar(x, y, yerr=dy, xerr=dx, fmt=fmt[i], label=labels[i])
+
+    # plot ChiPT formula
+    plotter.plot_func(fchiptLO, None, [1., 3.], "LO ChiPT")
+    #plotter.plot_func(fchiptNLO, 3.79, [1., 3.], "NLO ChiPT", fmt="--k")
+    plotter.plot_func(fchiptNLO, retval[0][0][0], [1., 3.], "NLO ChiPT", fmt="--c")
+    if xcut:
+        y = fchiptNLO(retval[0][0][0], xcut)
+        plt.vlines(xcut, 0.8*y, 1.2*y, colors="k", label="")
+
+    # plot extrapolated value
+    #plt.errorbar(1.1, -0.044, fmt='^k', label="extrapol. from paper")
+    plt.errorbar(1.0385, mf_phys, fmt='^m', label="extrapol.")
+
+    plt.legend(numpoints=1)
+    plotter.save()
+
+    # plot histogram
+    plotter.new_file("%s/hist_l_pipi_TP%d.pdf" % (plotfolder, 0))
+    labels = ["l$_{\pi\pi}$ fit results", "l$_{\pi\pi}$", "l$_{\pi\pi}$"]
+    plotter.histogram(fitres, labels, 0)
+    del plotter
+
+    return
+
+def main():
+    d0 = np.array([0., 0., 0.]) # total momentum of the system
+    s = 1
+    # left out A40.20 since f_pi not known
+    # left out A40.24
+    #Aens = ["A30.32", "A40.32", "A60.24"]
+    #Bens, Dens = [], []
+    Aens = ["A30.32", "A40.32", "A60.24",
+            "A80.24", "A100.24"]
+    Bens = ["B25.32", "B35.32", "B55.32", "B85.24"]
+    Dens = ["D30.48", "D45.32"]
+    #Dens = ["D15.48", "D30.48", "D45.32"]
+    datafolder = "./data/I2/"
+    plotfolder = "./plots/I2/summary/"
+    print_summary(datafolder, plotfolder, [Aens, Bens, Dens])
+    return
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass

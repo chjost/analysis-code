@@ -16,9 +16,6 @@ def main():
     readsingledata = False 
     readsinglefit = False
     plotsingle = False
-    readtwodata = False
-    readtwofit = False
-    plottwo = True
 
     # get data from input file
     prefix = ens.get_data("path")

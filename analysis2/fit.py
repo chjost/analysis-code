@@ -5,39 +5,62 @@ The class for fitting.
 import itertools
 import numpy as np
 
-from fit_routines import fit_comb, fit_single, calculate_ranges
+from fit_routines import (fit_comb, fit_single, calculate_ranges, compute_dE,
+    compute_phaseshift, get_start_values, get_start_values_comb, fitting)
 from in_out import read_fitresults, write_fitresults
 from interpol import match_lin, evaluate_lin
-from functions import func_single_corr, func_ratio, func_const, func_two_corr
-from statistics import compute_error, sys_error, sys_error_rel, sys_error_der, draw_weighted, freq_count
-from energies import calc_q2
+from functions import (func_single_corr, func_ratio, func_const, func_two_corr,
+    func_single_corr2, func_sinh, compute_eff_mass)
+from statistics import compute_error, sys_error, sys_error_der, draw_weighted, freq_count
+from energies import calc_q2, calc_Ecm
 from zeta_wrapper import Z
 from scattering_length import calculate_scat_len
 
 class LatticeFit(object):
-    def __init__(self, fitfunc, verbose=False):
+    def __init__(self, fitfunc, dt_i=2, dt_f=2, dt=4, xshift=0.,
+            correlated=True, debug=0):
         """Create a class for fitting fitfunc.
 
         Parameters
         ----------
-        fitfunc : {0, 1, 2, callable}
+        fitfunc : {0, 1, 2, 3, callable}
             Choose between three predefined functions or an own
             fit function.
+        dt_i, dt_f : ints, optional
+            The step size for the first and last time slice for the fitting.
+        dt : int, optional
+            The minimal size of the interval.
+        xshift : float, optional
+            A shift for the x values of the fit
+        correlated : bool
+            Use the full covariance matrix or just the errors.
+        debug : int, optional
+            The level of debugging output
         """
-        self.verbose = verbose
+        self.debug = debug
         # chose the correct function if using predefined function
         if isinstance(fitfunc, int):
-            if fitfunc > 3:
-                raise ValueError("No fit function chosen")
+            if fitfunc > 5:
+                raise ValueError("No fit function choosen")
+            if fitfunc == 2:
+                self.npar = 1
+            elif fitfunc == 3:
+                self.npar = 3
+            else:
+                self.npar = 2
             functions = {0: func_single_corr, 1: func_ratio, 2: func_const,
-                3: func_two_corr}
+                3: func_two_corr, 4: func_single_corr2, 5: func_sinh}
             self.fitfunc = functions.get(fitfunc)
         else:
             self.fitfunc = fitfunc
+        self.xshift = xshift
+        self.dt = dt
+        self.dt_i = dt_i
+        self.dt_f = dt_f
+        self.correlated = correlated
 
     def fit(self, start, corr, ranges, corrid="", add=None, oldfit=None,
-            oldfitpar=None, useall=False, step=1, min_size=4, xshift=0.,
-            debug=0, fixend=False):
+            oldfitpar=None, useall=False):
         """Fits fitfunc to a Correlators object.
 
         The predefined functions describe a single particle correlation
@@ -46,8 +69,9 @@ class LatticeFit(object):
 
         Parameters
         ----------
-        start : float or sequence of floats
-            The start parameters for the fit.
+        start : float or sequence of floats or None
+            The start parameters for the fit. If None is given the start
+            parameters are calculated.
         corr : Correlators
             A correlators object with the data.
         ranges : sequence of ints or sequence of sequences of int
@@ -66,13 +90,6 @@ class LatticeFit(object):
         useall : bool
             Using all correlators in the single particle correlator or
             use just the lowest.
-        step : int, optional
-            The steps in the loops.
-        min_size : int, optional
-            The minimal size of the interval.
-        xshift : A scalar to shift the xrange of the fit. 
-        debug : int, optional
-            The amount of info printed.
 
         Returns
         -------
@@ -85,32 +102,33 @@ class LatticeFit(object):
             # get the fitranges
             dshape = corr.shape
             ncorr = dshape[-1]
-            franges, fshape = calculate_ranges(ranges, dshape, step=step,
-                    min_size=min_size, debug=debug, fixend=fixend)
+            franges, fshape = calculate_ranges(ranges, dshape, dt_i=self.dt_i,
+                    dt_f=self.dt_f, dt=self.dt, debug=self.debug)
 
             # prepare storage
             fitres = FitResult(corrid)
             fitres.set_ranges(franges, fshape)
-            shapes_data = [(dshape[0], len(start), fshape[0][i]) for i in range(ncorr)]
+            shapes_data = [(dshape[0], self.npar, fshape[0][i]) for i in range(ncorr)]
             shapes_other = [(dshape[0], fshape[0][i]) for i in range(ncorr)]
             fitres.create_empty(shapes_data, shapes_other, ncorr)
             del shapes_data, shapes_other
 
+            if start is None:
+                # set starting values
+                start = get_start_values(ncorr, franges, corr.data, self.npar)
+
             # do the fitting
-            if add is None:
-                for res in fit_single(self.fitfunc, start, corr, franges,
-                        debug=debug):
-                    fitres.add_data(*res)
-            else:
-                for res in fit_single(self.fitfunc, start, corr, franges, add,
-                        debug):
-                    fitres.add_data(*res)
+            for res in fit_single(self.fitfunc, start, corr, franges,
+                    add=add, debug=self.debug, correlated=self.correlated,
+                    xshift=self.xshift, npar=self.npar):
+                fitres.add_data(*res)
         else:
             # handle the fitranges
             dshape = corr.shape
             oldranges, oldshape = oldfit.get_ranges()
             franges, fshape = calculate_ranges(ranges, dshape, oldshape,
-                    step=step, min_size=min_size, debug=debug, fixend=fixend)
+                    dt_i=self.dt_i, dt_f=self.dt_f, dt=self.dt,
+                    debug=self.debug)
 
             # generate the shapes for the data
             shapes_data = []
@@ -126,25 +144,71 @@ class LatticeFit(object):
             for item in itertools.product(*ncorriter):
                 # create the iterator over the fit ranges
                 tmp = [fshape[i][x] for i,x in enumerate(item)]
-                shapes_data.append(tuple([dshape[0], len(start)] + tmp))
-                shapes_other.append(tuple([dshape[0]] + tmp))
-
+                shapes_data.append((dshape[0], self.npar) + tuple(tmp))
+                shapes_other.append((dshape[0],) + tuple(tmp))
             # prepare storage
             fitres = FitResult(corrid)
             fitres.set_ranges(franges, fshape)
             fitres.create_empty(shapes_data, shapes_other, ncorr)
             del shapes_data, shapes_other
 
+            if start is None:
+                #print("ncorr")
+                #print(ncorr)
+                start = get_start_values_comb(ncorr, franges, corr.data, self.npar)
             # do the fitting
-            if add is None:
-                for res in fit_comb(self.fitfunc, start, corr, franges, fshape,
-                        oldfit, None, oldfitpar, xshift=xshift, debug=debug):
-                    fitres.add_data(*res)
-            else:
-                for res in fit_comb(self.fitfunc, start, corr, franges, fshape,
-                        oldfit, add, oldfitpar, xshift=xshift, debug=debug):
-                    fitres.add_data(*res)
+            for res in fit_comb(self.fitfunc, start, corr, franges, fshape,
+                    oldfit, add, oldfitpar, useall, self.debug, self.xshift,
+                    self.correlated):
+                fitres.add_data(*res)
 
+        return fitres
+
+    def chiral_fit(self, X, Y, corrid="", start=None, xcut=None, debug=0):
+        """Fit function to data.
+        
+        Parameters
+        ----------
+        X, Y : ndarrays
+            The data arrays for X and Y. Assumes ensemble as first axis
+            and bootstrap samples as second axis.
+        corrid : str
+            Identifier for the fit result.
+        start : list or tuple or ndarray
+            Start value for the fit.
+        xcut : float
+            A maximal value for the X values. Everything above will not
+            be used in the fit.
+        debug : int
+            The amount of information printed to screen.
+        """
+        # if no start value given, take an arbitrary value
+        if start is None:
+            _start = [3.8]
+        # make sure start is a tuple, list, or ndarray for leastsq to work
+        elif not isinstance(start, (np.ndarray, tuple, list)):
+            _start = list(start)
+        else:
+            _start = start
+        # implement a cut on the data if given
+        if xcut:
+            tmp = X[:,0] < xcut
+            _X = X[tmp].T
+            _Y = Y[tmp].T
+        else:
+            _X = X.T
+            _Y = Y.T
+
+        # create FitResults
+        fitres = FitResult("chiral_fit")
+        shape1 = (_X.shape[0], 1, _X[:3].shape[0])
+        shape2 = (_X.shape[0], _X[:3].shape[0])
+        fitres.create_empty(shape1, shape2, 1)
+        # fit the data
+        dof = _X.shape[1] - len(_start)
+        for i, x in enumerate(_X[:3]):
+            tmpres, tmpchi2, tmppval = fitting(self.fitfunc, x, _Y, _start, debug=debug)
+            fitres.add_data((0,i), tmpres, tmpchi2, tmppval)
         return fitres
 
 class FitResult(object):
@@ -189,7 +253,7 @@ class FitResult(object):
         """Read data from file.
         """
         tmp = read_fitresults(filename)
-        obj = cls(tmp[0][0])
+        obj = cls(tmp[0][0], tmp[0][3])
         obj.fit_ranges = tmp[1]
         obj.data = tmp[2]
         obj.chi2 = tmp[3]
@@ -197,7 +261,6 @@ class FitResult(object):
         obj.label = tmp[5]
         obj.corr_num = tmp[0][1]
         obj.fit_ranges_shape = tmp[0][2]
-        obj.derived = tmp[0][3]
         return obj
 
     def save(self, filename):
@@ -457,16 +520,14 @@ class FitResult(object):
             self.weight = []
             if self.derived:
                 nfits = [d[0].size for d in self.data]
-            else:
-                nfits = [d[0,0].size for d in self.data]
-            if self.derived:
                 r, r_std, r_syst, w = sys_error_der(self.data, self.pval)
                 self.error.append((r, r_std, r_syst, nfits))
                 self.weight.append(w)
             else:
+                nfits = [d[0,0].size for d in self.data]
                 npar = self.data[0].shape[1]
                 for i in range(npar):
-                    r, r_std, r_syst, w = sys_error(self.data, self.pval, i)
+                    r, r_std, r_syst, w = sys_error(self.data, self.pval, i, rel=rel)
                     self.error.append((r, r_std, r_syst, nfits))
                     self.weight.append(w)
 
@@ -488,7 +549,70 @@ class FitResult(object):
                 rsys[i][1]))
         print("------------------------------\n\n")
 
-    def data_for_plot(self, par=0,new=True):
+    def print_details(self):
+        """Prints details for every fit."""
+        print("------------------------------")
+        print("details for %s" % self.corr_id)
+        if self.derived:
+            # iterate over the correlators
+            for i, lab in enumerate(self.label):
+                print("correlator %s" % (str(lab)))
+                if self.data[i].ndim < 3:
+                    for j in range(self.data[i].shape[-1]):
+                        # create a string containing the fit parameters
+                        tmpstring = " ".join(("%2d:" % (j),
+                                              "weight %e" % (self.pval[i][0,j]),
+                                              "par: %e" % (self.data[i][0,j])))
+                        print(tmpstring)
+                else:
+                    for j in range(self.data[i].shape[-1]):
+                        # iterate over additional fit intervals
+                        nintervals = self.data[i].shape[1:-1]
+                        ninteriter = [[x for x in range(n)] for n in nintervals]
+                        for item in itertools.product(*ninteriter):
+                            # create a string containing the fit parameters
+                            select = (slice(None),) + item + (j,)
+                            tmpstring = " ".join(("%2d:" % (j),
+                                                  "add ranges %s" % str(item),
+                                                  "weight %e" % (self.pval[i][select][0]),
+                                                  "par: %e +- %e" % (self.data[i][select][0], np.std(self.data[i][select]))))
+                            print(tmpstring)
+        else:
+            # iterate over the correlators
+            for i, lab in enumerate(self.label):
+                print("correlator %s" % (str(lab)))
+                if self.data[i].ndim < 4:
+                    for j, r in enumerate(self.fit_ranges[i]):
+                        # create a string containing the fit parameters
+                        tmppar = ["par:"]
+                        for p in range(self.data[i].shape[1]):
+                          tmppar.append("%e +- %e" % (self.data[i][0,p,j], np.std(self.data[i][:,p,j])))
+                        tmppar = " ".join(tmppar)
+                        tmpstring = " ".join(("%d: range %2d:%2d" % (j, r[0],r[1]),
+                                              "chi^2 %e" % (self.chi2[i][0,j]),
+                                              "pval %5f" % (self.pval[i][0,j]),
+                                              tmppar))
+                        print(tmpstring)
+                else:
+                    for j, r in enumerate(self.fit_ranges[i]):
+                        # iterate over additional fit intervals
+                        nintervals = self.data[i].shape[2:-1]
+                        ninteriter = [[x for x in range(n)] for n in nintervals]
+                        for item in itertools.product(*ninteriter):
+                            # create a string containing the fit parameters
+                            tmppar = ["par:"]
+                            for p in range(self.data[i].shape[1]):
+                                select = (slice(None), p) + item + (j,)
+                                tmppar.append("%e" % (self.data[i][select])[0])
+                            tmppar = " ".join(tmppar)
+                            tmpstring = " ".join(("%d: range %2d:%2d" % (j, r[0],r[1]),
+                                                  "add ranges %s" % str(item),
+                                                  "chi^2 %e" % (self.chi2[i][select][0]),
+                                                  "pval %5f" % (self.pval[i][select][0]),
+                                                  tmppar))
+                            print(tmpstring)
+
+    def data_for_plot(self, par=0):
         """Prints the errors etc of the data."""
         if new is True:
           self.error=None
@@ -519,48 +643,48 @@ class FitResult(object):
         Parameters
         ----------
         mass : FitResult
-            The masses of the single particles.
-        parself, parmass : int, optional
-            The parameters for which to do this.
-        L : int
+            The mass of the particle.
+        parmass : 
+            The parameter of the mass fit to tuse.
+        L : int, optional
             The spatial extend of the lattice.
-        isratio : bool
-            If self is already the ratio.
         """
-        # we need the weight of both mass and self
+        if not self.derived or self.corr_id != "Ecm":
+            raise RuntimeError("change to center of mass frame first")
+        # we need the weight
         self.calc_error()
         mass.calc_error()
-        # get the mass of the single particles, assuming the
-        # first entry of the mass FitResults contains them.
         _ma = mass.data[0][:,parmass]
         _ma_w = mass.weight[parmass][0]
-        _data = self.data[0][:,parself]
-        _data_w = self.weight[parself][0]
-        nsam = _ma.shape[0]
-        cotd = [np.zeros((nsam, _ma.shape[-1], _data.shape[-1]))]
-        cotd_w = [np.zeros((_ma.shape[-1], _data.shape[-1]))]
-        # loop over fitranges of self
-        for i in range(_data.shape[-1]):
-            # loop over fitranges of mass
-            for j in range(_ma.shape[-1]):
-                if isratio:
-                    q2 = ((_data[:,j,i]*_data[:,j,i]/4.+_data[:,j,i]*_ma[:,j]) *
-                          (2. * np.pi) / float(L))
-                else:
-                    q2 = calc_q2(_data[:,i], _ma[:,j], L)
-                cotd[0][:,j,i] = Z(q2).real / (np.pow(np.pi, 3./2.) * np.sqrt(q2))
-                if isratio:
-                    cotd_w[0][j,i] = _ma_w[j] * _data_w[j,i]
-                else:
-                    cotd_w[0][j,i] = _ma_w[j] * _data_w[i]
-        np.save("cotd_test.npy", cotd[0])
-        np.save("cotd_w_test.npy", cotd_w[0])
-        res, std, syst = sys_error_der(cotd, cotd_w)
-        print(res[0][0])
-        print(std[0])
-        print(syst[0])
+        nsam = self.data[0].shape[0]
+        newshape = [(nsam,) + _ma.shape[1:] + d.shape[2:] for d in self.data]
+        delta = FitResult("delta", True)
+        delta.create_empty(newshape, newshape, [1, len(self.data)])
+        for res in compute_phaseshift(self.data, self.weight, _ma, _ma_w, L):
+            delta.add_data(*res)
+        return delta
+        ## loop over fitranges of self
+        #for i in range(_data.shape[-1]):
+        #    # loop over fitranges of mass
+        #    for j in range(_ma.shape[-1]):
+        #        if isratio:
+        #            q2 = ((_data[:,j,i]*_data[:,j,i]/4.+_data[:,j,i]*_ma[:,j]) *
+        #                  (2. * np.pi) / float(L))
+        #        else:
+        #            q2 = calc_q2(_data[:,i], _ma[:,j], L)
+        #        cotd[0][:,j,i] = Z(q2).real / (np.pow(np.pi, 3./2.) * np.sqrt(q2))
+        #        if isratio:
+        #            cotd_w[0][j,i] = _ma_w[j] * _data_w[j,i]
+        #        else:
+        #            cotd_w[0][j,i] = _ma_w[j] * _data_w[i]
+        #np.save("cotd_test.npy", cotd[0])
+        #np.save("cotd_w_test.npy", cotd_w[0])
+        #res, std, syst = sys_error_der(cotd, cotd_w)
+        #print(res[0][0])
+        #print(std[0])
+        #print(syst[0])
 
-    def calc_dE(self, mass, parself=0, parmass=0):
+    def calc_dE(self, mass, parself=0, parmass=0, isdependend=True):
         """Calculate dE from own data and the mass of the particles.
 
         Parameters
@@ -569,6 +693,8 @@ class FitResult(object):
             The masses of the single particles.
         parself, parmass : int, optional
             The parameters for which to do this.
+        isdependend : bool
+            If mass and self are dependend on each other.
         """
         # we need the weight of both mass and self
         self.calc_error()
@@ -577,28 +703,15 @@ class FitResult(object):
         # first entry of the mass FitResults contains them.
         _ma = mass.data[0][:,parmass]
         _ma_w = mass.weight[parmass][0]
-        _dE = []
-        _dE_w = []
-        nsamples = self.data[0].shape[0]
-        for i, d in enumerate(self.data):
-            # create the empty arrays
-            _dE.append(np.zeros((nsamples,)+_ma.shape[1:]+d.shape[2:]))
-            _dE_w.append(np.zeros(_ma.shape[1:]+d.shape[2:]))
-            len1 = len(_ma.shape[1:])
-            # iterate over the new array
-            niter = [[x for x in range(n)] for n in _dE[-1].shape[1:]]
-            for item in itertools.product(*niter):
-                s = d[(slice(None), parself)+item[len1:]]
-                a = _ma[(slice(None),)+item[:len1]]
-                _dE[-1][(slice(None),)+item] = s - 2. * a
-                _dE_w[-1][item] = (_ma_w[item[:len1]] *
-                        self.weight[parself][i][item[len1:]])
-        self.dE = _dE
-        self.dE_w = _dE_w
-        res, std, syst = sys_error_der(self.dE, self.dE_w)
-        print(res)
-        print(std)
-        print(syst)
+        _energy = self.data[0][:,parself]
+        _energy_w = self.weight[parself][0]
+        nsam = self.data[0].shape[0]
+        newshape = (nsam, _ma.shape[-1], _energy.shape[-1])
+        dE = FitResult("dE", True)
+        dE.create_empty(newshape, newshape, [1,1])
+        for res in compute_dE(_ma, _ma_w, _energy, _energy_w, isdependend):
+            dE.add_data(*res)
+        return dE
 
     #def sort_res(self, )
     #    """Function resorting a FitResult object by a specific axis
@@ -626,6 +739,8 @@ class FitResult(object):
             The spatial extend of the lattice.
         isratio : bool
             If self is already the ratio.
+        isdependend : bool
+            If mass and self are dependend on each other.
         """
         # we need the weight of both mass and self
         self.calc_error()
@@ -648,6 +763,42 @@ class FitResult(object):
             scat.add_data(*res)
         #print(scat.pval.shape)
         return scat
+
+    def to_CM(self, par, L=24, d=np.array([0., 0., 1.]), uselattice=True):
+        """Transform data to center of mass frame.
+
+        Parameters
+        ----------
+        par : int
+            Which of the fit parameters to transform.
+        L : int, optional
+            The lattice size.
+        d : ndarray, optional
+            The total momentum vector of the system.
+        uselattice : bool, optional
+            Use the lattice formulas or the continuum formulas.
+        """
+        if self.derived:
+            return
+        self.calc_error()
+        newshapes = [p.shape for p in self.pval]
+        Ecm = FitResult("Ecm", True)
+        Ecm.create_empty(newshapes, newshapes, self.corr_num)
+        nsamples = self.data[0].shape[0]
+        for i, data in enumerate(self.data):
+            ranges = [[x for x in range(n)] for n in data.shape[2:]]
+            for item in itertools.product(*ranges):
+                select = (slice(None), par) + item
+                gamma, res = calc_Ecm(data[select], d=d, L=L, lattice=uselattice)
+                weight = np.ones(nsamples) * self.weight[par][i][item]
+                if not isinstance(self.label[i], tuple):
+                    tmp = (self.label[i],)
+                else:
+                    tmp = self.label[i]
+                #if np.any(res > 4*0.14463):
+                #    print("%s: Ecm over 4*mpi" % str(tmp+item))
+                Ecm.add_data(tmp + item, res, gamma, weight)
+        return Ecm
 
     def evaluate_quark_mass(self, amu_s, obs_eval, obs1, obs2=None, obs3=None,
         meth=0):
@@ -772,7 +923,6 @@ class FitResult(object):
             _obsweight2, _obsweight3, amu_s, obs_match):
             self.add_data(*res)
 
-
     def mult_obs(self, other, corr_id="Product"):
       """Multiply two observables in order to treat them as a new observable.
 
@@ -883,6 +1033,7 @@ class FitResult(object):
       mult_obs.data[0] = product
       mult_obs.pval[0] = weights
       return mult_obs
+
     def res_reduced(self, samples=20, corr_id='reduced', m_a0 = False):
       """Take boolean 1d intersection of two arrays to choose certain fitranges and
       corresponding data.
@@ -947,4 +1098,6 @@ class FitResult(object):
           ind += 1
 
       return res_sorted
-     
+
+if __name__ == "__main__":
+    pass

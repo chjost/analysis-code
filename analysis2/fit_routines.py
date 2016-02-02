@@ -9,8 +9,11 @@ import scipy.stats
 import numpy as np
 
 from statistics import compute_error
+from functions import compute_eff_mass
+from utils import loop_iterator
 
-def fit_single(fitfunc, start, corr, franges, add=None, debug=0):
+def fit_single(fitfunc, start, corr, franges, add=None, debug=0,
+        correlated=True, xshift=0., npar=2):
     """Fits fitfunc to a Correlators object.
 
     The predefined functions describe a single particle correlation
@@ -32,6 +35,8 @@ def fit_single(fitfunc, start, corr, franges, add=None, debug=0):
         Additional arguments to the fit function.
     debug : int, optional
         The amount of info printed.
+    correlated : bool
+        Use the full covariance matrix or just the errors.
     """
     dshape = corr.shape
     ncorr = dshape[-1]
@@ -46,20 +51,33 @@ def fit_single(fitfunc, start, corr, franges, add=None, debug=0):
     for n in range(ncorr):
         if debug > 1:
             print("fitting correlator %d" % (n))
-        for i, r in enumerate(franges[n]):
-            if debug > 1:
-                print("fitting interval %d" % (i))
-            res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
-                corr.data[:,r[0]:r[1]+1,n], start, add = add, correlated=True,
-                debug=debug)
-            if i==0:
-                print(res.shape)
-                print(chi.shape)
-                print(pva.shape)
-            yield (n, i), res, chi, pva
+        if isinstance(start[0], (tuple, list)) and len(start[0]) == 1:
+            for i, r in enumerate(franges[n]):
+                if debug > 1:
+                    print("fitting interval %d" % (i))
+                res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
+                    corr.data[:,r[0]:r[1]+1,n], start[n], add=add,
+                        correlated=correlated, debug=debug)
+                yield (n, i), res, chi, pva
+        elif isinstance(start[0], (tuple, list)):
+            for i, r in enumerate(franges[n]):
+                if debug > 1:
+                    print("fitting interval %d" % (i))
+                res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
+                    corr.data[:,r[0]:r[1]+1,n], start[n][i], add=add,
+                        correlated=correlated, debug=debug)
+                yield (n, i), res, chi, pva
+        else:
+            for i, r in enumerate(franges[n]):
+                if debug > 1:
+                    print("fitting interval %d" % (i))
+                res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
+                    corr.data[:,r[0]:r[1]+1,n], start, add=add,
+                        correlated=correlated, debug=debug)
+                yield (n, i), res, chi, pva
 
 def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
-        oldfitpar=None, useall=False, xshift=0., debug=0):
+        oldfitpar=None, useall=False, debug=0, xshift=0., correlated=True, npar=1):
     """Fits fitfunc to a Correlators object.
 
     The predefined functions describe a single particle correlation
@@ -92,6 +110,8 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
     xshift: a scalar to shift the X-linspace for the fitting
     debug : int, optional
         The amount of info printed.
+    correlated : bool
+        Use the full covariance matrix or just the errors.
     """
     dshape = corr.shape
     ncorrs = [len(s) for s in fshape]
@@ -108,19 +128,23 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
     if debug > 0:
         print("fitting the data")
     # iterate over the correlation functions
-    ncorriter = [[x for x in range(n)] for n in ncorrs]
-    for item in itertools.product(*ncorriter):
+    #ncorriter = [[x for x in range(n)] for n in ncorrs]
+    #for item in itertools.product(*ncorriter):
+    for item in loop_iterator(ncorrs):
         if debug > 1:
             print("fitting correlators %s" % str(item))
+        n = item[-1]
         # create the iterator over the fit ranges
         tmp = [fshape[i][x] for i,x in enumerate(item)]
-        rangesiter = [[x for x in range(n)] for n in tmp]
+        #rangesiter = [[x for x in range(n)] for n in tmp]
         # iterate over the fit ranges
-        for ritem in itertools.product(*rangesiter):
+        #for ritem in itertools.product(*rangesiter):
+        for ritem in loop_iterator(tmp):
+            m = ritem[-1]
             if debug > 1:
                 print("fitting fit ranges %s" % str(ritem))
             # get fit interval
-            r = franges[item[-1]][ritem[-1]]
+            r = franges[n][m]
             # get old data
             add_data = oldfit.get_data(item[:-1] + ritem[:-1]) 
             # get only the wanted parameter if oldfitpar is given
@@ -136,13 +160,35 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
                 if add_data.ndim == 1:
                     add_data.shape = (-1, 1)
                 add_data = np.hstack((add_data, add))
-            res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
-                    corr.data[:,r[0]:r[1]+1,item[-1]], start, add=add_data,
-                    correlated=True, debug=debug)
+            # HACK, to be removed
+            if False:
+            #if corr.data.ndim == 4:
+                if isinstance(start[0], (tuple, list)):
+                    res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
+                        corr.data[:,r[0]:r[1]+1,ritem[-2],n], start[n],
+                        add=add_data, correlated=correlated, debug=debug)
+                else:
+                    res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
+                        corr.data[:,r[0]:r[1]+1,ritem[-2],n], start,
+                        add=add_data, correlated=correlated, debug=debug)
+            else:
+                #print(len(start[0]))
+                if isinstance(start[0], (tuple, list)) and len(start[0]) == npar:
+                    res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
+                        corr.data[:,r[0]:r[1]+1,n], start[n],
+                        add=add_data, correlated=correlated, debug=debug)
+                elif isinstance(start[0], (tuple, list)):
+                    res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
+                        corr.data[:,...,r[0]:r[1]+1,n], start[n],
+                        #corr.data[:,r[0]:r[1]+1,n], start[n][m],
+                        add=add_data, correlated=correlated, debug=debug)
+                else:
+                    res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
+                        corr.data[:,r[0]:r[1]+1,n], start,
+                        add=add_data, correlated=correlated, debug=debug)
             yield item + ritem, res, chi, pva
 
-def calculate_ranges(ranges, shape, oldshape=None, step=2, min_size=4, debug=0,
-    fixend=False):
+def calculate_ranges(ranges, shape, oldshape=None, dt_i=2, dt_f=2, dt=4, debug=0):
     """Calculates the fit ranges.
 
     Parameters
@@ -154,9 +200,9 @@ def calculate_ranges(ranges, shape, oldshape=None, step=2, min_size=4, debug=0,
         The shape of the data.
     oldshape : sequence, optional
         The fitranges of a fit before.
-    step : int, optional
-        The steps in the loops.
-    min_size : int, optional
+    dt_i, dt_f : ints, optional
+        The step size for the first and last time slice for the fitting.
+    dt : int, optional
         The minimal size of the interval.
     fixend : bool to fix the last point in the fit ranges
     debug : int
@@ -178,7 +224,7 @@ def calculate_ranges(ranges, shape, oldshape=None, step=2, min_size=4, debug=0,
             if debug > 1:
                 print("the upper range exceeds the data range")
             ranges[1] = shape[1] - 1
-        r_tmp = get_ranges(ranges[0], ranges[1], step, min_size,fixend=fixend)
+        r_tmp = get_ranges(ranges[0], ranges[1], dt_i=dt_i, dt_f=dt_f, dt=dt)
         fit_ranges = [r_tmp for i in range(ncorr)]
         shape = [[r_tmp.shape[0]] * ncorr]
     else:
@@ -190,31 +236,42 @@ def calculate_ranges(ranges, shape, oldshape=None, step=2, min_size=4, debug=0,
             # check if we exceed the time extent
             if ran[1] > shape[1] - 1:
                 ran[1] = shape[1] - 1
-            fit_ranges.append(get_ranges(ran[0], ran[1], step, min_size,
-              fixend=fixend))
+            fit_ranges.append(get_ranges(ran[0], ran[1], dt_i=dt_i, dt_f=dt_f, dt=dt))
         shape = [[ran.shape[0] for ran in fit_ranges]]
     if oldshape is not None:
         shape = oldshape + shape
     fit_ranges = np.asarray(fit_ranges)
     return fit_ranges, shape
 
-def get_ranges(lower, upper, step, minsize, fixend=False):
+def get_ranges(lower, upper, dt_i=2, dt_f=2, dt=4):
     """Get the intervals given a lower and upper bound, step size and
     the minimal size of the interval.
     """
     ran = []
-    for lo in range(lower, upper+1, step):
-      if fixend is True:
-        up = 32
-        ran.append((lo,up))
-      else:
-        for up in range(lower, upper+1, step):
-            if (up - lo + 2) > minsize:
-                # the +2 comes from the fact that the interval contains one
-                # more number than the difference between the boundaries and
-                # because python would exclude the upper boundary but we
-                # include it explicitly
-                ran.append((lo, up))
+    # keep initial time slice fixed
+    if dt_i < 0:
+        # keep upper time slice fixed
+        if dt_f < 0:
+            if (up - lo + 2) > dt:
+                ran.append((lower, upper))
+        else:
+            for up in range(upper, lower-1, -dt_f):
+                if (up - lower + 2) > dt:
+                    ran.append((lower, up))
+    # keep upper time slice fixed
+    elif dt_f < 0:
+        for lo in range(lower, upper+1, dt_i):
+            if (upper - lo + 2) > dt:
+                ran.append((lo, upper))
+    else:
+        for lo in range(lower, upper+1, dt_i):
+            for up in range(upper, lower-1, -dt_f):
+                if (up - lo + 2) > dt:
+                    # the +2 comes from the fact that the interval contains one
+                    # more number than the difference between the boundaries and
+                    # because python would exclude the upper boundary but we
+                    # include it explicitly
+                    ran.append((lo, up))
     return np.asarray(ran)
 
 def fitting(fitfunc, X, Y, start, add=None, correlated=True, debug=0):
@@ -258,12 +315,9 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, debug=0):
 
     # compute inverse, cholesky decomposed covariance matrix
     if not correlated:
-        print(np.cov(Y.T))
         cov = np.diag(np.diagonal(np.cov(Y.T)))
     else:
         cov = np.cov(Y.T)
-        print(cov)
-        print(Y[0])
     cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
 
     # degrees of freedom
@@ -278,13 +332,13 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, debug=0):
     if add is None:
         for b in range(samples):
             p,cov1,infodict,mesg,ier = leastsq(errfunc, start, args=(X, Y[b],
-                cov), full_output=1, factor=0.1)
+                cov), full_output=1, factor=.1)
             chisquare[b] = float(sum(infodict['fvec']**2.))
             res[b] = np.array(p)
     else:
         for b in range(samples):
             p,cov1,infodict,mesg,ier = leastsq(errfunc, start, args=(X, Y[b],
-                add[b], cov), full_output=1, factor=0.1)
+                add[b], cov), full_output=1, factor=.1)
             chisquare[b] = float(sum(infodict['fvec']**2.))
             res[b] = np.array(p)
     # calculate mean and standard deviation
@@ -309,6 +363,110 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, debug=0):
         print("p-value: %lf" % pvals[0]) 
 
     return res, chisquare, pvals
+
+def compute_dE(mass, mass_w, energy, energy_w, isdependend=False):
+    needed = np.zeros(mass.shape[0])
+    if isdependend:
+        for i in range(mass.shape[-1]):
+            for j in range(energy.shape[-1]):
+                tmp = energy[:,i,j] - 2.*mass[:,i]
+                tmp_w = mass_w[i] * energy_w[i,j]
+                yield (0,0,i,j), tmp, needed, tmp_w
+    else:
+        for i in range(mass.shape[-1]):
+            for j in range(energy.shape[-1]):
+                tmp = energy[:,j] - 2.*mass[:,i]
+                tmp_w = mass_w[i] * energy_w[j]
+                yield (0,0,i,j), tmp, needed, tmp_w
+        
+def compute_phaseshift(Ecm, Ecm_w, mass, mass_w, L=24, isdependend=True):
+    # setup variables
+    corr_num = [1, len(Ecm)]
+    nsamples = Ecm[0].shape[0]
+    needed = np.zeros((nsamples,))
+    nfits = [d.shape[1:] for d in Ecm]
+    print(corr_num)
+    print(nsamples)
+    print(nfits)
+    raise StopIteration
+
+def get_start_values(ncorr, ranges, data, npar=2):
+    """Calculate start values for the fits.
+
+    Parameters
+    ----------
+    ncorr : int
+        The number of correlators used.
+    ranges : list of ints
+        The fit ranges for each correlator.
+    data : ndarray
+        The correlator data.
+    npar : int
+        The number of parameters.
+
+    Returns
+    -------
+    start : list of list of floats
+        The start values for each fit.
+    """
+    start = []
+    for n in range(ncorr):
+        start.append([])
+        # calculate effective values for correlator
+        c_eff = np.nanmean(data[...,n], axis=0)
+        m_eff = np.nanmean(compute_eff_mass(data[...,n]), axis=0)
+        # iterate over the ranges
+        for r in ranges[n]:
+            if npar == 2:
+                start[-1].append([c_eff[r[0]], m_eff[r[0]]])
+            elif npar == 1:
+                start[-1].append([m_eff[r[0]]])
+            elif npar == 3:
+                start[-1].append([c_eff[r[0]], m_eff[r[0]], 1.])
+            else:
+                raise RuntimeError("Cannot set starting values for" +
+                    "funtions with npar > 3.")
+    return start
+
+def get_start_values_comb(ncorr, ranges, data, npar=2):
+    """Calculate start values for the combined fits.
+
+    Parameters
+    ----------
+    ncorr : int
+        The number of correlators used.
+    ranges : list of ints
+        The fit ranges for each correlator.
+    data : ndarray
+        The correlator data.
+    npar : int
+        The number of parameters.
+
+    Returns
+    -------
+    start : list of list of floats
+        The start values for each fit.
+    """
+    start = []
+    for n in range(ncorr[-1]):
+        # calculate effective values for correlator
+        # select all axis except 1 and the last
+        # needs to be a tuple for nanmean
+        ax = tuple([i for i in range(data.ndim) if i != 1])
+        c_eff = np.nanmean(data[...,n], axis=ax[:-1])
+        m_eff = np.nanmean(compute_eff_mass(data[...,n]), axis=ax[:-1])
+        # iterate over the ranges
+        for r in ranges[n]:
+            if npar == 2:
+                start.append([c_eff[r[0]], m_eff[r[0]]])
+            elif npar == 1:
+                start.append([m_eff[r[0]]])
+            elif npar == 3:
+                start.append([c_eff[r[0]], m_eff[r[0]], 1.])
+            else:
+                raise RuntimeError("Cannot set starting values for" +
+                    "funtions with npar > 3.")
+    return start
 
 if __name__ == "__main__":
     pass

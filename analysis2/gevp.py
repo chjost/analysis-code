@@ -4,6 +4,7 @@ Functions for the GEVP and similar functions.
 
 import numpy as np
 import scipy.linalg as spla
+import itertools
 
 def gevp_shift_1(data, dt, dE=None, debug=0):
     """Weight-shift the correlation function matrix.
@@ -40,30 +41,39 @@ def gevp_shift_1(data, dt, dE=None, debug=0):
 
     # weighting of the matrix
     if dE is not None:
-        for t in range(dshape[1]):
+        _data = np.zeros_like(data)
+        for t in range(_data.shape[1]):
             weight = np.exp(dE*t)
-            if isinstance(dE, (int, float)):
-                data[:,t] = data[:,t] * weight
-            else:
-                for b in range(dshape[0]):
-                    data[b,t] = data[b,t] * weight[b]
+            # the following is needed since the weight and data
+            # axis have the first axis in common
+            _data[:,t] = (data[:,t].T * weight).T
+            #if isinstance(dE, (int, float)):
+            #    _data[:,t] = data[:,t] * weight
+            #else:
+            #    for b in range(dshape[0]):
+            #        _data[b,t] = data[b,t] * weight[b]
+    else:
+        _data = np.copy(data)
 
     # create the new array
     sdata = np.zeros(dshape)
 
     # fill the new array
     for i in range(dshape[1]):
-        sdata[:,i] = data[:,i] - data[:,i+dt]
+        sdata[:,i] = _data[:,i] - _data[:,i+dt]
 
     # reweighting of the matrix to cancel
     if dE is not None:
         for t in range(dshape[1]):
             weight = np.exp(-dE*t)
-            if isinstance(dE, (int, float)):
-                sdata[:,t] = sdata[:,t] * weight
-            else:
-                for b in range(dshape[0]):
-                    sdata[b,t] = sdata[b,t] * weight[b]
+            # the following is needed since the weight and data
+            # axis have the first axis in common
+            sdata[:,t] = (sdata[:,t].T * weight).T
+            #if isinstance(dE, (int, float)):
+            #    sdata[:,t] = sdata[:,t] * weight
+            #else:
+            #    for b in range(dshape[0]):
+            #        sdata[b,t] = sdata[b,t] * weight[b]
     # return shifted matrix
     return sdata
 
@@ -278,12 +288,30 @@ def calculate_gevp(data, t0=1):
     """
     # Initialize the eigenvalue array
     values_array = np.zeros(data.shape[:-1])
-    # iterate over the bootstrap samples
-    for _samples in range(data.shape[0]):
-        # iterate over the eigensystems
-        for eigenvalues, _eigenvectors, _t in solve_gevp_gen(data[_samples], t0):
-            # save the eigenvalues to the array
-            values_array[_samples, _t] = eigenvalues
-    # set the eigenvalues for t=t0 to 1.0
-    values_array[:,t0] = 1.0
+    if data.ndim == 4:
+        # iterate over the bootstrap samples
+        for _samples in range(data.shape[0]):
+            # iterate over the eigensystems
+            for eigenvalues, _eigenvectors, _t in solve_gevp_gen(data[_samples], t0):
+                # save the eigenvalues to the array
+                values_array[_samples, _t] = eigenvalues
+        # set the eigenvalues for t=t0 to 1.0
+        values_array[:,t0] = 1.0
+    else:
+        # iterate over the additional dimensions
+        item = [[n for n in range(x)] for x in data.shape[2:-2]]
+        for it in itertools.product(*item):
+            # iterate over the bootstrap samples
+            for _samples in range(data.shape[0]):
+                # select the entries
+                s = (_samples, slice(None)) + it + (Ellipsis,)
+                # iterate over the eigensystems
+                for eigenvalues, _eigenvectors, _t in solve_gevp_gen(data[s], t0):
+                    # select the entries
+                    s1 = (_samples, _t) + it + (Ellipsis,)
+                    # save the eigenvalues to the array
+                    values_array[s1] = eigenvalues
+            # set the eigenvalues for t=t0 to 1.0
+            values_array[:,t0] = 1.0
+
     return values_array

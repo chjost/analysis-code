@@ -1,4 +1,3 @@
-#!/usr/bin/python2
 #!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
 #!/usr/bin/python2
 
@@ -18,57 +17,98 @@ def main():
 
     # get data from input file
     lat = ens.name()
-    datadir = ens.get_data("datadir")
-    plotdir = ens.get_data("plotdir")
+    L = ens.L()
+    datadir = "/".join((ens.get_data("datadir"), lat))
+    plotdir = "/".join((ens.get_data("plotdir"), lat))
+    #datadir = ens.get_data("datadir")
+    #plotdir = ens.get_data("plotdir")
     d2 = ens.get_data("d2")
+    d = ens.get_data("d")
 
     # single particle correlator
     print("read single particle corrs")
-    picorr = ana.Correlators.read("%s/corr_pi_%s.npy" % (datadir, lat))
-    pifit = ana.FitResult.read("%s/fit_pi_%s.npz" % (datadir, lat))
+    picorr = ana.Correlators.read("%s/corr_pi.npy" % (datadir))
+    pifit = ana.FitResult.read("%s/fit_pi.npz" % (datadir))
     pifit.print_data(1)
-    #print("pi best fit")
-    #print(pifit.weight[1][0][29])
-    #print(pifit.data[0][0,:,29])
+    #pifit.print_details()
 
     # two particle correlator
-    print("\n\nread ratio")
-    #ratiocorr = ana.Correlators.read("%s/ratio_pipi_TP%d_%s.npy" % (datadir, d2, lat))
-    #ratiofit = ana.FitResult.read("%s/fit_pipi_ratio_TP%d_%s.npz" % (datadir, d2, lat))
-    pipifit = ana.FitResult.read("%s/fit_pipi_TP%d_%s.npz" % (datadir, d2, lat))
-    #ratiofit.print_data(0)
-    #ratiofit.print_data(1)
+    print("\n\nread four point function")
+    print(datadir)
+    pipifit = ana.FitResult.read("%s/fit_pipi_TP%d.npz" % (datadir, d2))
     pipifit.print_data(1)
-    #pipifit.print_data(1)
-    #pipifit.print_data(2)
-    #print(pipifit.data[0][0])
-    #print(pipifit.data[0][1000])
-    #print("dE best fits")
-    #print(ratiofit.weight[1][0][29])
-    #print(ratiofit.data[0][0,:,29])
-    #print(ratiofit.weight[1][1][29])
-    #print(ratiofit.data[1][0,:,29])
-    #print(ratiofit.weight[1][2][29])
-    #print(ratiofit.data[2][0,:,29])
+    #pipifit.print_details()
 
-    calca = False
+    print("\n\nread ratio")
+    print(datadir)
+    ratiofit = ana.FitResult.read("%s/fit_pipi_ratio_TP%d.npz" % (datadir, d2))
+    ratiofit.print_data(0)
+    ratiofit.print_data(1)
+    #ratiofit.print_details()
+
+    #calcEcm = True
+    #if calcEcm:
+    #    Ecm = pipifit.to_CM(1, L=L, d=d)
+    #    Ecm.save("%s/Ecm_TP%d.npz" % (datadir, d2))
+    #else:
+    #    Ecm = ana.FitResult.read("%s/Ecm_TP%d.npz" % (datadir, d2))
+    #Ecm.print_data()
+    #Ecm.print_details()
+
+    #calcdelta = True
+    #if calcdelta:
+    #    delta = Ecm.calc_cot_delta(pifit, 1)
+    #    delta.save("%s/delta_TP%d.npz" % (datadir, d2))
+    #else:
+    #    delta = ana.FitResult.read("%s/delta_TP%d.npz" % (datadir, d2))
+
+    calcdE = True
+    if calcdE:
+        dE = pipifit.calc_dE(pifit, 1, 1, isdependend=False)
+        dE.save("%s/dE_TP%d.npz" % (datadir, d2))
+    else:
+        dE = ana.FitResult.read("%s/dE_TP%d.npz" % (datadir, d2))
+    dE.print_data()
+    #print(dE.data[0][0])
+    #dE.print_details()
+    #plotter = ana.LatticePlot("%s/dE_TP%d_%s.pdf" % (plotdir, d2, lat))
+    #label = ["dE", "dE$_{\pi\pi}$", "dE$_{\pi\pi}$"]
+    #plotter.histogram(dE, label)
+    #del plotter
+
+    calca = True
     if calca:
         print("calculate scattering length")
-        #a_pipi = ratiofit.calc_scattering_length(pifit, 1, 1, L=ens.L(), isratio=True)
-        a_pipi = pipifit.calc_scattering_length(pifit, 1, 1, L=ens.L(), isratio=False)
-        #cotd = ratiofit.calc_cot_delta(pifit, 1, 1, L=ens.L(), isratio=True)
-        a_pipi.save("%s/scat_len_TP%d_%s.npz" % (datadir, d2, lat))
+        a_pipi = pipifit.calc_scattering_length(pifit, 1, 1, L=ens.L(), isdependend=False)
+        r_a_pipi = ratiofit.calc_scattering_length(pifit, 1, 1, L=ens.L(), isratio=True)
+        a_pipi.save("%s/scat_len_TP%d.npz" % (datadir, d2))
+        r_a_pipi.save("%s/scat_len_ratio_TP%d.npz" % (datadir, d2))
     else:
-        a_pipi = ana.FitResult.read("%s/scat_len_TP%d_%s.npz" % (datadir, d2, lat))
+        a_pipi = ana.FitResult.read("%s/scat_len_TP%d.npz" % (datadir, d2))
+        r_a_pipi = ana.FitResult.read("%s/scat_len_ratio_TP%d.npz" % (datadir, d2))
     a_pipi.print_data()
-    plotter = ana.LatticePlot("%s/scat_len_TP%d_%s.pdf" % (plotdir, d2, lat))
-    label = ["scattering length", "a$_{\pi\pi}$", "a$_{\pi\pi}$"]
-    plotter.histogram(a_pipi, label)
-    del plotter
+    r_a_pipi.print_data()
+    #a_pipi.print_details()
+    #r_a_pipi.print_details()
+    #plotter = ana.LatticePlot("%s/scat_len_TP%d.pdf" % (plotdir, d2))
+    #label = ["scattering length", "a$_{\pi\pi}$", "a$_{\pi\pi}$"]
+    #plotter.histogram(a_pipi, label)
+    #plotter.new_file("%s/scat_len_ratio_TP%d.pdf" % (plotdir, d2))
+    #label = ["scattering length from ratio", "a$_{\pi\pi}$", "a$_{\pi\pi}$"]
+    #plotter.histogram(r_a_pipi, label)
+    #del plotter
+
+    # multiply a*m_pi
+    am_pi = a_pipi.mult_obs(pifit)
+    am_pi.save("%s/am_pi_TP%d.npz" % (datadir, d2))
+    am_pi.print_data()
+    r_am_pi = r_a_pipi.mult_obs(pifit)
+    r_am_pi.save("%s/am_pi_ratio_TP%d.npz" % (datadir, d2))
+    r_am_pi.print_data()
+
 
 if __name__ == '__main__':
     try:
-        print("starting")
         main()
     except KeyboardInterrupt:
         pass
