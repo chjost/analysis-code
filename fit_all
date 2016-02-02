@@ -82,9 +82,7 @@ def main():
     # plot the result
     if plotsingle:
         print("plotting")
-        # omit fit plotting for production
         plotter = ana.LatticePlot("%s/fit_k_%s.pdf" % (plotdir, lat))
-        #plotter = ana.LatticePlot("%s/hist_fit_k_%s.pdf" % (plotdir, lat))
         plotter.set_env(ylog=True)
         label = ["single particle", "t", "C(t)", "kaon"]
         plotter.plot(picorr, label, pifit, fit_single, add=addT, debug=debug)
@@ -134,16 +132,13 @@ def main():
 
     if plottwo:
         print("plotting")
-        # omit ratio fit plots for production
         plotter = ana.LatticePlot("%s/fit_ratio_kk_TP%d_%s.pdf" % (plotdir, d2, lat))
-        #plotter = ana.LatticePlot("%s/hist_fit_kk_TP%d_%s.pdf" % (plotdir, d2, lat))
         plotter.set_env(ylog=False)
         label = ["Ratio", "t", "R(t)", "data"]
         print "plotter set up"
         plotter.plot(ratio, label, ratiofit, fit_ratio, oldfit=pifit, add=addT,
            oldfitpar=1, xshift=0.5, debug=debug)
         print "open new file for deltaE"
-        # plotter.new_file("%s/hist_fit_kk_TP%d_%s.pdf" % (plotdir, d2, lat))
         plotter.new_file("%s/hist_fit_kk_ratio_TP%d_%s.pdf" % (plotdir, d2, lat))
         label = ["ratio", "dE$_{KK}$/a", "dE$_{KK}$"]
         plotter.histogram(ratiofit, label, 1)
