@@ -174,25 +174,6 @@ def main():
       Aresults[j] = ens
 
        
-        #------------ Read in OS fk-data for each ensemble --------------------
-        # numpy array holding 3 strange quark masses, 3 kaon masses and 3 values
-        # fk
-        OS_fk = np.loadtxt(src_path+"OSfk_"+ens[:-1]+".dat", skiprows=1,
-            usecols=(1,2,3,4,5,6))
-        # delete everything with wrong light quark mass
-        lqm = float(a[1:-3])*0.0001
-        OS_fk = OS_fk[np.logical_not(OS_fk[:,0]!=lqm)]
-
-        # ----------------- linear interpolation of fk ------------------------ 
-        # interpolate fk to amu_s value
-        OS_fk_y = OS_fk[np.logical_and(OS_fk[:,1]>0.015,OS_fk[:,1]<0.02),4]
-        OS_fk_y = np.atleast_2d(OS_fk_y)
-        OS_fk_x = OS_fk[np.logical_and(OS_fk[:,1]>0.015,OS_fk[:,1]<0.02),1]
-        fk_coeff = ana.ipol_lin(OS_fk_y,OS_fk_x)
-        fk_coeff_match = ana.eval_lin(fk_coeff, b_roots_p1) 
-        #print("lin. i-pol.:\tf_K = %f +/- %f" % (fk_coeff_match[0], 0))
-        fk_ipol[idx] = np.array([fk_coeff_match[0],0])
-
     Aresults = Aresults.reshape((len(latA),8))
     print Aresults
     fmt = " ".join(['%1.4e']*8)
