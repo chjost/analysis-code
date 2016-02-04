@@ -5,6 +5,8 @@ Statistical functions.
 import numpy as np
 import itertools
 
+from utils import *
+
 def compute_error(data, axis=0):
     """Calculates the mean and standard deviation of the data.
 
@@ -22,8 +24,9 @@ def compute_error(data, axis=0):
     ndarray
         The standard deviation of the data.
     """
-    m = np.mean(data, axis)
-    return np.mean(data, axis), np.std(data, axis)
+    if axis != 0:
+        raise ValueError("compute_error not implemented for axis = %d" % axis)
+    return mean_std(data)
 
 def weighted_quantile(data, weights, quantile=0.5):
     """Compute the weighted quantile, where a fixed percentage of the sum of
@@ -138,7 +141,8 @@ def sys_error(data, pvals, par=0, rel=True):
                     data_weight[i].ravel())
         # the statistical error is the standard deviation of the medians
         # over the bootstrap samples.
-        res_std[i] = np.std(res[i])
+        _, s = mean_std(res[i])
+        res_std[i] = s
         # the systematic error is given by difference between the median 
         # on the original data and the 16%- or 84%-quantile respectively
         res_sys[i][0]=res[i][0] - weighted_quantile(d[0,par].ravel(),
@@ -187,7 +191,8 @@ def sys_error_der(data, weights):
             res[i][b] = weighted_quantile(d[b].ravel(), weights[i][b].ravel())
         # the statistical error is the standard deviation of the medians
         # over the bootstrap samples.
-        res_std[i] = np.std(res[i])
+        _, s = mean_std(res[i])
+        res_std[i] = s
         # the systematic error is given by difference between the median 
         # on the original data and the 16%- or 84%-quantile respectively
         res_sys[i][0] = res[i][0]-weighted_quantile(d[0].ravel(),
@@ -251,6 +256,13 @@ def freq_count(arr, verb=False):
     if verb == True:
       print(frequencies)
     return frequencies
+
+def draw_gauss_distributed(mean, std, shape):
+    """Draw normal distributed random numbers."""
+    np.random.seed(1227)
+    # for random samples from N(\mu, \sigma^2) use
+    # sigma * random(shape) + mu
+    return std * np.random.randn(*shape) + mean
 
 if __name__ == "main":
     pass

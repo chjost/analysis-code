@@ -223,11 +223,14 @@ def print_summary(datafolder, plotfolder, lattices, d2=0):
         print_line(lat, d, p_dE[lat])
 
     print("a")
-    print("%9s  %26s"% ("lattice", "data"))
-    for lat, d in zip(lattices, summ_a):
-        print("%8s: %5.2f +- %.2f +%.2f -%.2f" % (lat, d[0], d[1], d[2], d[3]))
-
     p_am = paper_am()
+    print("%9s  %26s\t%s"% ("lattice", "data", "reference"))
+    for lat, d in zip(lattices, summ_a):
+        print("%8s: %5.2f +- %.2f +%.2f -%.2f\t%.2f" % (lat, d[0], d[1], d[2], d[3], p_am[lat][0]/w_pi[lat][0]))
+
+    #print("a from paper (calculated)")
+    #for lat in lattices:
+    #    print("%9s  %.2f" % (lat, p_am[lat][0]/w_pi[lat][0]))
     print("a * mpi")
     print("%9s  %32s\t%32s\t%12s"% ("lattice", "reference", "data", "sigma"))
     for lat, d in zip(lattices, summ_ampi):
@@ -244,7 +247,8 @@ def print_summary(datafolder, plotfolder, lattices, d2=0):
 
     print("a")
     for lat, d in zip(lattices, summ_a):
-        print("%8s & $%.2f(%1.0f)(^{+%1.0f}_{-%1.0f})$ \\\\" % (lat, d[0], d[1]*100., d[2]*100., d[3]*100.))
+        tmp = p_am[lat][0]/w_pi[lat][0]
+        print("%8s & $%.2f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%.2f$ & $%.2f$ \\\\" % (lat, d[0], d[1]*100., d[2]*100., d[3]*100., tmp, np.abs(tmp-d[0])/d[1]))
 
     print("a * mpi")
     for lat, d in zip(lattices, summ_ampi):

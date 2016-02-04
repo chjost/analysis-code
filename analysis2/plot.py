@@ -123,7 +123,7 @@ class LatticePlot(object):
 
 
     def _genplot_single(self, corr, label, fitresult=None, fitfunc=None,
-            add=None, xshift=0., rel=False, debug=0):
+            add=None, xshift=0., rel=False, ploterror=False, debug=0):
         """Plot the data of a Correlators object and a FitResult object
         together.
 
@@ -176,7 +176,7 @@ class LatticePlot(object):
                     plot_data(X, np.divide(ddata,corr.data[0,:,n]),
                         np.zeros_like(ddata), label=label[3], plotrange=[3,T])
                 else:
-                    self.plot_data(X, corr.data[0,:,n], ddata, label[3],
+                    plot_data(X, corr.data[0,:,n], ddata, label[3],
                         plotrange=[3,T])
                 plt.legend()
                 self.save()
@@ -242,7 +242,6 @@ class LatticePlot(object):
         T = corr.shape[1]
         franges = fitresult.fit_ranges
         fshape = fitresult.fit_ranges_shape
-        print(fshape)
 
         # iterate over correlation functions
         ncorriter = [[x for x in range(n)] for n in ncorrs]
@@ -253,16 +252,12 @@ class LatticePlot(object):
             mdata, ddata = compute_error(corr.data[:,:,n])
             # create the iterator over the fit ranges
             tmp = [fshape[i][x] for i,x in enumerate(item)]
-            print(tmp)
-            #limit fitranges to be plotted
-            rangesiter = [[x for x in range(m)] for m in [10,10] ]
-            #rangesiter = [[x for x in range(m)] for m in tmp ]
+            rangesiter = [[x for x in range(m)] for m in tmp ]
             # iterate over the fit ranges
             for ritem in itertools.product(*rangesiter):
                 if debug > 1:
                     print("plotting fit ranges %s" % str(ritem))
                 r = ritem[-1]
-                print r
                 # get fit interval
                 fi = franges[n][r]
                 _par = fitresult.get_data(item + ritem)
@@ -371,9 +366,9 @@ class LatticePlot(object):
                     self.save()
         label[0] = label_save
 
-    def plot_func(self, func, args, interval, label, fmt="k"):
+    def plot_func(self, func, args, interval, label, fmt="k", col="black"):
         X = np.linspace(interval[0], interval[1], 1000)
-        plot_function(func, X, args, label, ploterror=False, fmt=fmt)
+        plot_function(func, X, args, label, ploterror=True, fmt=fmt, col=col)
 
     def history(self, data, label, par=None):
         self._set_env_normal()

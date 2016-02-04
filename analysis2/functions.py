@@ -233,32 +233,6 @@ def func_sinh(p, t, o):
     """
     return p[0]*np.sinh(p[1]/2.) * np.sinh(p[1]*(t-o/2.))
 
-def compute_weight(corr, pvals, par=1):
-    """compute the weights for the histogram
-
-    Parameters
-    ----------
-    corr : ndarray
-        the correlation functions.
-    pvals : ndarray
-        The p-values for each correlation function.
-    par : int
-        The parameter for which to calculate the weight.
-
-    Returns
-    -------
-    list
-        The calculated weights.
-    """
-    errors = np.std(corr, axis=1)
-    max_err = np.amax(errors)
-    weights = []
-    if len(pvals) != 0:
-        for i in range(pvals.shape[0]):
-            w = (1.-2*abs(pvals[i,par]-0.5))*max_err/errors[i]
-            weights.append(w**2)
-    return weigths
-
 def simple_difference(d1, d2=None):
     """Calculates the difference of two data sets
 
@@ -339,15 +313,6 @@ def compute_square(data):
     Returns
     -------
     ndarray
-        The derivative of the data.
-
-    Raises
-    ------
-    IndexError
-        If array has only 1 axis.
+        The square of the data.
     """
-    # creating square array from data array
-    dshape = list(data.shape)
-    # computing the square
-    square = np.square(data)
-    return square
+    return np.square(data)

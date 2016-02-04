@@ -118,6 +118,9 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
     if not useall:
         ncorrs[-2] = 1
     if ncorrs[-1] != dshape[-1]:
+        print(fshape)
+        print(ncorrs)
+        print(dshape)
         raise RuntimeError("something wrong in fit_comb")
     # prepare X data
     if debug > 0:
@@ -188,7 +191,8 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
                         add=add_data, correlated=correlated, debug=debug)
             yield item + ritem, res, chi, pva
 
-def calculate_ranges(ranges, shape, oldshape=None, dt_i=2, dt_f=2, dt=4, debug=0):
+def calculate_ranges(ranges, shape, oldshape=None, dt_i=2, dt_f=2, dt=4, debug=0,
+        lintervals=False):
     """Calculates the fit ranges.
 
     Parameters
@@ -204,9 +208,12 @@ def calculate_ranges(ranges, shape, oldshape=None, dt_i=2, dt_f=2, dt=4, debug=0
         The step size for the first and last time slice for the fitting.
     dt : int, optional
         The minimal size of the interval.
-    fixend : bool to fix the last point in the fit ranges
-    debug : int
+    fixend : bool, optional
+        Fix the last point in the fit ranges
+    debug : int, optional
         The amount of info printed.
+    lintervals : bool, optional
+        In ranges intervals for the upper and lower limit respectively are given.
 
     Returns
     -------
@@ -216,28 +223,53 @@ def calculate_ranges(ranges, shape, oldshape=None, dt_i=2, dt_f=2, dt=4, debug=0
         The "shape" of the ranges.
     """
     ncorr = shape[-1]
-    # check if ranges makes sense
-    if isinstance(ranges[0], int):
-        # assume one range for every correlator
-        # check if we exceed the time extent
-        if ranges[1] > shape[1] - 1:
-            if debug > 1:
-                print("the upper range exceeds the data range")
-            ranges[1] = shape[1] - 1
-        r_tmp = get_ranges(ranges[0], ranges[1], dt_i=dt_i, dt_f=dt_f, dt=dt)
-        fit_ranges = [r_tmp for i in range(ncorr)]
-        shape = [[r_tmp.shape[0]] * ncorr]
-    else:
-        # one fitrange for every correlator
-        if len(ranges) != ncorr:
-            raise ValueError("number of ranges and correlators is incompatible")
-        fit_ranges = []
-        for ran in ranges:
+    if lintervals:
+        if isinstance(ranges[0], int):
+            print("path 1")
+            # assume one range for every correlator
             # check if we exceed the time extent
-            if ran[1] > shape[1] - 1:
-                ran[1] = shape[1] - 1
-            fit_ranges.append(get_ranges(ran[0], ran[1], dt_i=dt_i, dt_f=dt_f, dt=dt))
-        shape = [[ran.shape[0] for ran in fit_ranges]]
+            if ranges[1] > shape[1] - 1:
+                if debug > 1:
+                    print("the upper range exceeds the data range")
+                ranges[1] = shape[1] - 1
+            r_tmp = get_ranges2(ranges[:2], ranges[2:], dt_i=dt_i, dt_f=dt_f, dt=dt)
+            fit_ranges = [r_tmp for i in range(ncorr)]
+            shape = [[r_tmp.shape[0]] * ncorr]
+        else:
+            print("path 2")
+            # one fitrange for every correlator
+            if len(ranges) != ncorr:
+                raise ValueError("number of ranges and correlators is incompatible")
+            fit_ranges = []
+            for ran in ranges:
+                # check if we exceed the time extent
+                if ran[-1] > shape[1] - 1:
+                    ran[-1] = shape[1] - 1
+                fit_ranges.append(get_ranges2(ran[:2], ran[2:], dt_i=dt_i, dt_f=dt_f, dt=dt))
+            shape = [[ran.shape[0] for ran in fit_ranges]]
+    else:
+        # check if ranges makes sense
+        if isinstance(ranges[0], int):
+            # assume one range for every correlator
+            # check if we exceed the time extent
+            if ranges[1] > shape[1] - 1:
+                if debug > 1:
+                    print("the upper range exceeds the data range")
+                ranges[1] = shape[1] - 1
+            r_tmp = get_ranges(ranges[0], ranges[1], dt_i=dt_i, dt_f=dt_f, dt=dt)
+            fit_ranges = [r_tmp for i in range(ncorr)]
+            shape = [[r_tmp.shape[0]] * ncorr]
+        else:
+            # one fitrange for every correlator
+            if len(ranges) != ncorr:
+                raise ValueError("number of ranges and correlators is incompatible")
+            fit_ranges = []
+            for ran in ranges:
+                # check if we exceed the time extent
+                if ran[1] > shape[1] - 1:
+                    ran[1] = shape[1] - 1
+                fit_ranges.append(get_ranges(ran[0], ran[1], dt_i=dt_i, dt_f=dt_f, dt=dt))
+            shape = [[ran.shape[0] for ran in fit_ranges]]
     if oldshape is not None:
         shape = oldshape + shape
     fit_ranges = np.asarray(fit_ranges)
@@ -266,6 +298,51 @@ def get_ranges(lower, upper, dt_i=2, dt_f=2, dt=4):
     else:
         for lo in range(lower, upper+1, dt_i):
             for up in range(upper, lower-1, -dt_f):
+                if (up - lo + 2) > dt:
+                    # the +2 comes from the fact that the interval contains one
+                    # more number than the difference between the boundaries and
+                    # because python would exclude the upper boundary but we
+                    # include it explicitly
+                    ran.append((lo, up))
+    return np.asarray(ran)
+
+def get_ranges2(lower, upper, dt_i=2, dt_f=2, dt=4):
+    """Get the intervals given an interval for lower and upper bound,
+    step size and the minimal size of the interval.
+    """
+    ran = []
+    _di = np.abs(dt_i)
+    _df = np.abs(dt_f)
+    # keep initial time slice fixed
+    if _di < 0:
+        if isinstance(lower, (tuple, list, np.ndarray)):
+            _low = lower[0]
+        else:
+            _low = lower
+        # keep upper time slice fixed
+        if _df < 0:
+            if isinstance(upper, (tuple, list, np.ndarray)):
+                _upp = upper[-1]
+            else:
+                _upp = upper
+            if (_upp - _low + 2) > dt:
+                ran.append((_low, _upp))
+        else:
+            for up in range(upper[-1], upper[0], -_df):
+                if (up - _low + 2) > dt:
+                    ran.append((_low, up))
+    # keep upper time slice fixed
+    elif _df < 0:
+        if isinstance(upper, (tuple, list, np.ndarray)):
+            _upp = upper[-1]
+        else:
+            _upp = upper
+        for lo in range(lower[0], lower[-1], _di):
+            if (_upp - lo + 2) > dt:
+                ran.append((lo, _upp))
+    else:
+        for lo in range(lower[0], lower[-1], _di):
+            for up in range(upper[-1], upper[0], -_df):
                 if (up - lo + 2) > dt:
                     # the +2 comes from the fact that the interval contains one
                     # more number than the difference between the boundaries and
