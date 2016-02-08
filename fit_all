@@ -74,7 +74,8 @@ def main():
     else:
         pifit = ana.FitResult.read("%s/fit_k_%s.npz" % (datadir, lat))
     print(pifit.data[0].shape)
-    pifit.print_data()
+    pifit.print_data(1)
+    print(pifit.weight[0])
     range_mk, r_mk_shape = pifit.get_ranges()
     print(range_mk)
 
@@ -135,7 +136,8 @@ def main():
             d2, lat))
     ratiofit.print_data(0)
     ratiofit.print_data(1)
-
+    print(ratiofit.weight[1][0])
+    #print(collapsed.weight[0][0].shape)
     if plottwo:
         print("plotting")
         plotter = ana.LatticePlot("%s/fit_ratio_kk_TP%d_%s.pdf" % (plotdir, d2, lat))

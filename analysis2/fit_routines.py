@@ -314,8 +314,10 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, debug=0):
         errfunc = lambda p, x, y, e, error: np.dot(error, (y-fitfunc(p,x,e)).T)
 
     # compute inverse, cholesky decomposed covariance matrix
+    print correlated
     if not correlated:
         cov = np.diag(np.diagonal(np.cov(Y.T)))
+        print cov
     else:
         cov = np.cov(Y.T)
     cov = (np.linalg.cholesky(np.linalg.inv(cov))).T

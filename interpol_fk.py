@@ -98,12 +98,12 @@ def main():
     plotdir = ens.get_data("plotdir") 
     d2 = ens.get_data("d2")
     
-    for i,s in enumerate(strangeB):
+    for i,s in enumerate(strangeA):
       print(s)
-      for j,a in enumerate(latB):
+      for j,a in enumerate(latA):
         fk_data = "%s/%s/OSfk_%s.dat" % (datadir,a,a)
-        fk_use = interp_fk(fk_data, lqmB[j], sqmB[i])
-        print("%f %f %f" %(lqmB[j],fk_use[0],fk_use[1]))
+        fk_use = interp_fk(fk_data, lqmA[j], sqmA[i])
+        print("%f %f %f" %(lqmA[j],fk_use[0],fk_use[1]))
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':
     try:

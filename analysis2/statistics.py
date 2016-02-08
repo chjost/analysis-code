@@ -68,7 +68,6 @@ def compute_weight(data, pvals, rel=True):
     weight : ndarray
     """
     # compute std/mean over bootstrap samples for every fit interval
-    print np.nanstd(data, axis=0) 
     if rel:
         errors = np.nanstd(data, axis=0)/np.nanmean(data, axis=0)
     else:
@@ -78,7 +77,7 @@ def compute_weight(data, pvals, rel=True):
     # prepare storage
     weights = np.zeros((data.shape[1:]))
     # Warning playing with the exponent of the weight
-    exp=3
+    exp=2
     if weights.ndim == 1:
         for i in range(weights.shape[0]):
             weights[i] = ((1. - 2.*np.abs(pvals[0,i]-0.5)) *

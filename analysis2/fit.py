@@ -90,6 +90,8 @@ class LatticeFit(object):
         useall : bool
             Using all correlators in the single particle correlator or
             use just the lowest.
+        median : bool
+            Adjusts fit ranges of fitresult if median is used
 
         Returns
         -------
@@ -116,6 +118,7 @@ class LatticeFit(object):
             if start is None:
                 # set starting values
                 start = get_start_values(ncorr, franges, corr.data, self.npar)
+            print self.correlated
 
             # do the fitting
             for res in fit_single(self.fitfunc, start, corr, franges,
@@ -406,16 +409,23 @@ class FitResult(object):
         nboot = self.data[0].shape[0]
         npars = self.data[0].shape[1]
         shape1 = (nboot,npars,1)
-        print(shape1)
+        #print shape1
         shape2 = (nboot,1)
+        #print shape1
         singular.create_empty(shape1,shape2,1)
-        # usually only one correlator is taken into account
-        res, res_std, res_sys, data_weight = self.error[0]
-        singular.data[0][:,0,0] = res[0]
         singular.set_ranges(np.array([[[10,15]]]),[[1,]])
-        res, res_std, res_sys, data_weight = self.error[1]
-        singular.weight = np.ones(nboot)
+        # usually only one correlator is taken into account
+        # copy data to singular
+        res, res_std, res_sys, n_fits = self.error[0]
+        singular.data[0][:,0,0] = res[0]
+        res, res_std, res_sys, n_fits = self.error[1]
         singular.data[0][:,1,0] = res[0]
+        # set weights accordingly
+        singular.weight = [[np.array([1.])] for d in range(2)]
+        singular.error = []
+        #singular.weight = np.ones(shape2)
+        #print singular.weight[0]
+        #singular.pval[0]=np.full(nboot,singular.weight)
         return singular
 
     def create_empty(self, shape1, shape2, corr_num):
@@ -524,7 +534,7 @@ class FitResult(object):
                 self.error.append((r, r_std, r_syst, nfits))
                 self.weight.append(w)
             else:
-                print(self.data)
+                #print(self.data)
                 nfits = [d[0,0].size for d in self.data]
                 npar = self.data[0].shape[1]
                 for i in range(npar):
@@ -615,7 +625,7 @@ class FitResult(object):
                                                   tmppar))
                             print(tmpstring)
 
-    def data_for_plot(self, par=0):
+    def data_for_plot(self, par=0, new=False):
         """Prints the errors etc of the data."""
         if new is True:
           self.error=None
@@ -750,9 +760,14 @@ class FitResult(object):
         mass.calc_error()
         # get the data
         _mass = mass.data[0][:,parmass]
+        print("mass in scattering length")
+        print(_mass.shape)
+        print(mass.weight)
         _massweight = mass.weight[parmass][0]
+        print(_massweight)
         _energy = self.data[0][:,parself]
         _energyweight = self.weight[parself][0]
+        print(_energyweight)
         nsam = _mass.shape[0]
         # create the new shapes
         scatshape = (nsam, _mass.shape[-1], _energy.shape[-1])
@@ -764,7 +779,7 @@ class FitResult(object):
         for res in calculate_scat_len(_mass, _massweight, _energy, _energyweight,
                 L, isdependend, isratio):
             scat.add_data(*res)
-        #print(scat.pval.shape)
+        print(scat.pval[0].shape)
         return scat
 
     def to_CM(self, par, L=24, d=np.array([0., 0., 1.]), uselattice=True):
@@ -926,7 +941,7 @@ class FitResult(object):
             _obsweight2, _obsweight3, amu_s, obs_match):
             self.add_data(*res)
 
-    def mult_obs(self, other, corr_id="Product"):
+    def mult_obs(self, other, corr_id="Product", isdependend=False):
       """Multiply two observables in order to treat them as a new observable.
 
         Warning
@@ -952,11 +967,11 @@ class FitResult(object):
       # Check ranges and samples for compliance
       if layout[0] != other.data[0].shape[0]:
         raise ValueError("Number of Bootstrapsamples not compatible!")
-      if layout[1] != other.data[0][0].shape[1]:
-        raise ValueError("Number of same parameter fit ranges not compatible!\n"
-            + "%d vs. %d" % (layout[1], other.data[0][0].shape[1]))
-
-      # Deal with observables
+      if isdependend:
+          if layout[1] != other.data[0][0].shape[1]:
+            raise ValueError("Number of same parameter fit ranges not compatible!\n"
+                + "%d vs. %d" % (layout[1], other.data[0][0].shape[1]))
+      # Deal with observable
       product = np.zeros_like(self.data[0])
       for b, arr0 in enumerate(other.data[0]):
         for r_self, arr1 in enumerate(arr0[1]):
@@ -968,9 +983,15 @@ class FitResult(object):
       # prepare new weight array
       weights_prod = np.zeros_like(weights_0)
       # multiply weights of first observable with observable of second
-      for idx, weights_1 in enumerate(other.weight[1][0]):
-        weights_prod[idx] = np.multiply(weights_1, weights_0[idx])
-
+      print self.weight
+      print other.weight
+      if isdependend:
+        for idx, weights_1 in enumerate(other.weight[1][0]):
+           weights_prod[idx] = np.multiply(weights_1, weights_0[idx])
+      else:
+        for idx, weights_1 in enumerate(other.weight):
+           weights_prod[idx] = np.multiply(weights_1, weights_0[idx])
+      
       # Get array into right shape for calculation
       weights = np.tile( weights_prod.flatten(), boots ).reshape(boots, ranges1,
           ranges2)

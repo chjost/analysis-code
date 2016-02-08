@@ -64,14 +64,14 @@ def main():
         #print mk_low.pval[0].shape
         
         #obs1 = mk_low.res_reduced(samples=200,m_a0=True)
-        obs1 = obs1.res_reduced(samples = 200)
+        obs1 = obs1.res_reduced(samples = 20)
 
         # Read high m
         mk_high = ana.FitResult.read("%s/%s/%s/fit_k_%s.npz" % (datadir,a,strange[1],a))
         mk_high.print_data(par=1)
         mk_high.calc_error()
         obs2 = mk_high.mult_obs_single(mk_high, "m_high_sq")
-        obs2 = obs2.res_reduced(samples = 200)
+        obs2 = obs2.res_reduced(samples = 20)
         
         qmatch = ana.FitResult('match',derived=True)
         qmatch.evaluate_quark_mass(amu_s,obs_match, obs1, obs2)
@@ -83,14 +83,14 @@ def main():
         mka0_low = ana.FitResult.read("%s/%s/%s/mk_akk_%s.npz" % (datadir,a,strange[0],a))
         mka0_low.print_data(par=1)
         mka0_low.calc_error()
-        obs3 = mka0_low.res_reduced(samples = 200,m_a0=True)
+        obs3 = mka0_low.res_reduced(samples = 20,m_a0=True)
         print(obs3.data[0].shape)
 
         # Read high ma0
         mka0_high = ana.FitResult.read("%s/%s/%s/mk_akk_%s.npz" % (datadir,a,strange[1],a))
         mka0_high.print_data(par=1)
         mka0_high.calc_error()
-        obs4 = mka0_high.res_reduced(samples = 200,m_a0=True)
+        obs4 = mka0_high.res_reduced(samples = 20,m_a0=True)
         print(obs4.data[0].shape)
 
         mka0_ipol = ana.FitResult('eval',derived=True)

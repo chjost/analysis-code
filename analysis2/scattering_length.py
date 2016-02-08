@@ -25,7 +25,6 @@ def calculate_scat_len(mass, massweight, energy, energyweight, L=24,
             # don't calculate
             if isratio or isdependend:
                 weight = np.full(nsam, massweight[j] * energyweight[j,i])
-                #weight = massweight[j] * energyweight[j,i]
             else:
                 weight = np.full(nsam, massweight[j] * energyweight[i])
                 #weight = massweight[j] * energyweight[i]
@@ -40,6 +39,7 @@ def calculate_scat_len(mass, massweight, energy, energyweight, L=24,
                         pre[b,j]*c[0]/float(L), pre[b,j], 0.])
                     if isratio:
                         p[3] = -1. * energy[b,j,i]
+                      
                     else:
                         if isdependend:
                             p[3] = -1. * (energy[b,j,i]-2*mass[b,j])
