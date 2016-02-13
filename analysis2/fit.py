@@ -309,6 +309,56 @@ class FitResult(object):
             rindex = [slice(None), slice(None)] + [x for x in index[len(self.corr_num):]]
             return self.data[lindex][rindex]
 
+    def cut_data(self, t_min, t_max, min_dat, par=1):
+        """ Function to cut data in FitResult object to certain fit ranges
+    
+        Parameters:
+        -----------
+        fitres : A FitResult object containing the parameter of interest for all fit
+                 ranges
+        t_min, t_max : minumum and maximum time of fit ranges
+        min_dat : minimum amount of data points in cut
+        par : the parameter of the fit result
+    
+        Returns:
+        --------
+        fitres_cut : A truncated FitResult object containing only, data, chi2 and pvals for the fit
+        ranges of interst
+        """
+        # Create an empty correlator object for easier plotting
+        fitres_cut = FitResult('delta E', derived = False)
+        # get fitranges from ratiofit
+        range_r, r_r_shape = self.get_ranges()
+        # get indices for fitranges of interval
+        ranges=[]
+        for s,i in enumerate(range_r[0]):
+          if i[0] >= t_min and i[1] <= t_max:
+            if i[1]-i[0] >= min_dat:
+              ranges.append(s)
+            else:
+              continue
+
+        # shape for 1 Correlator, data and pvalues
+        shape_dE = (self.data[0].shape[0], self.data[0].shape[1], len(ranges))
+        shape_pval = (self.pval[0].shape[0], len(ranges))
+        shape1 = [shape_dE for dE in self.data]
+        shape2 = [shape_pval for p in self.pval]
+        fitres_cut.create_empty(shape1, shape2, 1)
+    
+        # Get data for error calculation
+        # 0 in data is for median mass
+        dat = self.data[0][:,:,:,ranges]
+        pval = self.pval[0][:,:,ranges]
+        chi2 = self.chi2[0][:,:,ranges]
+        # add data to FitResult
+        fitres_cut.data[0] = dat
+        fitres_cut.pval[0] = pval
+        fitres_cut.chi2[0] = chi2
+        #fitres_cut.fit_ranges = range_r[ranges]
+        #fitres_cut.add_data((0,),dat,chi2,pval)
+    
+        return fitres_cut
+
     def add_data(self, index, data, chi2, pval):
         """Add data to FitResult.
 
@@ -752,6 +802,8 @@ class FitResult(object):
             The spatial extend of the lattice.
         isratio : bool
             If self is already the ratio.
+        truncated : bool
+            If energy has only one fit range dimension
         isdependend : bool
             If mass and self are dependend on each other.
         """
@@ -776,6 +828,8 @@ class FitResult(object):
         scat = FitResult("scat_len", True)
         scat.create_empty(scatshape, scatshape_w, [1,1])
         # calculate scattering length
+        print("_energy has shape:")
+        print _energy.shape
         for res in calculate_scat_len(_mass, _massweight, _energy, _energyweight,
                 L, isdependend, isratio):
             scat.add_data(*res)
