@@ -88,8 +88,8 @@ def main():
     # get fit_ranges
     range_r, r_r_shape = ratiofit.get_ranges()
     #print(range_r[0])
-    t_low = [15,16,17]
-    t_hi = [26,27,28,29,30,31,32]
+    t_low = [10,11,12,13]
+    t_hi = [24,26,28,30,32]
     fr = len(t_low)*len(t_hi)
     res = np.zeros((fr, 6))
     j = 0
@@ -99,8 +99,11 @@ def main():
         idx=[]
         for s,i in enumerate(range_r[0]):
           if i[0] >= l and i[1] <= h:
-            list1.append(i)
-            idx.append(s)
+            if i[1] - i[0] >= 10:
+              list1.append(i)
+              idx.append(s)
+            else:
+              continue
         # get data for plotting
         deltaE = cut_data(ratiofit, idx)
         eshift = deltaE.data_for_plot()
@@ -131,7 +134,7 @@ def main():
     plt.title(lbl[0])
     plt.grid()
     plt.xlim((-1,fr+1))
-    plt.ylim((0.0025,0.0035))
+    plt.ylim((0.0028,0.0045))
     plt.xlabel(lbl[1])
     plt.ylabel(lbl[2])
     plt.legend()

@@ -309,7 +309,7 @@ class FitResult(object):
             rindex = [slice(None), slice(None)] + [x for x in index[len(self.corr_num):]]
             return self.data[lindex][rindex]
 
-    def cut_data(self, t_min, t_max, min_dat, par=1):
+    def cut_data(self, t_min, t_max, min_dat=7, par=1):
         """ Function to cut data in FitResult object to certain fit ranges
     
         Parameters:
@@ -1164,6 +1164,7 @@ class FitResult(object):
       wght_draw_unq = freq_vals[:,0]
       intersect[:,0] = np.asarray(np.nonzero(np.in1d(flat_weights, wght_draw_unq)))
       intersect[:,1] = freq_vals[:,1]
+      print intersect
       # TODO: solve this by an iterator
       ind=0
       for i,v in enumerate(intersect):

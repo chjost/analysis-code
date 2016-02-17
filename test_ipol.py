@@ -42,23 +42,24 @@ def main():
 
     # get data from input file
     lat = ens.name()
-    latA = ens.get_data("namea")
+    latA = ens.get_data("nameb")
     #quark = ens.get_data("quark")
     datadir = ens.get_data("datadir") 
     d2 = ens.get_data("d2")
-    strange = ens.get_data("strangea")
-    amu_s = ens.get_data("amu_s_a")
-    obs_match = 0.02125
+    strange = ens.get_data("strangeb")
+    amu_s = ens.get_data("amu_s_b")
+    obs_match = 0.0198
 
     print(datadir)
     # Place fit results in new empty fitresults objects
     #qm_matched = ana.FitResult.create_empty(shape1,shape1,2)
     #mk_a0_matched = ana.FitResult.create_empty(shape1,shape,1)
-    for a in latA:
+    for i,a in enumerate(latA):
         # Read low m
         mk_low = ana.FitResult.read("%s/%s/%s/fit_k_%s.npz" % (datadir,a,strange[0],a))
         mk_low.print_data(par=1)
         mk_low.calc_error()
+        print(mk_low.weight)
         #print mk_low.pval[0].shape
         obs1 = mk_low.mult_obs_single(mk_low, "m_low_sq")
         #print mk_low.pval[0].shape
@@ -70,6 +71,7 @@ def main():
         mk_high = ana.FitResult.read("%s/%s/%s/fit_k_%s.npz" % (datadir,a,strange[1],a))
         mk_high.print_data(par=1)
         mk_high.calc_error()
+        print(mk_high.weight)
         obs2 = mk_high.mult_obs_single(mk_high, "m_high_sq")
         obs2 = obs2.res_reduced(samples = 20)
         
@@ -83,6 +85,7 @@ def main():
         mka0_low = ana.FitResult.read("%s/%s/%s/mk_akk_%s.npz" % (datadir,a,strange[0],a))
         mka0_low.print_data(par=1)
         mka0_low.calc_error()
+        print(mka0_low.weight)
         obs3 = mka0_low.res_reduced(samples = 20,m_a0=True)
         print(obs3.data[0].shape)
 
@@ -90,6 +93,7 @@ def main():
         mka0_high = ana.FitResult.read("%s/%s/%s/mk_akk_%s.npz" % (datadir,a,strange[1],a))
         mka0_high.print_data(par=1)
         mka0_high.calc_error()
+        print(mka0_high.weight)
         obs4 = mka0_high.res_reduced(samples = 20,m_a0=True)
         print(obs4.data[0].shape)
 
