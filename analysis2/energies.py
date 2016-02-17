@@ -107,7 +107,7 @@ def WfromMass(m, q, L=24):
     float or ndarray
         The particle energy.
     """
-    return 2.*np.sqrt(m*m + 4.*q*q*np.pi*np.pi/(float(L)*float(L)))
+    return np.sqrt(m*m + 4.*q*q*np.pi*np.pi/(float(L)*float(L)))
 
 @memoize(50)
 def WfromMass_lat(m, q, L=24):
@@ -129,7 +129,7 @@ def WfromMass_lat(m, q, L=24):
     float or ndarray
         The particle energy.
     """
-    return 2. * np.arccosh(np.cosh(m) + 2. * np.sin(q * np.pi / float(L))**2)
+    return np.arccosh(np.cosh(m) + 2. * np.sin(q * np.pi / float(L))**2)
 
 def calc_gamma(q2, m, d=np.array([0., 0., 1.]), L=24):
     """Calculates the Lorentz boost factor for the given energy and momentum.

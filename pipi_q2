@@ -1,0 +1,116 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+#!/usr/bin/python2
+
+import sys
+import numpy as np
+
+import analysis2 as ana
+
+def main():
+    # parse the input file
+    if len(sys.argv) < 2:
+        ens = ana.LatticeEnsemble.parse("A40.24.ini")
+    else:
+        ens = ana.LatticeEnsemble.parse(sys.argv[1])
+
+    # get data from input file
+    lat = ens.name()
+    L = ens.L()
+    datadir = "/".join((ens.get_data("datadir"), lat))
+    plotdir = "/".join((ens.get_data("plotdir"), lat))
+    #datadir = ens.get_data("datadir")
+    #plotdir = ens.get_data("plotdir")
+    d2 = ens.get_data("d2")
+    d = ens.get_data("d")
+
+    # single particle correlator
+    print("read single particle corrs")
+    picorr = ana.Correlators.read("%s/corr_pi.npy" % (datadir))
+    pifit = ana.FitResult.read("%s/fit_pi.npz" % (datadir))
+    pifit.print_data(1)
+    #pifit.print_details()
+
+    # two particle correlator
+    #print("\n\nread four point function")
+    #print(datadir)
+    pipifit = ana.FitResult.read("%s/fit_pipi_TP%d.npz" % (datadir, d2))
+    pipifit.print_data(1)
+    #pipifit.print_details()
+
+    calcEcm = False
+    if calcEcm:
+        Ecm = pipifit.to_CM(1, L=L, d=d)
+        Ecm.save("%s/Ecm_TP%d.npz" % (datadir, d2))
+    else:
+        Ecm = ana.FitResult.read("%s/Ecm_TP%d.npz" % (datadir, d2))
+    Ecm.print_data()
+    #Ecm.print_details()
+
+    calcq2 = True
+    if calcq2:
+        q2 = Ecm.calc_momentum(pifit, parmass=1, L=L, uselattice=False)
+        q2.save("%s/q2_TP%d.npz" % (datadir, d2))
+    else:
+        q2 = ana.FitResult.read("%s/q2_TP%d.npz" % (datadir, d2))
+    q2.print_data()
+    #q2.print_details()
+
+    #calcdelta = True
+    #if calcdelta:
+    #    print("testing calc")
+    #    delta = Ecm.calc_cot_delta(pifit, parmass=1, isdependend=True, d2=d2)
+    #    delta.save("%s/delta_TP%d.npz" % (datadir, d2))
+    #else:
+    #    delta = ana.FitResult.read("%s/delta_TP%d.npz" % (datadir, d2))
+    #delta.print_data()
+
+    #calcdE = True
+    #if calcdE:
+    #    dE = pipifit.calc_dE(pifit, 1, 1, isdependend=False)
+    #    dE.save("%s/dE_TP%d.npz" % (datadir, d2))
+    #else:
+    #    dE = ana.FitResult.read("%s/dE_TP%d.npz" % (datadir, d2))
+    #dE.print_data()
+    ##dE.print_details()
+    #plotter = ana.LatticePlot("%s/dE_TP%d_%s.pdf" % (plotdir, d2, lat))
+    #label = ["dE", "dE$_{\pi\pi}$", "dE$_{\pi\pi}$"]
+    #plotter.histogram(dE, label)
+    #del plotter
+
+    #calca = True
+    #if calca:
+    #    print("calculate scattering length")
+    #    a_pipi = pipifit.calc_scattering_length(pifit, 1, 1, L=ens.L(), isdependend=False)
+    #    a_pipi.save("%s/scat_len_TP%d.npz" % (datadir, d2))
+    #    #r_a_pipi = ratiofit.calc_scattering_length(pifit, 1, 1, L=ens.L(), isratio=True)
+    #    #r_a_pipi.save("%s/scat_len_ratio_TP%d.npz" % (datadir, d2))
+    #else:
+    #    a_pipi = ana.FitResult.read("%s/scat_len_TP%d.npz" % (datadir, d2))
+    #    #r_a_pipi = ana.FitResult.read("%s/scat_len_ratio_TP%d.npz" % (datadir, d2))
+    #r_a_pipi = ana.FitResult.read("%s/scat_len_ratio_TP%d.npz" % (datadir, d2))
+    #a_pipi.print_data()
+    #r_a_pipi.print_data()
+    ##a_pipi.print_details()
+    ##r_a_pipi.print_details()
+    #plotter = ana.LatticePlot("%s/scat_len_TP%d.pdf" % (plotdir, d2))
+    #label = ["scattering length", "a$_{\pi\pi}$", "a$_{\pi\pi}$"]
+    #plotter.histogram(a_pipi, label)
+    #plotter.new_file("%s/scat_len_ratio_TP%d.pdf" % (plotdir, d2))
+    #label = ["scattering length from ratio", "a$_{\pi\pi}$", "a$_{\pi\pi}$"]
+    #plotter.histogram(r_a_pipi, label)
+    #del plotter
+
+    # multiply a*m_pi
+    #am_pi = a_pipi.mult_obs(pifit)
+    #am_pi.save("%s/am_pi_TP%d.npz" % (datadir, d2))
+    #am_pi.print_data()
+    #r_am_pi = r_a_pipi.mult_obs(pifit)
+    #r_am_pi.save("%s/am_pi_ratio_TP%d.npz" % (datadir, d2))
+    #r_am_pi.print_data()
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass

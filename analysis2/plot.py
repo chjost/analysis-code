@@ -249,7 +249,7 @@ class LatticePlot(object):
             if debug > 1:
                 print("plotting correlators %s" % str(item))
             n = item[-1]
-            mdata, ddata = compute_error(corr.data[:,:,n])
+            mdata, ddata = compute_error(corr.data[:,:,item[-2], n])
             # create the iterator over the fit ranges
             tmp = [fshape[i][x] for i,x in enumerate(item)]
             rangesiter = [[x for x in range(m)] for m in tmp ]
@@ -285,7 +285,7 @@ class LatticePlot(object):
 
                 # plot
                 self._set_env_normal()
-                plot_data(X, corr.data[0,:,n], ddata, label[3],
+                plot_data(X, corr.data[0,:,item[-2], n], ddata, label[3],
                         plotrange=[1,T])
                 plot_function(fitfunc.fitfunc, X, _par, label[4], 
                         add_data, fi, ploterror)
@@ -328,7 +328,7 @@ class LatticePlot(object):
             self._genplot_comb(corr, label, fitresult, fitfunc, oldfit, add,
                     oldfitpar, ploterror, xshift, debug)
 
-    def histogram(self, fitresult, label, par=None):
+    def histogram(self, fitresult, label, nb_bins=None, par=None):
         """Plot the histograms.
 
         Parameters
@@ -342,11 +342,15 @@ class LatticePlot(object):
         """
         fitresult.calc_error()
         label_save = label[0]
+        if nb_bins is None:
+            _bins = fitresult.fit_ranges_shape[-1][0] / 2
+        else:
+            _bins = nb_bins
         if fitresult.derived:
             w = fitresult.weight[0]
             for i, d in enumerate(fitresult.data):
                 label[0] = " ".join((label_save, str(fitresult.label[i])))
-                plot_histogram(d[0], w[i], label)
+                plot_histogram(d[0], w[i], label, _bins)
                 plt.legend()
                 self.save()
         else:
@@ -354,14 +358,14 @@ class LatticePlot(object):
                 for p, w in enumerate(fitresult.weight):
                     for i, d in enumerate(fitresult.data):
                         label[0] = " ".join((label_save, str(fitresult.label[i])))
-                        plot_histogram(d[0,p], w[i], label)
+                        plot_histogram(d[0,p], w[i], label, _bins)
                         plt.legend()
                         self.save()
             else:
                 w = fitresult.weight[par]
                 for i, d in enumerate(fitresult.data):
                     label[0] = " ".join((label_save, str(fitresult.label[i])))
-                    plot_histogram(d[0,par], w[i], label)
+                    plot_histogram(d[0,par], w[i], label, _bins)
                     plt.legend()
                     self.save()
         label[0] = label_save

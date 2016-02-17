@@ -14,8 +14,8 @@ def main():
         ens = ana.LatticeEnsemble.parse(sys.argv[1])
 
     # read settings
-    readdata = False
-    preparedata = True
+    readdata = True
+    preparedata = False
     readfit = False
     plotdata = True
 
@@ -68,21 +68,21 @@ def main():
     fitter = ana.LatticeFit(5, dt_i=dti, dt_f=dtf, dt=dt, correlated=True, xshift=0.5)
     if readfit == False:
         if L < 25:
-            fitranges = [[11,15,18,23],] + [[11,13,19,20],]*(gmax-1)
+            fitranges = [[11,17,17,22],] + [[11,15,18,20],]*(gmax-1)
         elif L < 33:
-            fitranges = [[11,15,24,30],] + [[11,13,19,20],]*(gmax-1)
+            fitranges = [[11,17,20,30],] + [[11,15,18,20],]*(gmax-1)
         else:
-            fitranges = [[10,27,38,47],] + [[10,12,19,20],]*(gmax-1)
-        print(fitranges)
+            fitranges = [[10,27,35,47],] + [[10,15,18,20],]*(gmax-1)
+        #print(fitranges)
         if d2 != 0:
             fitres = fitter.fit(None, corr, fitranges, corrid="E", oldfit=pifit,
-                oldfitpar=1, useall=False, add=addT)
+                oldfitpar=1, add=addT, lint=True)
         else:
-            fitres = fitter.fit(None, corr, fitranges, corrid="E", add=addT)
+            fitres = fitter.fit(None, corr, fitranges, corrid="E", add=addT, lint=True)
         fitres.save("%s/fit_pipi_TP%d.npz" % (datadir, d2))
     else:
         fitres = ana.FitResult.read("%s/fit_pipi_TP%d.npz" % (datadir, d2))
-    fitres.print_data(0)
+    #fitres.print_data(0)
     fitres.print_data(1)
     #fitres.print_details()
 
@@ -92,10 +92,14 @@ def main():
         plotter = ana.LatticePlot("%s/fit_pipi_TP%d.pdf" % (plotdir, d2))
         plotter.set_env(ylog=True)
         label = ["two pion energy", "t", "C(t)", "E$_{\pi\pi}$"]
-        plotter.plot(corr, label, fitres, fitter, add=addT, xshift=0.5)
+        if d2 != 0:
+            plotter.plot(corr, label, fitres, fitter, oldfit=pifit, oldfitpar=1,
+                add=addT, xshift=-0.5)
+        else:
+            plotter.plot(corr, label, fitres, fitter, add=addT, xshift=-0.5)
         plotter.new_file("%s/hist_fit_pipi_TP%d.pdf" % (plotdir, d2))
         label = ["two pion energy", "E$_{\pi\pi}$/a", "E$_{\pi\pi}$"]
-        plotter.histogram(fitres, label, 1)
+        plotter.histogram(fitres, label, par=1)
         del plotter
 
 if __name__ == '__main__':

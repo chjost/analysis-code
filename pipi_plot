@@ -238,13 +238,20 @@ def print_summary(datafolder, plotfolder, lattices, d2=0):
     #    print("(%.3f +- %.3f, %.3f +- %.3f)" % (tx[0], tx[1], ty[0], ty[1]))
 
     # fit
-    readfit = False
+    readfit = True
     if not readfit:
+        print("NLO fit")
         fit_chi = ana.LatticeFit(fchiptNLO)
         fitres = fit_chi.chiral_fit(all_data_x, all_data_y, xcut=xcut)
-        fitres.save("%s/summary/chiral_fit.npz" % (datafolder))
+        #if xcut:
+        #    fitres.save("%s/summary/chiral_fit_xcut%.1f.npz" % (datafolder, xcut))
+        #else:
+        #    fitres.save("%s/summary/chiral_fit.npz" % (datafolder))
     else:
-        fitres = ana.FitResult.read("%s/summary/chiral_fit.npz" % (datafolder))
+        if xcut:
+            fitres = ana.FitResult.read("%s/summary/chiral_fit_xcut%.1f.npz" % (datafolder, xcut))
+        else:
+            fitres = ana.FitResult.read("%s/summary/chiral_fit.npz" % (datafolder))
     fitres.print_data()
     if xcut:
         dof = np.count_nonzero(all_data_x[:,0] < xcut)
@@ -264,7 +271,10 @@ def print_summary(datafolder, plotfolder, lattices, d2=0):
     print("m_pi/f_pi|phys = %.5f +- %.5f" %(mf_p[0], mf_p[1]))
 
     # plot everything
-    plotter = ana.LatticePlot("%s/ampi_mfpi_TP%d.pdf" % (plotfolder, 0))
+    if xcut:
+        plotter = ana.LatticePlot("%s/ampi_mfpi_xcut%.1f_TP%d.pdf" % (plotfolder, xcut, 0))
+    else:
+        plotter = ana.LatticePlot("%s/ampi_mfpi_TP%d.pdf" % (plotfolder, 0))
     # set title etc.
     plotter.set_title("", ["M$_\pi$/f$_\pi$", "M$_\pi$a$_0$"])
 
@@ -359,7 +369,10 @@ def print_summary(datafolder, plotfolder, lattices, d2=0):
     plotter.save()
 
     # plot histogram
-    plotter.new_file("%s/hist_l_pipi_TP%d.pdf" % (plotfolder, 0))
+    if xcut:
+        plotter.new_file("%s/hist_l_pipi_xcut%.1f_TP%d.pdf" % (plotfolder, xcut, 0))
+    else:
+        plotter.new_file("%s/hist_l_pipi_TP%d.pdf" % (plotfolder, 0))
     labels = ["l$_{\pi\pi}$ fit results", "l$_{\pi\pi}$", "l$_{\pi\pi}$"]
     plotter.histogram(fitres, labels, 0)
     del plotter

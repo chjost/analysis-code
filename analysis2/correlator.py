@@ -261,7 +261,7 @@ class Correlators(object):
         return np.copy(self.data)
 
     def ratio(self, single_corr, ratio=0, shift=1, single_corr1=None,
-            useall=False, usecomb=None):
+            useall=False, mass=None, d2=0, L=24, irrep="A1"):
         """Calculates the ratio and returns a new Correlator object.
 
         The implemented ratios are:
@@ -286,9 +286,14 @@ class Correlators(object):
         useall : bool
             Using all correlators in the single particle correlator or
             use just the lowest.
-        usecomb : list of list of ints
-            The combinations of entries of single_corr (and single_corr1)
-            to use.
+        mass : {None, float, ndarray}, optional
+            The weight factor.
+        d2 : int, optional
+            The total momentum squared, used for determining dE.
+        L : int, optional
+            The spatial extent of the lattice.
+        irrep : string, optional
+            The lattice irrep to use, influences dE.
         
         Returns
         -------
@@ -301,6 +306,13 @@ class Correlators(object):
         if single_corr1 is not None and single_corr1.matrix:
             raise RuntimeError("cannot do ratio with a matrix")
 
+        # calculate the dE for weighting if needed
+        if mass is None:
+            dE=None
+        else:
+            # TODO: differentiate the different d2 and irreps
+            dE = np.asarray(WfromMass_lat(mass, d2, L) - mass)
+
         # get the actual ratio being calculated
         # TODO check ratio 4 implementation
         functions = {0: simple_ratio, 1: ratio_shift, 2: simple_ratio_subtract}
@@ -309,16 +321,28 @@ class Correlators(object):
         ratiofunc = functions.get(ratio)
 
         if single_corr1 is None:
-            obj = Correlators(debug=self.debug)
-            #obj.data = ratiofunc(self.data, single_corr.data, single_corr.data,
-            #    shift, useall, usecomb)
-            obj.data = ratiofunc(self.data, single_corr.data, single_corr.data)
-            obj.shape = obj.data.shape
+            if dE is not None and dE.ndim > 1:
+                tmp = np.zeros_like(self.data)
+                # iterate over the axis > 1 of dE
+                item = [[n for n in range(x)] for x in dE.shape[1:]]
+                for it in itertools.product(*item):
+                    # select the correct entries for tmp and dE
+                    s = (Ellipsis,) + it +(slice(None), slice(None))
+                    s1 = (slice(None),) + it
+                    tmp[s] = ratiofunc(self.data, single_corr.data, single_corr.data,
+                        shift, dE[s1], useall, d2, L, irrep)
+                obj = Correlators(debug=self.debug)
+                obj.data = tmp
+
+            else:
+                obj = Correlators(debug=self.debug)
+                obj.data = ratiofunc(self.data, single_corr.data, single_corr.data,
+                    shift, dE, useall, d2, L, irrep)
         else:
             obj = Correlators(debug=self.debug)
             obj.data = ratiofunc(self.data, single_corr.data, single_corr1.data,
-                shift, useall, usecomb)
-            obj.shape = obj.data.shape
+                shift, dE, useall, d2, L, irrep)
+        obj.shape = obj.data.shape
         return obj
 
     def back_derivative(self):

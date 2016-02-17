@@ -239,7 +239,7 @@ def plot_data_with_fit(X, Y, dY, fitfunc, args, label, plotrange=None,
             datalabel = "".join((datalabel, "\npar = %.4e" % (args[0])))
         plt.text(x, y, datalabel)
 
-def plot_histogram(data, data_weight, label, debug=0):
+def plot_histogram(data, data_weight, label, nb_bins=20, debug=0):
     """Plots histograms for the given data set.
 
     The function plots the weighted distribution of the data, the unweighted
@@ -259,9 +259,9 @@ def plot_histogram(data, data_weight, label, debug=0):
     """
     # The histogram
     # generate weighted histogram
-    hist, bins = np.histogram(data, 20, weights=data_weight, density=True)
+    hist, bins = np.histogram(data, nb_bins, weights=data_weight, density=True)
     # generate the unweighted histogram
-    uhist, ubins = np.histogram(data, 20, weights=np.ones_like(data_weight),
+    uhist, ubins = np.histogram(data, nb_bins, weights=np.ones_like(data_weight),
                                 density=True)
 
     # prepare the plot

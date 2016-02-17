@@ -131,17 +131,12 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
     if debug > 0:
         print("fitting the data")
     # iterate over the correlation functions
-    #ncorriter = [[x for x in range(n)] for n in ncorrs]
-    #for item in itertools.product(*ncorriter):
     for item in loop_iterator(ncorrs):
         if debug > 1:
             print("fitting correlators %s" % str(item))
         n = item[-1]
-        # create the iterator over the fit ranges
-        tmp = [fshape[i][x] for i,x in enumerate(item)]
-        #rangesiter = [[x for x in range(n)] for n in tmp]
         # iterate over the fit ranges
-        #for ritem in itertools.product(*rangesiter):
+        tmp = [fshape[i][x] for i,x in enumerate(item)]
         for ritem in loop_iterator(tmp):
             m = ritem[-1]
             if debug > 1:
@@ -163,32 +158,15 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
                 if add_data.ndim == 1:
                     add_data.shape = (-1, 1)
                 add_data = np.hstack((add_data, add))
-            # HACK, to be removed
-            if False:
-            #if corr.data.ndim == 4:
-                if isinstance(start[0], (tuple, list)):
-                    res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
-                        corr.data[:,r[0]:r[1]+1,ritem[-2],n], start[n],
-                        add=add_data, correlated=correlated, debug=debug)
-                else:
-                    res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
-                        corr.data[:,r[0]:r[1]+1,ritem[-2],n], start,
-                        add=add_data, correlated=correlated, debug=debug)
+            # do the fitting
+            if isinstance(start[0], (tuple, list)):
+                res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
+                    corr.data[:,r[0]:r[1]+1,item[-2],n], start[n],
+                    add=add_data, correlated=correlated, debug=debug)
             else:
-                #print(len(start[0]))
-                if isinstance(start[0], (tuple, list)) and len(start[0]) == npar:
-                    res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
-                        corr.data[:,r[0]:r[1]+1,n], start[n],
-                        add=add_data, correlated=correlated, debug=debug)
-                elif isinstance(start[0], (tuple, list)):
-                    res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
-                        corr.data[:,...,r[0]:r[1]+1,n], start[n],
-                        #corr.data[:,r[0]:r[1]+1,n], start[n][m],
-                        add=add_data, correlated=correlated, debug=debug)
-                else:
-                    res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
-                        corr.data[:,r[0]:r[1]+1,n], start,
-                        add=add_data, correlated=correlated, debug=debug)
+                res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
+                    corr.data[:,r[0]:r[1]+1,n], start,
+                    add=add_data, correlated=correlated, debug=debug)
             yield item + ritem, res, chi, pva
 
 def calculate_ranges(ranges, shape, oldshape=None, dt_i=2, dt_f=2, dt=4, debug=0,
@@ -225,7 +203,6 @@ def calculate_ranges(ranges, shape, oldshape=None, dt_i=2, dt_f=2, dt=4, debug=0
     ncorr = shape[-1]
     if lintervals:
         if isinstance(ranges[0], int):
-            print("path 1")
             # assume one range for every correlator
             # check if we exceed the time extent
             if ranges[1] > shape[1] - 1:
@@ -236,7 +213,6 @@ def calculate_ranges(ranges, shape, oldshape=None, dt_i=2, dt_f=2, dt=4, debug=0
             fit_ranges = [r_tmp for i in range(ncorr)]
             shape = [[r_tmp.shape[0]] * ncorr]
         else:
-            print("path 2")
             # one fitrange for every correlator
             if len(ranges) != ncorr:
                 raise ValueError("number of ranges and correlators is incompatible")
@@ -456,7 +432,8 @@ def compute_dE(mass, mass_w, energy, energy_w, isdependend=False):
                 tmp_w = mass_w[i] * energy_w[j]
                 yield (0,0,i,j), tmp, needed, tmp_w
         
-def compute_phaseshift(Ecm, Ecm_w, mass, mass_w, L=24, isdependend=True):
+def compute_phaseshift(Ecm, Ecm_w, mass, mass_w, L=24, isdependend=True,
+        d2=0, irrep="A1"):
     # setup variables
     corr_num = [1, len(Ecm)]
     nsamples = Ecm[0].shape[0]

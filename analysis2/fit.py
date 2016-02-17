@@ -2,6 +2,7 @@
 The class for fitting.
 """
 
+import time
 import itertools
 import numpy as np
 
@@ -215,10 +216,17 @@ class LatticeFit(object):
         # fit the data
         dof = _X.shape[1] - len(_start)
         # fit every bootstrap sample
-        for i, x in enumerate(_X):
+        timing = []
+        for i, x in enumerate(_X[:100]):
+            timing.append(time.clock())
             tmpres, tmpchi2, tmppval = fitting(self.fitfunc, x, _Y, _start, debug=debug)
             fitres.add_data((0,i), tmpres, tmpchi2, tmppval)
-            print("%d of %d finished" % (i+1, _X.shape[0]))
+            #if i % 100:
+            #    print("%d of %d finished" % (i+1, _X.shape[0]))
+        t1 = np.asarray(timing)
+        print("total fit time %fs" % (t1[-1] - t1[0]))
+        t2 = t1[1:] - t1[:-1]
+        print("time per fit %f +- %fs" % (np.mean(t2), np.std(t2)))
         return fitres
 
 class FitResult(object):
@@ -623,12 +631,9 @@ class FitResult(object):
                 rsys[i][1]))
         return res
 
-    def calc_cot_delta(self, mass, parself=0, parmass=0, L=24, isratio=False):
+    def calc_cot_delta(self, mass, parmass=0, L=24, isdependend=False,
+            d2=0, irrep="A1"):
         """Calculate the cotangent of the scattering phase.
-
-        Warning
-        -------
-        This overwrites the data, so be careful to save the data before.
 
         Parameters
         ----------
@@ -645,12 +650,16 @@ class FitResult(object):
         self.calc_error()
         mass.calc_error()
         _ma = mass.data[0][:,parmass]
-        _ma_w = mass.weight[parmass][0]
-        nsam = self.data[0].shape[0]
-        newshape = [(nsam,) + _ma.shape[1:] + d.shape[2:] for d in self.data]
+        _ma_w = mass.weight[parmass]
+        nsam = _ma.shape[0]
+        if isdependend:
+            newshape = [d.shape for d in self.data]
+        else:
+            newshape = [(nsam,_ma.shape[-1],d.shape[-1]) for d in self.data]
         delta = FitResult("delta", True)
         delta.create_empty(newshape, newshape, [1, len(self.data)])
-        for res in compute_phaseshift(self.data, self.weight, _ma, _ma_w, L):
+        for res in compute_phaseshift(self.data, self.weight, _ma, _ma_w, L,
+                isdependend, d2, irrep):
             delta.add_data(*res)
         return delta
 
@@ -754,13 +763,46 @@ class FitResult(object):
                 gamma, res = calc_Ecm(data[select], d=d, L=L, lattice=uselattice)
                 weight = np.ones(nsamples) * self.weight[par][i][item]
                 if not isinstance(self.label[i], tuple):
-                    tmp = (self.label[i],)
+                    tmp = tuple(self.label[i])
                 else:
                     tmp = self.label[i]
                 #if np.any(res > 4*0.14463):
                 #    print("%s: Ecm over 4*mpi" % str(tmp+item))
                 Ecm.add_data(tmp + item, res, gamma, weight)
         return Ecm
+
+    def calc_momentum(self, mass, parmass, L=24, uselattice=True):
+        """Transform data to center of mass frame.
+
+        Parameters
+        ----------
+        par : int
+            Which of the fit parameters to transform.
+        L : int, optional
+            The lattice size.
+        d : ndarray, optional
+            The total momentum vector of the system.
+        uselattice : bool, optional
+            Use the lattice formulas or the continuum formulas.
+        """
+        self.calc_error()
+
+        _ma = mass.data[0][:,parmass]
+        _ma_w = mass.weight[parmass][0]
+        newshapes = [p.shape for p in self.pval]
+        q2 = FitResult("q2", True)
+        q2.create_empty(newshapes, newshapes, self.corr_num)
+        nsamples = self.data[0].shape[0]
+        needed = np.zeros((nsamples,))
+        for i, data in enumerate(self.data):
+            weight = (_ma_w * self.weight[0][i].T).T
+            for n in range(data.shape[-1]):
+                res = calc_q2(data[...,n], _ma, L=L, lattice=uselattice)
+                #print(res.shape)
+                for m in range(data.shape[-2]):
+                    tmp = weight[m,n] * np.ones((nsamples,))
+                    q2.add_data((0, i, m, n), res[:,m], needed, tmp)
+        return q2
 
     def evaluate_quark_mass(self, amu_s, obs_eval, obs1, obs2=None, obs3=None,
         meth=0):

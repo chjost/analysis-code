@@ -15,7 +15,7 @@ def main():
 
     # read settings
     readdata = True
-    readfit = False
+    readfit = True
     plotdata = True
 
     # get data from input file
@@ -51,7 +51,7 @@ def main():
     print("fitting")
     fitter = ana.LatticeFit(0, dt_i=dti, dt_f=dtf, dt=dt, correlated=True)
     if readfit == False:
-        fitres = fitter.fit(None, corr, [11, 35], corrid="epi", add=addT)
+        fitres = fitter.fit(None, corr, [14, 38], corrid="epi", add=addT)
         #fitres = fitter.fit(None, corr, [Ti, T], corrid="epi", add=addT)
         fitres.save("%s/fit_pi.npz" % (datadir))
     else:
@@ -69,8 +69,9 @@ def main():
         plotter.new_file("%s/hist_fit_pi.pdf" % (plotdir))
         #plotter = ana.LatticePlot("%s/hist_fit_pi.pdf" % (plotdir))
         label = ["single pion energy", "E$_\pi$/a", "E$_\pi$"]
-        plotter.histogram(fitres, label, 1)
+        plotter.histogram(fitres, label, par=1)
         plotter.new_file("%s/eff_mass_pi.pdf" % (plotdir))
+        plotter.set_env(ylog=False)
         #plotter = ana.LatticePlot("%s/eff_mass_pi.pdf" % (plotdir))
         corr.mass()
         label = ["single pion effective mass", "m$_{\pi,eff}$/a", "m$_\pi$", ""]
