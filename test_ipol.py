@@ -61,21 +61,26 @@ def main():
         mk_low.calc_error()
         print(mk_low.weight)
         #print mk_low.pval[0].shape
+        # To use the median in the interpolations, we have to switch shrinking
+        # and multiplication
+        mk_low = mk_low.singularize()
+        #obs1 = obs1.singularize()
         obs1 = mk_low.mult_obs_single(mk_low, "m_low_sq")
         #print mk_low.pval[0].shape
         
         #obs1 = mk_low.res_reduced(samples=200,m_a0=True)
-        obs1 = obs1.res_reduced(samples = 20)
+        #obs1 = obs1.res_reduced(samples = 20)
 
         # Read high m
         mk_high = ana.FitResult.read("%s/%s/%s/fit_k_%s.npz" % (datadir,a,strange[1],a))
         mk_high.print_data(par=1)
         mk_high.calc_error()
         print(mk_high.weight)
+        mk_high = mk_high.singularize()
         obs2 = mk_high.mult_obs_single(mk_high, "m_high_sq")
-        obs2 = obs2.res_reduced(samples = 20)
+        #obs2 = obs2.res_reduced(samples = 20)
         
-        qmatch = ana.FitResult('match',derived=True)
+        qmatch = ana.FitResult('match', derived=False)
         qmatch.evaluate_quark_mass(amu_s,obs_match, obs1, obs2)
         qmatch.print_data()
         qmatch.save("%s/%s/match_k_%s.npz" % (datadir,a,a))
@@ -86,7 +91,8 @@ def main():
         mka0_low.print_data(par=1)
         mka0_low.calc_error()
         print(mka0_low.weight)
-        obs3 = mka0_low.res_reduced(samples = 20,m_a0=True)
+        #obs3 = mka0_low.res_reduced(samples = 20,m_a0=True)
+        obs3 = mka0_low.singularize()
         print(obs3.data[0].shape)
 
         # Read high ma0
@@ -94,7 +100,8 @@ def main():
         mka0_high.print_data(par=1)
         mka0_high.calc_error()
         print(mka0_high.weight)
-        obs4 = mka0_high.res_reduced(samples = 20,m_a0=True)
+        #obs4 = mka0_high.res_reduced(samples = 20,m_a0=True)
+        obs4 = mka0_high.singularize()
         print(obs4.data[0].shape)
 
         mka0_ipol = ana.FitResult('eval',derived=True)

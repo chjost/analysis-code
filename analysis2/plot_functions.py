@@ -153,7 +153,7 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
             edgecolor=col, alpha=0.3)
     plt.legend()
 
-def plot_data(X, Y, dY, label, plotrange=None, fmt="xb"):
+def plot_data(X, Y, dY, label, plotrange=None, fmt="x",col='b'):
     """A function that plots data.
 
     Parameters
@@ -178,14 +178,14 @@ def plot_data(X, Y, dY, label, plotrange=None, fmt="xb"):
             l = int(plotrange[0])
             u = int(plotrange[1])
         # plot the data
-        plt.errorbar(X[l:u], Y[l:u], dY[l:u], fmt=fmt, label=label)
+        plt.errorbar(X[l:u], Y[l:u], dY[l:u], fmt=fmt, label=label, c=col)
     else:
         # plot the data
-        plt.errorbar(X, Y, dY, fmt=fmt, label=label)
+        plt.errorbar(X, Y, dY, fmt=fmt, label=label,c=col)
     plt.legend()
 
 def plot_data_with_fit(X, Y, dY, fitfunc, args, label, plotrange=None,
-                   fitrange=None, addpars=None, pval=None):
+                   fitrange=None, addpars=None, pval=None,col='b'):
     """A function that plots data and the fit to the data.
 
     Parameters
@@ -213,10 +213,10 @@ def plot_data_with_fit(X, Y, dY, fitfunc, args, label, plotrange=None,
         write the p-value in the plot if given
     """
     # plot the data
-    plot_data(X, Y, dY, label[0], plotrange=plotrange)
+    plot_data(X, Y, dY, label[0], plotrange=plotrange,col=col)
 
     # plot the function
-    plot_function(fitfunc, X, args, label[1], addpars, fitrange)
+    plot_function(fitfunc, X, args, label[1], addpars, fitrange,col=col)
 
     # adjusting the plot style
     plt.legend()

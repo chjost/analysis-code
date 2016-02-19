@@ -229,10 +229,10 @@ def main():
   #    plt.annotate(l,(X-0.001,Y+0.01))
   mpi_etmc_phys=ana.lat_to_phys(mpi_etmc)
   print mpi_etmc_phys
-  mpisq = plt.errorbar(np.square(mpi_r0_etmc_low), mk_akk_etmc[:,0], mk_akk_etmc[:,1], fmt='o' + 'b',
-                    label = r'A, unit. match',color='blue')
-  mpisq = plt.errorbar(np.square(mpi_r0_etmc_low), mk_akk_etmc_old[:,0], mk_akk_etmc_old[:,1], fmt='o' + 'b',
-                    label = r'A, unit. match old$',color='gold')
+  #mpisq = plt.errorbar(np.square(mpi_r0_etmc_low), mk_akk_etmc[:,0], mk_akk_etmc[:,1], fmt='o' + 'b',
+  #                  label = r'A, unit. match',color='blue')
+  #mpisq = plt.errorbar(np.square(mpi_r0_etmc_low), mk_akk_etmc_old[:,0], mk_akk_etmc_old[:,1], fmt='o' + 'b',
+  #                  label = r'A, unit. match old$',color='gold')
   #mpisq = plt.errorbar(np.square(mpi_r0_etmc_low), mk_akk_etmc_low[:,0], mk_akk_etmc_low[:,1], fmt='o' + 'b',
   #                  label = r'A, $a\mu_s = 0.0225$',color='blue')
   #mpisq = plt.errorbar(np.square(mpi_r0_etmc_low), mk_akk_etmc_high[:,0], mk_akk_etmc_high[:,1], fmt='o' + 'b',

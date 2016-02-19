@@ -290,7 +290,7 @@ def simple_difference(d1, d2=None):
         for _t in range(rshape[1]):
           print(_s,_t)
           # calculate difference
-          difference[_s,_t] = d1[_s,_t,0] - d2[_s,_t,0]
+          difference[_s,_t] = d1[_s,_t] - d2[_s,_t]
 
 
     return difference

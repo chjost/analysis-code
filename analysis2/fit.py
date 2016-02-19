@@ -893,8 +893,9 @@ class FitResult(object):
       # Get the we
       # Result has the same layout as one of the observables!
       # TODO: If observables have different layouts break
-      layout = obs1.data[0].shape
-      print(layout)
+      layout1 = obs1.data[0].shape
+      layout2 = obs1.pval[0].shape
+      #print(layout)
       _obs1 = obs1.data[0]
       _obsweight1 = obs1.pval[0][0]
       if obs2 is not None:
@@ -907,13 +908,7 @@ class FitResult(object):
       print("observable to evaluate at")
       print(_obs_eval)
 
-      boots = layout[0] 
-      ranges1 = layout[1]
-      if obs1.data[0].ndim == 3:
-        ranges2 = layout[2]
-      else:
-        ranges2 = 0
-      self.create_empty(layout, layout, 1)
+      self.create_empty(layout1, layout2, 1)
       # Decide method beforehand, cheaper in the end
 
       if meth == 0:

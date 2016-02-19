@@ -16,7 +16,7 @@ from plot_functions import plot_data, plot_function, plot_histogram
 from in_out import check_write
 
 class LatticePlot(object):
-    def __init__(self, filename):
+    def __init__(self, filename, join=False):
         """Initialize a plot.
 
         Parameters
@@ -33,6 +33,11 @@ class LatticePlot(object):
         self.ylim=None
         self.grid=True
         self.legend=True
+        self.join=join
+        if join:
+            self.cycol = itertools.cycle('bgrcmk').next
+        else:
+            self.cycol = itertools.cycle('b').next
 
     def __del__(self):
         self.plotfile.close()
@@ -174,10 +179,11 @@ class LatticePlot(object):
                 # plot the relative error instead of data and error
                 if rel is True:
                     plot_data(X, np.divide(ddata,corr.data[0,:,n]),
-                        np.zeros_like(ddata), label=label[3], plotrange=[3,T])
+                        np.zeros_like(ddata), label=label[3],
+                        plotrange=[3,T],col=self.cycol())
                 else:
                     plot_data(X, corr.data[0,:,n], ddata, label[3],
-                        plotrange=[3,T])
+                        plotrange=[3,T],col=self.cycol())
                 plt.legend()
                 if join is False:
                   self.save()
@@ -197,9 +203,9 @@ class LatticePlot(object):
                     # plot
                     self._set_env_normal()
                     plot_data(X, corr.data[0,:,n], ddata, label[3],
-                            plotrange=[1,T])
+                            plotrange=[1,T],col=self.cycol())
                     plot_function(fitfunc.fitfunc, X, mpar, label[4],
-                            add, fi, ploterror)
+                            add, fi, ploterror,col=self.cycol())
                     plt.legend()
                     if join is False:
                       self.save()
@@ -299,7 +305,8 @@ class LatticePlot(object):
                 self.save()
 
     def plot(self, corr, label, fitresult=None, fitfunc=None, oldfit=None,
-            add=None, oldfitpar=None, ploterror=False, xshift=0., debug=0):
+            add=None, oldfitpar=None, ploterror=False, xshift=0., debug=0,
+            join=False):
         """Plot the data of a Correlators object and a FitResult object
         together.
 
@@ -329,10 +336,10 @@ class LatticePlot(object):
         """
         if oldfit is None:
             self._genplot_single(corr, label, fitresult, fitfunc, add=add,
-                    ploterror=ploterror, xshift=xshift, debug=debug)
+                    ploterror=ploterror, xshift=xshift, debug=debug, join=join)
         else:
             self._genplot_comb(corr, label, fitresult, fitfunc, oldfit, add,
-                    oldfitpar, ploterror, xshift, debug)
+                    oldfitpar, ploterror, xshift, debug,join=join)
 
     def histogram(self, fitresult, label, nb_bins=20, par=None):
         """Plot the histograms.

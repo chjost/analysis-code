@@ -4,6 +4,30 @@ Functions for the ratio calculation.
 
 import numpy as np
 
+def twopoint_ratio(d1, d2, d3):
+    """Calculates a simple ratio of three data sets.
+
+    Calculates d1(t)/d2(t).
+    Assumes that all data sets are numpy arrays with two axis, the first being
+    the bootstrap number and the second being the time.
+    
+    Args:
+        d1, d2 The three data sets.
+
+    Returns:
+        The ratio, its mean and its standard deviation.
+    """
+    # create array from dimensions of the data
+    rshape = list(d1.shape)
+    ratio = np.zeros(rshape)
+    for _s in range(rshape[0]):
+        for _t in range(rshape[1]):
+            # calculate ratio
+            ratio[_s,_t] = d1[_s,_t]/d2[_s,_t]-1.
+    # TODO(CJ): test if the following give the same result
+    # ratio = d1/(d2*d3)
+    return ratio
+
 def simple_ratio(d1, d2, d3):
     """Calculates a simple ratio of three data sets.
 

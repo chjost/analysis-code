@@ -86,7 +86,10 @@ def ipol_lin(y1, y2, x):
     c1 = y1-np.multiply(c0,x[0])
     # save slope and y-intercept
     interpol = np.zeros((len(y1),2))
-    interpol[:,0], interpol[:,1] = c0, c1
+    if len(c0.shape) == 2:
+      interpol[:,0], interpol[:,1] = np.ravel(c0), np.ravel(c1)
+    else:
+      interpol[:,0], interpol[:,1] = c0, c1
     return interpol
 
 def interp_fk(name, mul, mus_match):
