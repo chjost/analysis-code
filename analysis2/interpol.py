@@ -48,10 +48,12 @@ def evaluate_lin(y1, y2, x, w1, w2, obs_eval):
 
     Parameters
     ----------
+
+    par : The output parameter to place the result
     Returns
     """
 
-    # check number of weights
+    #check number of weights
     if w1.shape != w2.shape:
       raise ValueError("Shapes of observables incompatible")
     for i in range(w1.shape[-1]):
@@ -60,9 +62,10 @@ def evaluate_lin(y1, y2, x, w1, w2, obs_eval):
       # if obs_match is a FitResult, evaluate it at the coefficients
       # else solve c0*mu_s + c1 - obs_match = 0 for mu_s
       result = eval_lin(coeff, obs_eval)
+      print result.shape
       weight = np.multiply(w1[i],w2[i])
       needed = np.zeros_like(weight)
-
+      
       yield (0,i), result, needed, weight
   
 def ipol_lin(y1, y2, x):

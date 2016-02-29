@@ -385,6 +385,7 @@ class FitResult(object):
         """
         if self.data is None:
             raise RuntimeError("No place to store data, call create_empty first")
+        print(data.shape)
         if isinstance(self.corr_num, int):
             if len(index) != 2:
                 raise ValueError("Index has wrong length")
@@ -459,17 +460,23 @@ class FitResult(object):
         nboot = self.data[0].shape[0]
         npars = self.data[0].shape[1]
         shape1 = (nboot,npars,1)
-        #print shape1
+        print("is data derived?")
+        print(self.derived)
         shape2 = (nboot,1)
         #print shape1
         singular.create_empty(shape1,shape2,1)
         singular.set_ranges(np.array([[[10,15]]]),[[1,]])
         # usually only one correlator is taken into account
         # copy data to singular
-        res, res_std, res_sys, n_fits = self.error[0]
-        singular.data[0][:,0,0] = res[0]
-        res, res_std, res_sys, n_fits = self.error[1]
-        singular.data[0][:,1,0] = res[0]
+        if self.derived is False:
+            res, res_std, res_sys, n_fits = self.error[0]
+            singular.data[0][:,0,0] = res[0]
+            res, res_std, res_sys, n_fits = self.error[1]
+            singular.data[0][:,1,0] = res[0]
+        else:
+            res, res_std, res_sys, n_fits = self.error[0]
+            singular.data[0][:,0,0] = res[0]
+            
         # set weights accordingly
         singular.weight = [[np.array([1.])] for d in range(2)]
         singular.error = []
@@ -873,7 +880,7 @@ class FitResult(object):
         return Ecm
 
     def evaluate_quark_mass(self, amu_s, obs_eval, obs1, obs2=None, obs3=None,
-        meth=0):
+        meth=0, parobs=1):
       """ evaluate the strange quark mass at obs_match
 
       Parameters
@@ -885,7 +892,8 @@ class FitResult(object):
       meth: How to match: 0: linear interpolation (only two values)
                           1: linear fit
                           2: quadratic interpolation
-
+      parobs : int
+               Which parameter of the results should be taken
       """
       if obs2==None and obs3==None:
         raise ValueError("Matching not possible, check input of 2nd (and 3rd) observable!")
@@ -893,22 +901,25 @@ class FitResult(object):
       # Get the we
       # Result has the same layout as one of the observables!
       # TODO: If observables have different layouts break
-      layout1 = obs1.data[0].shape
-      layout2 = obs1.pval[0].shape
-      #print(layout)
-      _obs1 = obs1.data[0]
+      shape1 = obs1.data[0].shape
+      shape2 = obs1.pval[0].shape
+      # prepare shapes
+      layout1 = (shape1[0],shape1[-1])
+      layout2 = [shape2[0],]
+
+      _obs1 = obs1.data[0][:,parobs]
       _obsweight1 = obs1.pval[0][0]
       if obs2 is not None:
-        _obs2 = obs2.data[0]
+        _obs2 = obs2.data[0][:,parobs]
         _obsweight2 = obs2.pval[0][0]
       if obs3 is not None:
-        _obs3 = obs3.data[0]
+        _obs3 = obs3.data[0][:,parobs]
         _obsweight3 = obs3.pval[0][0]
       _obs_eval = obs_eval
       print("observable to evaluate at")
       print(_obs_eval)
 
-      self.create_empty(layout1, layout2, 1)
+      self.create_empty(layout1, layout1, 1)
       # Decide method beforehand, cheaper in the end
 
       if meth == 0:

@@ -53,7 +53,7 @@ def main():
     #f.close()
     #inputlist = ['cnfg'+i+'/' for i in x]
     #print inputlist
-    cfg_rng = [500,500,8]
+    cfg_rng = [500,2900,8]
     missing = miss_confs(rawdir,cfg_rng)
     print missing
     for i in range(cfg_rng[0],cfg_rng[1]+1,cfg_rng[2]):

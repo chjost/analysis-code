@@ -42,13 +42,13 @@ def main():
 
     # get data from input file
     lat = ens.name()
-    latA = ens.get_data("nameb")
+    latA = ens.get_data("namea")
     #quark = ens.get_data("quark")
     datadir = ens.get_data("datadir") 
     d2 = ens.get_data("d2")
-    strange = ens.get_data("strangeb")
-    amu_s = ens.get_data("amu_s_b")
-    obs_match = 0.0198
+    strange = ens.get_data("strangea")
+    amu_s = ens.get_data("amu_s_a")
+    obs_match = 0.0226
 
     print(datadir)
     # Place fit results in new empty fitresults objects
@@ -80,7 +80,9 @@ def main():
         obs2 = mk_high.mult_obs_single(mk_high, "m_high_sq")
         #obs2 = obs2.res_reduced(samples = 20)
         
-        qmatch = ana.FitResult('match', derived=False)
+        qmatch = ana.FitResult('match', derived=True)
+        print(obs1.data[0].shape)
+        print(obs2.data[0].shape)
         qmatch.evaluate_quark_mass(amu_s,obs_match, obs1, obs2)
         qmatch.print_data()
         qmatch.save("%s/%s/match_k_%s.npz" % (datadir,a,a))
@@ -105,7 +107,7 @@ def main():
         print(obs4.data[0].shape)
 
         mka0_ipol = ana.FitResult('eval',derived=True)
-        mka0_ipol.evaluate_quark_mass(amu_s,obs_match,obs3, obs4)
+        mka0_ipol.evaluate_quark_mass(amu_s,obs_match,obs3, obs4,parobs=0)
         mka0_ipol.print_data()
         mka0_ipol.save("%s/%s/match_mk_akk_%s.npz" % (datadir,a,a))
         

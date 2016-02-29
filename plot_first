@@ -20,20 +20,14 @@ def main():
     plotsingle = True
     readtwodata = False
     plottwo = True
-    compare = True
+    compare = False
     # get data from input file
     prefix = ens.get_data("path")
     print prefix
     lat = ens.name()
     nboot = ens.get_data("nboot")
-    data = ens.get_data("datadir")
-    plots = ens.get_data("plotdir")
-    subfld = ens.get_data("subfold")
-    #try:
-    #    subfld = ens.get_data("subfold")
-    #    print subfld
-    #except KeyError:
-    #    subfld = ('')
+    datadir = ens.get_data("datadir")
+    plotdir = ens.get_data("plotdir")
     gmax = ens.get_data("gmax")
     d2 = ens.get_data("d2")
     try:
@@ -50,127 +44,63 @@ def main():
 # Begin calculation
 #######################################################################
    
-    for fld in subfld:
-      datadir = '%s/%s/' % (data,fld)
-      plotdir = '%s/%s/' % (plots,fld)
-      # single particle correlator
-      print("read single particle corrs")
-      #files = ["%s/pi_corr_p%d.dat" % (prefix, d) for d in range(4)]
-      files = ["%s/k_charged_p%d.dat" % (datadir, d) for d in range(1)]
-      if readsingledata == False:
-          kcorr = ana.Correlators(files, matrix=False)
-          print(kcorr.data)
-          kcorr.sym_and_boot(nboot)
-          print(kcorr.shape)
-          kcorr.save("%s/corr_k_%s.npy" % (datadir, lat))
-      else:
-          kcorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat))
+    # single particle correlator
+    print("read single particle corrs")
+    #files = ["%s/pi_corr_p%d.dat" % (prefix, d) for d in range(4)]
+    files = ["%s/k_charged_p%d.dat" % (datadir, d) for d in range(1)]
+    if readsingledata == False:
+        kcorr = ana.Correlators(files, matrix=False)
+        print(kcorr.data)
+        kcorr.sym_and_boot(nboot)
+        print(kcorr.shape)
+        kcorr.save("%s/corr_k_%s.npy" % (datadir, lat))
+    else:
+        kcorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat))
 
-      # two particle correlator
-      print("read two particle corrs")
-      #files = ["%s/kk_charged_A1_TP%d_%d%d.dat" % (datadir, d2, i, j) for i in\
-      #    range(gmax+1) for j in range(gmax+1)]
-      files = ["%s/kk_charged_A1_TP%d_%d%d.dat" % (datadir, d2, i, j) for i in\
-          range(gmax+1) for j in range(gmax+1)]
-      print files
-      if readtwodata == False:
-          kkcorr = ana.Correlators(files, matrix=False)
-          kkcorr.sym_and_boot(nboot)
-          #kkcorr.symmetrize(nboot)
-          ratio = kkcorr.ratio(kcorr, ratio=2 )
-          kkcorr.save("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
-      else:
-          kkcorr = ana.Correlators.read("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
-          ratio = kkcorr.ratio(kcorr, ratio=2 )
+    # two particle correlator
+    print("read two particle corrs")
+    #files = ["%s/kk_charged_A1_TP%d_%d%d.dat" % (datadir, d2, i, j) for i in\
+    #    range(gmax+1) for j in range(gmax+1)]
+    files = ["%s/kk_charged_A1_TP%d_%d%d.dat" % (datadir, d2, i, j) for i in\
+        range(gmax+1) for j in range(gmax+1)]
+    print files
+    if readtwodata == False:
+        kkcorr = ana.Correlators(files, matrix=False)
+        kkcorr.sym_and_boot(nboot)
+        #kkcorr.symmetrize(nboot)
+        ratio = kkcorr.ratio(kcorr, ratio=2 )
+        kkcorr.save("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
+    else:
+        kkcorr = ana.Correlators.read("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
+        ratio = kkcorr.ratio(kcorr, ratio=2 )
 
-      #compute effective masses after ratio has been build
-      kcorr.mass()
-      kkcorr.mass()
+    #compute effective masses after ratio has been build
+    kcorr.mass()
+    kkcorr.mass()
 
-      #plot effective masses of kcorr and kkcorr
-      if plotsingle:
-          print("plotting")
-          plotter = ana.LatticePlot("%s/mass_k_TP%d_%s.pdf" % (plotdir, d2, lat))
-          plotter.set_env(ylog=False)
-          label = ["Mass Kaon", "t", "m_eff(t)", "data"]
-          plotter.plot(kcorr, label )
-          del plotter
-
-      if plottwo:
-          print("plotting")
-          plotter = ana.LatticePlot("%s/ratio_kk_TP%d_%s.pdf" % (plotdir, d2, lat))
-          plotter.set_env(ylog=False)
-          label = ["Ratio", "t", "R(t)", "data"]
-          print "plotter set up"
-          plotter.plot(ratio, label, add=addT, xshift=0.5, debug=debug)
-          print "open new file for effective mass"
-          plotter.new_file("%s/mass_kk_TP%d_%s.pdf" % (plotdir, d2, lat))
-          plotter.set_env(ylog=False)
-          label = ["Mass 4pt-function", "$t$", "$m_{eff,KK}$","data"]
-          plotter.plot(kkcorr,label) 
-          del plotter
-
-    if compare:
-        plotter = ana.LatticePlot("%s/compare_diag_TP%d_%s.pdf" % (prefix, d2,
-          lat),join=True)
-        files = ["%s/%s/k_charged_p0.dat" % (data, fld) for fld in subfld]
-        print files
-        corr1 = ana.Correlators(files[0], matrix = False)
-        corr2 = ana.Correlators(files[1], matrix = False)
-        corr3 = ana.Correlators(files[2], matrix = False)
-        plotter.set_env(ylog=True)
-        label=["C2 of kaon", "t", "C2(t)", r'$\epsilon = 10^{-16}$']
-        plotter.plot(corr1, label, join=True)
-        label=["C2 of kaon", "t", "C2(t)", r'$\epsilon = 10^{-19}$']
-        plotter.plot(corr2, label, join=True)
-        label=["C2 of kaon", "t", "C2(t)", r'$\epsilon = 10^{-21}$']
-        plotter.plot(corr3, label, join=False)
-        del plotter
-        ratio_16_19 = corr1.ratio(corr2, ratio=3,shift=0) 
-        ratio_19_21 = corr2.ratio(corr3, ratio=3,shift=0)
-        ratio_16_21 = corr1.ratio(corr3, ratio=3,shift=0)
-        plotter = ana.LatticePlot("%s/compare_C2_ratio%d_%s.pdf" % (prefix, d2,
-                                  lat))
+    #plot effective masses of kcorr and kkcorr
+    if plotsingle:
+        print("plotting")
+        plotter = ana.LatticePlot("%s/mass_k_TP%d_%s.pdf" % (plotdir, d2, lat))
         plotter.set_env(ylog=False)
-        label=[r'Ratio of $C_2$ of kaon', "t", r'$(C_2^{16}/C_2^{19})(t)-1$', r'ratio']
-        plotter.plot(ratio_16_19, label)
-        label=[r'Ratio of $C_2$ of kaon', "t", r'$(C_2^{19}/C_2^{21})(t)-1$', r'ratio']
-        plotter.plot(ratio_19_21, label)
-        label=[r'ratio of $C_2$ of kaon', "t", r'$(C_2^{16}/C_2^{21})(t)-1$', r'ratio']
-        plotter.plot(ratio_16_21, label)
+        label = ["Mass Kaon", "t", "m_eff(t)", "data"]
+        plotter.plot(kcorr, label )
         del plotter
 
-        plotter = ana.LatticePlot("%s/compare_C4%d_%s.pdf" % (prefix, d2,
-          lat),join=True)
-        files = ["%s/%s/kk_charged_A1_TP0_00.dat" % (data, fld) for fld in subfld]
-        print files
-        corr1 = ana.Correlators(files[0], matrix = False)
-        corr2 = ana.Correlators(files[1], matrix = False)
-        corr3 = ana.Correlators(files[2], matrix = False)
-        plotter.set_env(ylog=True)
-        label=["C4 of kaon", "t", "C4(t)", r'$\epsilon = 10^{-16}$']
-        plotter.plot(corr1, label, join=True)
-        label=["C4 of kaon", "t", "C4(t)", r'$\epsilon = 10^{-19}$']
-        plotter.plot(corr2, label, join=True)
-        label=["C4 of kaon", "t", "C4(t)", r'$\epsilon = 10^{-21}$']
-        plotter.plot(corr3, label, join=False)
-        del plotter
-
-        #plot ratios
-        
-        ratio_16_19 = corr1.ratio(corr2, ratio=3,shift=0) 
-        ratio_19_21 = corr2.ratio(corr3, ratio=3,shift=0)
-        ratio_16_21 = corr1.ratio(corr3, ratio=3,shift=0)
-        plotter = ana.LatticePlot("%s/compare_C4_ratio%d_%s.pdf" % (prefix, d2,
-                                  lat))
+    if plottwo:
+        print("plotting")
+        plotter = ana.LatticePlot("%s/ratio_kk_TP%d_%s.pdf" % (plotdir, d2, lat))
         plotter.set_env(ylog=False)
-        label=[r'Ratio of $C_4$ of kaon', "t", r'$(C_4^{16}/C_4^{19})(t)-1$', r'ratio']
-        plotter.plot(ratio_16_19, label)
-        label=[r'Ratio of $C_4$ of kaon', "t", r'$(C_4^{19}/C_4^{21})(t)-1$', r'ratio']
-        plotter.plot(ratio_19_21, label)
-        label=[r'ratio of $C_4$ of kaon', "t", r'$(C_4^{16}/C_4^{21})(t)-1$', r'ratio']
-        plotter.plot(ratio_16_21, label)
+        label = ["Ratio", "t", "R(t)", "data"]
+        print "plotter set up"
+        plotter.plot(ratio, label, add=addT, xshift=0.5, debug=debug)
+        print "open new file for effective mass"
+        plotter.new_file("%s/mass_kk_TP%d_%s.pdf" % (plotdir, d2, lat))
+        plotter.set_env(ylog=False)
+        label = ["Mass 4pt-function", "$t$", "$m_{eff,KK}$","data"]
+        plotter.plot(kkcorr,label) 
         del plotter
+
 
 
 

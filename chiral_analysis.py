@@ -82,7 +82,7 @@ def main():
   
   # Firstly, read in all interpolated data into one array for which the
   # fits are conducted and append them to an array
-  fk_unit = read_extern('./fk_unitary.dat')
+  fk_unit = read_extern('./plots2/data/fk_unitary.dat')
   # Initialize a result array for the Ydata
   nb_ens=len(latA)+len(latB)+len(latD)
   # arrays for x and y data
@@ -138,7 +138,7 @@ def main():
   chiral_extra.print_data()
 
   # Lastly, plot the fitted function and the data
-  plotter = ana.LatticePlot()
+  plotter = ana.LatticePlot('./plots2/pdf/chiral_ext.pdf')
   label = ["Chiral Extrapolation", r'$M_K/f_K$',
             r'$M_K a_{0}$',r'amu_s^D = 0.015']
   plotter.plot(chiral_extra,label,chiral_extra)
