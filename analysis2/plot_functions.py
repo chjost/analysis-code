@@ -77,9 +77,14 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
             if args0 == add0:
                 # first axis has same size for both
                 # iterate over the x range
-                for x in x1:
+                for i, x in enumerate(x1):
                     # the actual value is given by the first sample
                     y1.append(func(_args[0], x, _add[0]))
+                    #if i % 100 == 0:
+                    #    print(x)
+                    #    print(_args[0])
+                    #    print(_add[0])
+                    #    print(y1[-1])
                     if ploterror:
                         tmp = [y1[-1]]
                         # iterate over the rest of the arguments

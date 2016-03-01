@@ -2,6 +2,7 @@
 The class for fitting.
 """
 
+import time
 import itertools
 import numpy as np
 
@@ -11,7 +12,8 @@ from in_out import read_fitresults, write_fitresults
 from interpol import match_lin, evaluate_lin
 from functions import (func_single_corr, func_ratio, func_const, func_two_corr,
     func_single_corr2, func_sinh, compute_eff_mass)
-from statistics import compute_error, sys_error, sys_error_der, draw_weighted, freq_count
+from statistics import (compute_error, sys_error, sys_error_der, draw_weighted,
+    freq_count, draw_gauss_distributed)
 from energies import calc_q2, calc_Ecm
 from zeta_wrapper import Z
 from scattering_length import calculate_scat_len
@@ -60,7 +62,7 @@ class LatticeFit(object):
         self.correlated = correlated
 
     def fit(self, start, corr, ranges, corrid="", add=None, oldfit=None,
-            oldfitpar=None, useall=False):
+            oldfitpar=None, useall=False, lint=False):
         """Fits fitfunc to a Correlators object.
 
         The predefined functions describe a single particle correlation
@@ -98,6 +100,15 @@ class LatticeFit(object):
         FitResult
             A class that holds all results.
         """
+        # sanity check
+        if isinstance(ranges[0], (tuple, list, np.ndarray)):
+            for r in ranges:
+                if r[0] > r[1]:
+                    raise ValueError("final t is smaller than initial t")
+        else:
+            if ranges[0] > ranges[1]:
+                raise ValueError("final t is smaller than initial t")
+
         # check if it is a combined fit or not
         if oldfit is None:
             # no combined fit
@@ -105,7 +116,7 @@ class LatticeFit(object):
             dshape = corr.shape
             ncorr = dshape[-1]
             franges, fshape = calculate_ranges(ranges, dshape, dt_i=self.dt_i,
-                    dt_f=self.dt_f, dt=self.dt, debug=self.debug)
+                    dt_f=self.dt_f, dt=self.dt, debug=self.debug, lintervals=lint)
 
             # prepare storage
             fitres = FitResult(corrid)
@@ -131,7 +142,7 @@ class LatticeFit(object):
             oldranges, oldshape = oldfit.get_ranges()
             franges, fshape = calculate_ranges(ranges, dshape, oldshape,
                     dt_i=self.dt_i, dt_f=self.dt_f, dt=self.dt,
-                    debug=self.debug)
+                    debug=self.debug, lintervals=lint)
 
             # generate the shapes for the data
             shapes_data = []
@@ -187,7 +198,7 @@ class LatticeFit(object):
         """
         # if no start value given, take an arbitrary value
         if start is None:
-            _start = [3.8]
+            _start = [3.0]
         # make sure start is a tuple, list, or ndarray for leastsq to work
         elif not isinstance(start, (np.ndarray, tuple, list)):
             _start = list(start)
@@ -204,14 +215,23 @@ class LatticeFit(object):
 
         # create FitResults
         fitres = FitResult("chiral_fit")
-        shape1 = (_X.shape[0], 1, _X[:3].shape[0])
-        shape2 = (_X.shape[0], _X[:3].shape[0])
+        shape1 = (_X.shape[0], 1, _X.shape[0])
+        shape2 = (_X.shape[0], _X.shape[0])
         fitres.create_empty(shape1, shape2, 1)
         # fit the data
         dof = _X.shape[1] - len(_start)
-        for i, x in enumerate(_X[:3]):
+        # fit every bootstrap sample
+        timing = []
+        for i, x in enumerate(_X[:100]):
+            timing.append(time.clock())
             tmpres, tmpchi2, tmppval = fitting(self.fitfunc, x, _Y, _start, debug=debug)
             fitres.add_data((0,i), tmpres, tmpchi2, tmppval)
+            #if i % 100:
+            #    print("%d of %d finished" % (i+1, _X.shape[0]))
+        t1 = np.asarray(timing)
+        print("total fit time %fs" % (t1[-1] - t1[0]))
+        t2 = t1[1:] - t1[:-1]
+        print("time per fit %f +- %fs" % (np.mean(t2), np.std(t2)))
         return fitres
 
 class FitResult(object):
@@ -614,8 +634,12 @@ class FitResult(object):
             r, rstd, rsys, nfits = self.error[par]
         for i, lab in enumerate(self.label):
             print("correlator %s, %d fits" %(str(lab), nfits[i]))
-            print("%.8f +- %.8f -%.5f +%.5f" % (r[i][0], rstd[i], rsys[i][0],
-                rsys[i][1]))
+            if np.fabs(r[i][0]) < 1e-4:
+                print("%.4e +- %.4e -%.4e +%.4e" % (r[i][0], rstd[i], rsys[i][0],
+                    rsys[i][1]))
+            else:
+                print("%.5f +- %.5f -%.5f +%.5f" % (r[i][0], rstd[i], rsys[i][0],
+                    rsys[i][1]))
         print("------------------------------\n\n")
 
     def print_details(self):
@@ -675,10 +699,11 @@ class FitResult(object):
                                 tmppar.append("%e" % (self.data[i][select])[0])
                             select = (slice(None),) + item + (j,)
                             tmppar = " ".join(tmppar)
+                            select = (0,) + item + (j,)
                             tmpstring = " ".join(("%d: range %2d:%2d" % (j, r[0],r[1]),
                                                   "add ranges %s" % str(item),
-                                                  "chi^2 %e" % (self.chi2[i][select][0]),
-                                                  "pval %5f" % (self.pval[i][select][0]),
+                                                  "chi^2 %e" % (self.chi2[i][select]),
+                                                  "pval %5f" % (self.pval[i][select]),
                                                   tmppar))
                             print(tmpstring)
 
@@ -688,27 +713,18 @@ class FitResult(object):
           self.error=None
         self.calc_error()
 
-        #print("------------------------------")
-        #print("summary for %s" % self.corr_id)
         if self.derived:
-            #print("derived values")
             r, rstd, rsys, nfits = self.error[0]
         else:
-            #print("parameter %d" % par)
             r, rstd, rsys, nfits = self.error[par]
         for i, lab in enumerate(self.label):
-            #print("correlator %s, %d fits" %(str(lab), nfits[i]))
             res = np.array((r[i][0], rstd[i], rsys[i][0],
                 rsys[i][1]))
         return res
-        #print("------------------------------\n\n")
 
-    def calc_cot_delta(self, mass, parself=0, parmass=0, L=24, isratio=False):
+    def calc_cot_delta(self, mass, parmass=0, L=24, isdependend=False,
+            d2=0, irrep="A1"):
         """Calculate the cotangent of the scattering phase.
-
-        Warning
-        -------
-        This overwrites the data, so be careful to save the data before.
 
         Parameters
         ----------
@@ -725,34 +741,18 @@ class FitResult(object):
         self.calc_error()
         mass.calc_error()
         _ma = mass.data[0][:,parmass]
-        _ma_w = mass.weight[parmass][0]
-        nsam = self.data[0].shape[0]
-        newshape = [(nsam,) + _ma.shape[1:] + d.shape[2:] for d in self.data]
+        _ma_w = mass.weight[parmass]
+        nsam = _ma.shape[0]
+        if isdependend:
+            newshape = [d.shape for d in self.data]
+        else:
+            newshape = [(nsam,_ma.shape[-1],d.shape[-1]) for d in self.data]
         delta = FitResult("delta", True)
         delta.create_empty(newshape, newshape, [1, len(self.data)])
-        for res in compute_phaseshift(self.data, self.weight, _ma, _ma_w, L):
+        for res in compute_phaseshift(self.data, self.weight, _ma, _ma_w, L,
+                isdependend, d2, irrep):
             delta.add_data(*res)
         return delta
-        ## loop over fitranges of self
-        #for i in range(_data.shape[-1]):
-        #    # loop over fitranges of mass
-        #    for j in range(_ma.shape[-1]):
-        #        if isratio:
-        #            q2 = ((_data[:,j,i]*_data[:,j,i]/4.+_data[:,j,i]*_ma[:,j]) *
-        #                  (2. * np.pi) / float(L))
-        #        else:
-        #            q2 = calc_q2(_data[:,i], _ma[:,j], L)
-        #        cotd[0][:,j,i] = Z(q2).real / (np.pow(np.pi, 3./2.) * np.sqrt(q2))
-        #        if isratio:
-        #            cotd_w[0][j,i] = _ma_w[j] * _data_w[j,i]
-        #        else:
-        #            cotd_w[0][j,i] = _ma_w[j] * _data_w[i]
-        #np.save("cotd_test.npy", cotd[0])
-        #np.save("cotd_w_test.npy", cotd_w[0])
-        #res, std, syst = sys_error_der(cotd, cotd_w)
-        #print(res[0][0])
-        #print(std[0])
-        #print(syst[0])
 
     def calc_dE(self, mass, parself=0, parmass=0, isdependend=True):
         """Calculate dE from own data and the mass of the particles.
@@ -782,13 +782,6 @@ class FitResult(object):
         for res in compute_dE(_ma, _ma_w, _energy, _energy_w, isdependend):
             dE.add_data(*res)
         return dE
-
-    #def sort_res(self, )
-    #    """Function resorting a FitResult object by a specific axis
-
-    #    Parameters
-    #    ----------
-    #    """
 
     def calc_scattering_length(self, mass, parself=0, parmass=0, L=24,
             isratio=False, isdependend=True):
@@ -840,7 +833,6 @@ class FitResult(object):
         for res in calculate_scat_len(_mass, _massweight, _energy, _energyweight,
                 L, isdependend, isratio):
             scat.add_data(*res)
-        print(scat.pval[0].shape)
         return scat
 
     def to_CM(self, par, L=24, d=np.array([0., 0., 1.]), uselattice=True):
@@ -871,13 +863,46 @@ class FitResult(object):
                 gamma, res = calc_Ecm(data[select], d=d, L=L, lattice=uselattice)
                 weight = np.ones(nsamples) * self.weight[par][i][item]
                 if not isinstance(self.label[i], tuple):
-                    tmp = (self.label[i],)
+                    tmp = tuple(self.label[i])
                 else:
                     tmp = self.label[i]
                 #if np.any(res > 4*0.14463):
                 #    print("%s: Ecm over 4*mpi" % str(tmp+item))
                 Ecm.add_data(tmp + item, res, gamma, weight)
         return Ecm
+
+    def calc_momentum(self, mass, parmass, L=24, uselattice=True):
+        """Transform data to center of mass frame.
+
+        Parameters
+        ----------
+        par : int
+            Which of the fit parameters to transform.
+        L : int, optional
+            The lattice size.
+        d : ndarray, optional
+            The total momentum vector of the system.
+        uselattice : bool, optional
+            Use the lattice formulas or the continuum formulas.
+        """
+        self.calc_error()
+
+        _ma = mass.data[0][:,parmass]
+        _ma_w = mass.weight[parmass][0]
+        newshapes = [p.shape for p in self.pval]
+        q2 = FitResult("q2", True)
+        q2.create_empty(newshapes, newshapes, self.corr_num)
+        nsamples = self.data[0].shape[0]
+        needed = np.zeros((nsamples,))
+        for i, data in enumerate(self.data):
+            weight = (_ma_w * self.weight[0][i].T).T
+            for n in range(data.shape[-1]):
+                res = calc_q2(data[...,n], _ma, L=L, lattice=uselattice)
+                #print(res.shape)
+                for m in range(data.shape[-2]):
+                    tmp = weight[m,n] * np.ones((nsamples,))
+                    q2.add_data((0, i, m, n), res[:,m], needed, tmp)
+        return q2
 
     def evaluate_quark_mass(self, amu_s, obs_eval, obs1, obs2=None, obs3=None,
         meth=0, parobs=1):
@@ -1064,85 +1089,94 @@ class FitResult(object):
       return mult_obs
 
     def mult_obs_single(self, other, corr_id="Product"):
-      """Multiply two observables in order to treat them as a new observable.
+        """Multiply two observables in order to treat them as a new observable.
 
-        Warning
-        -------
-        This overwrites the data, so be careful to save the data before.
-      
-      Parameters
-      ----------
-      other: FitResult object that gets multiplied with self in a
-          weightpreserving way.
-      corr_id: Id of derived observable
+          Warning
+          -------
+          This overwrites the data, so be careful to save the data before.
+        
+        Parameters
+        ----------
+        other: FitResult object that gets multiplied with self in a
+            weightpreserving way.
+        corr_id: Id of derived observable
 
-      """
-      # Self determines the resulting layout
-      layout = self.data[0].shape
-      boots = layout[0] 
-      ranges1 = layout[2]
-      if self.data[0].ndim == 3:
-        ranges2 = layout[2]
-      else:
-        ranges2 = 0
-      
-      # Check ranges and samples for compliance
-      if layout[0] != other.data[0].shape[0]:
-        raise ValueError("Number of Bootstrapsamples not compatible!")
-      if layout[1] != other.data[0].shape[1]:
-        raise ValueError("Number of same parameter fit ranges not compatible!\n"
-            + "%d vs. %d" % (layout[1], other.data[0].shape[1]))
+        """
+        # Self determines the resulting layout
+        layout = self.data[0].shape
+        boots = layout[0] 
+        ranges1 = layout[2]
+        if self.data[0].ndim == 3:
+            ranges2 = layout[2]
+        else:
+            ranges2 = 0
+        
+        # Check ranges and samples for compliance
+        if layout[0] != other.data[0].shape[0]:
+            raise ValueError("Number of Bootstrapsamples not compatible!")
+        if layout[1] != other.data[0].shape[1]:
+            raise ValueError("Number of same parameter fit ranges not compatible!\n"
+              + "%d vs. %d" % (layout[1], other.data[0].shape[1]))
 
-      # Deal with observables
-      product = np.zeros_like(self.data[0])
-      for b, arr0 in enumerate(other.data[0]):
-        for r_self, arr1 in enumerate(arr0):
-          product[b][r_self] = np.multiply(arr1, self.data[0][b][r_self])
+        # Deal with observables
+        product = np.zeros_like(self.data[0])
+        for b, arr0 in enumerate(other.data[0]):
+            for r_self, arr1 in enumerate(arr0):
+                product[b][r_self] = np.multiply(arr1, self.data[0][b][r_self])
 
-      # Deal with observable weights
-      # Get weights for all fit ranges (1 sample is sufficient)
-      weights_0 = self.pval[0][0]
-      # prepare new weight array
-      weights_prod = np.zeros_like(weights_0)
-      # multiply weights of first observable with observable of second
-      for idx, weights_1 in enumerate(other.weight[1][0]):
-        weights_prod[idx] = np.multiply(weights_1, weights_0[idx])
+        # Deal with observable weights
+        # Get weights for all fit ranges (1 sample is sufficient)
+        weights_0 = self.pval[0][0]
+        # prepare new weight array
+        weights_prod = np.zeros_like(weights_0)
+        # multiply weights of first observable with observable of second
+        for idx, weights_1 in enumerate(other.weight[1][0]):
+            weights_prod[idx] = np.multiply(weights_1, weights_0[idx])
 
-      # Get array into right shape for calculation
-      weights = np.tile( weights_prod.flatten(), boots ).reshape(boots, ranges1)
+        # Get array into right shape for calculation
+        weights = np.tile( weights_prod.flatten(), boots ).reshape(boots, ranges1)
 
-      # prepare storage
-      mult_obs = FitResult(corr_id, True)
-      mult_obs.create_empty(layout, layout, [1,1])
-      mult_obs.data[0] = product
-      mult_obs.pval[0] = weights
-      return mult_obs
+        # prepare storage
+        mult_obs = FitResult(corr_id, True)
+        mult_obs.create_empty(layout, layout, [1,1])
+        mult_obs.data[0] = product
+        mult_obs.pval[0] = weights
+        return mult_obs
 
     def res_reduced(self, samples=20, corr_id='reduced', m_a0 = False):
-      """Take boolean 1d intersection of two arrays to choose certain fitranges and
-      corresponding data.
+        """Take boolean 1d intersection of two arrays to choose certain fitranges and
+        corresponding data.
   
-      This function flattens the data wrt the fit ranges. Thus the structure of
-      different observables will get lost.
-      
-      Parameters
-      ----------
-          vals : The chosen weights as result of draw_weighted
-      
-      Returns:
-          res_sorted : The intersected data and weights as a new FitResult object.
-      
-      """
-      # Self determines the resulting layout
-      layout = self.data[0].shape
-      boots = layout[0] 
+        This function flattens the data wrt the fit ranges. Thus the structure of
+        different observables will get lost.
+        
+        Parameters
+        ----------
+        vals : 
+            The chosen weights as result of draw_weighted
 
-      # Reshape data in dependence of correlator type
-      if self.derived == True:
-        if m_a0 is True:
-          ndim = self.data[0].shape[1]*self.data[0].shape[2]
-          flat_data = self.data[0].reshape((boots,ndim))
-          flat_weights = self.pval[0][0].reshape(ndim)
+        Returns
+        -------
+        res_sorted :
+            The intersected data and weights as a new FitResult object.
+        
+        """
+        # Self determines the resulting layout
+        layout = self.data[0].shape
+        boots = layout[0] 
+
+        # Reshape data in dependence of correlator type
+        if self.derived == True:
+            if m_a0 is True:
+                ndim = self.data[0].shape[1]*self.data[0].shape[2]
+                flat_data = self.data[0].reshape((boots,ndim))
+                flat_weights = self.pval[0][0].reshape(ndim)
+            else:
+                ndim = self.data[0].shape[2]
+                print ndim
+                print self.data[0][:,1].shape
+                flat_data = self.data[0][:,1].reshape((boots,ndim))
+                flat_weights = self.pval[0][0].reshape(ndim)
         else:
           ndim = self.data[0].shape[2]
           print ndim
@@ -1183,6 +1217,66 @@ class FitResult(object):
           ind += 1
 
       return res_sorted
+
+    def fse_multiply(self, mean, std):
+        """Do finite size corrections to the data."""
+        # loop over principal correlators
+        for d in self.data:
+            # get the needed shape of samples
+            shape = (d.shape[0],)
+            # get bootstrap samples of corrections
+            fse = draw_gauss_distributed(mean, std, shape)
+            for x in np.nditer(d, op_flags=["readwrite"], 
+                    flags=["external_loop"], order="F"):
+                x[...]=x*fse
+        if self.error is not None:
+            self.error = None
+            self.calc_error()
+
+    def fse_divide(self, mean, std):
+        """Do finite size corrections to the data."""
+        # loop over principal correlators
+        for d in self.data:
+            # get the needed shape of samples
+            shape = (d.shape[0],)
+            # get bootstrap samples of corrections
+            fse = draw_gauss_distributed(mean, std, shape)
+            for x in np.nditer(d, op_flags=["readwrite"], 
+                    flags=["external_loop"], order="F"):
+                x[...]=x/fse
+        if self.error is not None:
+            self.error = None
+            self.calc_error()
+
+    def fse_add(self, mean, std):
+        """Do finite size corrections to the data."""
+        # loop over principal correlators
+        for d in self.data:
+            # get the needed shape of samples
+            shape = (d.shape[0],)
+            # get bootstrap samples of corrections
+            fse = draw_gauss_distributed(mean, std, shape)
+            for x in np.nditer(d, op_flags=["readwrite"], 
+                    flags=["external_loop"], order="F"):
+                x[...]=x + fse
+        if self.error is not None:
+            self.error = None
+            self.calc_error()
+
+    def fse_subtract(self, mean, std):
+        """Do finite size corrections to the data."""
+        # loop over principal correlators
+        for d in self.data:
+            # get the needed shape of samples
+            shape = (d.shape[0],)
+            # get bootstrap samples of corrections
+            fse = draw_gauss_distributed(mean, std, shape)
+            for x in np.nditer(d, op_flags=["readwrite"], 
+                    flags=["external_loop"], order="F"):
+                x[...]=x - fse
+        if self.error is not None:
+            self.error = None
+            self.calc_error()
 
 if __name__ == "__main__":
     pass

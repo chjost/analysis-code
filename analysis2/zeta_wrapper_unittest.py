@@ -5,6 +5,11 @@ Unit tests for the zeta function wrappers.
 import unittest
 import numpy as np
 
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+
 from zeta_wrapper import Z, omega
 
 class Zeta_Test(unittest.TestCase):
@@ -68,6 +73,31 @@ class Zeta_Test(unittest.TestCase):
         if delta < 0:
             delta = 180+delta
         self.assertAlmostEqual(delta, 136.65, delta=0.01)
+
+    def test_plot(self):
+        x = np.linspace(0, np.pi, 1000)
+        #P = [np.array([0., 0., 0.])]
+        P = [np.array([0., 0., 0.]), np.array([0., 0., 1.]),
+             np.array([1., 1., 0.])]
+        for d in P:
+            print(d)
+            fname = "zeta_TP%d.pdf" % (np.dot(d,d))
+            fplot = PdfPages(fname)
+            for l in range(3):
+                print("  %d" % l)
+                for m in range(l+1):
+                    print("    %d" % m)
+                    plt.xlabel("p$^2$")
+                    plt.ylabel("Z(1, p$^2$)")
+                    plt.title("Luescher Zeta function for l=%d, m=%d" % (l, m))
+                    y = Z(x, l=l, m=m, d=d)
+                    plt.plot(x, y.real, "r", label="real")
+                    plt.plot(x, y.imag, "b", label="imag")
+                    plt.ylim([-10., 10.])
+                    plt.legend()
+                    fplot.savefig()
+                    plt.clf()
+            fplot.close()
 
 if __name__ == "__main__":
     unittest.main()
