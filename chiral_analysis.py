@@ -136,12 +136,13 @@ def main():
   chipt = ana.LatticeFit(ptfit,dt_i=1, dt_f=1)
   chiral_extra = chipt.chiral_fit(mk_fk,mk_akk,corrid="MA-ChiPT")
   chiral_extra.print_data()
-
-  # Lastly, plot the fitted function and the data
-  plotter = ana.LatticePlot('./plots2/pdf/chiral_ext.pdf')
-  label = ["Chiral Extrapolation", r'$M_K/f_K$',
-            r'$M_K a_{0}$',r'amu_s^D = 0.015']
-  plotter.plot(chiral_extra,label,chiral_extra)
+  print(mk_akk.shape)
+  print(mk_fk.shape)
+  ## Lastly, plot the fitted function and the data
+  #plotter = ana.LatticePlot('./plots2/pdf/chiral_ext.pdf')
+  #label = ["Chiral Extrapolation", r'$M_K/f_K$',
+  #          r'$M_K a_{0}$',r'amu_s^D = 0.015']
+  #plotter.plot(chiral_extra,label,chiral_extra)
   
 
 
