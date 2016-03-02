@@ -36,7 +36,7 @@ def mean_std(data, axis=0, mean=None):
         _mean = data[select]
     else:
         _mean = mean
-    var = np.sum(np.square(data - _mean), axis=axis) / data.shape[axis]
+    var = np.nansum(np.square(data - _mean), axis=axis) / data.shape[axis]
     std = np.sqrt(var)
     return _mean, std
 

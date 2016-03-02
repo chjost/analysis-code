@@ -432,18 +432,6 @@ def compute_dE(mass, mass_w, energy, energy_w, isdependend=False):
                 tmp_w = mass_w[i] * energy_w[j]
                 yield (0,0,i,j), tmp, needed, tmp_w
         
-def compute_phaseshift(Ecm, Ecm_w, mass, mass_w, L=24, isdependend=True,
-        d2=0, irrep="A1"):
-    # setup variables
-    corr_num = [1, len(Ecm)]
-    nsamples = Ecm[0].shape[0]
-    needed = np.zeros((nsamples,))
-    nfits = [d.shape[1:] for d in Ecm]
-    print(corr_num)
-    print(nsamples)
-    print(nfits)
-    raise StopIteration
-
 def get_start_values(ncorr, ranges, data, npar=2):
     """Calculate start values for the fits.
 

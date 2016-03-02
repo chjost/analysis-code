@@ -46,23 +46,34 @@ def main():
     Ecm.print_data()
     #Ecm.print_details()
 
-    calcq2 = True
+    calcq2 = False
     if calcq2:
-        q2 = Ecm.calc_momentum(pifit, parmass=1, L=L, uselattice=False)
+        if d2 != 0:
+            q2 = Ecm.calc_momentum(pifit, parmass=1, L=L,
+                uselattice=False, isdependend=True)
+        else:
+            q2 = Ecm.calc_momentum(pifit, parmass=1, L=L, uselattice=False)
         q2.save("%s/q2_TP%d.npz" % (datadir, d2))
     else:
         q2 = ana.FitResult.read("%s/q2_TP%d.npz" % (datadir, d2))
     q2.print_data()
     #q2.print_details()
 
-    #calcdelta = True
-    #if calcdelta:
-    #    print("testing calc")
-    #    delta = Ecm.calc_cot_delta(pifit, parmass=1, isdependend=True, d2=d2)
-    #    delta.save("%s/delta_TP%d.npz" % (datadir, d2))
-    #else:
-    #    delta = ana.FitResult.read("%s/delta_TP%d.npz" % (datadir, d2))
-    #delta.print_data()
+    calcdelta = True
+    if calcdelta:
+        print("testing calc")
+        # need Ecm because of the Lorentz boost
+        if d2 != 0:
+            delta, cotdelta = q2.calc_cot_delta(Ecm, isdependend=True, d2=d2)
+        else:
+            delta, cotdelta = q2.calc_cot_delta(Ecm, isdependend=False, d2=d2)
+        delta.save("%s/delta_TP%d.npz" % (datadir, d2))
+        cotdelta.save("%s/cotdelta_TP%d.npz" % (datadir, d2))
+    else:
+        delta = ana.FitResult.read("%s/delta_TP%d.npz" % (datadir, d2))
+        cotdelta = ana.FitResult.read("%s/cotdelta_TP%d.npz" % (datadir, d2))
+    cotdelta.print_data()
+    delta.print_data()
 
     #calcdE = True
     #if calcdE:
