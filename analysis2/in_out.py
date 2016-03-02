@@ -585,15 +585,20 @@ def inputnames(conf_file, corr_string):
     """ Function to build Correlator input names conformal with B. Knippschilds
     naming scheme
         
-    The function invokes a config parser which reads the config file (config.ini) regarding the
-    specified correlation functions and returns a list of input names
+    The function invokes a config parser which reads the config file (config.ini)
+    regarding the specified correlation functions and returns a list of input names
 
-    Args:
-        conf_file: string with path to the configuration file 
-        corr_string: array of identifiers for correlation functions to be
-                    read in
-    Returns:
-        A list of inputnames
+    Parameters
+    ----------
+    conf_file : string
+        path to the configuration file 
+    corr_string : list or tuple of strings
+        identifiers for correlation functions to be read in
+
+    Returns
+    -------
+    list of strings
+        the input filenames
 
     """
     # invoke config parser and read config file
