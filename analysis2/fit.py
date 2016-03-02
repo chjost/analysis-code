@@ -215,7 +215,8 @@ class LatticeFit(object):
 
         # create FitResults
         fitres = FitResult("chiral_fit")
-        shape1 = (_X.shape[0], 1, _X.shape[0])
+        #shape1 = (_X.shape[0], 1, _X.shape[0])
+        shape1 = (_X.shape[0], len(start), _X.shape[0])
         shape2 = (_X.shape[0], _X.shape[0])
         fitres.create_empty(shape1, shape2, 1)
         # fit the data
@@ -463,7 +464,7 @@ class FitResult(object):
         else:
             raise ValueError("Index cannot be calculated")
 
-    def singularize(self):
+    def singularize(self, debug=0):
         """ Set data of self to weighted medians over fit ranges and weights to
         1. This makes combined fits faster
 
@@ -480,10 +481,10 @@ class FitResult(object):
         nboot = self.data[0].shape[0]
         npars = self.data[0].shape[1]
         shape1 = (nboot,npars,1)
-        print("is data derived?")
-        print(self.derived)
+        if debug > 0:
+          print("is data derived?")
+          print(self.derived)
         shape2 = (nboot,1)
-        #print shape1
         singular.create_empty(shape1,shape2,1)
         singular.set_ranges(np.array([[[10,15]]]),[[1,]])
         # usually only one correlator is taken into account
@@ -905,7 +906,7 @@ class FitResult(object):
         return q2
 
     def evaluate_quark_mass(self, amu_s, obs_eval, obs1, obs2=None, obs3=None,
-        meth=0, parobs=1):
+        meth=0, parobs=1, debug=0):
       """ evaluate the strange quark mass at obs_match
 
       Parameters
@@ -941,8 +942,9 @@ class FitResult(object):
         _obs3 = obs3.data[0][:,parobs]
         _obsweight3 = obs3.pval[0][0]
       _obs_eval = obs_eval
-      print("observable to evaluate at")
-      print(_obs_eval)
+      if debug > 0:
+        print("observable to evaluate at")
+        print(_obs_eval)
 
       self.create_empty(layout1, layout1, 1)
       # Decide method beforehand, cheaper in the end
@@ -1183,40 +1185,35 @@ class FitResult(object):
           print self.data[0][:,1].shape
           flat_data = self.data[0][:,1].reshape((boots,ndim))
           flat_weights = self.pval[0][0].reshape(ndim)
-      else:
-        ndim = self.data[0].shape[2]
-        flat_data = self.data[0][:,1].reshape((boots,ndim))
-        self.calc_error()
-        flat_weights = self.weight[1]
 
-      vals = draw_weighted(flat_weights, samples=samples)
-      ranges = vals.shape[0]
-      # Get frequency count of sorted vals 
-      freq_vals = freq_count(vals, verb=False)
-      # Create empty fitresult to add data
-      res_sorted = FitResult(corr_id, derived=True)
-      store1 = (boots, ranges)
-      store2 = (boots,ranges)
-      res_sorted.create_empty(store1, store2 ,1)
-      # get frequencies and indices in original data
-      intersect = np.zeros_like(freq_vals)
-      # replace first column
-      wght_draw_unq = freq_vals[:,0]
-      intersect[:,0] = np.asarray(np.nonzero(np.in1d(flat_weights, wght_draw_unq)))
-      intersect[:,1] = freq_vals[:,1]
-      print intersect
-      # TODO: solve this by an iterator
-      ind=0
-      for i,v in enumerate(intersect):
-        for cnt in range(int(v[1])):
-          targ_ind = (0,ind)
-          weight = np.tile(freq_vals[i,0],boots)
-          data = flat_data[:,v[0]]
-          chi2_dummy = np.zeros_like(weight)
-          res_sorted.add_data(targ_ind,data,chi2_dummy,weight)
-          ind += 1
+        vals = draw_weighted(flat_weights, samples=samples)
+        ranges = vals.shape[0]
+        # Get frequency count of sorted vals 
+        freq_vals = freq_count(vals, verb=False)
+        # Create empty fitresult to add data
+        res_sorted = FitResult(corr_id, derived=True)
+        store1 = (boots, ranges)
+        store2 = (boots,ranges)
+        res_sorted.create_empty(store1, store2 ,1)
+        # get frequencies and indices in original data
+        intersect = np.zeros_like(freq_vals)
+        # replace first column
+        wght_draw_unq = freq_vals[:,0]
+        intersect[:,0] = np.asarray(np.nonzero(np.in1d(flat_weights, wght_draw_unq)))
+        intersect[:,1] = freq_vals[:,1]
+        print intersect
+        # TODO: solve this by an iterator
+        ind=0
+        for i,v in enumerate(intersect):
+          for cnt in range(int(v[1])):
+            targ_ind = (0,ind)
+            weight = np.tile(freq_vals[i,0],boots)
+            data = flat_data[:,v[0]]
+            chi2_dummy = np.zeros_like(weight)
+            res_sorted.add_data(targ_ind,data,chi2_dummy,weight)
+            ind += 1
 
-      return res_sorted
+        return res_sorted
 
     def fse_multiply(self, mean, std):
         """Do finite size corrections to the data."""

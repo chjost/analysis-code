@@ -10,4 +10,4 @@ from .plot import LatticePlot
 from .functions import func_const, func_ratio, func_single_corr
 from .statistics import draw_weighted, compute_error, sys_error, draw_gauss_distributed 
 from .interpol import interp_fk
-from .utils import mean_std
+from .utils import mean_std, physical_mass, r0_mass
