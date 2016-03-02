@@ -50,6 +50,10 @@ def main():
     datadir = ens.get_data("datadir") 
     plotdir = ens.get_data("plotdir") 
     d2 = ens.get_data("d2")
+    cut = ens.get_data("cut")
+    if cut:
+      cut_range = ens.get_data("fitcut")
+      cut_min = ens.get_data("cut_min")
 
     print(datadir)
     print(plotdir)
@@ -58,22 +62,33 @@ def main():
     print("read single particle corrs")
     #kcorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat))
     kfit = ana.FitResult.read("%s/fit_k_%s.npz" % (datadir, lat))
+    kfit.error=None
     kfit.print_data(1)
-
+    collapsed = kfit.singularize()
+    print kfit.weight
+    print collapsed.weight
     print("\n\nread ratio")
     ratiofit = ana.FitResult.read("%s/fit_kk_TP%d_%s.npz" % (datadir, d2, lat))
+    if cut:
+        ratiofit=ratiofit.cut_data(cut_range[0],cut_range[1],cut_min)
+    print ratiofit.data[0].shape
+    print ratiofit.pval[0].shape
+    print ratiofit.derived
+    ratiofit.error=None
     ratiofit.print_data(0)
     ratiofit.print_data(1)
+    print(ratiofit.weight[0][0].shape)
 
     calca = True
     if calca:
         print("calculate scattering length")
-        a_kk = ratiofit.calc_scattering_length(kfit, 1, 1, L=ens.L(),
-            isratio=True, isdependend=False)
+        a_kk = ratiofit.calc_scattering_length(collapsed, 1, 1, L=ens.L(),
+              isratio=True, isdependend=False)
         a_kk.save("%s/scat_len_TP%d_%s.npz" % (datadir, d2, lat))
     else:
         a_kk = ana.FitResult.read("%s/scat_len_TP%d_%s.npz" % (datadir, d2, lat))
     a_kk.print_data()
+    print a_kk.weight
     plotter = ana.LatticePlot("%s/scat_len_TP%d_%s.pdf" % (plotdir, d2, lat))
     label = ["scattering length", "a$_{\k\k}$", "a$_{\k\k}$"]
     plotter.histogram(a_kk, label)

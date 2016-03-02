@@ -120,6 +120,9 @@ def main():
   #          d2))
   ratiofit.calc_error()
   ratiofit.print_data(1)
+  print("Delta_r at t=18.5")
+  rel_r=rerr[18]/rmean[18]
+  print(rerr[18], rmean[18], rel_r)
   # prin original data with standard deviation
   dE_orig = ratiofit.data[0][0,1,0,:]
   dE_stat = np.std(ratiofit.data[0][:,1,0:],0)
@@ -140,39 +143,39 @@ def main():
   ##dE = 0.008
   ##L=24
   ##a0 = -0.164/E
-  ##Dataset for 32^3 kaon data Order : E_single, A_Ratio, a0, T,L
-  #data = np.array((2.4925e-01, 1.83975372, -1.4043, 64, 32))
+  #Dataset for 32^3 kaon data Order : E_single, A_Ratio, a0, T,L
+  #data = np.array((0.25001021, 1.83838098, -1.51878016, 64, 32))
   ##Dataset for 32^3 pipi data Order : E_single, A_Ratio, a0, T,L
   ##data = np.array((2.4925e-01, 1.83975372, -1.4043, 64, 32))
 
   ##Dataset for 24^3 kaon data Order : E_single, A_Ratio, a0, T,L
-  ##data = np.array((2.5612e-01, 1.72606912, -1.4352 ,48 ,24))
+  data = np.array((0.25755685, 1.73169236, -1.52506665, 48, 24))
   ##Dataset for 24^3 pipi data Order : E_single, A_Ratio, a0, T,L
   ##data = np.array((1.446e-01, 1.72606912, -0.164/0.1446 ,48 ,24))
   #
 
   ## Get model data for delta E from Lueschers formula
-  #model_dE = e_shift_luescher(data[0], data[4], data[2])
-  #print(model_dE)
+  model_dE = e_shift_luescher(data[0], data[4], data[2])
+  print(model_dE)
   ## Plug that into the Ratio function at specific t -> get ratio at t
   ##t2 = np.linspace(0.5,32.5,32,endpoint=False)
-  #t2 = np.asarray([10.5,15.5])
-  #print t2
+  t2 = np.asarray([10.5,15.5])
+  print t2
   ## Test ratio function
-  #print rmean[12], rerr[12], eval_ratio(data[1], t2[0], model_dE, data[0],
-  #    data[3])
-  #R = eval_ratio(data[1], t2, model_dE, data[0], data[3])
+  print rmean[12], rerr[12], eval_ratio(data[1], t2[0], model_dE, data[0],
+      data[3])
+  R = eval_ratio(data[1], t2, model_dE, data[0], data[3])
   ## take error from data of ratio(?)
   ##print(R)
   ##print(np.subtract(ratio.data[0,:,0],rmean))
-  #stdev_R = np.asarray([rerr[10],rerr[15]])
+  stdev_R = np.asarray([rerr[10],rerr[15]])
   ## Calculate delta E and its derivative from rewritten formulae
-  #dE = e_shift_ratio(R, t2, data[1], data[0], data[3])
-  #dE_dR = derive_e_shift_ratio(R, t2, data[1], data[0], data[3])
+  dE = e_shift_ratio(R, t2, data[1], data[0], data[3])
+  dE_dR = derive_e_shift_ratio(R, t2, data[1], data[0], data[3])
   ## calculate error on that with gaussian propagation
-  #err_prop = np.sqrt(np.square(np.multiply(dE_dR,stdev_R)))
-  #rel_err_deltaE = np.divide(err_prop,dE)
-  #print(rel_err_deltaE)
+  err_prop = np.sqrt(np.square(np.multiply(dE_dR,stdev_R)))
+  rel_err_deltaE = np.divide(err_prop,dE)
+  print(rel_err_deltaE)
 
 if __name__ == '__main__':
     try:

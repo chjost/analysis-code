@@ -48,10 +48,12 @@ def evaluate_lin(y1, y2, x, w1, w2, obs_eval):
 
     Parameters
     ----------
+
+    par : The output parameter to place the result
     Returns
     """
 
-    # check number of weights
+    #check number of weights
     if w1.shape != w2.shape:
       raise ValueError("Shapes of observables incompatible")
     for i in range(w1.shape[-1]):
@@ -60,9 +62,10 @@ def evaluate_lin(y1, y2, x, w1, w2, obs_eval):
       # if obs_match is a FitResult, evaluate it at the coefficients
       # else solve c0*mu_s + c1 - obs_match = 0 for mu_s
       result = eval_lin(coeff, obs_eval)
+      print result.shape
       weight = np.multiply(w1[i],w2[i])
       needed = np.zeros_like(weight)
-
+      
       yield (0,i), result, needed, weight
   
 def ipol_lin(y1, y2, x):
@@ -86,8 +89,48 @@ def ipol_lin(y1, y2, x):
     c1 = y1-np.multiply(c0,x[0])
     # save slope and y-intercept
     interpol = np.zeros((len(y1),2))
-    interpol[:,0], interpol[:,1] = c0, c1
+    if len(c0.shape) == 2:
+      interpol[:,0], interpol[:,1] = np.ravel(c0), np.ravel(c1)
+    else:
+      interpol[:,0], interpol[:,1] = c0, c1
     return interpol
+
+def interp_fk(name, mul, mus_match):
+    """ This function reads values for mk from a textfile, filters them and
+    interpolates them to a given valence strange quark mass.
+
+    Parameters:
+    -----------
+      name : the filename of the fk data
+             Source for fk: 
+             /freedisk/urbach/delphyne/4flavour/b<beta>/mu<mu_l>/result<ens>.dat
+      mul : light quark mass of the ensemble
+      mus_match : the value to evaluate interploation
+
+    Returns:
+    --------
+      fk_ipol, dfk_ipol : the value and the error of the interpolated decay constant
+    """
+    #print("Input is:")
+    #print("name : %s, mu_l = %f, match = %f" % (name, mul, mus_match))
+    # Read in textfile for fk_values (usually placed in the data folders together
+    # numpy array holding 3 strange quark masses, 3 kaon masses and 3 values
+    # fk with the correlators)
+    #Source for fk: /freedisk/urbach/delphyne/4flavour/b<beta>/mu<mu_l>/result<ens>.dat
+    OS_fk = np.loadtxt(name, skiprows=1,
+        usecols=(1,2,3,4,5,6))
+    # delete everything with wrong light quark mass
+    OS_fk = OS_fk[np.logical_not(OS_fk[:,0]!= mul)]
+
+    # filter the textfile for the right light quark mass
+    # make numpy arrays with x and y values
+    mus = OS_fk[:,1]
+    fk  = OS_fk[:,4]
+    dfk = OS_fk[:,5]
+    # use np.interp to interpolate to given value
+    fk_ipol = np.interp(mus_match, mus, fk)
+    dfk_ipol = np.interp(mus_match, mus,dfk)
+    return np.array((fk_ipol, dfk_ipol))
   
 def solve_lin(lin_coeff, match):
   """ Solves linear equation for x value 

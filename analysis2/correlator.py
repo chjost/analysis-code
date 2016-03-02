@@ -11,7 +11,7 @@ import in_out
 import bootstrap as boot
 import gevp
 import functions as func
-from ratio import simple_ratio, ratio_shift, simple_ratio_subtract
+from ratio import simple_ratio, ratio_shift, simple_ratio_subtract, twopoint_ratio
 from energies import WfromMass_lat, WfromMass
 
 class Correlators(object):
@@ -315,7 +315,7 @@ class Correlators(object):
 
         # get the actual ratio being calculated
         # TODO check ratio 4 implementation
-        functions = {0: simple_ratio, 1: ratio_shift, 2: simple_ratio_subtract}
+        functions = {0: simple_ratio, 1: ratio_shift, 2: simple_ratio_subtract, 3: twopoint_ratio}
         #functions = {0: ratio.simple_ratio, 1: ratio.ratio_shift,
         #        2: ratio.simple_ratio_subtract, 3: ratio.ratio}
         ratiofunc = functions.get(ratio)
@@ -397,7 +397,7 @@ class Correlators(object):
         if self.data.shape[-1] == 2:
           obj.data = func.simple_difference(self.data)
         else:
-          obj.data = func.simple_difference(self.data, single_corr)
+          obj.data = func.simple_difference(self.data, single_corr.data)
         obj.shape = obj.data.shape
         print(obj.shape)
         return obj

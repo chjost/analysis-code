@@ -1,0 +1,113 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+
+# Script to plot the effective masses and the ratio
+
+import sys
+import numpy as np
+import analysis2 as ana
+
+def main():
+####################################################
+# parse the input file and setup parameters
+#####################################################
+    if len(sys.argv) < 2:
+        ens = ana.LatticeEnsemble.parse("kk_I1_TP0_A40.24.ini")
+    else:
+        ens = ana.LatticeEnsemble.parse(sys.argv[1])
+
+    # read settings
+    readsingledata = False
+    plotsingle = True
+    readtwodata = False
+    plottwo = True
+    compare = False
+    # get data from input file
+    prefix = ens.get_data("path")
+    print prefix
+    lat = ens.name()
+    nboot = ens.get_data("nboot")
+    datadir = ens.get_data("datadir")
+    plotdir = ens.get_data("plotdir")
+    gmax = ens.get_data("gmax")
+    d2 = ens.get_data("d2")
+    try:
+        debug = ens.get_data("debug")
+    except KeyError:
+        debug = 0
+    T = ens.T()
+    T2 = ens.T2()
+    addT = np.ones((nboot,)) * T
+    addT2 = np.ones((nboot,)) * T2
+
+
+#######################################################################
+# Begin calculation
+#######################################################################
+   
+    # single particle correlator
+    print("read single particle corrs")
+    #files = ["%s/pi_corr_p%d.dat" % (prefix, d) for d in range(4)]
+    files = ["%s/k_charged_p%d.dat" % (datadir, d) for d in range(1)]
+    if readsingledata == False:
+        kcorr = ana.Correlators(files, matrix=False)
+        print(kcorr.data)
+        kcorr.sym_and_boot(nboot)
+        print(kcorr.shape)
+        kcorr.save("%s/corr_k_%s.npy" % (datadir, lat))
+    else:
+        kcorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat))
+
+    # two particle correlator
+    print("read two particle corrs")
+    #files = ["%s/kk_charged_A1_TP%d_%d%d.dat" % (datadir, d2, i, j) for i in\
+    #    range(gmax+1) for j in range(gmax+1)]
+    files = ["%s/kk_charged_A1_TP%d_%d%d.dat" % (datadir, d2, i, j) for i in\
+        range(gmax+1) for j in range(gmax+1)]
+    print files
+    if readtwodata == False:
+        kkcorr = ana.Correlators(files, matrix=False)
+        kkcorr.sym_and_boot(nboot)
+        #kkcorr.symmetrize(nboot)
+        ratio = kkcorr.ratio(kcorr, ratio=2 )
+        kkcorr.save("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
+    else:
+        kkcorr = ana.Correlators.read("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
+        ratio = kkcorr.ratio(kcorr, ratio=2 )
+
+    #compute effective masses after ratio has been build
+    kcorr.mass()
+    kkcorr.mass()
+
+    #plot effective masses of kcorr and kkcorr
+    if plotsingle:
+        print("plotting")
+        plotter = ana.LatticePlot("%s/mass_k_TP%d_%s.pdf" % (plotdir, d2, lat))
+        plotter.set_env(ylog=False)
+        label = ["Mass Kaon", "t", "m_eff(t)", "data"]
+        plotter.plot(kcorr, label )
+        del plotter
+
+    if plottwo:
+        print("plotting")
+        plotter = ana.LatticePlot("%s/ratio_kk_TP%d_%s.pdf" % (plotdir, d2, lat))
+        plotter.set_env(ylog=False)
+        label = ["Ratio", "t", "R(t)", "data"]
+        print "plotter set up"
+        plotter.plot(ratio, label, add=addT, xshift=0.5, debug=debug)
+        print "open new file for effective mass"
+        plotter.new_file("%s/mass_kk_TP%d_%s.pdf" % (plotdir, d2, lat))
+        plotter.set_env(ylog=False)
+        label = ["Mass 4pt-function", "$t$", "$m_{eff,KK}$","data"]
+        plotter.plot(kkcorr,label) 
+        del plotter
+
+
+
+
+if __name__ == '__main__':
+    try:
+        print("starting")
+        main()
+    except KeyboardInterrupt:
+        pass
+

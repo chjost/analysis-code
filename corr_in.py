@@ -53,12 +53,14 @@ def main():
     #f.close()
     #inputlist = ['cnfg'+i+'/' for i in x]
     #print inputlist
-    cfg_rng = [500,541,4]
+    cfg_rng = [500,2900,8]
     missing = miss_confs(rawdir,cfg_rng)
-    for i in range(cfg_rng[0],cfg_rng[1],cfg_rng[2]):
+    print missing
+    for i in range(cfg_rng[0],cfg_rng[1]+1,cfg_rng[2]):
       if i in missing:
         continue
       inputlist.append('cnfg%d/' % i)
+    print inputlist
     print(len(inputlist))
     # Read in correlators
     print("Reading Correlation functions from %s..." % rawdir)
@@ -72,10 +74,11 @@ def main():
     C4_tot = ana.confs_subtr(C4D,C4C)
     C4_tot = ana.confs_mult(C4_tot,2)
     print("Writing to: %s..." % datadir)
+    #ana.write_data_ascii(C2,datadir+'eta_s.dat')
     ana.write_data_ascii(C2,datadir+'k_charged_p0.dat')
     ana.write_data_ascii(C4_tot,datadir+'kk_charged_A1_TP0_00.dat')
-    #ana.write_data_ascii(C4D,datadir+'C4D.dat')
-    #ana.write_data_ascii(C4C,datadir+'C4C.dat')
+    ana.write_data_ascii(C4D,datadir+'C4D.dat')
+    ana.write_data_ascii(C4C,datadir+'C4C.dat')
     print("Finished")
 
 

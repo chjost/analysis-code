@@ -1,0 +1,118 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+
+# Script to plot (intermediate) fitresults
+
+import sys
+import numpy as np
+import analysis2 as ana
+
+def main():
+####################################################
+# parse the input file and setup parameters
+#####################################################
+    if len(sys.argv) < 2:
+        ens = ana.LatticeEnsemble.parse("kk_I1_TP0_A40.24.ini")
+    else:
+        ens = ana.LatticeEnsemble.parse(sys.argv[1])
+
+    # read settings
+    readsinglefit = False
+    plotsingle = False
+    readtwofit = True
+    plottwo = True
+
+    # get data from input file
+    prefix = ens.get_data("path")
+    print prefix
+    lat = ens.name()
+    nboot = ens.get_data("nboot")
+    datadir = ens.get_data("datadir")
+    plotdir = ens.get_data("plotdir")
+    gmax = ens.get_data("gmax")
+    d2 = ens.get_data("d2")
+    try:
+        debug = ens.get_data("debug")
+    except KeyError:
+        debug = 0
+    T = ens.T()
+    T2 = ens.T2()
+    addT = np.ones((nboot,)) * T
+    addT2 = np.ones((nboot,)) * T2
+
+
+#######################################################################
+# Begin calculation
+#######################################################################
+
+
+    picorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat))
+
+    fit_single = ana.LatticeFit(0, True)
+    pifit = ana.FitResult.read("%s/fit_k_%s.npz" % (datadir, lat))
+    pifit.print_data(1)
+    range_mk, r_mk_shape = pifit.get_ranges()
+    print(r_mk_shape[0][0])
+
+    # plot the result
+    if plotsingle:
+        print("plotting")
+        plotter = ana.LatticePlot("%s/fit_k_%s.pdf" % (plotdir, lat))
+        plotter.set_env(ylog=True)
+        label = ["single particle", "t", "C(t)", "kaon"]
+        plotter.plot(picorr, label, pifit, fit_single, add=addT, debug=debug)
+        plotter.new_file("%s/hist_fit_k_%s.pdf" % (plotdir, lat))
+        label = ["kaon energy", "E$_\k$/a", "E$_\k$"]
+        range_mk, r_mk_shape = pifit.get_ranges()
+        # declare number of bins dependant of fit ranges of 0th correlator
+        nbins = r_mk_shape[0][0]/3.
+        plotter.histogram(pifit, label, nb_bins=7, par=1)
+        del plotter
+
+    # two particle correlator
+    kkcorr = ana.Correlators.read("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
+    ratio = kkcorr.ratio(picorr, ratio=2 )
+    fit_ratio = ana.LatticeFit(1, True)
+    start_ratio = [3., 1.]
+    # ratiofit
+    ratiofit = ana.FitResult.read("%s/fit_kk_TP%d_%s.npz" % (datadir,
+            d2, lat))
+    range_r, r_r_shape = ratiofit.get_ranges()
+    print(r_r_shape[1][0])
+    ratiofit.print_data(0)
+    ratiofit.print_data(1)
+    pifit.print_details()
+    ratiofit.print_details()
+
+    if plottwo:
+        print("plotting")
+        plotter = ana.LatticePlot("%s/fit_ratio_kk_TP%d_%s.pdf" % (plotdir, d2, lat))
+        plotter.set_env(ylog=False)
+        label = ["Ratio", "t", "R(t)", "data"]
+        print "plotter set up"
+        plotter.plot(ratio, label, ratiofit, fit_ratio, oldfit=pifit, add=addT,
+            oldfitpar=1, xshift=0.5, debug=debug)
+        print "open new file for deltaE"
+        plotter.new_file("%s/hist_fit_kk_ratio_TP%d_%s.pdf" % (plotdir, d2, lat))
+        label = ["ratio", "dE$_{KK}$/a", "dE$_{KK}$"]
+        # Number of bins is last parameter fit ranges of 0th correlator divided
+        # by 3
+        range_r, r_r_shape = ratiofit.get_ranges()
+        nbins = r_r_shape[1][0]/3.
+        plotter.histogram(ratiofit, label, nb_bins=nbins, par=1)
+        del plotter
+
+        picorr.mass()
+        print("plotting")
+        plotter = ana.LatticePlot("%s/mass_k_TP%d_%s.pdf" % (plotdir, d2, lat))
+        plotter.set_env(ylog=False)
+        label = ["Mass Kaon", "t", "m_eff(t)", "data"]
+        plotter.plot(picorr, label )
+        del plotter
+
+if __name__ == '__main__':
+    try:
+        print("starting")
+        main()
+    except KeyboardInterrupt:
+        pass
+

@@ -62,15 +62,19 @@ def main():
     # Read in fitted masses, ranges and weights
     print("Read fit results for single particle mass")
     m = ana.FitResult.read("%s/fit_k_%s.npz" % (datadir, lat))
+    m.error=None
     m.print_data(par=1)
+    collapsed = m.singularize()
 
     # Read in results of scattering length
     print("Read results for scattering length")
     a0 = ana.FitResult.read("%s/scat_len_TP%d_%s.npz" % (datadir, d2, lat))
     a0.print_data()
+    print a0.weight
     print(a0.data[0].shape)
+    print(m.data[0].shape)
     if read_m_a0 == False:
-      mult_obs = a0.mult_obs(m, "m_a0")
+      mult_obs = a0.mult_obs(collapsed, "m_a0", isdependend=True)
       mult_obs.save("%s/mk_akk_%s.npz" % (datadir,lat))
     else:
       mult_obs = ana.FitResult.read("%s/mk_akk_%s.npx" % (datadir.lat))
@@ -80,7 +84,10 @@ def main():
       print("plotting")
       plotter = ana.LatticePlot("%s/hist_mk_akk_%s.pdf" % (plotdir, lat))
       label = ["Scattering length", "M$_\k$ a$_\k\k$", "M$_\k$ a$_\k\k$"]
-      plotter.histogram(mult_obs, label, 1)
+      # Number of bins is last parameter fit ranges of 0th correlator divided
+      # by 3
+      nbins = mult_obs.data[0].shape[-1]/4.
+      plotter.histogram(mult_obs, label, nb_bins=nbins)
       del plotter
 
 # make this script importable, according to the Google Python Style Guide

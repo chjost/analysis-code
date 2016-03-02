@@ -79,15 +79,17 @@ def compute_weight(data, pvals, rel=True):
     min_err = np.amin(errors)
     # prepare storage
     weights = np.zeros((data.shape[1:]))
+    # Warning playing with the exponent of the weight
+    exp=2
     if weights.ndim == 1:
         for i in range(weights.shape[0]):
             weights[i] = ((1. - 2.*np.abs(pvals[0,i]-0.5)) *
-                min_err/errors[i])**2
+                min_err/errors[i])**exp
     else:
         ranges = [[n for n in range(x)] for x in weights.shape]
         for riter in itertools.product(*ranges):
             weights[riter] = ((1. - 2.*np.abs(pvals[(0,)+riter]-0.5)) *
-                min_err/errors[riter])**2
+                min_err/errors[riter])**exp
     return weights
 
 def sys_error(data, pvals, par=0, rel=True):
@@ -263,6 +265,5 @@ def draw_gauss_distributed(mean, std, shape):
     # for random samples from N(\mu, \sigma^2) use
     # sigma * random(shape) + mu
     return std * np.random.randn(*shape) + mean
-
 if __name__ == "main":
     pass

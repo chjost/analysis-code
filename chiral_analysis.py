@@ -3,9 +3,9 @@
 ################################################################################
 #
 # Author: Christopher Helmes (helmes@hiskp.uni-bonn.de)
-# Date:   Februar 2015
+# Date:   Februar 2016
 #
-# Copyright (C) 2015 Christopher Helmes
+# Copyright (C) 2016 Christopher Helmes
 # 
 # This program is free software: you can redistribute it and/or modify it under 
 # the terms of the GNU General Public License as published by the Free Software 
@@ -21,7 +21,7 @@
 #
 ################################################################################
 #
-# Function: Fits and Interpolations of a_KK * m_K for different strange quark
+# Function: Fits of interpolated a_KK * m_K for different strange quark
 # masses amu_s 
 #
 # For informations on input parameters see the description of the function.
@@ -29,7 +29,7 @@
 ################################################################################
 
 # system imports
-import os.path as osp
+import sys
 from scipy import stats
 from scipy import interpolate as ip
 import numpy as np
@@ -42,238 +42,108 @@ import matplotlib.cm as cm
 from matplotlib.backends.backend_pdf import PdfPages
 
 # Christian's packages
-import analysis as ana
+import analysis2 as ana
+
+def read_extern(filename):
+  """ Read external data with identifiers into a dicitonary
+  ATM the tags are written in the first column and the data in the second and
+  third.
+  TODO: Rewrite that to be more dynamic
+  """
+  tags = np.loadtxt(filename,dtype='str', usecols=(0,))
+  values = np.loadtxt(filename, usecols=(1,2))
+  # build a dicitonary from the arrays
+  data_dict = {}
+  for i,a in enumerate(tags):
+      data_dict[a] = values[i]
+  return data_dict
+
 def main():
+# Parse the input
+  if len(sys.argv) < 2:
+      ens = ana.LatticeEnsemble.parse("A40.24.ini")
+  else:
+      ens = ana.LatticeEnsemble.parse(sys.argv[1])
+
+  # get data from input file
+  lat = ens.name()
+  latA = ens.get_data("namea")
+  latB = ens.get_data("nameb")
+  latD = ens.get_data("named")
+  strangeA = ens.get_data("strangea")
+  strangeB = ens.get_data("strangeb")
+  strangeD = ens.get_data("stranged")
+  AB = latA+latB
+  print(AB)
+  #quark = ens.get_data("quark")
+  datadir = ens.get_data("datadir") 
+  plotdir = ens.get_data("plotdir") 
+  nboot = ens.get_data("nboot")
   
-    #----------- Define global parameters, like number of ensembles -------------
-    # Datapath old data
-    rootpath = '/hiskp2/helmes/k-k-scattering/data/'
-    # Datapath new data
-    #rootpath = '/hiskp2/helmes/analysis/scattering/k_charged/'
-    datapath = rootpath+'results/'
-    #-------------------- A Ensembles ----------------------------------------
-    ## name
-    # ensemble = ['A40.24/','A60.24/','A80.24/','A100.24/']
-    ## ensemble = ['A40.24/']
+  # Firstly, read in all interpolated data into one array for which the
+  # fits are conducted and append them to an array
+  fk_unit = read_extern('./plots2/data/fk_unitary.dat')
+  # Initialize a result array for the Ydata
+  nb_ens=len(latA)+len(latB)+len(latD)
+  # arrays for x and y data
+  mk_akk = np.zeros((nb_ens,nboot))
+  mk_fk = np.zeros_like((mk_akk))
+  for j,a in enumerate(AB):
+      y_obs = ana.FitResult.read("%s%s/match_mk_akk_%s.npz" % (datadir, a, a))
+      y_obs.calc_error()
+      data_shape=y_obs.data[0].shape
+      y_obs.data[0]=y_obs.data[0].reshape((data_shape[0],1,data_shape[-1]))
+  # Each array is the weighted median over the fit ranges
+      res, res_std, res_sys, data_weight = ana.sys_error(y_obs.data,y_obs.pval)
+      mk_akk[j] = res[0]
 
-    ## strange quark masses
-    #amu_s = np.asarray([0.0225,0.02464])
-    ## light masses
-    #amu_l = np.array([[0.004],[0.006],[0.008],[0.01]])
-    ## unitary observables 
-    #fk_unit = np.array([[0.07432, 0.0057], [0.07699 ,0.0046],
-    #          [0.07886 ,0.0046], [0.0805 ,0.0051]])
-    #r0_a = [[5.178,0.044],[5.209,0.058],
-    #      [4.989,0.040],[4.864,0.021]]
-    #mk_unit = np.array([[0.25884,0.00043], [0.26695,0.00052],
-    #          [0.27706,0.00061], [0.28807,0.00034]])
-    ## unitary kaon masses and decay constants from eta eta` paper
-    ## A40.24  0.25884(43)
-    ## A60.24  0.26695(52) 
-    ## A80.24  0.27706(61)
-    ##A100.24  0.28807(34)
+      x_obs = ana.FitResult.read("%s%s/match_k_%s.npz" % (datadir, a, a))
+      x_obs.calc_error()
+      data_shape=x_obs.data[0].shape
+      x_obs.data[0]=x_obs.data[0].reshape((data_shape[0],1,data_shape[-1]))
+  # Each array is the weighted median over the fit ranges
+      res, res_std, res_sys, data_weight = ana.sys_error(x_obs.data,x_obs.pval)
+      fk = ana.draw_gauss_distributed(fk_unit[a][0],fk_unit[a][1],(1,nboot))
+      # For tree level chipt the square is needed
+      mk_fk[j] = np.divide(res[0],fk)**2
 
-    #------------------------------ B Ensembles -------------------------------
-    # name 
-    ensemble = ['B85.24/']
-    # strange quark masses
-    amu_s = np.asarray([0.016, 0.01861,0.021])
-    # light masses
-    amu_l = np.array([0.0085])
-    # unitary observables
-    fk_unit = np.array([[0.07226,0.00042]])
-    r0_a = np.array([[5.493,0.041]])
-    mk_unit = np.array([[0.24392,0.00059]])
-    b_mu_s = len(amu_s)
-    # transform M_K^phys to lattice units for each ensemble by M_K^lat =
-    # M_K^lat = 0.5 fm * a/r_0 * M_K^phys / hc
-    hc = [197.326968]
-    lat_spac = np.divide(0.5,r0_a)
-    M_K_pdg = [493.677,0.016] 
-    mk_phys = np.divide(np.multiply(lat_spac,M_K_pdg),hc)
-    print mk_phys
-
-    nb=[0]
-    mk_match = mk_phys
-    rat_mf = np.divide(mk_match[:,0],fk_unit[:,0])
-    drat_mf = ana.err_prop_gauss(mk_match,fk_unit)
-    mk_by_fk = np.column_stack((rat_mf,drat_mf))
-    print mk_by_fk
-    # arrayfor final results stores for each ensemble light quark mass, amu_s
-    # from matching,unitary mass and mk_akk from interpolation
-    amu_s_ipol = np.zeros((3,2)) 
-    akk_mk_match = np.zeros((3,2))
-    fk_ipol = np.zeros((3,2))
-    # loop over Ensembles
-    for (ens, idx ,mk_match_sq) in zip(ensemble,nb,mk_match):
-        
-        # Source path for data
-        src_path = "/hiskp2/helmes/k-k-scattering/data/"+ens
-        # cache path for fit results
-        cache_path = "/hiskp2/helmes/k-k-scattering/data/cache/" 
-        # Path for plots
-        plt_path = "/hiskp2/helmes/k-k-scattering/plots/"+ens
+  ens_AB=len(latA)+len(latB)
+  for j,a in enumerate(latD):
+      y_obs = ana.FitResult.read("%s%s/%s/mk_akk_%s.npz" % (datadir, a, strangeD[j], a))
+      y_obs.calc_error()
+      data_shape=y_obs.data[0].shape
+      #y_obs.data[0]=y_obs.data[0].reshape((data_shape[0],1,data_shape[-1]))
+      y_obs.pval[0] =y_obs.pval[0].reshape((nboot,y_obs.pval[0].shape[-1]))
+  # Each array is the weighted median over the fit ranges
+      res, res_std, res_sys, data_weight = ana.sys_error(y_obs.data,y_obs.pval)
+      mk_akk[ens_AB+j] = res[0]
   
-        # Numpy array for mass and scattering length (dim: nb_samples, nb_mu_s)
-        mk_sq_sum = np.zeros((1500,3))
-        ma_kk_sum = np.zeros_like(mk_sq_sum)
+      x_obs = ana.FitResult.read("%s%s/%s/fit_k_%s.npz" % (datadir, a, strangeD[j], a))
+      x_obs.calc_error(1)
+      data_shape=x_obs.data[0].shape
+  # Each array is the weighted median over the fit ranges
+      x_obs.pval[0] =x_obs.pval[0].reshape((nboot,x_obs.pval[0].shape[-1]))
+      res, res_std, res_sys, data_weight = ana.sys_error(x_obs.data,x_obs.pval,par=1)
+      fk = ana.draw_gauss_distributed(fk_unit[a][0],fk_unit[a][1],(1,nboot))
+      # For tree level chipt the square is needed
+      mk_fk[ens_AB+j] = np.divide(res[0],fk)**2
+  # bootstrapsamples are available for the x-data draw from gaussian
+  # distribution
+
+  # Secondly, fit a chiral function to the data
+  #define a lambda fit function
+  ptfit = lambda p,x: -x/(8.*np.pi)-p*x**2/(128.*np.pi**2)
+  chipt = ana.LatticeFit(ptfit,dt_i=1, dt_f=1)
+  chiral_extra = chipt.chiral_fit(mk_fk,mk_akk,corrid="MA-ChiPT")
+  chiral_extra.print_data()
+  print(mk_akk.shape)
+  print(mk_fk.shape)
+  ## Lastly, plot the fitted function and the data
+  #plotter = ana.LatticePlot('./plots2/pdf/chiral_ext.pdf')
+  #label = ["Chiral Extrapolation", r'$M_K/f_K$',
+  #          r'$M_K a_{0}$',r'amu_s^D = 0.015']
+  #plotter.plot(chiral_extra,label,chiral_extra)
   
-  
-        #----------- Read in samples: m_k, a0, mk_a0 --------------------------------
-        # loop over strange quark masses
-        nb_mu_s = len(amu_s)
-        for s in range(0, nb_mu_s):
-            # mk_a0 input
-            infile_ma_kk = src_path + "mk_a0_" + str(amu_s[s])[3:] + ".npy"
-            ma_kk = ana.read_data(infile_ma_kk)
-            # Kaon mass input
-            infile_mk = src_path + "m_k_" + str(amu_s[s])[3:] +".npy"
-            mk = ana.read_data(infile_mk)
-  
-            # Append read in results to arrays.
-            if(ma_kk.shape != ma_kk_sum[0].shape):
-              ma_kk = np.resize(ma_kk,(1500))
-              mk = np.resize(mk,(1500))
-            ma_kk_sum[:,s] = ma_kk
-            mk_sq_sum[:,s] = np.square(mk)
-        
-        #------------ Read in OS fk-data for each ensemble --------------------
-        # numpy array holding 3 strange quark masses, 3 kaon masses and 3 values
-        # fk
-        OS_fk = np.loadtxt(src_path+"OSfk_"+ens[:-1]+".dat", skiprows=1,
-            usecols=(1,2,3,4,5,6))
-        # delete everything with wrong light quark mass
-        lqm = float(ens[1:-3])*0.0001
-        OS_fk = OS_fk[np.logical_not(OS_fk[:,0]!=lqm)]
-  
-        ##------ Fit and interpolations to resorted data (Bootstrapsamplewise) -------
-
-        # Necessary functions 
-        # linear fit
-        linfit = lambda p, t: p[0]*t+p[1]
-        # quadratic interpolation
-        sqfit = lambda p, t: p[0]*t**2+p[1]*t+p[2]
-  
-        # matching to M_K^unit with linear fit
-        p_mk_sq, chi2_mk_sq, pvals_mk_sq = ana.fitting(linfit, amu_s, mk_sq_sum,
-                                                       [2.,1.], verbose=False)
-        print("amu_s from unitary M_K matching\n")
-        b_roots_fit = ana.match_qm(p_mk_sq, np.square(mk_match_sq))
-        mean_amu_s, std_amu_s = ana.calc_error(b_roots_fit)
-        print("lin. fit:\tamu_s = %f +/- %f" % (b_roots_fit[0], std_amu_s))
-  
-        # matching to M_K^unit with linear interpolation
-        interp1 = ana.ipol_lin(mk_sq_sum[:], amu_s)
-        b_roots_p1 = ana.match_qm(interp1, np.square(mk_match_sq))
-        mean_amu_s_p1, std_amu_s_p1 = ana.calc_error(b_roots_p1)
-        print("lin. i-pol.:\tamu_s = %f +/- %f" % (b_roots_p1[0], std_amu_s_p1))
-        amu_s_ipol[idx] = np.array([b_roots_p1[0],std_amu_s_p1])
-
-        # matching to M_K^unit with quadratic interpolation
-        interp2 = ana.ipol_quad(mk_sq_sum,amu_s)
-        b_roots_p2 = ana.match_qm(interp2, np.square(mk_match_sq))
-        mean_amu_s_p2, std_amu_s_p2 = ana.calc_error(b_roots_p2)
-        print("quadr. i-pol.:\tamu_s = %f +/- %f" % (b_roots_p2[0], std_amu_s_p2))
-        
-        #b_roots_p1 = mk
-        # ----------------- linear interpolation of fk ------------------------ 
-        # interpolate fk to amu_s value
-        OS_fk_y = OS_fk[np.logical_and(OS_fk[:,1]>0.015,OS_fk[:,1]<0.02),4]
-        OS_fk_y = np.atleast_2d(OS_fk_y)
-        OS_fk_x = OS_fk[np.logical_and(OS_fk[:,1]>0.015,OS_fk[:,1]<0.02),1]
-        fk_coeff = ana.ipol_lin(OS_fk_y,OS_fk_x)
-        fk_coeff_match = ana.eval_lin(fk_coeff, b_roots_p1) 
-        print("lin. i-pol.:\tf_K = %f +/- %f" % (fk_coeff_match[0], 0))
-        fk_ipol[idx] = np.array([fk_coeff_match[0],0])
-  
-        #------------------ linear interpolation of M_K*a_kk ----------------------
-
-        print("M_K * a_kk from unitary M_K matching\n")
-        ## Linear interpolation
-        #a_k_ipol = ana.ipol_lin(ma_kk_sum[:], amu_s)
-        a_k_ipol = ma_kk_sum
-        a_kk_match = ana.eval_lin(a_k_ipol,b_roots_p1) 
-
-        mean_a_kk_match, std_a_kk_match = ana.calc_error(a_kk_match)
-        print("lin. i-pol.:\tM_K * a_kk = %f +/- %f" % (a_kk_match[0], std_a_kk_match))
-        akk_mk_match[idx] = np.array([a_kk_match[0],std_a_kk_match])
-        ana.write_data(a_kk_match, cache_path+ens[:-1]+'_akk_mk_match.npy')
-
-        # Linear fit
-        p_a_k, chi2_a_k, pvals_ak = ana.fitting(linfit, amu_s, ma_kk_sum, [2.,1.],
-            verbose = False)
-        mak_fit = ana.eval_lin(p_a_k,b_roots_fit)
-        mean_ma_k_fit, std_ma_k_fit = ana.calc_error(mak_fit)
-        print("lin. fit:\tM_K * a_kk = %f +/- %f" % (mak_fit[0], std_ma_k_fit))
-        
-        # quadratic interpolation
-        a_k_ipol2 = ana.ipol_quad(ma_kk_sum, amu_s)
-        a_kk_match_q = ana.eval_quad(a_k_ipol2,b_roots_p2)
-        a_kk_match_stat = ana.calc_error(a_kk_match_q)
-        print("quad. i-pol.:\tM_K * a_kk = %f +/- %f" % (a_kk_match_q[0], a_kk_match_stat[1]))
-        #------------------ Plot mk_a0 and mk^2 vs. amu_s -------------------------
-        
-        # Get standard deviation for plots
-        ma_kk_mean, ma_kk_std = ana.calc_error(ma_kk_sum, 0)
-        mk_sq_mean, mk_sq_std = ana.calc_error(mk_sq_sum, 0)
-  
-        # Plot original data together with statistical error and the constant unitary
-        # mass
-        # Savepaths
-        pltout_mk_sq = plt_path+"mk_sq_unit_chiral.pdf"
-        pltout_ma_kk = plt_path+"ma_kk_unit_chiral.pdf"
-        # PDFplots
-        pdf_mk = PdfPages(pltout_mk_sq) 
-        pdf_ma_kk = PdfPages(pltout_ma_kk) 
-        # Labels
-        label_mk_sq = [r'Chiral behaviour of $M_K$',r'$a\mu_s$',r'$(aM_K)^2$',
-            ens[:-1],r'linear fit',r'$(aM_K^{\mathrm{unit}})^2$',
-                       r'$a\mu_s^{\mathrm{K}}$']
-        label_ma_kk = [r'Chiral behaviour of $a_0M_K$',r'$a\mu_s$',r'$a_0M_K$',
-            ens[:-1],r'lin. ipol',r'$a_0M_K$',
-                       r'$a\mu_s^{\mathrm{K}}$']
-
-         #Plot the linear fit with its matched amu_s
-        ana.plot_data_with_fit(amu_s, mk_sq_sum[0,:], mk_sq_std, linfit, p_mk_sq[0],
-            None, label_mk_sq, pdf_mk, hconst = np.square(mk_match_sq),
-            vconst=(b_roots_fit[0],std_amu_s),xlim=[0.016,0.021])
-
-        # Plot the linear interpolation with its matched amu_s
-        label_mk_sq[4] = r'linear ipol'
-        ana.plot_data_with_fit(amu_s, mk_sq_sum[0,:], mk_sq_std, linfit, interp1[0],
-            None, label_mk_sq, pdf_mk, hconst = np.square(mk_match_sq),
-            vconst=(b_roots_p1[0],std_amu_s_p1),xlim=[0.016,0.021])
-
-
-        # Plot the quadratic interpolation with its matched amu_s
-        label_mk_sq[4] = r'quadr. ipol'
-        ana.plot_data_with_fit(amu_s, mk_sq_sum[0,:], mk_sq_std, sqfit, interp2[0],
-            None, label_mk_sq, pdf_mk, hconst = np.square(mk_match_sq),
-            vconst=(b_roots_p2[0],std_amu_s_p2),xlim=[0.01,0.025])
-
-        # Plot M_K * a_kk vs. amu_s
-        # linear interpolation
-        ana.plot_data_with_fit(amu_s, ma_kk_sum[0,:], ma_kk_std, linfit,
-            a_k_ipol[0], None, label_ma_kk, pdf_ma_kk,
-            hconst =
-            (a_kk_match[0],std_a_kk_match),vconst=(b_roots_p1[0],std_amu_s_p1),xlim=[0.022,0.025])
-        # Plot the linear fit with its fitted amu_s
-        ana.plot_data_with_fit(amu_s, ma_kk_sum[0,:], std_ma_k_fit,linfit,
-            p_a_k[0],None,label_ma_kk,pdf_ma_kk,
-            hconst=(mak_fit[0],std_ma_k_fit),vconst=(b_roots_fit[0],std_amu_s),xlim=[0.022,0.025])
-        ## quadratic interpolation
-        #label_ma_kk[4] = r'qudr. ipol'
-        #ana.plot_data_with_fit(amu_s, ma_kk_sum[0,:], ma_kk_std, sqfit,
-        #    a_k_ipol2[0], None, label_ma_kk, pdf_ma_kk,
-        #    hconst =
-        #    (a_kk_match_q[0],a_kk_match_stat[1]),vconst=(b_roots_p2[0],std_amu_s_p2),xlim=[0.01,0.025])
-        # Close pdf files
-        pdf_mk.close() 
-        pdf_ma_kk.close()
-    res = np.hstack(( amu_l, amu_s_ipol, mk_match, fk_unit, mk_by_fk, akk_mk_match))
-    print res
-    save_head = 'amu_l\tamu_s_ipol d(amu_s_ipol)\tmk_match d(mk_match)\tfk_unit d(fk_unit)\tmk/fk d(mk/fk)\takk_mk_match d(akk_mk_match)'
-    np.savetxt(datapath+'ma_mk_match_B.dat',res,fmt='%.4e',header=save_head)
 
 
 # make this script importable, according to the Google Python Style Guide
