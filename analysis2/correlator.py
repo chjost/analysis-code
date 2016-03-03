@@ -99,7 +99,27 @@ class Correlators(object):
         """
         data = in_out.read_data(filename)
         # set the data directly
-        tmp = cls()
+        tmp = cls(debug=debug)
+        tmp.data = data
+        tmp.shape = data.shape
+        if data.shape[-2] != data.shape[-1]:
+            tmp.matrix = False
+        else:
+            tmp.matrix = True
+        return tmp
+
+    @classmethod
+    def create(cls, data, debug=0):
+        """Create correlator class from preexisting data.
+
+        Parameters
+        ----------
+        data : ndarray
+            The correlation function data.
+        debug : int, optional
+            The amount of debug information printed.
+        """
+        tmp = cls(debug=debug)
         tmp.data = data
         tmp.shape = data.shape
         if data.shape[-2] != data.shape[-1]:
@@ -184,9 +204,9 @@ class Correlators(object):
         uselattice : bool, optional
             Use the lattice version of the dispersion relation.
         """
-        # if the data is not a matrix, do nothing
-        if not self.matrix:
-            return
+        ## if the data is not a matrix, do nothing
+        #if not self.matrix:
+        #    return
 
         # calculate the dE for weighting if needed
         if mass is None:

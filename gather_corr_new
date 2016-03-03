@@ -33,115 +33,176 @@ import ConfigParser
 
 import analysis2 as ana
 
-def parse_input():
-    """Parse the input file."""
-    config = ConfigParser.SafeConfigParser()
-    opts = {}
-    opts["debug"] = config.getint("main", "debug")
-    opts["inputpath"] = config.get("main", "inputpath")
-    opts["outputpath"] = config.get("main", "outputpath")
-    opts["pimax"] = config.getint("main", "pimax")
-    opts["cmfmax"] = config.getint("main", "cmfmax")
-    opts["mfmax"] = config.getint("main", "mfmax")
-    opts["confmax"] = config.getint("main", "confmax")
-    opts["confmin"] = config.getint("main", "confmin")
-    opts["confstep"] = config.getint("main", "confstep")
-
 def main():
-    # check for input file
     if len(os.sys.argv) < 2:
-        # no input file, generate sample
-        print("no input file specified, creating example")
-        config = ConfigParser.SafeConfigParser()
-        config.add_section("main")
-        config.set("main", "debug", "0")
-        config.set("main", "inputpath", "./")
-        config.set("main", "outputpath", "./")
-        config.set("main", "pimax", "4")
-        config.set("main", "cmfmax", "3")
-        config.set("main", "mfmax", "2")
-        config.set("main", "confmax", "385")
-        config.set("main", "confmin", "300")
-        config.set("main", "confstep", "4")
-        config.set("main", "missing", "384")
-        fi = open("example.cfg", "w")
-        config.write(fi)
-        os.sys.exit(-1)
-
+        fname = "./ini/uncharged.ini"
+    else:
+        fname = os.sys.argv[1]
     # parse the input file for variables
     config = ConfigParser.SafeConfigParser()
-    config.read(os.sys.argv[1])
+    config.read(fname)
     debug = config.getint("main", "debug")
+    #debug = 3
     inputpath = config.get("main", "inputpath")
     outputpath = config.get("main", "outputpath")
-    pimax = config.getint("main", "pimax")
-    cmfmax = config.getint("main", "cmfmax")
-    mfmax = config.getint("main", "mfmax")
     confmax = config.getint("main", "confmax")
     confmin = config.getint("main", "confmin")
     confstep = config.getint("main", "confstep")
+    nbran = config.getint("main", "nbran")
     # workaround: missing needs ints, config reads strings
+    diag = config.get("main", "diagrams").split(",")
     miss = config.get("main", "missing").split(",")
     missing = []
     for m in miss:
-        missing.append(int(m))
-    #debug = 1
-    #inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D30/sum/"
-    #outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D30/"
-    #pimax = 4
-    #cmfmax = 3
-    #mfmax = 2
-    #missing = [384, 388, 392, 396, 412, 416, 420, 424, 428]
-    #confmin = 300
-    #confmax = 445
-    #confstep = 4
+        missing.append(int(m.strip()))
+    diagrams = []
+    for d in diag:
+        diagrams.append(str(d.strip()))
+    innames = ana.inputnames(fname, diagrams)
 
-    filelist = ["pi_corr_p%d" % (x) for x in xrange(pimax)]
-    filelist += ["pipi_pipi_A1_corr_TP0_%1d%1d" % (i, j) for i in range(cmfmax)
-        for j in range(cmfmax)]
-    filelist += ["pipi_pipi_A1_corr_TP1_%1d%1d" % (i, j) for i in range(mfmax)
-        for j in range(mfmax)]
-    filelist += ["pipi_pipi_A1_corr_TP2_%1d%1d" % (i, j) for i in range(mfmax)
-        for j in range(mfmax)]
-    filelist += ["pipi_pipi_A1_corr_TP3_%1d%1d" % (i, j) for i in range(mfmax)
-        for j in range(mfmax)]
-    suffix=".dat"
     inputlist = []
     for i in range(confmin, confmax, confstep):
         if i in missing:
             continue
-        inputlist.append(".conf%04d" % i)
+        inputlist.append("cnfg%d/" % i)
     if debug > 0:
-        print("number of files: %d" % len(filelist))
+        print("number of files: %d" % len(innames))
         print("number of configs: %d" % len(inputlist))
     if debug > 1:
         print(inputpath)
         print(outputpath)
     if debug > 2:
-        print(filelist)
+        print(innames)
         print(inputlist)
         print(missing)
 
-    for d in filelist:
-        fnames = []
-        for i in inputlist:
-            fnames.append("".join((inputpath, d, i, suffix)))
-        if debug > 2:
-            print(fnames)
-        # read in data
-        corrs = ana.Correlators(fnames, matrix=False)
-        corrs.data = np.rollaxis(corrs.data, 1, 0)
-        corrs.data = np.rollaxis(corrs.data, 2, 0)
-
-        # print to file
-        outname = "".join((outputpath, d, suffix))
+    for d in innames:
+        if debug > 0:
+            print(d)
+        data = []
+        # need to treat C1 differently
+        if d.startswith("C1"):
+            # read in data
+            for i in inputlist:
+                inname = "".join((inputpath, i, d))
+                ## read in data
+                tmp = np.fromfile(inname, dtype=complex).reshape((nbran, -1))
+                data.append(tmp)
+            # brind data into shape
+            tmp = np.asarray(data)
+            data = np.zeros((tmp.shape[0], tmp.shape[-1]), dtype=complex)
+            #data = np.zeros(tmp.shape[:-1], dtype=complex)
+            T = tmp.shape[2]
+            # calc VEV
+            #vev = np.mean(tmp)
+            #print("vev = %f %+f" % (vev.real, vev.imag))
+            #tmp -= vev
+            # calc the correlation function
+            for t1 in range(T):
+                for t2 in range(T):
+                    for r1 in range(nbran):
+                        for r2 in range(nbran):
+                            if r1 == r2:
+                                continue
+                            data[:,t1] += (tmp[:,r1,(t1+t2)%T].real * tmp[:,r2,t2].real
+                                + 1.j*(tmp[:,r1,(t1+t2)%T].imag * tmp[:,r2,t2].imag))
+            # normalize the correlation function
+            data /= (float(nbran) * float(nbran-1))*float(T)
+        else:
+            for i in inputlist:
+                inname = "".join((inputpath, i, d))
+                ## read in data
+                data.append(np.fromfile(inname, dtype=complex))
+            data = np.asarray(data)
+        # create a correlator from the data
+        corrsr = ana.Correlators.create(np.atleast_3d(data).real)
+        corrsi = ana.Correlators.create(np.atleast_3d(data).imag)
+        # save the data
+        outname = "".join((outputpath, d))
         if debug > 1:
             print("save data to %s" % outname)
-        corrs.save(outname, asascii=True)
+        corrsr.save(outname.replace(".dat", "_real.dat"), asascii=True)
+        corrsi.save(outname.replace(".dat", "_imag.dat"), asascii=True)
+        corrsr.sym_and_boot(1500)
+        corrsi.sym_and_boot(1500)
 
+        # plot the data
+        plotter = ana.LatticePlot(outname.replace(".dat", "_real.pdf"))
+        labels = ["correlation function", "t", "C(t)", "data"]
+        plotter.plot(corrsr, labels)
+        if d.startswith("C20"):
+            corrsr.data = -corrsr.data
+            plotter.set_env(ylog=True)
+            plotter.plot(corrsr, labels)
+            corrsr.data = -corrsr.data
+            plotter.set_env(ylog=False)
+        elif d.startswith("C1"):
+            corrsr.shift(1)
+            plotter.plot(corrsr, labels)
+        plotter.new_file(outname.replace(".dat", "_imag.pdf"))
+        plotter.plot(corrsi, labels)
+
+        labels = ["eff. mass", "t", "m(t)", "data"]
+        corrsr.mass()
+        corrsi.mass()
+        #plotter.set_env(ylim=[0., 0.5])
+        plotter.new_file(outname.replace(".dat", "_real_mass.pdf"))
+        plotter.plot(corrsr, labels)
+        plotter.new_file(outname.replace(".dat", "_imag_mass.pdf"))
+        plotter.plot(corrsi, labels)
+
+        del plotter
+
+def build_pi0():
+    # parse config
+    if len(os.sys.argv) < 2:
+        fname = "./ini/uncharged.ini"
+    else:
+        fname = os.sys.argv[1]
+    config = ConfigParser.SafeConfigParser()
+    config.read(fname)
+    datapath = config.get("main", "outputpath")
+    diag = config.get("main", "diagrams").split(",")
+    diagrams = []
+    for d in diag:
+        diagrams.append(str(d.strip()))
+    innames = ana.inputnames(fname, diagrams)
+    for i in innames:
+        if i.startswith("C1") and "_u_" in i:
+            tmpname = "".join((datapath, i))
+            tmpname = tmpname.replace(".dat", "_real.dat")
+            print(tmpname)
+            corrD = ana.Correlators(tmpname)
+        elif i.startswith("C20") and "_uu_" in i:
+            tmpname = "".join((datapath, i))
+            tmpname = tmpname.replace(".dat", "_real.dat")
+            print(tmpname)
+            corrC = ana.Correlators(tmpname)
+
+    newdata = -corrC.data + 2. * corrD.data
+
+    pi0 = ana.Correlators.create(newdata)
+    tmpname = "".join((datapath, "pi_corr_p0.dat"))
+    pi0.save(tmpname, asascii=True)
+    pi0.sym_and_boot(1500)
+    plotter = ana.LatticePlot(tmpname.replace(".dat", ".pdf"))
+    labels = ["correlation function", "t", "C(t)", "data"]
+    plotter.plot(pi0, labels)
+    pi0.shift(dt=1)
+    plotter.plot(pi0, labels)
+
+    plotter.set_env(ylim=[0., 0.3])
+    pi0.mass()
+    plotter.new_file(tmpname.replace(".dat", "_mass.pdf"))
+    labels = ["eff. mass", "t", "m(t)", "data"]
+    plotter.plot(pi0, labels)
+
+    del plotter
+    
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':
     try:
         main()
+        build_pi0()
     except KeyboardInterrupt:
         print("\nKeyboard Interrupt, exiting...")

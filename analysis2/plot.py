@@ -180,10 +180,10 @@ class LatticePlot(object):
                 if rel is True:
                     plot_data(X, np.divide(ddata,corr.data[0,:,n]),
                         np.zeros_like(ddata), label=label[3],
-                        plotrange=[3,T],col=self.cycol())
+                        plotrange=[1,T],col=self.cycol())
                 else:
                     plot_data(X, corr.data[0,:,n], ddata, label[3],
-                        plotrange=[3,T],col=self.cycol())
+                        plotrange=[1,T],col=self.cycol())
                 plt.legend()
                 if join is False:
                   self.save()

@@ -632,50 +632,50 @@ def inputnames(conf_file, corr_string):
             join_op = '_'.join(op_list)
             # build the filename
             corrname = c0[0]+"/"+c0[0]+"_"+join_q+"_"+join_op+".dat"
-            print corrname
+            #print corrname
             inputnames.append(corrname)
     return inputnames
 
 def _read_corr(_name, _T=48):
-  """ Uses numpy's openfile function to read in binary data and reshape it to
-  pairs of complex numbers
+    """ Uses numpy's openfile function to read in binary data and reshape it to
+    pairs of complex numbers
 
-  Args: 
-      _name: The file's name (best constructed in advance)
-      _T: The lattice's time extent defaults to 48
+    Args: 
+        _name: The file's name (best constructed in advance)
+        _T: The lattice's time extent defaults to 48
 
-  Returns: 
-      corr: The read in reshaped correlation function as T,2 Array
-  """
-  # C like array order is implied
-  tmp = np.fromfile(_name,dtype=float)
-  corr = tmp.reshape((_T,2))
-  return corr
+    Returns: 
+        corr: The read in reshaped correlation function as T,2 Array
+    """
+    # C like array order is implied
+    tmp = np.fromfile(_name,dtype=float)
+    corr = tmp.reshape((_T,2))
+    return corr
 
 def read_confs(path,corrname,confs,_T=48,verb=False):
-  """ Wrapper to read in correlationfunctions of several configurations
+    """ Wrapper to read in correlationfunctions of several configurations
 
-      This file assumes B. Knippschilds binary file layout with all the
-      Correlator information in the filename
-      Args: 
-           path: The path to the data to read
-           corrname: The name of the correlationfunction, should be built
-           separately
-           confs: alist of configuration folder names
-           _T: temporal time extent of the functions to read in
+        This file assumes B. Knippschilds binary file layout with all the
+        Correlator information in the filename
+        Args: 
+             path: The path to the data to read
+             corrname: The name of the correlationfunction, should be built
+             separately
+             confs: alist of configuration folder names
+             _T: temporal time extent of the functions to read in
 
-      Returns: A numpy array holding the correlation functions. Shape is
-      (nb_cfg,T,2) for real and imaginary part
-  """
-  C = np.zeros((len(confs),_T,2))
-  for i,d in enumerate(confs):
-    #Generate filename from inputlist
-    if verb is True:
-      print path, d, corrname
-    _fname = path+d+corrname
-    _C_tmp = _read_corr(_fname,_T)
-    C[i] = _C_tmp
-  return C
+        Returns: A numpy array holding the correlation functions. Shape is
+        (nb_cfg,T,2) for real and imaginary part
+    """
+    C = np.zeros((len(confs),_T,2))
+    for i,d in enumerate(confs):
+        #Generate filename from inputlist
+        if verb is True:
+            print path, d, corrname
+        _fname = path+d+corrname
+        _C_tmp = _read_corr(_fname,_T)
+        C[i] = _C_tmp
+    return C
 
 
 def confs_subtr(Corr1, Corr2):

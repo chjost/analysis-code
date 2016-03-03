@@ -37,7 +37,7 @@ def main():
     pipifit.print_data(1)
     #pipifit.print_details()
 
-    calcEcm = False
+    calcEcm = True
     if calcEcm:
         Ecm = pipifit.to_CM(1, L=L, d=d)
         Ecm.save("%s/Ecm_TP%d.npz" % (datadir, d2))
@@ -46,7 +46,7 @@ def main():
     Ecm.print_data()
     #Ecm.print_details()
 
-    calcq2 = False
+    calcq2 = True
     if calcq2:
         if d2 != 0:
             q2 = Ecm.calc_momentum(pifit, parmass=1, L=L,
