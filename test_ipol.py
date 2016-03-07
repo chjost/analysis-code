@@ -96,7 +96,12 @@ def main():
     strange = ens.get_data("strangeb")
     amu_s = ens.get_data("amu_s_b")
     obs_match = 0.0197
-    print_boot=False
+    try:
+      overwrite = ens.get_data("overwrite")
+    except KeyError:
+      overwrite = True
+
+    plot_boot=False
     print(datadir)
     # Place fit results in new empty fitresults objects
     #qm_matched = ana.FitResult.create_empty(shape1,shape1,2)
@@ -129,15 +134,16 @@ def main():
 
         print("Correlation coefficient for M_K^2 on Ensemble: %s" % a)
         data=np.hstack((obs2.data[0][:,1],obs1.data[0][:,1])).T 
-        print(np.corrcoef(data))
-        print(own_corrcoef(data))
+        #print(np.corrcoef(data))
+        #print(own_corrcoef(data))
         
         qmatch = ana.FitResult('match', derived=True)
         #print(obs1.data[0].shape)
         #print(obs2.data[0].shape)
         qmatch.evaluate_quark_mass(amu_s,obs_match, obs1, obs2)
         qmatch.print_data()
-        qmatch.save("%s/%s/match_k_%s.npz" % (datadir,a,a))
+        if overwrite:
+            qmatch.save("%s/%s/match_k_%s.npz" % (datadir,a,a))
         #print(qmatch.data)
         
         # Read low ma0
@@ -160,15 +166,16 @@ def main():
         print("Correlation coefficient for M_K*a_KK on Ensemble: %s" % a)
         data=np.hstack((obs3.data[0],obs4.data[0])).T[0] 
         print(data.shape)
-        print(np.corrcoef(data))
-        print(own_corrcoef(data))
+        #print(np.corrcoef(data))
+        #print(own_corrcoef(data))
 
         mka0_ipol = ana.FitResult('eval',derived=True)
         mka0_ipol.evaluate_quark_mass(amu_s,obs_match,obs3, obs4,parobs=0)
         mka0_ipol.print_data()
-        mka0_ipol.save("%s/%s/match_mk_akk_%s.npz" % (datadir,a,a))
+        if overwrite:
+            mka0_ipol.save("%s/%s/match_mk_akk_%s.npz" % (datadir,a,a))
 
-        if print_boot:
+        if plot_boot:
             label = ['Scattering length samplewise %s' % a,r'$a\mu_s$',r'$M_Ka_0^{I=1}$']
             plot_samples(plotdir,a,amu_s,obs_match,obs3.data[0],obs4.data[0],
                 mka0_ipol.data[0],label,name='/mka0_ext_samples_all.pdf')

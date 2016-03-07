@@ -6,6 +6,7 @@ import scipy.stats
 import math
 import numpy as np
 import fit
+import itertools as it
 #import analyze_fcts as af
 #import chiral_fits as chf
 
@@ -56,15 +57,34 @@ def evaluate_lin(y1, y2, x, w1, w2, obs_eval):
     #check number of weights
     if w1.shape != w2.shape:
       raise ValueError("Shapes of observables incompatible")
-    for i in range(w1.shape[-1]):
-      # for each fit range interpolate the two bootstrapsamples
-      coeff = ipol_lin(y1[:,i], y2[:,i], x)
-      # if obs_match is a FitResult, evaluate it at the coefficients
-      # else solve c0*mu_s + c1 - obs_match = 0 for mu_s
-      result = eval_lin(coeff, obs_eval)
-      print result.shape
-      weight = np.multiply(w1[i],w2[i])
-      needed = np.zeros_like(weight)
+    if combine_all:
+      fr1 = range(w1.shape[-1])
+      fr2 = range(w2.shape[-1])
+      fr_tot = [fr1,fr2]
+      i_yield = 0
+      for cmb in it.product(*fr_tot):
+        # for each fit range interpolate the two bootstrapsamples
+        coeff = ipol_lin(y1[:,cmb[0]], y2[:,cmb[1]], x)
+        # if obs_match is a FitResult, evaluate it at the coefficients
+        # else solve c0*mu_s + c1 - obs_match = 0 for mu_s
+        result = eval_lin(coeff, obs_eval)
+        print result.shape
+        weight = np.multiply(w1[cmb[0]],w2[cmb[1]])
+        needed = np.zeros_like(weight)
+      
+        yield (0,i_yield), result, needed, weight
+        i_yield += 1
+
+    else:
+      for i in range(w1.shape[-1]):
+        # for each fit range interpolate the two bootstrapsamples
+        coeff = ipol_lin(y1[:,i], y2[:,i], x)
+        # if obs_match is a FitResult, evaluate it at the coefficients
+        # else solve c0*mu_s + c1 - obs_match = 0 for mu_s
+        result = eval_lin(coeff, obs_eval)
+        print result.shape
+        weight = np.multiply(w1[i],w2[i])
+        needed = np.zeros_like(weight)
       
       yield (0,i), result, needed, weight
   

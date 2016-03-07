@@ -216,14 +216,14 @@ class LatticeFit(object):
         # create FitResults
         fitres = FitResult("chiral_fit")
         #shape1 = (_X.shape[0], 1, _X.shape[0])
-        shape1 = (_X.shape[0], len(start), _X.shape[0])
-        shape2 = (_X.shape[0], _X.shape[0])
+        shape1 = (_X.shape[0], len(start), _Y.shape[0])
+        shape2 = (_X.shape[0], _Y.shape[0])
         fitres.create_empty(shape1, shape2, 1)
         # fit the data
         dof = _X.shape[1] - len(_start)
         # fit every bootstrap sample
         timing = []
-        for i, x in enumerate(_X[:100]):
+        for i, x in enumerate(_X):
             timing.append(time.clock())
             tmpres, tmpchi2, tmppval = fitting(self.fitfunc, x, _Y, _start, debug=debug)
             fitres.add_data((0,i), tmpres, tmpchi2, tmppval)
@@ -463,6 +463,58 @@ class FitResult(object):
                 return n
         else:
             raise ValueError("Index cannot be calculated")
+
+    def fr_select(self, frange, debug=0):
+        """ Select one fit range of self, keep all shapes as is
+        1. This makes combined fits faster
+
+        WARNING,
+        data gets overwritten
+
+        Parameters:
+        -----------
+        par : Parameter to use to singularize (usually it is not the Amplitude
+        but the first one)
+        """
+        self.calc_error()
+        select = FitResult("one fit range", False)
+        nboot = self.data[0].shape[0]
+        npars = self.data[0].shape[1]
+        if isinstance(frange, int):
+            fr_idx = frange
+        else:
+            # search index corresponding to fit range
+            fr_self, fr_self_shape = self.get_ranges()
+            print("fit ranges for %s:" % self.corr_id)
+            print(fr_self, fr_self.shape)
+            fr_idx = get_fr_idx(fr_self[0],frange)
+            print(frange)
+            print(fr_self[0][fr_idx])
+        shape1 = (nboot,npars,1)
+        if debug > 0:
+          print("is data derived?")
+          print(self.derived)
+        shape2 = (nboot,1)
+        select.create_empty(shape1,shape2,1)
+        select.set_ranges(np.array([[[10,15]]]),[[1,]])
+        # usually only one correlator is taken into account
+        # copy data to singular
+        if self.derived is False:
+            res, res_std, res_sys, n_fits = self.error[0]
+            select.data[0][:,0,0] = self.data[0][:,0,fr_idx]
+            res, res_std, res_sys, n_fits = self.error[1]
+            select.data[0][:,1,0] = self.data[0][:,1,fr_idx] 
+        else:
+            res, res_std, res_sys, n_fits = self.error[0]
+            select.data[0][:,0,0] = self.data[0][:,0,fr_idx] 
+            
+        # set weights accordingly
+        select.weight = [[np.array([1.])] for d in range(2)]
+        select.error = []
+        #select.weight = np.ones(shape2)
+        #print select.weight[0]
+        #select.pval[0]=np.full(nboot,singular.weight)
+        return select
 
     def singularize(self, debug=0):
         """ Set data of self to weighted medians over fit ranges and weights to
@@ -1274,6 +1326,19 @@ class FitResult(object):
         if self.error is not None:
             self.error = None
             self.calc_error()
+
+def get_fr_idx(search,find):
+    
+    # loop over outer dimension of search
+    idx=[]
+    for i,r in enumerate(search):
+      if r[0] == find[0]:
+        if r[1] == find[1]:
+          idx.append(i)
+    if len(idx) == 0:
+      idx.append(0)
+      print("fit range not found")
+    return idx[0]
 
 if __name__ == "__main__":
     pass
