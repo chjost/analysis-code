@@ -958,7 +958,7 @@ class FitResult(object):
         return q2
 
     def evaluate_quark_mass(self, amu_s, obs_eval, obs1, obs2=None, obs3=None,
-        meth=0, parobs=1, debug=0):
+        meth=0, parobs=1, combine_all=True, debug=0):
       """ evaluate the strange quark mass at obs_match
 
       Parameters
@@ -972,6 +972,8 @@ class FitResult(object):
                           2: quadratic interpolation
       parobs : int
                Which parameter of the results should be taken
+      combine_all : Boolean
+                    Whether or not all combinations of fit ranges are taken
       """
       if obs2==None and obs3==None:
         raise ValueError("Matching not possible, check input of 2nd (and 3rd) observable!")
@@ -982,8 +984,12 @@ class FitResult(object):
       shape1 = obs1.data[0].shape
       shape2 = obs1.pval[0].shape
       # prepare shapes
-      layout1 = (shape1[0],shape1[-1])
-      layout2 = [shape2[0],]
+      if combine_all:
+        dim_fr1 = shape1[-1]
+        dim_fr2 = obs2.data[0].shape[-1]
+        layout1 = (shape1[0],dim_fr1*dim_fr2)
+      else:
+        layout1 = (shape1[0],shape1[-1])
 
       _obs1 = obs1.data[0][:,parobs]
       _obsweight1 = obs1.pval[0][0]
@@ -1003,7 +1009,7 @@ class FitResult(object):
 
       if meth == 0:
         for res in evaluate_lin(_obs1, _obs2, amu_s, _obsweight1,
-            _obsweight2, _obs_eval):
+            _obsweight2, _obs_eval,combine_all=combine_all):
             self.add_data(*res)
 
       if meth == 1:

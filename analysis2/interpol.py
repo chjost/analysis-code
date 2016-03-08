@@ -39,7 +39,7 @@ def match_lin(y1, y2, x, w1, w2, obs_match, w_match=None):
 
       yield (0,i), result, needed, weight
 
-def evaluate_lin(y1, y2, x, w1, w2, obs_eval):
+def evaluate_lin(y1, y2, x, w1, w2, obs_eval, combine_all=True):
     """Function to match the quark mass using a linear interpolation (check if it
     is really interpolated)
 
@@ -56,24 +56,25 @@ def evaluate_lin(y1, y2, x, w1, w2, obs_eval):
 
     #check number of weights
     if w1.shape != w2.shape:
-      raise ValueError("Shapes of observables incompatible")
+      print("Different number of fit ranges present")
+      print("Take all combinations? %s" % combine_all)
     if combine_all:
-      fr1 = range(w1.shape[-1])
-      fr2 = range(w2.shape[-1])
+      # Flatten fit ranges should not break anything
+      w1=np.ravel(w1)
+      w2=np.ravel(w2)
+      fr1 = range(w1.shape[0])
+      fr2 = range(w2.shape[0])
       fr_tot = [fr1,fr2]
-      i_yield = 0
-      for cmb in it.product(*fr_tot):
+      for fr,cmb in enumerate(it.product(*fr_tot)):
         # for each fit range interpolate the two bootstrapsamples
         coeff = ipol_lin(y1[:,cmb[0]], y2[:,cmb[1]], x)
         # if obs_match is a FitResult, evaluate it at the coefficients
         # else solve c0*mu_s + c1 - obs_match = 0 for mu_s
         result = eval_lin(coeff, obs_eval)
-        print result.shape
         weight = np.multiply(w1[cmb[0]],w2[cmb[1]])
         needed = np.zeros_like(weight)
       
-        yield (0,i_yield), result, needed, weight
-        i_yield += 1
+        yield (0,fr), result, needed, weight
 
     else:
       for i in range(w1.shape[-1]):
@@ -86,7 +87,7 @@ def evaluate_lin(y1, y2, x, w1, w2, obs_eval):
         weight = np.multiply(w1[i],w2[i])
         needed = np.zeros_like(weight)
       
-      yield (0,i), result, needed, weight
+        yield (0,i), result, needed, weight
   
 def ipol_lin(y1, y2, x):
     """ Interpolate bootstrapsamples of data linearly

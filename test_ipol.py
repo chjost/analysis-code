@@ -115,7 +115,7 @@ def main():
         #print mk_low.pval[0].shape
         # To use the median in the interpolations, we have to switch shrinking
         # and multiplication
-        mk_low = mk_low.singularize()
+        #mk_low = mk_low.singularize()
         #obs1 = obs1.singularize()
         obs1 = mk_low.mult_obs_single(mk_low, "m_low_sq")
         #print obs1.data[0][0,1,0]
@@ -128,7 +128,7 @@ def main():
         mk_high.print_data(par=1)
         mk_high.calc_error()
         #print(mk_high.weight)
-        mk_high = mk_high.singularize()
+        #mk_high = mk_high.singularize()
         obs2 = mk_high.mult_obs_single(mk_high, "m_high_sq")
         #obs2 = obs2.res_reduced(samples = 20)
 
@@ -152,7 +152,8 @@ def main():
         mka0_low.calc_error()
         #print(mka0_low.weight)
         #obs3 = mka0_low.res_reduced(samples = 20,m_a0=True)
-        obs3 = mka0_low.singularize()
+        #obs3 = mka0_low.singularize()
+        obs3 = mka0_low
         #print(obs3.data[0].shape)
 
         # Read high ma0
@@ -161,11 +162,12 @@ def main():
         mka0_high.calc_error()
         #print(mka0_high.weight)
         #obs4 = mka0_high.res_reduced(samples = 20,m_a0=True)
-        obs4 = mka0_high.singularize()
+        #obs4 = mka0_high.singularize()
+        obs4 = mka0_high
         #print(obs4.data[0].shape)
-        print("Correlation coefficient for M_K*a_KK on Ensemble: %s" % a)
-        data=np.hstack((obs3.data[0],obs4.data[0])).T[0] 
-        print(data.shape)
+        #print("Correlation coefficient for M_K*a_KK on Ensemble: %s" % a)
+        #data=np.hstack((obs3.data[0],obs4.data[0])).T[0] 
+        #print(data.shape)
         #print(np.corrcoef(data))
         #print(own_corrcoef(data))
 
