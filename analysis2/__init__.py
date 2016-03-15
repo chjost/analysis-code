@@ -7,6 +7,7 @@ from .correlator import Correlators
 from .ensemble import LatticeEnsemble
 from .fit import LatticeFit, FitResult
 from .plot import LatticePlot
+from .plot_functions import plot_function
 from .functions import func_const, func_ratio, func_single_corr
 from .statistics import draw_weighted, compute_error, sys_error, draw_gauss_distributed 
 from .interpol import interp_fk

@@ -65,7 +65,7 @@ def plot_samples(path,ens,mus_fix,mus_match,data_low,data_high,data_ext,
 def own_corrcoef(data,debug=0):
     m = np.empty(data.shape[0])
     for l in range(data.shape[0]):
-        print data[l].shape
+        #print data[l].shape
         m[l], std= ana.compute_error(data[l])
     x_c = data[0] - m[0]
     y_c = data[1] - m[1]
@@ -95,13 +95,13 @@ def main():
     d2 = ens.get_data("d2")
     strange = ens.get_data("strangeb")
     amu_s = ens.get_data("amu_s_b")
-    obs_match = 0.0197
+    obs_match = ens.get_data("obs_match")
     try:
       overwrite = ens.get_data("overwrite")
     except KeyError:
       overwrite = True
 
-    plot_boot=False
+    plot_boot=True
     print(datadir)
     # Place fit results in new empty fitresults objects
     #qm_matched = ana.FitResult.create_empty(shape1,shape1,2)
@@ -133,9 +133,9 @@ def main():
         #obs2 = obs2.res_reduced(samples = 20)
 
         print("Correlation coefficient for M_K^2 on Ensemble: %s" % a)
-        data=np.hstack((obs2.data[0][:,1],obs1.data[0][:,1])).T 
+        data_mk=np.hstack((obs2.data[0][:,1],obs1.data[0][:,1])).T 
         #print(np.corrcoef(data))
-        #print(own_corrcoef(data))
+        print(own_corrcoef(data_mk))
         
         qmatch = ana.FitResult('match', derived=True)
         #print(obs1.data[0].shape)
@@ -165,25 +165,40 @@ def main():
         #obs4 = mka0_high.singularize()
         obs4 = mka0_high
         #print(obs4.data[0].shape)
-        #print("Correlation coefficient for M_K*a_KK on Ensemble: %s" % a)
-        #data=np.hstack((obs3.data[0],obs4.data[0])).T[0] 
+        print("Correlation coefficient for M_K*a_KK on Ensemble: %s" % a)
+        corr_obs1 = obs3.singularize()
+        corr_obs2 = obs4.singularize()
+        data_ma0=np.hstack((corr_obs1.data[0],corr_obs2.data[0])).T[0] 
         #print(data.shape)
         #print(np.corrcoef(data))
-        #print(own_corrcoef(data))
-
+        print(own_corrcoef(data_ma0))
+        print("Correlation coefficients between M_K and a_KK:")
+        print(data_ma0.shape)
+        data_cross = np.vstack((data_mk[0],data_ma0[1]))
+        print(data_cross.shape)
+        print(own_corrcoef(data_cross))
         mka0_ipol = ana.FitResult('eval',derived=True)
         mka0_ipol.evaluate_quark_mass(amu_s,obs_match,obs3, obs4,parobs=0)
         mka0_ipol.print_data()
+        print(mka0_ipol.data[0][:,0].shape)
+        print(corr_obs1.data[0].shape)
+        corr_ext = mka0_ipol.singularize()
+        data = np.hstack((corr_obs1.data[0],corr_obs2.data[0],corr_ext.data[0][:,0].reshape(1500,1,1))).T[0]
+        print(data.shape)
+        print(np.corrcoef(data))
         if overwrite:
             mka0_ipol.save("%s/%s/match_mk_akk_%s.npz" % (datadir,a,a))
 
         if plot_boot:
             label = ['Scattering length samplewise %s' % a,r'$a\mu_s$',r'$M_Ka_0^{I=1}$']
-            plot_samples(plotdir,a,amu_s,obs_match,obs3.data[0],obs4.data[0],
-                mka0_ipol.data[0],label,name='/mka0_ext_samples_all.pdf')
+            obs3.singularize()
+            obs4.singularize()
+            mka0_ipol.singularize()
+            plot_samples(plotdir,a,amu_s,obs_match,obs3.data[0][:,0],obs4.data[0][:,0],
+                mka0_ipol.data[0][:,0],label,name='/mka0_int_samples_all_large.pdf')
             label = ['Kaon Mass samplewise %s' % a,r'$a\mu_s$',r'$M_K^2$']
             plot_samples(plotdir,a,amu_s,obs_match,obs1.data[0][:,1],obs2.data[0][:,1],
-                qmatch.data[0],label,name='/mk_sq_ext_sample_all.pdf')
+                qmatch.data[0][:,1],label,name='/mk_sq_int_sample_all_large.pdf')
         
         # Make nice plots for interpolation
 # make this script importable, according to the Google Python Style Guide

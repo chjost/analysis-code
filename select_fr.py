@@ -88,8 +88,8 @@ def main():
     # get fit_ranges
     range_r, r_r_shape = ratiofit.get_ranges()
     #print(range_r[0])
-    t_low = [11,12,13,14]
-    t_hi = [21,22,23,24]
+    t_low = [10,11,12,13]
+    t_hi = [20,21,22,23,24]
     fr = len(t_low)*len(t_hi)
     res = np.zeros((fr, 6))
     j = 0
@@ -134,7 +134,7 @@ def main():
     plt.title(lbl[0])
     plt.grid()
     plt.xlim((-1,fr+1))
-    plt.ylim((0.0069,0.0074))
+    plt.ylim((0.0055,0.0075))
     plt.xlabel(lbl[1])
     plt.ylabel(lbl[2])
     plt.legend()

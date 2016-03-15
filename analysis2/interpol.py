@@ -83,7 +83,7 @@ def evaluate_lin(y1, y2, x, w1, w2, obs_eval, combine_all=True):
         # if obs_match is a FitResult, evaluate it at the coefficients
         # else solve c0*mu_s + c1 - obs_match = 0 for mu_s
         result = eval_lin(coeff, obs_eval)
-        print result.shape
+        #print result.shape
         weight = np.multiply(w1[i],w2[i])
         needed = np.zeros_like(weight)
       

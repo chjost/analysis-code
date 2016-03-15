@@ -127,8 +127,8 @@ def main():
   resdir = ens.get_data("resultdir") 
   nboot = ens.get_data("nboot")
   
-  readchipt = True 
-  #readchipt = False 
+  #readchipt = True 
+  readchipt = False 
   xcut = False
 
   # Firstly, read in all interpolated data into one array for which the
@@ -141,16 +141,20 @@ def main():
   nb_ens=len(latA)+len(latB)+len(latD)
   # arrays for x and y data
   mk_akk = np.zeros((nb_ens,nboot))
+  res_ma0 = np.zeros((nb_ens,4))
   mk_fk = np.zeros_like((mk_akk))
-  mpi = np.zeros_like((mk_akk))
+  #mpi = np.zeros_like((mk_akk))
+  mpi = np.zeros((nb_ens))
   for j,a in enumerate(AB):
       y_obs = ana.FitResult.read("%s%s/match_mk_akk_%s.npz" % (datadir, a, a))
       y_obs.calc_error()
+      print y_obs.data[0].shape
       data_shape=y_obs.data[0].shape
       y_obs.data[0]=y_obs.data[0].reshape((data_shape[0],1,data_shape[-1]))
   # Each array is the weighted median over the fit ranges
       res, res_std, res_sys, data_weight = ana.sys_error(y_obs.data,y_obs.pval)
       mk_akk[j] = res[0]
+      res_ma0[j] = y_obs.data_for_plot()
 
       x_obs = ana.FitResult.read("%s%s/match_k_%s.npz" % (datadir, a, a))
       x_obs.calc_error()
@@ -167,18 +171,20 @@ def main():
       #mk_fk[j] = np.divide(res[0],fk_sq)
       #mpi[j] = ana.r0_mass(mpi_dist,a[0])**2
       mpi[j] = ana.r0_mass(mpi_ext[a][0],a[0])**2
-      print(mpi[j][0],a)
+      print(mpi[j],a)
 
   ens_AB=len(latA)+len(latB)
   for j,a in enumerate(latD):
       y_obs = ana.FitResult.read("%s%s/%s/mk_akk_%s.npz" % (datadir, a, strangeD[j], a))
       y_obs.calc_error()
+      print y_obs.data[0].shape
       data_shape=y_obs.data[0].shape
       #y_obs.data[0]=y_obs.data[0].reshape((data_shape[0],1,data_shape[-1]))
       y_obs.pval[0] =y_obs.pval[0].reshape((nboot,y_obs.pval[0].shape[-1]))
   # Each array is the weighted median over the fit ranges
       res, res_std, res_sys, data_weight = ana.sys_error(y_obs.data,y_obs.pval)
       mk_akk[ens_AB+j] = res[0]
+      res_ma0[ens_AB+j] = y_obs.data_for_plot()
   
       x_obs = ana.FitResult.read("%s%s/%s/fit_k_%s.npz" % (datadir, a, strangeD[j], a))
       x_obs.calc_error(1)
@@ -194,7 +200,7 @@ def main():
       #mk_fk[ens_AB+j] = np.divide(res[0],fk)**2
       #mpi[ens_AB+j] = ana.r0_mass(mpi_dist,a[0])**2
       mpi[ens_AB+j] = ana.r0_mass(mpi_ext[a][0],a[0])**2
-      print(mpi[ens_AB+j][0],a)
+      print(mpi[ens_AB+j],a)
   # Secondly, fit a chiral function to the data
   #define a lambda fit function
 
@@ -212,6 +218,9 @@ def main():
       else:
           chipt = ana.LatticeFit(lo_chipt,dt_i=1, dt_f=1)
           p=[1.,1.]
+          mpi = mpi.reshape((nb_ens,1))
+          print(mpi.shape)
+          print(mk_akk.shape)
           chiral_extra = chipt.chiral_fit(mpi,mk_akk,corrid="MA-ChiPT",start=p)
           chiral_extra.save(resdir+'chiptfit_orig_mpi.npz')
   chiral_extra.print_data()
@@ -219,16 +228,14 @@ def main():
   print(chiral_extra.data[0].shape)
   print("m a0 has shape:")
   print(mk_akk.shape)
-  res_ma0 = np.asarray([ana.compute_error(i,mean=i[0]) for i in mk_akk],dtype=float).reshape((nb_ens,2))
+  #res_ma0 = np.asarray([ana.compute_error(i,mean=i[0]) for i in mk_akk],dtype=float).reshape((nb_ens,2))
   res_mpi = np.asarray([ana.compute_error(i,mean=i[0]) for i in mpi],dtype=float).reshape((nb_ens,2))
-  print(res_mpi.shape)
   # generate fitfunction points and physical point
   #error for physical point
   phys_pt_x = 0.1124
   mk_a0_fin = err_phys_pt(chiral_extra.data[0],phys_pt_x,lo_chipt)
   if xcut:
       b=res_mpi[:,0] < xcut
-      print(res_mpi[b])
       ndof = res_mpi[b].shape[0]
   else:
       ndof = nb_ens-chiral_extra.data[0].shape[1]
@@ -241,26 +248,37 @@ def main():
   if xcut:
       pfit = PdfPages("./plots2/pdf/LOChiPT_matchD_xcut_%d.pdf" % xcut)
   else:
-      pfit = PdfPages("./plots2/pdf/LOChiPT_matchD.pdf")
-  #plt.errorbar(res_mpi[0:6,0],res_ma0[0:6,0],res_ma0[0:6,1],res_mpi[0:6,1],
-  #             fmt='s', color='red', label='A Ensembles')
-  #plt.errorbar(res_mpi[6:9,0],res_ma0[6:9,0],res_ma0[6:9,1],res_mpi[6:9,1],
-  #             fmt='^', color='blue', label='B Ensembles')
-  #plt.errorbar(res_mpi[9,0],res_ma0[9,0],res_ma0[9,1],res_mpi[9,1],
-  #             fmt='o', color='green', label='D Ensembles')
+      pfit = PdfPages("./plots2/pdf/LOChiPT_matchD_new.pdf")
+
+  # plot systematic errors on top
+  args = chiral_extra.data[0]
+  ana.plot_function(lo_chipt,x,args,label=r'LO-$\chi$-PT',ploterror=True)
+  plt.errorbar(res_mpi[0:6,0],res_ma0[0:6,0],
+              yerr=[res_ma0[0:6,1]+res_ma0[0:6,2],
+               res_ma0[0:6,1]+res_ma0[0:6,3]],
+               fmt='s', color='red')
+  plt.errorbar(res_mpi[6:10,0],res_ma0[6:10,0],
+              yerr=[res_ma0[6:10,1]+res_ma0[6:10,2],
+               res_ma0[6:10,1]+res_ma0[6:10,3]],
+               fmt='^', color='blue')
+  plt.errorbar(res_mpi[10,0],res_ma0[10,0],
+              yerr =[[res_ma0[10,1]+res_ma0[10,2]],
+               [res_ma0[10,1]+res_ma0[10,3]]],
+               fmt='o', color='green')
   plt.errorbar(res_mpi[0:6,0],res_ma0[0:6,0],res_ma0[0:6,1],
                fmt='s', color='red', label='A Ensembles')
   plt.errorbar(res_mpi[6:10,0],res_ma0[6:10,0],res_ma0[6:10,1],
                fmt='^', color='blue', label='B Ensembles')
   plt.errorbar(res_mpi[10,0],res_ma0[10,0],res_ma0[10,1],
                fmt='o', color='green', label='D Ensembles')
-  plt.plot(x,y,color='black',label=r'LO $\chi$-PT')
+  #plt.plot(x,y,color='black',label=r'LO $\chi$-PT')
   if xcut:
     y = lo_chipt(chiral_extra.data[0][0,:,0], xcut)
     plt.vlines(xcut, 0.95*y, 1.05*y, colors="k", label="")
     plt.hlines(0.95*y, xcut*0.98, xcut, colors="k", label="")
     plt.hlines(1.05*y, xcut*0.98, xcut, colors="k", label="")
-  plt.errorbar(phys_pt_x,mk_a0_fin[0],mk_a0_fin[1], fmt='d', color='darkorange', label='Physical Point')
+  #plt.errorbar(phys_pt_x,mk_a0_fin[0],mk_a0_fin[1], fmt='d', color='darkorange', label='Physical Point')
+  plt.errorbar(phys_pt_x,mk_a0_fin[0], fmt='d', color='darkorange', label='Physical Point')
   plt.grid(False)
   plt.legend(loc='best',numpoints=1)
   plt.ylim(-0.45,-0.25)
@@ -268,6 +286,23 @@ def main():
   plt.xlabel(r'$(r_0M_{\pi})^2$')
   pfit.savefig()
   pfit.close()
+  
+
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Keyboard Interrupt")
+
+  #plt.errorbar(res_mpi[0:6,0],res_ma0[0:6,0],res_ma0[0:6,1],res_mpi[0:6,1],
+  #             fmt='s', color='red', label='A Ensembles')
+  #plt.errorbar(res_mpi[6:9,0],res_ma0[6:9,0],res_ma0[6:9,1],res_mpi[6:9,1],
+  #             fmt='^', color='blue', label='B Ensembles')
+  #plt.errorbar(res_mpi[9,0],res_ma0[9,0],res_ma0[9,1],res_mpi[9,1],
+  #             fmt='o', color='green', label='D Ensembles')
+        
   ## Lastly, plot the fitted function and the data
   ## Open pdf
   #print(res_mpi[0:6,0]**2,res_ma0[0:6,0],res_ma0[0:6,1],res_mk_fk[0:6,1])
@@ -284,12 +319,3 @@ def main():
   #plt.xlabel(r'$M_K/f_K$')
   #pfit.savefig()
   #pfit.close()
-  
-
-
-# make this script importable, according to the Google Python Style Guide
-if __name__ == '__main__':
-    try:
-        main()
-    except KeyboardInterrupt:
-        print("Keyboard Interrupt")

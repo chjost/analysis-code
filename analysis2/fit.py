@@ -216,16 +216,20 @@ class LatticeFit(object):
         # create FitResults
         fitres = FitResult("chiral_fit")
         #shape1 = (_X.shape[0], 1, _X.shape[0])
-        shape1 = (_X.shape[0], len(start), _Y.shape[0])
-        shape2 = (_X.shape[0], _Y.shape[0])
+        #shape1 = (_X.shape[0], len(start), _Y.shape[0])
+        #shape2 = (_X.shape[0], _Y.shape[0])
+        shape1 = (_Y.shape[0], len(start), _X.shape[0])
+        shape2 = (_Y.shape[0], _X.shape[0])
         fitres.create_empty(shape1, shape2, 1)
         # fit the data
-        dof = _X.shape[1] - len(_start)
+        dof = _X.shape[-1] - len(_start)
         # fit every bootstrap sample
         timing = []
         for i, x in enumerate(_X):
+            print(x)
             timing.append(time.clock())
             tmpres, tmpchi2, tmppval = fitting(self.fitfunc, x, _Y, _start, debug=debug)
+            print(i,tmpres.shape)
             fitres.add_data((0,i), tmpres, tmpchi2, tmppval)
             #if i % 100:
             #    print("%d of %d finished" % (i+1, _X.shape[0]))
@@ -516,7 +520,7 @@ class FitResult(object):
         #select.pval[0]=np.full(nboot,singular.weight)
         return select
 
-    def singularize(self, debug=0):
+    def singularize(self, debug=0 ):
         """ Set data of self to weighted medians over fit ranges and weights to
         1. This makes combined fits faster
 
@@ -534,7 +538,7 @@ class FitResult(object):
         npars = self.data[0].shape[1]
         shape1 = (nboot,npars,1)
         if debug > 0:
-          print("is data derived?")
+          print("is self derived?")
           print(self.derived)
         shape2 = (nboot,1)
         singular.create_empty(shape1,shape2,1)
