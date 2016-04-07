@@ -43,7 +43,7 @@ def fit_single(fitfunc, start, corr, franges, add=None, debug=0,
     # prepare X data
     if debug > 0:
         print("Get X data")
-    X = np.linspace(0., float(dshape[1]), dshape[1], endpoint=False)
+    X = np.linspace(0., float(dshape[1]), dshape[1], endpoint=False) + xshift
 
     # fitting
     if debug > 0:

@@ -88,13 +88,13 @@ def main():
 
     # get data from input file
     lat = ens.name()
-    latA = ens.get_data("nameb")
+    latA = ens.get_data("namea")
     #quark = ens.get_data("quark")
     datadir = ens.get_data("datadir")
     plotdir = ens.get_data("plotdir")
     d2 = ens.get_data("d2")
-    strange = ens.get_data("strangeb")
-    amu_s = ens.get_data("amu_s_b")
+    strange = ens.get_data("strangea")
+    amu_s = ens.get_data("amu_s_a")
     obs_match = ens.get_data("obs_match")
     try:
       overwrite = ens.get_data("overwrite")
@@ -195,10 +195,10 @@ def main():
             obs4.singularize()
             mka0_ipol.singularize()
             plot_samples(plotdir,a,amu_s,obs_match,obs3.data[0][:,0],obs4.data[0][:,0],
-                mka0_ipol.data[0][:,0],label,name='/mka0_int_samples_all_large.pdf')
+                mka0_ipol.data[0][:,0],label,name='/mka0_int_samples_all.pdf')
             label = ['Kaon Mass samplewise %s' % a,r'$a\mu_s$',r'$M_K^2$']
             plot_samples(plotdir,a,amu_s,obs_match,obs1.data[0][:,1],obs2.data[0][:,1],
-                qmatch.data[0][:,1],label,name='/mk_sq_int_sample_all_large.pdf')
+                qmatch.data[0][:,1],label,name='/mk_sq_int_sample_all.pdf')
         
         # Make nice plots for interpolation
 # make this script importable, according to the Google Python Style Guide

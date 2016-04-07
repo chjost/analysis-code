@@ -19,7 +19,7 @@ def main():
     readsingledata = False
     plotsingle = True
     readtwodata = False
-    plottwo = True
+    plottwo = False
     compare = False
     # get data from input file
     prefix = ens.get_data("path")
@@ -47,7 +47,7 @@ def main():
     # single particle correlator
     print("read single particle corrs")
     #files = ["%s/pi_corr_p%d.dat" % (prefix, d) for d in range(4)]
-    files = ["%s/k_charged_p%d.dat" % (datadir, d) for d in range(1)]
+    files = ["%s/kk_charged_p%d.dat" % (datadir, d) for d in range(1)]
     if readsingledata == False:
         kcorr = ana.Correlators(files, matrix=False)
         print(kcorr.data)
@@ -74,9 +74,9 @@ def main():
         kkcorr = ana.Correlators.read("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
         ratio = kkcorr.ratio(kcorr, ratio=2 )
 
-    #compute effective masses after ratio has been build
+    compute effective masses after ratio has been build
     kcorr.mass()
-    kkcorr.mass()
+    #kkcorr.mass()
 
     #plot effective masses of kcorr and kkcorr
     if plotsingle:

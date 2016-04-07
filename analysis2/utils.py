@@ -40,7 +40,7 @@ def mean_std(data, axis=0, mean=None):
     std = np.sqrt(var)
     return _mean, std
 
-def r0_mass(amps,ens):
+def r0_mass(amps,ens,square=False):
   """Calculates the physical mass from pseudoscalar masses in lattice units
 
   Parameters:
@@ -48,7 +48,10 @@ def r0_mass(amps,ens):
   """
   #dictionary of Sommer parameter (arxiv:1403.4504v3)
   r = {'A':5.31, 'B':5.77, 'D':7.60}
-  r0_m =np.multiply(r[ens],amps) 
+  if square is False:
+    r0_m =np.multiply(r[ens],amps)
+  else:
+    r0_m =np.multiply(r[ens]**2,amps)
   return r0_m
 
 def physical_mass(amps,ens):

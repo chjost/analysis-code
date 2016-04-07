@@ -40,7 +40,7 @@ def main():
     print(rawdir)
     print(datadir)
     inputlist = []
-    cfg_rng = [700,1404,4]
+    cfg_rng = [500,500,4]
     omit = []
     print(omit)
     missing = miss_confs(rawdir,cfg_rng)
