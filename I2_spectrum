@@ -1,0 +1,179 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+##!/usr/bin/python
+
+import numpy as np
+import matplotlib
+matplotlib.use('Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+
+import analysis2 as ana
+
+def plot_spectrum(datafolder, plotfolder, lattices, irreps=[["A1"]]):
+    """Print a summary of the lattices given.
+
+    Parameters
+    ----------
+    datafolder : string
+        Path to the data.
+    plotfolder : 
+        Path for the plots.
+    lattices: list of strings
+        The lattices to use.
+    irreps : list of list of strings
+        The "outer" list gives the totel momentum to use,
+        the inner which irreps to read in.
+    """
+    ## variables
+    verbose = False
+    xcut = None
+
+    # read data
+    # create overall list
+    pipi = []
+    filepi = "fit_pi.npz"
+    tmppi = ana.FitResult.read("%s/%s/%s" % (datafolder, lattices[-1], filepi))
+    tmppi.calc_error()
+    mpi = tmppi.error[1][0][0][0]
+    yvals = [1.9*mpi, 6.*mpi]
+    del tmppi
+
+    if verbose:
+        print("finished reading data")
+    # iterate over the lattices
+    for lat in lattices:
+        if verbose:
+            print("reading data for lattice: %s" % lat)
+        fname = "%s/summary/collected_spectrum_%s.npz" % (datafolder, lat)
+        lpipi = []
+        # iterate over the total momentum
+        for p2, irr in enumerate(irreps):
+            if verbose:
+                print("reading data for total momentum: %d" % p2)
+            lpipi.append([])
+            # iterate over the irreps
+            for ir in irr:
+                if verbose:
+                    print("reading data for irrep: %s" % ir)
+                # get file names
+                if ir == "A1":
+                    #filepipi = "Ecm_TP%d.npz" % p2
+                    filepipi = "fit_pipi_TP%d.npz" % p2
+                else:
+                    #filepipi = "Ecm_TP%d_%s.npz" % (p2, ir)
+                    filepipi = "fit_pipi_TP%d_%s.npz" % (p2, ir)
+                # read data
+                if verbose:
+                    print("read data")
+                tmppipi = ana.FitResult.read("%s/%s/%s" % (datafolder, lat, filepipi))
+                # calc mean
+                tmppipi.calc_error()
+                # get the needed data and append
+                npar = 1
+                tmp = [tmppipi.error[npar][0], tmppipi.error[npar][1],
+                       tmppipi.error[npar][2]]
+                lpipi[-1].append(tmp)
+                if verbose:
+                    print("extracted data")
+        pipi.append(lpipi)
+    if verbose:
+        print("finished reading data")
+
+    if verbose:
+        print("setting up plot")
+    # plot everything
+    plotter = ana.LatticePlot("%s/spectrum.pdf" % (plotfolder))
+    plotter.set_env(ylim=yvals)
+
+    # symbol code the irrep
+    irrepfmt = {"A1":"o", "E":"s", "T2":"D", "B1":"^"}
+    # color code the total momentum
+    p2fmt = ["r", "b", "g", "k"]
+    # axis labels
+    axlab = ["L/a", "aE$_{cm}$(L)"]
+    # plot the data
+    # pipi[lattice][total momentum][irrep][correlator]
+    for p2 in range(len(irreps)):
+        for j, irr in enumerate(irreps[p2]):
+            plotter.set_title("total momentum %d, irrep %s" % (p2, irr), axlab)
+            maxn = 0
+            for i, lat in enumerate(lattices):
+                L = int(lat.split(".")[-1])
+                tmppipi = pipi[i][p2][j]
+                if len(tmppipi) > maxn:
+                    maxn = len(tmppipi)
+                for k in range(len(tmppipi)):
+                    y = tmppipi[0][k][0]
+                    dy = [[np.sqrt(tmppipi[1][k]**2 + tmppipi[2][k][0]**2)],
+                          [np.sqrt(tmppipi[1][k]**2 + tmppipi[2][k][1]**2)]]
+                    plt.errorbar(L, y, yerr=dy, fmt="s"+p2fmt[k], label="")
+                    plt.errorbar(L, y, yerr=tmppipi[1][k], fmt="s"+p2fmt[k], label="")
+            # stretch the x axis for better overview
+            x_lim = np.asarray(plt.gca().get_xlim())
+            x_lim[1] += 0.1* x_lim[0]
+            x_lim[0] *= 0.9
+            plt.gca().set_xlim(x_lim)
+            # indicate the inelastic region
+            plt.axhline(y=4*mpi, c="grey")
+            plt.annotate(s="4m$_{\pi}$", xy=(x_lim[0]*1., 4.05*mpi))
+            # draw the expected energies
+            for n in range(maxn):
+                plot_expected(n, p2, irr, mpi)
+            #plt.legend(numpoints=1)
+            plt.grid(True)
+            plotter._set_env_normal()
+            plotter.save()
+    if verbose:
+        print("finishing plot")
+    del plotter
+    return
+
+def plot_expected(n, p2, irrep, mpi=0.14):
+    """Plot the expected energy of two non-interacting pions."""
+    if irrep == "A1":
+        if p2 == 0:
+            k1 = [0, 1, 2, 3, 4]
+            k2 = k1
+        elif p2 == 1:
+            k1 = [0, 1, 1, 2, 2, 3, 2]
+            k2 = [1, 2, 4, 3, 5, 6, 5]
+            #k1 = [0, 1, 2, 1, 2, 3, 3]
+            #k2 = [1, 2, 3, 4, 5, 5, 6]
+        elif p2 == 2:
+            k1 = [0, 1, 1, 2, 1, 2, 2, 3]
+            k2 = [2, 1, 3, 2, 5, 4, 6, 5]
+            #k1 = [0, 1, 1, 2, 2, 1, 3, 2]
+            #k2 = [2, 1, 3, 2, 4, 5, 5, 6]
+    elif irrep == "E":
+        if p2 == 0:
+            k1 = [1, 2, 4]
+            k2 = [1, 2, 2]
+    else:
+        raise RuntimeError("not implemented yet")
+    xlim = plt.gca().get_xlim()
+    if np.abs(xlim[1] - xlim[0]) < 1e-6:
+        xlim[0] *= 0.9
+        xlim[1] *= 1.1
+    x = np.linspace(xlim[0], xlim[1], 1000)
+    #y = np.sqrt(mpi**2 + k1[n]*4.*(np.pi/x)**2) + np.sqrt(mpi**2 + k2[n]*4*(np.pi/x)**2)
+    y = (np.arccosh(np.cosh(mpi) + 2.*np.sin(np.sqrt(k1[n])*np.pi/x)**2) +
+         np.arccosh(np.cosh(mpi) + 2.*np.sin(np.sqrt(k2[n])*np.pi/x)**2))
+    plt.plot(x, y, "-m")
+
+
+def main():
+    #Aens = ["A40.24"]
+    Aens = ["A40.20", "A40.24", "A40.32"]
+    datafolder = "./data/I2/"
+    plotfolder = "./plots/I2/summary/"
+    # construct list with irreps, giving also total momentum
+    irreps = [["A1", "E"], ["A1"], ["A1"]]
+    plot_spectrum(datafolder, plotfolder, Aens, irreps)
+    return
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass
