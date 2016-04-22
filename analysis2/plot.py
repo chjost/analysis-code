@@ -212,7 +212,7 @@ class LatticePlot(object):
         label[0] = label_save
 
     def _genplot_comb(self, corr, label, fitresult, fitfunc, oldfit, add=None,
-            oldfitpar=None, ploterror=False, xshift=0., debug=0):
+            oldfitpar=None, ploterror=False, xshift=0., debug=0, join=False):
         """Plot the data of a Correlators object and a FitResult object
         together.
 
@@ -257,10 +257,11 @@ class LatticePlot(object):
             if debug > 1:
                 print("plotting correlators %s" % str(item))
             n = item[-1]
-            mdata, ddata = compute_error(corr.data[:,:,item[-2], n])
+            mdata, ddata = compute_error(corr.data[:,:,n])
+            #mdata, ddata = compute_error(corr.data[:,:,item[-2],n])
             # create the iterator over the fit ranges
             tmp = [fshape[i][x] for i,x in enumerate(item)]
-            print(tmp)
+            #print(tmp)
             #limit fitranges to be plotted
             rangesiter = [[x for x in range(m)] for m in tmp ]
             # iterate over the fit ranges
@@ -295,7 +296,8 @@ class LatticePlot(object):
 
                 # plot
                 self._set_env_normal()
-                plot_data(X, corr.data[0,:,item[-2], n], ddata, label[3],
+                #plot_data(X, corr.data[0,:,item[-2],n], ddata, label[3],
+                plot_data(X, corr.data[0,:,n], ddata, label[3],
                         plotrange=[1,T])
                 plot_function(fitfunc.fitfunc, X, _par, label[4], 
                         add_data, fi, ploterror)

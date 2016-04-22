@@ -43,7 +43,7 @@ def fit_single(fitfunc, start, corr, franges, add=None, debug=0,
     # prepare X data
     if debug > 0:
         print("Get X data")
-    X = np.linspace(0., float(dshape[1]), dshape[1], endpoint=False)
+    X = np.linspace(0., float(dshape[1]), dshape[1], endpoint=False) + xshift
 
     # fitting
     if debug > 0:
@@ -161,7 +161,9 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
             # do the fitting
             if isinstance(start[0], (tuple, list)):
                 res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
-                    corr.data[:,r[0]:r[1]+1,item[-2],n], start[n],
+                    # TODO data can also be independent, so having only 3 axis
+                    corr.data[:,r[0]:r[1]+1,n], start[n],
+                    #corr.data[:,r[0]:r[1]+1,item[-2],n], start[n],
                     add=add_data, correlated=correlated, debug=debug)
             else:
                 res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
@@ -367,10 +369,8 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, debug=0):
         errfunc = lambda p, x, y, e, error: np.dot(error, (y-fitfunc(p,x,e)).T)
 
     # compute inverse, cholesky decomposed covariance matrix
-    print correlated
     if not correlated:
         cov = np.diag(np.diagonal(np.cov(Y.T)))
-        print cov
     else:
         cov = np.cov(Y.T)
     cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
@@ -379,6 +379,7 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, debug=0):
     dof = float(Y.shape[1]-len(start)) 
     samples = Y.shape[0]
     # create results arrays
+    #print(len(start))
     res = np.zeros((samples, len(start)))
     chisquare = np.zeros(samples)
     # The FIT to the boostrap samples

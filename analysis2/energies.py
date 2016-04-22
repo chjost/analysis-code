@@ -7,7 +7,7 @@ import numpy as np
 from memoize import memoize
 
 @memoize(50)
-def WfromE(E, d=np.array([0., 0., 0.]), L=24):
+def WfromE(E, d=0, L=24):
     """Calculates the CM energy from the energy.
 
     Parameters
@@ -24,7 +24,8 @@ def WfromE(E, d=np.array([0., 0., 0.]), L=24):
     float or ndarray
         The center of mass energy.
     """
-    return np.sqrt(E*E + np.dot(d, d) * 4. * np.pi*np.pi / (float(L)*float(L)))
+    return np.sqrt(E*E + d * 4. * np.pi*np.pi / (float(L)*float(L)))
+    #return np.sqrt(E*E + np.dot(d, d) * 4. * np.pi*np.pi / (float(L)*float(L)))
 
 @memoize(50)
 def EfromW(W, d=np.array([0., 0., 0.]), L=24):
@@ -131,7 +132,20 @@ def WfromMass_lat(m, q, L=24):
     """
     return np.arccosh(np.cosh(m) + 2. * np.sin(q * np.pi / float(L))**2)
 
-def calc_gamma(q2, m, d=np.array([0., 0., 1.]), L=24):
+def EfromMpi(mpi, q, L):
+    """Calculates the center of mass energy for a pion with momentum q.
+
+    Args:
+        mpi: pion mass
+        q: pion momentum
+        L: lattice size
+
+    Returns:
+        The energy.
+    """
+    return np.sqrt(mpi*mpi + 4.*q*q*np.pi*np.pi/(float(L)*float(L)))
+
+def calc_gamma(q2, m, d=0, L=24):
     """Calculates the Lorentz boost factor for the given energy and momentum.
 
     Parameters
@@ -150,7 +164,7 @@ def calc_gamma(q2, m, d=np.array([0., 0., 1.]), L=24):
     float or ndarray
         The Lorentz boost factor.
     """
-    E = EfromMpi(m, np.sqrt(q2), L)
+    E = 2.*EfromMpi(m, np.sqrt(q2), L)
     return WfromE(E, d, L) / E
 
 def calc_Ecm(E, d=np.array([0., 0., 1.]), L=24, lattice=False):

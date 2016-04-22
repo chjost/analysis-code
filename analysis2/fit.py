@@ -18,6 +18,7 @@ from energies import calc_q2, calc_Ecm
 from zeta_wrapper import Z
 from scattering_length import calculate_scat_len
 from phaseshift_functions import compute_phaseshift
+from utils import mean_std
 
 class LatticeFit(object):
     def __init__(self, fitfunc, dt_i=2, dt_f=2, dt=4, xshift=0.,
@@ -130,7 +131,7 @@ class LatticeFit(object):
             if start is None:
                 # set starting values
                 start = get_start_values(ncorr, franges, corr.data, self.npar)
-            print self.correlated
+            #print self.correlated
 
             # do the fitting
             for res in fit_single(self.fitfunc, start, corr, franges,
@@ -149,10 +150,10 @@ class LatticeFit(object):
             shapes_data = []
             shapes_other = []
             # iterate over the correlation functions
-            print(fshape)
+            #print(fshape)
             ncorr = [len(s) for s in fshape]
             if not useall:
-                print(ncorr)
+                #print(ncorr)
                 ncorr[-2] = 1
 
             ncorriter = [[x for x in range(n)] for n in ncorr]
@@ -644,6 +645,7 @@ class FitResult(object):
 
     def print_details(self):
         """Prints details for every fit."""
+        self.calc_error()
         print("------------------------------")
         print("details for %s" % self.corr_id)
         if self.derived:
@@ -655,7 +657,8 @@ class FitResult(object):
                         # create a string containing the fit parameters
                         tmpstring = " ".join(("%2d:" % (j),
                                               "weight %e" % (self.pval[i][0,j]),
-                                              "par: %e" % (self.data[i][0,j])))
+                                              "par: %e +- %e" % mean_std(
+                                                  self.data[i][0,j])))
                         print(tmpstring)
                 else:
                     for j in range(self.data[i].shape[-1]):
@@ -667,8 +670,10 @@ class FitResult(object):
                             select = (slice(None),) + item + (j,)
                             tmpstring = " ".join(("%2d:" % (j),
                                                   "add ranges %s" % str(item),
-                                                  "weight %e" % (self.pval[i][select][0]),
-                                                  "par: %e +- %e" % (self.data[i][select][0], np.std(self.data[i][select]))))
+                                                  "weight %e" % (
+                                                      self.pval[i][select][0]),
+                                                  "par: %e +- %e" % mean_std(
+                                                      self.data[i][select][0])))
                             print(tmpstring)
         else:
             # iterate over the correlators
@@ -679,7 +684,7 @@ class FitResult(object):
                         # create a string containing the fit parameters
                         tmppar = ["par:"]
                         for p in range(self.data[i].shape[1]):
-                          tmppar.append("%e +- %e" % (self.data[i][0,p,j], np.std(self.data[i][:,p,j])))
+                            tmppar.append("%e +- %e" % mean_std(self.data[i][:,p,j]))
                         tmppar = " ".join(tmppar)
                         tmpstring = " ".join(("%d: range %2d:%2d" % (j, r[0],r[1]),
                                               "chi^2 %e" % (self.chi2[i][0,j]),
@@ -696,7 +701,8 @@ class FitResult(object):
                             tmppar = ["par:"]
                             for p in range(self.data[i].shape[1]):
                                 select = (slice(None), p) + item + (j,)
-                                tmppar.append("%e" % (self.data[i][select])[0])
+                                tmppar.append("%e +- %e" % mean_std(
+                                    self.data[i][select]))
                             select = (slice(None),) + item + (j,)
                             tmppar = " ".join(tmppar)
                             select = (0,) + item + (j,)
@@ -810,14 +816,14 @@ class FitResult(object):
         mass.calc_error()
         # get the data
         _mass = mass.data[0][:,parmass]
-        print("mass in scattering length")
-        print(_mass.shape)
-        print(mass.weight)
+        #print("mass in scattering length")
+        #print(_mass.shape)
+        #print(mass.weight)
         _massweight = mass.weight[parmass][0]
-        print(_massweight)
+        #print(_massweight)
         _energy = self.data[0][:,parself]
         _energyweight = self.weight[parself][0]
-        print(_energyweight)
+        #print(_energyweight)
         nsam = _mass.shape[0]
         # create the new shapes
         scatshape = (nsam, _mass.shape[-1], _energy.shape[-1])
@@ -826,8 +832,8 @@ class FitResult(object):
         scat = FitResult("scat_len", True)
         scat.create_empty(scatshape, scatshape_w, [1,1])
         # calculate scattering length
-        print("_energy has shape:")
-        print _energy.shape
+        #print("_energy has shape:")
+        #print _energy.shape
         for res in calculate_scat_len(_mass, _massweight, _energy, _energyweight,
                 L, isdependend, isratio):
             scat.add_data(*res)
@@ -885,6 +891,7 @@ class FitResult(object):
             Use the lattice formulas or the continuum formulas.
         """
         self.calc_error()
+        mass.calc_error()
 
         _ma = mass.data[0][:,parmass]
         _ma_w = mass.weight[parmass][0]
@@ -1079,8 +1086,8 @@ class FitResult(object):
       # prepare new weight array
       weights_prod = np.zeros_like(weights_0)
       # multiply weights of first observable with observable of second
-      print self.weight
-      print other.weight
+      #print(self.weight[0].shape)
+      #print(other.weight[0].shape)
       if isdependend:
           for idx, weights_1 in enumerate(other.weight[1][0]):
               weights_prod[idx] = np.multiply(weights_1, weights_0[idx])

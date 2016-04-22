@@ -51,14 +51,15 @@ def main():
     print("fitting")
     fitter = ana.LatticeFit(0, dt_i=dti, dt_f=dtf, dt=dt, correlated=True)
     if readfit == False:
-        fitres = fitter.fit(None, corr, [14, 38], corrid="epi", add=addT)
+        fitres = fitter.fit(None, corr, [10, 40], corrid="epi", add=addT)
         #fitres = fitter.fit(None, corr, [Ti, T], corrid="epi", add=addT)
         fitres.save("%s/fit_pi.npz" % (datadir))
     else:
         fitres = ana.FitResult.read("%s/fit_pi.npz" % (datadir))
+    #print(corr.data[0][:,0])
     #fitres.print_data(0)
     fitres.print_data(1)
-    #fitres.print_details()
+    fitres.print_details()
 
     # plot the result
     if plotdata:

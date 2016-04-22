@@ -90,6 +90,11 @@ def read_in_data(cut=3., debug=False):
                     Ecm = np.arccosh(np.cosh(raw_data[0,index:index+2]) - mom)
                 above = np.greater_equal(Ecm, Ecut)
                 # append data to infolist, if above the cut
+                #print("L = %d, irr = %s, p2 = %d, count = 1" % (L, R, d))
+                #print(raw_data[0,index])
+                #if r < 2:
+                #    print("L = %d, irr = %s, p2 = %d, count = 2" % (L, R, d))
+                #    print(raw_data[0,index+1])
                 if np.sum(~above) == 1:
                     infolist.append((L, i, R, D, [infolen]))
                     finalindex.extend([index])
@@ -122,11 +127,11 @@ def read_in_data(cut=3., debug=False):
         print(cov.shape)
         for i in range(cov.shape[0]):
             print(cov[i])
-    print(raw_data.shape)
+    #print(raw_data.shape)
     return raw_data, mpi, cov, infolist
 
 def main():
-    debug=False
+    debug=True
     # general variables
     cut = 3.
     N = 0
@@ -139,8 +144,9 @@ def main():
     par = np.array([a0, r0, a2, r2])
     try:
         # read all data
-        data, mpi, cov, infolist = read_in_data(cut=cut, debug=debug)
+        data, mpi, cov, infolist = read_in_data(cut=cut, debug=False)
         if debug:
+            #print("main")
             print(data.shape)
             print(data[0])
 

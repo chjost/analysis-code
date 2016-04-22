@@ -5,6 +5,7 @@ Functions to calculate the phaseshift.
 import numpy as np
 from zeta_wrapper import omega
 from utils import loop_iterator
+from timeit import default_timer as timer
 
 def compute_phaseshift(q2, q2_w, gamma, gamma_w, L=24, isdependend=True,
         d2=0, irrep="A1"):
@@ -13,7 +14,9 @@ def compute_phaseshift(q2, q2_w, gamma, gamma_w, L=24, isdependend=True,
         print(gamma)
     nsamples = gamma[0].shape[0]
     needed = np.zeros((nsamples,))
+    print("calculating phaseshift, irrep %s, d2 = %d"% (irrep, d2))
     for i, q in enumerate(q2):
+        print("correlator %d" % i)
         res = np.zeros_like(needed)
         tmpweight = q2_w[i]*gamma_w[i]
         if np.any(gamma[i] < 1.):
@@ -38,32 +41,180 @@ def compute_phaseshift(q2, q2_w, gamma, gamma_w, L=24, isdependend=True,
                 weight = np.ones_like(needed) * tmpweight[item]
                 yield (((0,i)+tuple(item), res, needed, weight),
                        ((0,i)+tuple(item), res1, needed, weight))
-        if i == 1:
+        if i == 0:
             raise StopIteration
 
 def get_solution(q2, gamma, d2, irrep="A1"):
     if np.any(gamma < 1.):
         print("error: gamma < 1.")
         raise ValueError("blub")
+    if irrep == "A1":
+        cotd, delta = solutions_A1(q2, gamma, d2)
+    elif irrep == "E":
+        cotd, delta = solutions_E(q2, gamma, d2)
+    else:
+        raise RuntimeWarning("irrep %s not implemented" % irrep)
+        cotd, delta = None, None
+    if cotd is None or delta is None:
+        raise RuntimeWarning("irrep %s with momentum %d not implemented, returning 0!" % (
+            irrep, d2))
+        cotd = np.zeros_like(q2)
+        delta = np.zeros_like(q2)
+    return cotd, delta
+
+def solutions_A1(q2, gamma, d2):
+    """Calculates cot(delta_0) and delta_0 for the A1 irrep.
+
+    Parameters
+    ----------
+    q2 : ndarray
+        The squared momentum.
+    gamma : ndarray
+        The Lorentz boost of the system.
+    d2 : int
+        The total momentum squared.
+
+    Returns
+    -------
+    cotd : ndarray
+        The cotangent of the phaseshift.
+    delta : ndarray
+        The phaseshift.
+    """
     w_00 = omega(q2, gamma).real
     if d2 == 0:
-        res = w_00
-        res1 = np.arctan2(1., w_00) * 180. / np.pi
+        cotd = w_00
+        delta = np.arctan(1./cotd)*180./np.pi
     elif d2 == 1:
-        w_20 = np.square(omega(q2, gamma, l=2).real)
-        res = 5. * w_20 + w_00
-        res1 = np.arctan2(1., res) * 180. / np.pi
+        w_20 = omega(q2, gamma, l=2).real
+        cotd = 5. * np.square(w_20) + w_00
+        delta = np.arctan(1./cotd) * 180. / np.pi
     elif d2 == 2:
-        w_00 = omega(q2, gamma).real
-        w_20 = np.square(omega(q2, gamma, l=2).real)
-        w_22 = np.square(omega(q2, gamma, l=2, m=2).imag)
-        w_42 = np.square(omega(q2, gamma, l=4, m=2).real)
+        w_20 = np.square(omega(q2, gamma, l=2)).real
+        w_22 = np.square(omega(q2, gamma, l=2, m=2)).real
+        w_42 = np.square(omega(q2, gamma, l=4, m=2)).real
         tmp1 = 5. * w_20 + 10. * w_22
         tmp2 = 1. - 200./49.*w_22 - 270./49. * w_42
-        res = - (tmp1) / (tmp2) + w_00
-        res1 = np.arctan2(-tmp2, tmp2 * w_00 + tmp1) * 180. / np.pi
-    return res, res1
+        cotd = - (tmp1) / (tmp2) + w_00
+        delta = np.arctan(1./cotd)*180./np.pi
+        #res1 = np.arctan2(-tmp2, tmp2 * w_00 + tmp1) * 180. / np.pi
+    elif d2 == 3:
+        w_22 = np.square(omega(q2, gamma, l=2, m=2)).real
+        cotd = 30.*w_22 + w_00
+        delta = np.arctan(1./cotd)*180./np.pi
+    else:
+        codt = None
+        delta = None
+    return cotd, delta
+
+def solutions_B1(q2, gamma, d2):
+    """Calculates cot(delta_2) and delta_2 for the B1 irrep.
+
+    Parameters
+    ----------
+    q2 : ndarray
+        The squared momentum.
+    gamma : ndarray
+        The Lorentz boost of the system.
+    d2 : int
+        The total momentum squared.
+
+    Returns
+    -------
+    cotd : ndarray
+        The cotangent of the phaseshift.
+    delta : ndarray
+        The phaseshift.
+    """
+    w_00 = omega(q2, gamma).real
+    w_20 = omega(q2, gamma, l=2).real
+    w_40 = omega(q2, gamma, l=4).real
+    if d2 == 1:
+        w_44 = omega(q2, gamma, l=4, m=4).real
+        cotd = w_00 - 10./7.*w_20 + 3./7.*w_40 + 3./7.*np.sqrt(70)*w_44
+        delta = np.arctan(1./cotd) * 180. / np.pi
+    elif d2 == 2:
+        w_22 = omega(q2, gamma, l=2, m=2).imag
+        w_42 = omega(q2, gamma, l=4, m=2).imag
+        cotd = w_00 + 5./.7*w_20 - 12./7.*w_40 + 5.*np.sqrt(6.)/7.*w_22 +\
+            6.*np.sqrt(10.)/7.*w_42
+    else:
+        cotd = None
+        delta = None
+    return cotd, delta
+
+def solutions_B2(q2, gamma, d2):
+    """Calculates cot(delta_2) and delta_2 for the B2 irrep.
+
+    Parameters
+    ----------
+    q2 : ndarray
+        The squared momentum.
+    gamma : ndarray
+        The Lorentz boost of the system.
+    d2 : int
+        The total momentum squared.
+
+    Returns
+    -------
+    cotd : ndarray
+        The cotangent of the phaseshift.
+    delta : ndarray
+        The phaseshift.
+    """
+    w_00 = omega(q2, gamma).real
+    w_20 = omega(q2, gamma, l=2).real
+    w_40 = omega(q2, gamma, l=4).real
+    w_44 = omega(q2, gamma, l=4, m=4).real
+    if d2 == 1:
+        cotd = w_00 - 10./7.*w_20 + 3./7.*w_40 - 3./7.*np.sqrt(70)*w_44
+        delta = np.arctan(1./cotd) * 180. / np.pi
+    elif d2 == 2:
+        cotd = w_00 - 10./7.*w_20 + 3./7.*w_40 + 3./7.*np.sqrt(70)*w_44
+        delta = np.arctan(1./cotd) * 180. / np.pi
+    else:
+        cotd = None
+        delta = None
+    return cotd, delta
+
+def solutions_E(q2, gamma, d2):
+    """Calculates cot(delta_2) and delta_2 for the E irrep.
+
+    Parameters
+    ----------
+    q2 : ndarray
+        The squared momentum.
+    gamma : ndarray
+        The Lorentz boost of the system.
+    d2 : int
+        The total momentum squared.
+
+    Returns
+    -------
+    cotd : ndarray
+        The cotangent of the phaseshift.
+    delta : ndarray
+        The phaseshift.
+    """
+    w_00 = omega(q2, gamma).real
+    if d2 == 0:
+        w_20 = omega(q2, gamma, l=2).real
+        cotd = w_00 - 1./np.sqrt(5) * w_20
+        delta = np.arctan(1./cotd) * 180. / np.pi
+    elif d2 == 1:
+        w_20 = omega(q2, gamma, l=2).real
+        w_40 = omega(q2, gamma, l=4).real
+        cotd = w_00 - 5./7.*w_20 - 12./7.*w_40
+        delta = np.arctan(1./cotd) * 180. / np.pi
+    elif d2 == 3:
+        w_22 = omega(q2, gamma, l=2, m=2).real
+        w_40 = omega(q2, gamma, l=4).real
+        w_42 = omega(q2, gamma, l=4, m=2).real
         
+    else:
+        cotd = None
+        delta = None
+    return cotd, delta
 
 def calculate_phaseshift(q2, gamma=None, d2=0, irrep="A1", prec=1e-5, debug=0):
     """Calculates the phase shift using Luescher's Zeta function.

@@ -55,11 +55,12 @@ def ottnad_f_pi():
              "B85.24": (0.07039, 0.00026),
              "D15.48": (0.04373, 0.00019),
              "D30.48": (0.04735, 0.00015),
-             "D45.32": (0.04825, 0.00014)}
+             "D45.32": (0.04825, 0.00014),
+             "cA2.09.48": (0.06042, 0.00011)}
     return p_fpi
 
 def K_fpi():
-    """The values for K_fpi."""
+    """The values for the finite size corrections for f_pi."""
     k_fpi = {"A30.32": (0.9757, 0.0061),
             "A40.20": (np.nan,)*2,
             "A40.24": (0.9406, 0.0084),
@@ -76,11 +77,12 @@ def K_fpi():
             "B85.24": (0.9795, 0.0024),
             "D15.48": (0.9762, 0.0025),
             "D30.48": (0.9938, 0.0005),
-            "D45.32": (0.9860, 0.0013)} # values for D20.48
+            "D45.32": (0.9860, 0.0013), # values for D20.48
+            "cA2.09.48": (1.0, 0.01)}
     return k_fpi
 
 def K_mpi():
-    """The values of f_pi from Konstantins diss."""
+    """The values for the finite size correction for m_pi"""
     k_mpi = {"A30.32": (1.0081, 0.0052),
              "A40.20": (np.nan,)*2,
              "A40.24": (1.0206, 0.0095),
@@ -97,7 +99,8 @@ def K_mpi():
              "B85.24": (1.0083, 0.0028),
              "D15.48": (1.0081, 0.0022),
              "D30.48": (1.0021, 0.0007),
-             "D45.32": (1.0047, 0.0013)} # values for D20.48
+             "D45.32": (1.0047, 0.0013), # values for D20.48
+             "cA2.09.48": (1.0, 0.01)}
     return k_mpi
 
 def mf_paper():
@@ -118,7 +121,8 @@ def mf_paper():
              "B85.24": (2.736, 0.015),
              "D15.48": (1.590, 0.010),
              "D30.48": (2.070, 0.010),
-             "D45.32": (2.485, 0.012)}
+             "D45.32": (2.485, 0.012),
+             "cA2.09.48": (1.0703, 0.001)}
     return p_mf
 
 def carsten_plot():
@@ -167,7 +171,7 @@ def print_summary(datafolder, plotfolder, lattices, d2=0):
     p_mf = mf_paper()
 
     # read data
-    readnewdata = False
+    readnewdata = True
     fname = "%s/summary/collected_data.npz" % datafolder
     if readnewdata:
         summ_ampi, summ_mf = [], []
@@ -279,8 +283,8 @@ def print_summary(datafolder, plotfolder, lattices, d2=0):
     plotter.set_title("", ["M$_\pi$/f$_\pi$", "M$_\pi$a$_0$"])
 
     # plot the data
-    fmt = ["or", "sb", "Dg"]
-    labels = ["A ensembles", "B ensembles", "D ensembles"]
+    fmt = ["or", "sb", "^c", "Dg"]
+    labels = ["A ensembles", "B ensembles", "c Ensembles", "D ensembles"]
     for i, mf in enumerate(summ_mf):
         x = [d[0][0] for d in mf]
         y = [d[0][0] for d in summ_ampi[i]]
@@ -312,8 +316,8 @@ def print_summary(datafolder, plotfolder, lattices, d2=0):
     plotter.save()
 
     # compare to Carsten data
-    fmt = ["or", "sb", "Dg"]
-    labels = ["A ensembles", "B ensembles", "D ensembles"]
+    #fmt = ["or", "sb", "^c", "Dg"]
+    #labels = ["A ensembles", "B ensembles", "c Ensembles", "D ensembles"]
     cdata = carsten_plot()
     plotter.set_title("", ["M$_\pi$/f$_\pi$", "M$_\pi$a$_0$"])
     for i, mf in enumerate(summ_mf):
@@ -344,8 +348,8 @@ def print_summary(datafolder, plotfolder, lattices, d2=0):
     plotter.save()
 
     # compare to uncorrected data
-    fmt = ["or", "sb", "Dg"]
-    labels = ["A ensembles", "B ensembles", "D ensembles"]
+    #fmt = ["or", "sb", "Dg"]
+    #labels = ["A ensembles", "B ensembles", "D ensembles"]
     plotter.set_title("", ["M$_\pi$/f$_\pi$", "M$_\pi$a$_0$"])
     for i, mf in enumerate(summ_mf):
         x = [d[0][0] for d in mf]
@@ -374,7 +378,7 @@ def print_summary(datafolder, plotfolder, lattices, d2=0):
     else:
         plotter.new_file("%s/hist_l_pipi_TP%d.pdf" % (plotfolder, 0))
     labels = ["l$_{\pi\pi}$ fit results", "l$_{\pi\pi}$", "l$_{\pi\pi}$"]
-    plotter.histogram(fitres, labels, 0)
+    plotter.histogram(fitres, labels, 20, 0)
     del plotter
 
     return
@@ -389,13 +393,14 @@ def main():
             "A80.24", "A100.24"]
     Bens = ["B25.32", "B35.32", "B35.48", "B55.32", "B85.24"]
     Dens = ["D15.48", "D30.48", "D45.32"]
+    Cens = ["cA2.09.48"]
     #Aens = ["A30.32", "A40.32", "A60.24",
     #        "A80.24", "A100.24"]
     #Bens = ["B35.32", "B55.32", "B85.24"]
     #Dens = ["D45.32"]
     datafolder = "./data/I2/"
     plotfolder = "./plots/I2/summary/"
-    print_summary(datafolder, plotfolder, [Aens, Bens, Dens])
+    print_summary(datafolder, plotfolder, [Aens, Bens, Cens, Dens])
     return
 
 # make this script importable, according to the Google Python Style Guide

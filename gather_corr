@@ -97,14 +97,14 @@ def main():
     #confstep = 4
 
     filelist = ["pi_corr_p%d" % (x) for x in xrange(pimax)]
-    filelist += ["pipi_pipi_A1_corr_TP0_%1d%1d" % (i, j) for i in range(cmfmax)
-        for j in range(cmfmax)]
-    filelist += ["pipi_pipi_A1_corr_TP1_%1d%1d" % (i, j) for i in range(mfmax)
-        for j in range(mfmax)]
-    filelist += ["pipi_pipi_A1_corr_TP2_%1d%1d" % (i, j) for i in range(mfmax)
-        for j in range(mfmax)]
-    filelist += ["pipi_pipi_A1_corr_TP3_%1d%1d" % (i, j) for i in range(mfmax)
-        for j in range(mfmax)]
+    #filelist += ["pipi_pipi_A1_corr_TP0_%1d%1d" % (i, j) for i in range(cmfmax)
+    #    for j in range(cmfmax)]
+    #filelist += ["pipi_pipi_A1_corr_TP1_%1d%1d" % (i, j) for i in range(mfmax)
+    #    for j in range(mfmax)]
+    #filelist += ["pipi_pipi_A1_corr_TP2_%1d%1d" % (i, j) for i in range(mfmax)
+    #    for j in range(mfmax)]
+    #filelist += ["pipi_pipi_A1_corr_TP3_%1d%1d" % (i, j) for i in range(mfmax)
+    #    for j in range(mfmax)]
     suffix=".dat"
     inputlist = []
     for i in range(confmin, confmax, confstep):

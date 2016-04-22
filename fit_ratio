@@ -18,8 +18,8 @@ def main():
         ens = ana.LatticeEnsemble.parse(sys.argv[1])
 
     # read settings
-    readdata = True
-    preparedata = False
+    readdata = False
+    preparedata = True
     readfit = False
     plotdata = True
 
@@ -75,23 +75,23 @@ def main():
     else:
         corr = ana.Correlators.read("%s/corr_pipi_TP%d.npy" % (datadir, d2))
         ratio = ana.Correlators.read("%s/ratio_pipi_TP%d.npy" % (datadir, d2))
-    #plotter = ana.LatticePlot("%s/corrs_TP%d.pdf" % (plotdir, d2))
-    #plotter.set_env(ylog=True)
-    #label = ["two pion energy", "t", "C(t)", "E$_{\pi\pi}$"]
-    #plotter.plot(corr, label)
-    #plotter.set_env(ylog=False)
+    plotter = ana.LatticePlot("%s/corrs_TP%d.pdf" % (plotdir, d2))
+    plotter.set_env(ylog=True)
+    label = ["two pion energy", "t", "C(t)", "E$_{\pi\pi}$"]
+    plotter.plot(corr, label)
+    plotter.set_env(ylog=False)
     #label = ["rel. error of two pion energy", "t", "$\delta$ C(t)/C(t)", "rel. error"]
     #plotter._genplot_single(corr, label, rel=True)
     #plotter.set_env(ylog=False)
-    #label = ["ratio", "t", "R(t)", "$\delta$E$_{\pi\pi}$"]
-    #plotter.plot(ratio, label)
+    label = ["ratio", "t", "R(t)", "$\delta$E$_{\pi\pi}$"]
+    plotter.plot(ratio, label)
     #plotter.set_env(ylog=True)
     #label = ["ratio, logplot", "t", "log(R(t))", "$\delta$E$_{\pi\pi}$"]
     #plotter.plot(ratio, label)
     #plotter.set_env(ylog=False)
     #label = ["rel. error of ratio", "t", "$\delta$ R(t)/R(t)", "rel. error"]
     #plotter._genplot_single(ratio, label, rel=True)
-    #del plotter
+    del plotter
 
     print("fitting")
     fitter = ana.LatticeFit(1, dt_i=dti, dt_f=dtf, dt=dt, correlated=True, xshift=0.5)
@@ -103,7 +103,8 @@ def main():
         elif L < 33:
             fitranges = [[11,15,24,30],] + [[11,13,19,20],]*(gmax-1)
         else:
-            fitranges = [[10,27,40,47],] + [[10,12,19,20],]*(gmax-1)
+            fitranges = [[10,20,28,35],] + [[10,12,19,20],]*(gmax-1)
+            #fitranges = [[15,27,40,47],] + [[10,12,19,20],]*(gmax-1)
         #print(fitranges)
         fitres = fitter.fit(None, ratio, fitranges, corrid="E", oldfit=pifit,
             oldfitpar=1, useall=False, add=addT, lint=True)
@@ -112,7 +113,7 @@ def main():
         fitres = ana.FitResult.read("%s/fit_pipi_ratio_TP%d.npz" % (datadir, d2))
     fitres.print_data(0)
     fitres.print_data(1)
-    #fitres.print_details()
+    fitres.print_details()
 
     # plot the result
     if plotdata:
@@ -124,7 +125,7 @@ def main():
             add=addT, xshift=0.5)
         plotter.new_file("%s/hist_fit_pipi_ratio_TP%d.pdf" % (plotdir, d2))
         label = ["ratio hist", "dE$_{\pi\pi}$/a", "dE$_{\pi\pi}$"]
-        plotter.histogram(fitres, label, 1)
+        plotter.histogram(fitres, label, par=1)
         del plotter
 
 if __name__ == '__main__':

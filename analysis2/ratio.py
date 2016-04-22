@@ -228,6 +228,7 @@ def get_states(mass1, mass2, d2, irrep, useall):
             res1[...,n] = res1[...,0]
         for n in range(1, mass2.shape[-1]):
             res2[...,n] = res2[...,0]
+    return res1, res2
 
 if __name__ == "main":
     pass

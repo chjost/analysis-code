@@ -14,8 +14,8 @@ def main():
         ens = ana.LatticeEnsemble.parse(sys.argv[1])
 
     # read settings
-    readdata = False
-    preparedata = True
+    readdata = True
+    preparedata = False
     readfit = False
     plotdata = True
 
@@ -31,6 +31,10 @@ def main():
         debug = ens.get_data("debug")
     except KeyError:
         debug = 0
+    try:
+        irrep = ens.get_data("irrep")
+    except KeyError:
+        irrep = "A1"
     L = ens.L()
     Ti = ens.get_data("ti")
     Tf = ens.get_data("tf")
@@ -38,8 +42,12 @@ def main():
     dtf = ens.get_data("dtf")
     dt = ens.get_data("dt")
 
-    files = ["%s/pipi_pipi_A1_corr_TP%d_%d%d.dat" % (prefix, d2, i, j) for i in range(gmax) for j in range(gmax)]
+    files = ["%s/pipi_pipi_%s_corr_TP%d_%d%d.dat" % (prefix, irrep, d2, i, j) for i in range(gmax) for j in range(gmax)]
     addT = np.ones((nboot,)) * ens.T()
+    if irrep == "A1":
+        suffix = "TP%d.npy" % d2
+    else:
+        suffix = "TP%d_%s.npy" % (d2, irrep)
 
     # read pion data
     #pi = ana.Correlators.read("%s/corr_pi.npy" % (datadir))
@@ -49,55 +57,66 @@ def main():
     if readdata == False:
         corr = ana.Correlators(files)
         corr.sym_and_boot(nboot)
-        corr.save("%s/corr_pipi_raw_TP%d.npy" % (datadir, d2))
+        corr.save("%s/corr_pipi_raw_%s" % (datadir, suffix))
     else:
-        corr = ana.Correlators.read("%s/corr_pipi_raw_TP%d.npy" % (datadir, d2))
+        corr = ana.Correlators.read("%s/corr_pipi_raw_%s" % (datadir, suffix))
+
     if preparedata:
         if d2 != 0:
             # get m_pi for fitrange
             mpi = pifit.data[0][:,1]
-            corr.shift(1, mass=mpi, d2=d2, L=L)
+            corr.shift(1, mass=mpi, d2=d2, L=L, irrep=irrep)
         else:
             corr.shift(1)
         corr.gevp(1)
-        corr.save("%s/corr_pipi_TP%d.npy" % (datadir, d2))
+        corr.save("%s/corr_pipi_%s" % (datadir, suffix))
     else:
-        corr = ana.Correlators.read("%s/corr_pipi_TP%d.npy" % (datadir, d2))
+        corr = ana.Correlators.read("%s/corr_pipi_%s" % (datadir, suffix))
+    #for t in range(corr.data[0].shape[0]):
+    #    print("%2d %f" % (t, corr.data[0][t,0]))
+    #print(corr.data[0][:,0])
 
     print("fitting")
-    fitter = ana.LatticeFit(5, dt_i=dti, dt_f=dtf, dt=dt, correlated=True)
+    fitter = ana.LatticeFit(5, dt_i=dti, dt_f=dtf, dt=dt, correlated=True, xshift=0.5)
     if readfit == False:
-        if L < 25:
-            fitranges = [[11,17,17,22],] + [[8,12,15,17],]*(gmax-1)
-        elif L < 33:
-            fitranges = [[11,17,20,30],] + [[11,15,18,20],]*(gmax-1)
-        else:
-            fitranges = [[10,27,35,47],] + [[10,15,18,20],]*(gmax-1)
-        #print(fitranges)
+        #if L < 25:
+        #    fitranges = [[11,17,17,22],] + [[8,12,15,17],]*(gmax-1)
+        #elif L < 33:
+        #    fitranges = [[11,17,20,30],] + [[11,15,18,20],]*(gmax-1)
+        #else:
+        #    fitranges = [[10,20,28,35],] + [[10,12,19,20],]*(gmax-1)
+        #    #fitranges = [[10,27,35,47],] + [[10,15,18,20],]*(gmax-1)
+        fitranges = [[Ti, Ti+5, Tf-5, Tf],] + [[Ti-3, Ti+2, Tf-8, Tf-3],] * (gmax-1)
+        print(fitranges)
         if d2 != 0:
             fitres = fitter.fit(None, corr, fitranges, corrid="E", oldfit=pifit,
                 oldfitpar=1, add=addT, lint=True)
         else:
             fitres = fitter.fit(None, corr, fitranges, corrid="E", add=addT, lint=True)
-        fitres.save("%s/fit_pipi_TP%d.npz" % (datadir, d2))
+        fitres.save("%s/fit_pipi_%s" % (datadir, suffix.replace(".npy", ".npz")))
     else:
-        fitres = ana.FitResult.read("%s/fit_pipi_TP%d.npz" % (datadir, d2))
+        fitres = ana.FitResult.read("%s/fit_pipi_%s" % (datadir, suffix.replace(".npy", ".npz")))
     #fitres.print_data(0)
     fitres.print_data(1)
-    #fitres.print_details()
+    fitres.print_details()
 
     # plot the result
     if plotdata:
         print("plotting")
-        plotter = ana.LatticePlot("%s/fit_pipi_TP%d.pdf" % (plotdir, d2))
+        plotter = ana.LatticePlot("%s/fit_pipi_%s" % (plotdir, suffix.replace(".npy", ".pdf")))
         plotter.set_env(ylog=True)
         label = ["two pion energy", "t", "C(t)", "E$_{\pi\pi}$"]
         if d2 != 0:
             plotter.plot(corr, label, fitres, fitter, oldfit=pifit, oldfitpar=1,
-                add=addT)
+                add=addT, xshift=0.5)
         else:
-            plotter.plot(corr, label, fitres, fitter, add=addT)
-        plotter.new_file("%s/hist_fit_pipi_TP%d.pdf" % (plotdir, d2))
+            plotter.plot(corr, label, fitres, fitter, add=addT, xshift=0.5)
+        label = ["two pion effective mass", "t", "m$_{eff}$(t)", "m$_{\pi\pi}$"]
+        plotter.set_env(ylog=False)
+        if d2 == 0:
+            corr.mass()
+            plotter.plot(corr, label)
+        plotter.new_file("%s/hist_fit_pipi_%s" % (plotdir, suffix.replace(".npy", ".pdf")))
         label = ["two pion energy", "E$_{\pi\pi}$/a", "E$_{\pi\pi}$"]
         plotter.histogram(fitres, label, par=1)
         del plotter

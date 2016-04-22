@@ -57,3 +57,5 @@ def memoize(function, limit=None):
     memoize_wrapper.func_name = function.func_name
     return memoize_wrapper
 
+if __name__ == "__main__":
+    pass

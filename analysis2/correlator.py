@@ -212,6 +212,7 @@ class Correlators(object):
         if mass is None:
             dE=None
         else:
+            dE = get_dE(mass, d2, L, irrep)
             # TODO: differentiate the different d2 and irreps
             dE = np.asarray(0.5*WfromMass_lat(mass, d2, L) - mass)
 
@@ -331,7 +332,8 @@ class Correlators(object):
             dE=None
         else:
             # TODO: differentiate the different d2 and irreps
-            dE = np.asarray(WfromMass_lat(mass, d2, L) - mass)
+            #dE = np.asarray(WfromMass_lat(mass, d2, L) - mass)
+            dE = get_dE(mass, d2, L, irrep)
 
         # get the actual ratio being calculated
         # TODO check ratio 4 implementation
@@ -361,7 +363,7 @@ class Correlators(object):
         else:
             obj = Correlators(debug=self.debug)
             obj.data = ratiofunc(self.data, single_corr.data, single_corr1.data,
-                shift, dE, useall, d2, L, irrep)
+                shift, dE, useall, p2=d2, L=L, irrep=irrep)
         obj.shape = obj.data.shape
         return obj
 
@@ -470,6 +472,14 @@ class Correlators(object):
       self.data = np.delete(self.data,omitted,0)
       return omitted
 
+def get_dE(mass, d2, L, irrep="A1"):
+    """Calculate the energy gap for the leading finite-T effect.
+    """
+    if irrep == "A1":
+        dE = np.asarray(0.5*WfromMass_lat(mass, d2, L) - mass)
+    else:
+        dE = np.asarray(0.5*WfromMass_lat(mass, d2, L) - mass)
+    return dE
 
 if __name__ == "main":
     pass

@@ -5,6 +5,7 @@ Functions for plotting.
 import numpy as np
 import matplotlib.pyplot as plt
 
+from statistics import compute_error
 from functions import (func_single_corr, func_ratio, func_const, func_two_corr,
     func_single_corr2, compute_eff_mass)
 
@@ -90,8 +91,9 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
                         # iterate over the rest of the arguments
                         for i in range(1,args0):
                             tmp.append(func(_args[i], x, _add[i]))
-                        ymin.append(np.min(tmp))
-                        ymax.append(np.max(tmp))
+                        mean, std = compute_error(np.asarray(tmp))
+                        ymin.append(float(mean-std))
+                        ymax.append(float(mean+std))
             elif (args0 % add0) == 0:
                 # size of add is a divisor of size of args
                 # iterate over x
@@ -103,8 +105,9 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
                         # iterate over the rest of the arguments
                         for i in range(1,args0):
                             tmp.append(func(_args[i], x, _add[i%add0]))
-                        ymin.append(np.min(tmp))
-                        ymax.append(np.max(tmp))
+                        mean, std = compute_error(np.asarray(tmp))
+                        ymin.append(float(mean-std))
+                        ymax.append(float(mean+std))
             elif (add0 % args0) == 0:
                 # size of args is a divisor of size of add
                 # iterate over x
@@ -116,19 +119,21 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
                         # iterate over the rest of the arguments
                         for i in range(1,add0):
                             tmp.append(func(_args[i%args0], x, _add[i]))
-                        ymin.append(np.min(tmp))
-                        ymax.append(np.max(tmp))
+                        mean, std = compute_error(np.asarray(tmp))
+                        ymin.append(float(mean-std))
+                        ymax.append(float(mean+std))
         else:
             # no additional arguments, iterate over args
             #iterate over x
             for x in x1:
                 y1.append(func(_args[0], x))
                 if ploterror:
-                    tmp = [y[-1]]
+                    tmp = [y1[-1]]
                     for i in range(1, _args.shape[0]):
                         tmp.append(func(_args[i], x))
-                    ymin.append(np.min(tmp))
-                    ymax.append(np.max(tmp))
+                    mean, std = compute_error(np.asarray(tmp))
+                    ymin.append(float(mean-std))
+                    ymax.append(float(mean+std))
     # only one args
     else:
         # the first sample contains original data
@@ -145,8 +150,9 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
                 if np.asarray(tmp).size > 1:
                     y1.append(tmp[0])
                     if ploterror:
-                        ymax.append(np.max(tmp))
-                        ymin.append(np.min(tmp))
+                        mean, std = compute_error(np.asarray(tmp))
+                        ymin.append(float(mean-std))
+                        ymax.append(float(mean+std))
                 else:
                     y1.append(tmp)
             else:

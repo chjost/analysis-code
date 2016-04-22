@@ -1,0 +1,235 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+##!/usr/bin/python
+################################################################################
+#
+# Author: Christian Jost (jost@hiskp.uni-bonn.de)
+# Date:   Februar 2015
+#
+# Copyright (C) 2015 Christian Jost
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Function: This is the start of the eta/eta' analysis program
+#
+# For informations on input parameters see the description of the function.
+#
+################################################################################
+
+import sys
+import numpy as np
+import scipy
+import matplotlib
+matplotlib.use('Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+
+import analysis2 as ana
+
+def read_pi_data(lattices, datafolder):
+    """Read in the pion mass for the lattices.
+
+    Parameters
+    ----------
+    lattices : list of str
+        The list of lattices to read in.
+    datafolder : str
+        The path to the data folders.
+    """
+    mpi = []
+    for lat in lattices:
+        fname = "/".join((datafolder, lat, "fit_pi.npz"))
+        data = ana.FitResult.read(fname)
+        data.calc_error()
+        mpi.append(data.error[1][0][0])
+    mpi = np.asarray(mpi)
+    return mpi
+
+def read_pipi_data(datafolder, lattices, irreps, cut=10.):
+    """Read in the data for all the given lattices and irreps.
+
+    Parameters
+    ----------
+    datafolder : str
+        The path to the data folders.
+    lattices : list of str
+        The list of lattices to read in.
+    irreps : list of list of str
+        A list of the irreps to read in, combined with the
+        total momentum squared.
+    cut : float or array of float
+        A maximum value that is allowed as energy, everything
+        above the cut will not be returned.
+    """
+    debug = 0
+    # the final data
+    Epipi = []
+    # all information on the energy levels are in levels
+    levels = []
+    count_lat = []
+    last = 0
+    for l, lat in enumerate(lattices):
+        if debug > 0:
+            print(lat)
+        L = int(lat[-2:])
+        count_lat.append(0)
+        for p2, mf in enumerate(irreps):
+            if debug > 0:
+                print(p2)
+            for irr in mf:
+                if debug > 0:
+                    print(irr)
+                count = 0
+                # build file name
+                if irr == "A1":
+                    suffix = "fit_pipi_TP%d.npz" % p2
+                    suffix1 = "Ecm_TP%d.npz" % p2
+                else:
+                    suffix = "fit_pipi_TP%d_%s.npz" % (p2, irr)
+                    suffix1 = "Ecm_TP%d_%s.npz" % (p2, irr)
+                # read data and get weighted mean
+                fname = "/".join((datafolder, lat, suffix))
+                data = ana.FitResult.read(fname)
+                data.calc_error()
+                # need the center of mass energy for the cut
+                fname = "/".join((datafolder, lat, suffix1))
+                try:
+                    Ecm = ana.FitResult.read(fname)
+                except IOError:
+                    if p2 == 0:
+                        d = np.asarray([0., 0., 0.])
+                    elif p2 == 1:
+                        d = np.asarray([0., 0., 1.])
+                    elif p2 == 2:
+                        d = np.asarray([1., 1., 0.])
+                    elif p2 == 3:
+                        d = np.asarray([1., 1., 1.])
+                    Ecm = data.to_CM(1, L=L, d=d)
+                    Ecm.save(fname)
+                Ecm.calc_error()
+                for tmp, tmp1 in zip(data.error[1][0], Ecm.error[0][0]):
+                    # check whether over threshold
+                    if tmp1[0] > cut[l]:
+                        if debug > 1:
+                            print("over threshold")
+                        # since the levels are sorted we can abort here
+                        break
+                    count += 1
+                    count_lat[-1] += 1
+                    Epipi.append(tmp)
+                    #print("L = %d, irr = %s, p2 = %d, count = %d" % (L, irr, p2, count))
+                    #print(tmp[0])
+                if count == 0:
+                    continue
+                ind = [s+last for s in range(count)]
+                last += count
+                levels.append((L, l, irr, p2, ind))
+                #levels.append((L, l, irr, p2, count))
+    Epipi = np.asarray(Epipi)
+    if debug > 1:
+        print(Epipi.shape)
+    levels = np.asarray(levels, dtype=object)
+    if debug > 1:
+        print(levels)
+    # calculate covariance matrices
+    tmpcov = []
+    s = 0
+    for l in count_lat:
+        e = s + l
+        tmpcov.append(np.cov(Epipi[s:e]))
+        s = e
+    cov = scipy.linalg.block_diag(*tmpcov)
+    cor = np.linalg.cholesky(np.linalg.inv(cov))
+    return Epipi, levels, cor
+
+def do_fit(datafolder, plotfolder, lattices, irreps, mpicut):
+    """Do a global fit to the data specified in lattices and irreps."""
+    # reading switches
+    readmpi = True
+    readpipi = True
+    if len(sys.argv) > 1:
+        sstart = int(sys.argv[1])
+        try:
+            srange = int(sys.argv[2])
+        except IndexError:
+            srange = 3
+    else:
+        sstart = 0
+        srange = 3
+
+    # read in pion data
+    if readmpi:
+        fname = "/".join((datafolder, "globalfit", "mpi.npy"))
+        mpi = np.load(fname)
+    else:
+        mpi = read_pi_data(lattices, datafolder)
+        fname = "/".join((datafolder, "globalfit", "mpi.npy"))
+        np.save(fname, mpi)
+    #print(mpi.shape)
+    #print("pi data")
+    #print(mpi[:,0])
+
+    # calculate the cut
+    cut = 2 * np.sqrt(1. + mpicut)* mpi[:,0]
+    #print(cut)
+
+    # read in pipi data and do the cut
+    if readpipi:
+        fname = "/".join((datafolder, "globalfit", "Epipi.npz"))
+        fi = np.load(fname)
+        Epipi = fi["Epipi"]
+        levels = fi["levels"]
+        cor = fi["cor"]
+    else:
+        Epipi, levels, cor = read_pipi_data(datafolder, lattices, irreps, cut)
+        fname = "/".join((datafolder, "globalfit", "Epipi.npz"))
+        np.savez(fname, Epipi=Epipi, levels=levels, cor=cor)
+    #print(Epipi.shape)
+    #print(Epipi[:,0])
+    #print(cor.shape)
+    #print(levels)
+
+    # minimize the data
+    #start = np.asarray([-0.48, -1.8, -33.9, 0.])
+    start = np.asarray([-.8, 15., -.05, 0.])
+    #h = np.asarray([0.5, 2., 0.1])
+    h = np.asarray([0.5, 2., 0.01])
+    res, chi2 = ana.minimizer(Epipi, mpi, cor, start, h, levels, [sstart, srange])
+    fname = "/".join((datafolder, "globalfit", "gfitdata_%d.npz" % sstart))
+    np.savez(fname, res=res, chi2=chi2)
+    #np.savez("test_data1.npz", res=res, chi2=chi2)
+    return
+
+def main():
+    # the lattices to work on
+    lattices = ["A40.32", "A40.24", "A40.20"]
+    # the irreps and momentum squared to work on
+    irreps  = [["A1", "E", "T2"], ["A1"], ["A1"], ["A1"]]
+    #irreps  = [["A1", "E", "T2"], ["A1"], ["A1"]]
+    # the path to the data folders
+    datafolder = "./data/I2/"
+    # the folder for plots
+    plotfolder = "./plots/I2/globalfit/"
+    # a upper cut on the data
+    mpicut = 3.
+    # execute
+    do_fit(datafolder, plotfolder, lattices, irreps, mpicut)
+    return
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass
