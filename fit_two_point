@@ -36,6 +36,10 @@ def main():
         debug = ens.get_data("debug")
     except KeyError:
         debug = 0
+    try:
+        hasvev = ens.get_data("hasvev")
+    except KeyError:
+        hasvev = False
 
     files = ["%s/pi_corr_p%d.dat" % (prefix, d) for d in range(pmax)]
     addT = np.ones((nboot,)) * T
@@ -44,12 +48,14 @@ def main():
     if readdata == False:
         corr = ana.Correlators(files, matrix=False)
         corr.sym_and_boot(nboot)
+        if hasvev:
+            corr.shift(dt=1)
         corr.save("%s/corr_pi.npy" % (datadir))
     else:
         corr = ana.Correlators.read("%s/corr_pi.npy" % (datadir))
 
     print("fitting")
-    fitter = ana.LatticeFit(0, dt_i=dti, dt_f=dtf, dt=dt, correlated=True)
+    fitter = ana.LatticeFit(0, dt_i=dti, dt_f=dtf, dt=dt, correlated=False)
     if readfit == False:
         fitres = fitter.fit(None, corr, [10, 40], corrid="epi", add=addT)
         #fitres = fitter.fit(None, corr, [Ti, T], corrid="epi", add=addT)

@@ -97,24 +97,15 @@ def main():
                 ## read in data
                 tmp = np.fromfile(inname, dtype=complex).reshape((nbran, -1))
                 data.append(tmp)
-            # brind data into shape
             tmp = np.asarray(data)
             T = tmp.shape[-1]
-            # print all single loops
-            #for i in range(nbran):
-            #    outname = "".join((outputpath, "/C1/", "rnd%d_loop.dat"%i))
-            #    tst = np.zeros(tmp[:,i].shape+(2,))
-            #    tst[:,:,0] = tmp[:,i].real
-            #    tst[:,:,1] = tmp[:,i].imag
-            #    ctmp = ana.Correlators.create(tst)
-            #    ctmp.save(outname, True)
             # calc vev explicitly
-            tst = np.zeros((tmp.shape[0],1,2))
-            tst[:,0,0] = np.mean(tmp.real, axis=(1,2))
-            tst[:,0,1] = np.mean(tmp.imag, axis=(1,2))
-            outname = "".join((outputpath, "/C1/", "vev.dat"))
-            ctmp = ana.Correlators.create(tst)
-            ctmp.save(outname, True)
+            #tst = np.zeros((tmp.shape[0],1,2))
+            #tst[:,0,0] = np.mean(tmp.real, axis=(1,2))
+            #tst[:,0,1] = np.mean(tmp.imag, axis=(1,2))
+            #outname = "".join((outputpath, "/C1/", "vev.dat"))
+            #ctmp = ana.Correlators.create(tst)
+            #ctmp.save(outname, True)
             # build all rnd vec combinations explicitly
             data = np.zeros(tmp[:,0].shape+(2,))
             for i in range(nbran):
@@ -126,9 +117,41 @@ def main():
                         for t2 in range(T):
                             dt = (t2 - t1 + T)%T
                             tst[:,dt,0] = np.multiply(tmp[:,j,t1].real,tmp[:,i,t2].real)
-                            tst[:,dt,1] = -tmp[:,j,t1].imag*tmp[:,i,t2].imag
+                            tst[:,dt,1] = tmp[:,j,t1].imag*tmp[:,i,t2].imag
                         data += tst
             data /= (nbran*(nbran-1)*T)
+        elif "C20_us" in d:
+            print("working")
+            # read in data for u quark
+            for i in inputlist:
+                inname = "".join((inputpath, i, "C1/C1_u_p000.d000.g4.dat"))
+                ## read in data
+                tmp = np.fromfile(inname, dtype=complex).reshape((nbranu, -1))
+                data.append(tmp)
+            tmpu = np.asarray(data)
+            tmpu = np.sum(tmpu, axis=1)
+            # read in data for s quark
+            data = []
+            for i in inputlist:
+                inname = "".join((inputpath, i, "C1/C1_s_p000.d000.g4.dat"))
+                ## read in data
+                tmp = np.fromfile(inname, dtype=complex).reshape((nbrans, -1))
+                data.append(tmp)
+            tmps = np.asarray(data)
+            tmps = np.sum(tmps, axis=1)
+            T = tmpu.shape[-1]
+            if tmps.shape[-1] != T:
+                raise RuntimeError("T not the same")
+            # calculate the off-diagonal part
+            data = np.zeros(tmpu.shape+(2,))
+            tst = np.zeros_like(data)
+            for t1 in range(T):
+                for t2 in range(T):
+                    dt = (t2 - t1 + T)%T
+                    tst[:,dt,0] = tmpu[:,t1].real*tmps[:,t2].real
+                    tst[:,dt,1] = tmpu[:,t1].imag*tmps[:,t2].imag
+                data += tst
+            data /= (nbranu*nbrans*T)
         else:
             for i in inputlist:
                 inname = "".join((inputpath, i, d))
@@ -155,10 +178,11 @@ def main():
         #plotter.set_env(ylog=True)
         #labels[0] = "correlation function, log plot"
         #plotter.plot(corrs, labels)
-        plotter.set_env(ylog=False)
-        corrs.shift(1)
-        labels[0] = "correlation function, shifted"
-        plotter.plot(corrs, labels)
+        #plotter.set_env(ylog=False)
+        #if d.startswith("C1"):
+        #    corrs.shift(1)
+        #    labels[0] = "correlation function, shifted"
+        #    plotter.plot(corrs, labels)
 
         labels = ["eff. mass", "t", "m(t)", "data"]
         corrs.mass()
@@ -180,50 +204,95 @@ def build_eta():
     for d in diag:
         diagrams.append(str(d.strip()))
     innames = ana.inputnames(fname, diagrams)
-    quarks = ["u", "s", "c"]
-    corrD = {}
-    corrC = {}
-    for i, q1 in enumerate(quarks):
+    # dictionary with factors
+    disc_fac = {"uu": -2., "ss": -1., "cc": -1.,
+                "us": -np.sqrt(2.), "uc": -np.sqrt(2.), "sc": -1.}
+    conn_fac = {"uu": -1., "ss": -1., "cc": -1.}
+    # get the quarks needed
+    quarks = []
+    for name in [x for x in innames if x.startswith("C1")]:
+        if "_u_" in name and "u" not in quarks:
+            quarks.append("u")
+        elif "_s_" in name and "s" not in quarks:
+            quarks.append("s") 
+        elif "_c_" in name and "c" not in quarks:
+            quarks.append("c") 
+    
+    # build the diagonal elements
+    for q in quarks:
+        # get data
         for name in innames:
-            if name.startswith("C1") and ("_%s_" % q1) in name:
+            if name.startswith("C1") and ("_%s_" % q) in name:
+                print("using %s" % name)
                 tmpname = "".join((datapath, name))
-                # read imaginary part, located in the third column
-                corrD[q1] = ana.Correlators(tmpname, column=(2,))
-                continue
+                disc = ana.Correlators(tmpname, column=(2,))
+                fD = disc_fac["".join((q,q))]
+            elif name.startswith("C20") and ("_%s%s" % (q, q)) in name:
+                print("using %s" % name)
+                tmpname = "".join((datapath, name))
+                conn = ana.Correlators(tmpname, column=(1,))
+                fC = conn_fac["".join((q,q))]
+        # calc correlator
+        print("%s: fC = %f, fD = %f" % (q, fC, fD))
+        newdata = fC * conn.data + fD * disc.data
+        # save correlator
+        fname = "".join((datapath, "eta_%s%s_corr_p0.dat" % (q, q)))
+        eta = ana.Correlators.create(np.atleast_3d(newdata))
+        eta.save(fname, asascii=True)
+        # plot correlator
+        plotter = ana.LatticePlot(fname.replace(".dat", ".pdf"))
+        labels = ["correlation function", "t", "C(t)", "data"]
+        eta.sym_and_boot(500)
+        plotter.plot(eta, labels)
+        #plotter.set_env(ylog=True)
+        #plotter.plot(eta, labels)
+        #plotter.set_env(ylog=False)
+        #labels[0] = "shifted correlation function"
+        #eta.shift(dt=1)
+        #plotter.plot(eta, labels)
+        #plotter.set_env(ylog=True)
+        #plotter.plot(eta, labels)
+        #plotter.set_env(ylog=False)
 
-            for q2 in quarks[i:]:
+        #plotter.set_env(ylim=[0., 0.2])
+        eta.mass()
+        #print(eta.data[0])
+        labels = ["eff. mass", "t", "m(t)", "data"]
+        plotter.plot(eta, labels)
+        del plotter
+        del eta
+
+    # build the off-diagonal elements
+    for n, q1 in enumerate(quarks):
+        for q2 in [x for x in quarks[n:] if x!=q1]:
+            # get data
+            for name in innames:
                 if name.startswith("C20") and ("_%s%s" % (q1, q2)) in name:
+                    print("using %s" % name)
                     tmpname = "".join((datapath, name))
-                    corrC["%s%s" % (q1, q2)] = ana.Correlators(tmpname)
-
-    for q1 in quarks:
-        for q2 in quarks:
-            try:
-                cC = corrC["%s%s" % (q1, q2)]
-            except KeyError:
-                continue
-            if q1 == q2:
-                cD = corrD[q1]
-                newdata = -cC.data[...,0] - 0.5*cD.data[...,0]
-            else:
-                newdata = -cC.data[...,0]
-
+                    disc = ana.Correlators(tmpname, column=(2,))
+                    fD = disc_fac["".join((q1,q2))]
+            # calc correlator
+            print("%s%s: fD = %f" % (q1, q2, fD))
+            newdata = fD * disc.data
+            # save correlator
             fname = "".join((datapath, "eta_%s%s_corr_p0.dat" % (q1, q2)))
             eta = ana.Correlators.create(np.atleast_3d(newdata))
             eta.save(fname, asascii=True)
+            # plot correlator
             plotter = ana.LatticePlot(fname.replace(".dat", ".pdf"))
             labels = ["correlation function", "t", "C(t)", "data"]
-            eta.sym_and_boot(1500)
+            eta.sym_and_boot(500)
             plotter.plot(eta, labels)
-            plotter.set_env(ylog=True)
-            plotter.plot(eta, labels)
-            plotter.set_env(ylog=False)
-            labels[0] = "shifted correlation function"
-            eta.shift(dt=1)
-            plotter.plot(eta, labels)
-            plotter.set_env(ylog=True)
-            plotter.plot(eta, labels)
-            plotter.set_env(ylog=False)
+            #plotter.set_env(ylog=True)
+            #plotter.plot(eta, labels)
+            #plotter.set_env(ylog=False)
+            #labels[0] = "shifted correlation function"
+            #eta.shift(dt=1)
+            #plotter.plot(eta, labels)
+            #plotter.set_env(ylog=True)
+            #plotter.plot(eta, labels)
+            #plotter.set_env(ylog=False)
 
             #plotter.set_env(ylim=[0., 0.2])
             eta.mass()
@@ -232,6 +301,74 @@ def build_eta():
             plotter.plot(eta, labels)
             del plotter
             del eta
+
+    #corrD = {}
+    #corrC = {}
+    #for i, q1 in enumerate(quarks):
+    #    for name in innames:
+    #        if name.startswith("C1") and ("_%s_" % q1) in name:
+    #            tmpname = "".join((datapath, name))
+    #            # read imaginary part, located in the third column
+    #            corrD[q1] = ana.Correlators(tmpname, column=(2,))
+    #            if q1 == "u":
+    #                facD[q1] = -2.
+    #            else:
+    #                facD[q1] = -1.
+    #            continue
+
+    #        for q2 in quarks[i:]:
+    #            if name.startswith("C20") and ("_%s%s" % (q1, q2)) in name:
+    #                tmpq = "%s%s" % (q1, q2)
+    #                tmpname = "".join((datapath, name))
+    #                corrC[tmpq] = ana.Correlators(tmpname)
+    #                if "uu" in tmpq or "ss" in tmpq:
+    #                    facC[tmpq] = -1.
+    #                else:
+    #                    facC[tmpq] = -np.sqrt(2.)
+
+    #for q1 in quarks:
+    #    for q2 in quarks:
+    #        try:
+    #            tmpq = "%s%s" % (q1, q2)
+    #            cC = corrC[tmpq]
+    #            fC = facC[tmpq]
+    #            print(tmpq)
+    #            print("fC = %f" % fC)
+    #        except KeyError:
+    #            continue
+    #        if q1 == q2:
+    #            cD = corrD[q1]
+    #            fD = facD[q1]
+    #            print("fD = %f" % fD)
+    #            newdata = fC*cC.data[...,0] + fD*cD.data[...,0]
+    #            #newdata = -cC.data[...,0] - 0.5*cD.data[...,0]
+    #        else:
+    #            newdata = fC*cC.data[...,0]
+
+    #        fname = "".join((datapath, "eta_%s%s_corr_p0.dat" % (q1, q2)))
+    #        eta = ana.Correlators.create(np.atleast_3d(newdata))
+    #        eta.save(fname, asascii=True)
+    #        plotter = ana.LatticePlot(fname.replace(".dat", ".pdf"))
+    #        labels = ["correlation function", "t", "C(t)", "data"]
+    #        eta.sym_and_boot(500)
+    #        plotter.plot(eta, labels)
+    #        #plotter.set_env(ylog=True)
+    #        #plotter.plot(eta, labels)
+    #        plotter.set_env(ylog=False)
+    #        labels[0] = "shifted correlation function"
+    #        #eta.shift(dt=1)
+    #        #plotter.plot(eta, labels)
+    #        #plotter.set_env(ylog=True)
+    #        #plotter.plot(eta, labels)
+    #        #plotter.set_env(ylog=False)
+
+    #        #plotter.set_env(ylim=[0., 0.2])
+    #        eta.mass()
+    #        #print(eta.data[0])
+    #        labels = ["eff. mass", "t", "m(t)", "data"]
+    #        plotter.plot(eta, labels)
+    #        del plotter
+    #        del eta
     
 def build_pi0():
     # parse config
@@ -250,16 +387,13 @@ def build_pi0():
     for i in innames:
         if i.startswith("C1") and "_u_" in i:
             tmpname = "".join((datapath, i))
-            #tmpname = tmpname.replace(".dat", "_real.dat")
-            print(tmpname)
-            corrD = ana.Correlators(tmpname)
+            disc = ana.Correlators(tmpname)
         elif i.startswith("C20") and "_uu_" in i:
             tmpname = "".join((datapath, i))
-            #tmpname = tmpname.replace(".dat", "_real.dat")
-            print(tmpname)
-            corrC = ana.Correlators(tmpname)
+            conn = ana.Correlators(tmpname)
 
-    newdata = -corrC.data[...,0] + 2. * corrD.data[...,0]
+    print(conn.data.shape)
+    newdata = -conn.data + 2. * disc.data
 
     pi0 = ana.Correlators.create(np.atleast_3d(newdata))
     tmpname = "".join((datapath, "pi_corr_p0.dat"))
@@ -280,7 +414,7 @@ def build_pi0():
 
     #plotter.set_env(ylim=[0., 0.2])
     #print(pi0.data[0])
-    pi0.mass(False)
+    pi0.mass()
     #print(pi0.data[0])
     labels = ["eff. mass", "t", "m(t)", "data"]
     plotter.plot(pi0, labels)
@@ -289,8 +423,8 @@ def build_pi0():
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':
     try:
-        main()
-        build_pi0()
+        #main()
+        #build_pi0()
         build_eta()
     except KeyboardInterrupt:
         print("\nKeyboard Interrupt, exiting...")
