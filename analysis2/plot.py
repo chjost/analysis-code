@@ -178,7 +178,7 @@ class LatticePlot(object):
                 self._set_env_normal()
                 # plot the relative error instead of data and error
                 if rel is True:
-                    plot_data(X, np.divide(ddata,corr.data[0,:,n]),
+                    plot_data(X, np.d(ddata,corr.data[0,:,n]),
                         np.zeros_like(ddata), label=label[3],
                         plotrange=[1,T],col=self.cycol())
                 else:
@@ -305,8 +305,7 @@ class LatticePlot(object):
                 self.save()
 
     def plot(self, corr, label, fitresult=None, fitfunc=None, oldfit=None,
-            add=None, oldfitpar=None, ploterror=False, xshift=0., debug=0,
-            join=False):
+            add=None, oldfitpar=None, ploterror=False, xshift=0., debug=0):
         """Plot the data of a Correlators object and a FitResult object
         together.
 
@@ -336,10 +335,10 @@ class LatticePlot(object):
         """
         if oldfit is None:
             self._genplot_single(corr, label, fitresult, fitfunc, add=add,
-                    ploterror=ploterror, xshift=xshift, debug=debug, join=join)
+                    ploterror=ploterror, xshift=xshift, debug=debug)
         else:
             self._genplot_comb(corr, label, fitresult, fitfunc, oldfit, add,
-                    oldfitpar, ploterror, xshift, debug,join=join)
+                    oldfitpar, ploterror, xshift, debug)
 
     def histogram(self, fitresult, label, nb_bins=20, par=None):
         """Plot the histograms.
@@ -497,6 +496,59 @@ class LatticePlot(object):
         plt.colorbar()
         self.save()
         plt.clf()
+        
+def plot_single_line(x,y,label,col):
+  """plot horizontal and vertical lines at the specific points, labeled with
+  the specific values
+
+  Parameters
+  ----------
+  x,y : in general multidimensional ndarrays 
+  """
+  print("line properties")
+  print(x.shape)
+  print(y)
+  x_val=np.zeros(2)
+  y_val=np.zeros(2)
+  try:
+     x_val[0],x_val[1] = compute_error(x)
+  except:
+     x_val[0] = x
+     x_val[1] = 0
+  try:
+     y_val[0],y_val[1] = compute_error(y)
+  except:
+     y_val[0] = y
+     y_val[1] = 0
+  print(x_val)
+  print(y_val)
+  l = plt.axhline(y=y_val[0],ls='solid',color=col)
+  l = plt.axvline(x=x_val[0],ls='solid',color=col)
+  plt.errorbar(x_val[0],y_val[0],y_val[1],x_val[1],fmt =
+      'd',color=col,label=r'match: $(%f,%f)$' % (x_val[0],y_val[0]) )
+
+def plot_lines(x,y,label,proc=None):
+  """plot horizontal and vertical lines at the specific points, labeled with
+  the specific values
+
+  Parameters
+  ----------
+  x,y : in general multidimensional ndarrays 
+  """
+  # determine iterable data
+  # if proc is match, x is iterable
+  # if proc is eval, y is iterable
+  print(x)
+  print(y)
+  if hasattr(x,"__iter__"):
+    if hasattr(y,"__iter__"):
+      plot_single_line(x[0],y[0],label,col='k')
+      plot_single_line(x[1],y[1],label,col='r')
+      plot_single_line(x[2],y[2],label,col='b')
+    else:
+      plot_single_line(x[0],y,label,col='k')
+      plot_single_line(x[1],y,label,col='r')
+      plot_single_line(x[2],y,label,col='b')
 
 if __name__ == "__main__":
     pass

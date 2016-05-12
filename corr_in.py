@@ -39,25 +39,16 @@ def main():
 
     print(rawdir)
     print(datadir)
-    ## path to correlation functions
-    #res_path = '/hiskp2/helmes/contractions/kaon_scattering/tests/s_3_rnd_vec/A40.24/strange_225/data/'
-    ##res_path='/hiskp2/helmes/contractions/pion_scattering/A40.24/data/'
-    ##Corrs = ana.inputnames('./charged.ini',['C2+'])
-    ## path to analysis data
-    #res ='/hiskp2/helmes/analysis/scattering/test/s_3_rnd_vec/k_charged/data/A40.24/amu_s_225/'
-    ##res = '/hiskp2/helmes/analysis/scattering/pion_test/data/A40.24/' 
     inputlist = []
-    #f = open('conf.txt','r')
-    #x = f.read().split('\n')
-    #del x[-1]
-    #f.close()
-    #inputlist = ['cnfg'+i+'/' for i in x]
-    #print inputlist
-    cfg_rng = [500,2900,8]
+    cfg_rng = [500,500,4]
+    omit = []
+    print(omit)
     missing = miss_confs(rawdir,cfg_rng)
-    print missing
+    missing.extend(omit)
+    print (missing)
     for i in range(cfg_rng[0],cfg_rng[1]+1,cfg_rng[2]):
       if i in missing:
+        print("omit cfg %d" % i)
         continue
       inputlist.append('cnfg%d/' % i)
     print inputlist

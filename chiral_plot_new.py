@@ -104,20 +104,20 @@ def main():
   mpisq = plt.errorbar(xA_match_D,yA_match_D[:,0],[yA_match_D[:,1]+yA_match_D[:,3],yA_match_D[:,1]+yA_match_D[:,2]],
             fmt ='s',color='red')
   mpisq = plt.errorbar(xA_match_D,yA_match_D[:,0],yA_match_D[:,1],
-            fmt ='s',color='red',label = 'A-Ensembles')
+            fmt ='s',color='red',label = 'A Ensembles')
 
   # B matched to D
   mpisq = plt.errorbar(xB_match_D,yB_match_D[:,0],[yB_match_D[:,1]+yB_match_D[:,3],yB_match_D[:,1]+yB_match_D[:,2]],
             fmt ='^',color='blue')
   mpisq = plt.errorbar(xB_match_D,yB_match_D[:,0],yB_match_D[:,1],
-            fmt ='^',color='blue',label = 'B-Ensembles')
+            fmt ='^',color='blue',label = 'B Ensembles')
 
   # D
   print yD[3],yD[2]
   mpisq = plt.errorbar(xD,yD[0],yerr=np.array(yD[1]+yD[3],yD[1]+yD[2]),
             fmt ='o',color='green')
   mpisq = plt.errorbar(xD,yD[0],yD[1],
-            fmt ='o',color='green',label = 'D-Ensembles')
+            fmt ='o',color='green',label = 'D Ensembles')
   ## NPLQCD data
   mk_sq_npl = np.multiply(scat_dat_nplqcd[:,0], scat_dat_nplqcd[:,0])
   print('NPL Data:')

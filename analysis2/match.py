@@ -2,84 +2,290 @@
 Class for matching procedures. It behaves similar to the FitResult class,
 perhaps make it a derived class of some Metaobject
 """
+import matplotlib
+matplotlib.use('Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
-import interpol as ip
+
+from match_functions import *
+from match_help import in_ival
+from .plot import plot_lines,plot_single_line
+from .plot_functions import plot_data, plot_function
+from .statistics import compute_error
 
 class MatchResult(object):
     """Class to process FitResults for Interpolation
 
     The data has a similar layout to FitResult
     """
-    def __init__(self, obs_id):
+    def __init__(self, obs_id=None):
 
       """Allocate objects for initiated instance
       Parameters
       ----------
         obs_id : Observable that is investigated
-      """
 
-      self.data = None
+      Members
+      -------
+      amu_match : nd array,the resulting matched values of the quark mass,
+                  ordered by matching method
+      eval_obs : ndarray holding data evaluated at amu_match
+      coeffs : coefficients of the matching as list
+      obs : nd-array, Observables used in the matching
+      amu : nd-array, the quark masses belonging to the observables
+      """
+      # the matched amu_s_values (at least 3 values for 3 different methods)
+      self.amu_match = None
+      self.eval_obs=None
+      # the observables to match to
+      self.obs = None
+      # x-values to use in the matching should have same length as slf.obs
+      self.amu = None
+      # Coeffs for the plots
+      self.coeffs = None
       self.weight = None
       self.error = None
       self.label = None
+      # observable for with matching is done
       self.obs_id = obs_id
     
-    @classmethod
-    def read()
-    def save()
-    def create_empty()
-    def get_data()
-    def add_data()
-
-
-    def match_quark_mass(obs0, obs1, obs2=None, meth=0, amu_s, obs_match):
-      """Matches the quark mass to a given observable as an iterator
+    #@classmethod
+    #def read()
+    #def save()
+    def create_empty(self, nboot, nb_obs, obs_id):
+      """Create an empty matching class, setting up the appropriate shapes
 
       Parameters
       ----------
-      obs0, obs1, obs2: Observables at different strange quark masses 
-      weight0, weight1, weight2: The corresponding weights as 1- or 2-dim numpy
-          array
+      nboot : int, the number of bootstrapsamples for the data
+      nb_obs : int, the number of observables used in the matching
+      obs_id : str, an identifier for the matching
+      """
+      # number of methods and matched quark masses fixed
+      self.amu_match = np.zeros((3,nboot))
+      self.eval_obs = np.zeros_like(self.amu_match)
+      self.obs = np.zeros((nb_obs,nboot))
+      self.amu = np.zeros(nb_obs)
+      if self.obs_id is None:
+        self.obs_id = obs_id
+
+    # get data from collection of fitresults
+    def load_data(self,fitreslst,par,amu,square=False):
+      """load a list of fitresults and a list of amu values into an existing instance of
+      MatchResult
+
+      The Median of the FitResults is used to set the data in the MatchResult
+      instance
+
+      Parameters
+      ----------
+      """
+      # Check lengths
+      if len(fitreslst) != amu.shape[0]:
+        raise ValueError("Fitresults and amu have different length")
+      # from a list of fitresults, check if singular, singularize, if needed,
+      for i,r in enumerate(fitreslst):
+        r = r.singularize()
+        self.obs[i] = r.data[0][:,par,0]
+        if square:
+          self.obs[i] = np.square(self.obs[i])
+        self.amu[i] = amu[i]
+      
+    # need to set all data at once and add data one at a time
+
+    def set_data(self,obs,amu):
+      """Set observable data and amu for all observables
+      """
+      self.obs = obs
+      self.amu = amu
+
+    def add_data(self,idx,obs,amu):
+      """Set observable data and amu-values at one index
+      """
+      if self.obs is None:
+        raise RuntimeError("MatchResult not initialized call create empty first")
+      else:
+        self.obs[idx] = obs
+        self.amu[idx] = amu
+
+    def match_to(self, obs_to_match, meth=None, plot=True,plotdir=None,ens=None,
+        label=None):
+      """Matches the quark mass to a given observable
+
+      Parameters
+      ----------
+      obs : Observables at different strange quark masses 
       meth: How to match: 0: linear interpolation (only two values)
                           1: linear fit
-                          2: quadratic interpolation
-      obs_match: Observable to match to (lattice units)
+                          2: quadratic interpolation      
+      observable_match: Observable to match to (lattice units)
+
+      Returns
+      -------
+      amu_s_match : nd-array holding the matched strange quark mass
+                    parameters for 3 different methods
       """
-      if meth > 2:
-        raise ValueError("Method not implemented yet, meth < 3")
-      # weights of different observables are given by their numpy products.
-      # shape of observable weights
-      wght_lyt = weight0.shape
-      # for weights flatten arrays, multiply and reshape them 
-      wght0_f = weight0.flatten() 
-      wght1_f = weight1.flatten()
-      wght_res_f = np.multiply(wght0_f, wght1_f)
-
-      if obs2 != None:
-        wght2_f = weight2.flatten()
-        wght_res_f = np.multiply(wght_res_f, wght2_f)
-
-      wght_res = wght_res_f.reshape(wght_lyt)
-
-      # Depending on the method "meth" calculate coefficients first and evaluate
-      # the root of the function to find obs_match
-      # Method 0 only applicable for 2 observables
-      if meth == 0:
-            print("Using linear interpolation")
-            if weight0.ndim < 2:
-            for i in range(obs0.shape[-1]):
-                boot_obs = np.column_stack(obs0[i],obs1[i])
-                # coefficients of all bootstrapsamples
-                boot_lin = ipol_lin(boot_obs, amu_s)
-
-
-
-      yield (0, 0, i), result, needed, weight
-      if meth == 1:
-            print("Using linear fit")
-
-      yield (0, 0, i), result, needed, weight
-      if meth == 2:
+      # init result array:
+      self.coeffs = [0,0,0]
+      obs=self.obs
+      amu = self.amu
+      print("shape in function")
+      print self.amu_match.shape
+      
+      # do only one method
+      if isinstance(meth,int):
+        if meth > 2:
+          raise ValueError("Method not implementedi, yet. Need meth < 3")
+        
+        # Depending on the method "meth" calculate coefficients first and evaluate
+        # the root of the function to find obs_match
+        # Method 0 only applicable for 2 observables
+        if meth == 0:
+          print("Using linear interpolation")
+          # TODO: decide which observables to take depending on matching
+          if (np.mean(obs[0]) <= np.mean(obs_to_match)) & (np.mean(obs_to_match) <= np.mean(obs[1])):
+            self.amu_match[0], self.coeffs[0] = get_x_lin(obs[0],obs[1],
+                                                  amu[0:2], obs_to_match)
+          else:
+            self.amu_match[0], self.coeffs[0] = get_x_lin(obs[1],obs[2],
+                                                  amu[1:3], obs_to_match)
+        if meth == 1:
+          if obs.shape[0] == 3:
             print("Using quadratic interpolation")
-      yield (0, 0, i), result, needed, weight
-            
+            self.amu_match[1], self.coeffs[1] = get_x_quad(obs[0],obs[1],obs[2],
+                                                           amu,obs_to_match)
+        if meth == 2:
+          print("Using linear fit")
+          self.amu_match[2], self.coeffs[2] = get_x_fit(obs[0],obs[1],obs[2],
+                                                        amu,obs_to_match)
+      # Do all methods  
+      else:
+          if (np.mean(obs[0]) <= np.mean(obs_to_match)) & (np.mean(obs_to_match) <= np.mean(obs[1])):
+            self.amu_match[0], self.coeffs[0] = get_x_lin(obs[0],obs[1],amu[0:2],
+                                                        obs_to_match)
+          else:
+            self.amu_match[0], self.coeffs[0] = get_x_lin(obs[1],obs[2],amu[1:3],
+                                                        obs_to_match)
+          if obs.shape[0] == 3:
+            self.amu_match[1], self.coeffs[1] = get_x_quad(obs[0],obs[1],obs[2],
+                                                           amu, obs_to_match)
+            self.amu_match[2], self.coeffs[2] = get_x_fit(obs[0],obs[1],obs[2],
+                                                          amu, obs_to_match)
+          else:
+            self.amu_match[2], self.coeffs[2] = get_x__fit(obs[0],obs[1],obs[2],
+                                                           amu, obs_to_match) 
+      
+      if plot:
+        self.plot_match(obs_to_match,plotdir,ens,meth=meth,proc='match',label=label)
+
+    def eval_at(self, amu_match, meth = None, ens=None,plot = True,plotdir=None,label=None):
+      """Evaluates a given observable at a matched strange quark mass
+
+      Parameters
+      -----------
+      observable : the observables to evaluate
+      meth: How to match: 0: linear interpolation (only two values)
+                          1: linear fit
+                          2: quadratic interpolation      
+      amu_s_match: amu_s to evaluate at (lattice units)
+
+      Returns
+      -------
+      self.eval_obs : nd-array holding the matched observable values
+                    for 3 different methods
+      """
+      
+      # init result array:
+      self.coeffs = [0,0,0]
+      obs=self.obs
+      amu = self.amu
+      self.amu_match=amu_match
+      
+      # do only one method
+      if isinstance(meth,int):
+        if meth > 2:
+          raise ValueError("Method not implemented yet, meth < 3")
+        
+        # Depending on the method "meth" calculate coefficients first and evaluate
+        # the root of the function to find obs_match
+        # Method 0 only applicable for 2 observables
+        if meth == 0:
+          print("Using linear interpolation")
+          if in_ival(amu_match,amu[0],amu[1]):
+            self.eval_obs[0], self.coeffs[0] = calc_y_lin(obs[0],obs[1],amu[0:2],amu_match[0])
+          else:
+            self.eval_obs[0], self.coeffs[0] = calc_y_lin(obs[1],obs[2],amu[1:3],amu_match[0])
+        if meth == 1:
+          if obs.shape[0] == 3:
+            print("Using quadratic interpolation")
+            self.eval_obs[1], self.coeffs[1] = calc_y_quad(obs[0],obs[1],obs[2],amu,amu_match[1])
+        if meth == 2:
+          print("Using linear fit")
+          self.eval_obs[2], self.coeffs[2] = calc_y_fit(obs[0],obs[1],obs[2],amu,amu_match[2])
+      # Do all methods  
+      else:
+        print("Using linear interpolation")
+        if in_ival(amu_match,amu[0],amu[1]):
+            self.eval_obs[0], self.coeffs[0] = calc_y_lin(obs[0],obs[1],amu[0:2],amu_match[0])
+        else:
+            self.eval_obs[0], self.coeffs[0] = calc_y_lin(obs[1],obs[2],amu[1:3],amu_match[0])
+        if obs.shape[0] == 3:
+          self.eval_obs[1], self.coeffs[1] = calc_y_quad(obs[0],obs[1],obs[2],amu,amu_match[1])
+          self.eval_obs[2], self.coeffs[2] = calc_y_fit(obs[0],obs[1],obs[2],amu,amu_match[1])
+        else:
+          self.eval_obs[2], self.coeffs[2] = calc_y_fit(obs[0],obs[1],obs[2],amu,amu_match[2]) 
+      if plot:
+        self.plot_match(self.eval_obs,plotdir,ens,meth=meth,proc='eval',label=label)
+
+    def get_plot_error(self):
+      y = np.zeros((self.obs.shape[0],2))
+      for i,v in enumerate(self.obs):
+        y[i,0],y[i,1] = compute_error(v)
+      return y 
+
+    def plot_match(self,obs,plotdir,ens, proc=None, meth=None, label=None):
+      pmatch = PdfPages(plotdir+ens+'/'+proc+'_%s.pdf' % self.obs_id)
+      line = lambda p,x: p[0]*x+p[1]
+      para = lambda p,x: p[0]*x**2+p[1]*x+p[2]
+      # calculate errors for plot
+      y_plot = self.get_plot_error()
+      if meth is None:
+        # plot data
+        plot_data(self.amu,y_plot[:,0],y_plot[:,1],label='data')
+        # plot the functions
+        plot_function(line,self.amu,self.coeffs[0],'lin.  ipol',)
+        plot_function(para,self.amu,self.coeffs[1],'quad. ipol',
+                      fmt='r',col='red')
+        plot_function(line,self.amu,self.coeffs[2],'lin. fit',
+                      fmt='b',col='blue')
+        # plot matching lines
+        if proc == 'match':
+          plot_lines(self.amu_match,obs,label[0:2])
+        else:
+          plot_lines(self.amu_match,self.eval_obs,label[0:2])
+      elif meth == 0:
+        plot_data(self.amu,y_plot[:,0],y_plot[:,1],label='data')
+        plot_function(line,self.amu,self.coeffs[meth],'lin. ipol',
+                      ploterror=True)
+        plot_single_line(self.amu_match[meth],obs,label[0:2],col='k')
+      elif meth == 1:
+        plot_data(self.amu,y_plot[:,0],y_plot[:,1],label='data')
+        plot_function(para,self.amu,self.coeffs[meth],'quad.  ipol',
+                      ploterror=True,fmt='r',col='red')
+        plot_single_line(self.amu_match[meth],obs,label[0:2],col='r')
+      elif meth == 2:
+        plot_data(self.amu,y_plot[:,0],y_plot[:,1],label='data')
+        plot_function(line,self.amu,self.coeffs[meth],'lin. fit',
+            ploterror = True, fmt='b', col='blue')
+        plot_single_line(self.amu_match[meth],obs,label[0:2],col='b')
+      else:
+        raise ValueError("Method not known")
+      plt.xlabel(label[0])
+      plt.ylabel(label[1])
+      plt.legend(loc='best',numpoints=1,ncol=2)
+      pmatch.savefig()
+      pmatch.close()
+      plt.clf()
+

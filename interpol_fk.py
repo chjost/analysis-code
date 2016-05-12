@@ -70,7 +70,7 @@ def interp_fk(name, mul, mus_match):
     dfk = OS_fk[:,5]
     # use np.interp to interpolate to given value
     fk_ipol = np.interp(mus_match, mus, fk)
-    dfk_ipol = np.interp(mus_match, mus,dfk)
+    dfk_ipol = np.mean(dfk)
     return np.array((fk_ipol, dfk_ipol))
 
 def main():
@@ -85,25 +85,41 @@ def main():
     lat = ens.name()
     latA = ens.get_data("namea")
     latB = ens.get_data("nameb")
+    latD = ens.get_data("named")
+
     lqmA = ens.get_data("amu_l_a")
     lqmB = ens.get_data("amu_l_b")
-    print lqmB
+    lqmD = ens.get_data("amu_l_d")
+
     sqmA = ens.get_data("amu_s_a")
     sqmB = ens.get_data("amu_s_b")
-    print sqmB
+    sqmD = ens.get_data("amu_s_d")
+
     strangeA = ens.get_data("strangea")
     strangeB = ens.get_data("strangeb")
-    #quark = ens.get_data("quark")
+    strangeD = ens.get_data("stranged")
+
     datadir = ens.get_data("datadir") 
     plotdir = ens.get_data("plotdir") 
     d2 = ens.get_data("d2")
     
-    for i,s in enumerate(strangeA):
-      print(s)
-      for j,a in enumerate(latA):
+    header = "#Ens mu_l fk dfk"
+    print(header)
+    for j,a in enumerate(latA):
+      for k,s in enumerate(sqmA):
         fk_data = "%s/%s/OSfk_%s.dat" % (datadir,a,a)
-        fk_use = interp_fk(fk_data, lqmA[j], sqmA[i])
-        print("%f %f %f" %(lqmA[j],fk_use[0],fk_use[1]))
+        fk_use = interp_fk(fk_data, lqmA[j], s)
+        print("%s %f %f %f" %(a+"_"+str(s),lqmA[j],fk_use[0],fk_use[1]))
+    for j,a in enumerate(latB):
+      for k,s in enumerate(sqmB):
+        fk_data = "%s/%s/OSfk_%s.dat" % (datadir,a,a)
+        fk_use = interp_fk(fk_data, lqmB[j], s)
+        print("%s %f %f %f" %(a+"_"+str(s),lqmB[j],fk_use[0],fk_use[1]))
+    for j,a in enumerate(latD):
+      for k,s in enumerate(sqmD):
+        fk_data = "%s/%s/OSfk_%s.dat" % (datadir,a,a)
+        fk_use = interp_fk(fk_data, lqmD[j], s)
+        print("%s %f %f %f" %(a+"_"+str(s),lqmD[j],fk_use[0],fk_use[1]))
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':
     try:

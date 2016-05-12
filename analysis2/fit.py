@@ -9,7 +9,7 @@ import numpy as np
 from fit_routines import (fit_comb, fit_single, calculate_ranges, compute_dE,
     get_start_values, get_start_values_comb, fitting)
 from in_out import read_fitresults, write_fitresults
-from interpol import match_lin, evaluate_lin
+from interpol import match_lin, match_quad, evaluate_lin
 from functions import (func_single_corr, func_ratio, func_const, func_two_corr,
     func_single_corr2, func_sinh, compute_eff_mass)
 from statistics import (compute_error, sys_error, sys_error_der, draw_weighted,
@@ -180,7 +180,7 @@ class LatticeFit(object):
 
         return fitres
 
-    def chiral_fit(self, X, Y, corrid="", start=None, xcut=None, debug=0):
+    def chiral_fit(self, X, Y, corrid="", start=None, xcut=None, ncorr=None,debug=0):
         """Fit function to data.
         
         Parameters
@@ -217,14 +217,23 @@ class LatticeFit(object):
 
         # create FitResults
         fitres = FitResult("chiral_fit")
-        shape1 = (_X.shape[0], 1, _X.shape[0])
-        shape2 = (_X.shape[0], _X.shape[0])
-        fitres.create_empty(shape1, shape2, 1)
+        #shape1 = (_X.shape[0], 1, _X.shape[0])
+        #shape1 = (_X.shape[0], len(start), _Y.shape[0])
+        #shape2 = (_X.shape[0], _Y.shape[0])
+        shape1 = (_Y.shape[0], len(start), _X.shape[0])
+        shape2 = (_Y.shape[0], _X.shape[0])
+        if ncorr is None:
+          fitres.create_empty(shape1, shape2, 1)
+        elif isinstance(ncorr, int):
+          fitres.create_empty(shape1, shape2,ncorr)
+        else:
+          raise ValueError("ncorr needs to be integer")
+
         # fit the data
-        dof = _X.shape[1] - len(_start)
+        dof = _X.shape[-1] - len(_start)
         # fit every bootstrap sample
         timing = []
-        for i, x in enumerate(_X[:100]):
+        for i, x in enumerate(_X):
             timing.append(time.clock())
             tmpres, tmpchi2, tmppval = fitting(self.fitfunc, x, _Y, _start, debug=debug)
             fitres.add_data((0,i), tmpres, tmpchi2, tmppval)
@@ -464,7 +473,59 @@ class FitResult(object):
         else:
             raise ValueError("Index cannot be calculated")
 
-    def singularize(self):
+    def fr_select(self, frange, debug=0):
+        """ Select one fit range of self, keep all shapes as is
+        1. This makes combined fits faster
+
+        WARNING,
+        data gets overwritten
+
+        Parameters:
+        -----------
+        par : Parameter to use to singularize (usually it is not the Amplitude
+        but the first one)
+        """
+        self.calc_error()
+        select = FitResult("one fit range", False)
+        nboot = self.data[0].shape[0]
+        npars = self.data[0].shape[1]
+        if isinstance(frange, int):
+            fr_idx = frange
+        else:
+            # search index corresponding to fit range
+            fr_self, fr_self_shape = self.get_ranges()
+            print("fit ranges for %s:" % self.corr_id)
+            print(fr_self, fr_self.shape)
+            fr_idx = get_fr_idx(fr_self[0],frange)
+            print(frange)
+            print(fr_self[0][fr_idx])
+        shape1 = (nboot,npars,1)
+        if debug > 0:
+          print("is data derived?")
+          print(self.derived)
+        shape2 = (nboot,1)
+        select.create_empty(shape1,shape2,1)
+        select.set_ranges(np.array([[[10,15]]]),[[1,]])
+        # usually only one correlator is taken into account
+        # copy data to singular
+        if self.derived is False:
+            res, res_std, res_sys, n_fits = self.error[0]
+            select.data[0][:,0,0] = self.data[0][:,0,fr_idx]
+            res, res_std, res_sys, n_fits = self.error[1]
+            select.data[0][:,1,0] = self.data[0][:,1,fr_idx] 
+        else:
+            res, res_std, res_sys, n_fits = self.error[0]
+            select.data[0][:,0,0] = self.data[0][:,0,fr_idx] 
+            
+        # set weights accordingly
+        select.weight = [[np.array([1.])] for d in range(2)]
+        select.error = []
+        #select.weight = np.ones(shape2)
+        #print select.weight[0]
+        #select.pval[0]=np.full(nboot,singular.weight)
+        return select
+
+    def singularize(self, debug=0 ):
         """ Set data of self to weighted medians over fit ranges and weights to
         1. This makes combined fits faster
 
@@ -480,11 +541,14 @@ class FitResult(object):
         singular = FitResult("singular", False)
         nboot = self.data[0].shape[0]
         npars = self.data[0].shape[1]
-        shape1 = (nboot,npars,1)
-        print("is data derived?")
-        print(self.derived)
+        if self.derived:
+          shape1 = (nboot,1,1)
+        else:
+          shape1 = (nboot,npars,1)
+        if debug > 0:
+          print("is self derived?")
+          print(self.derived)
         shape2 = (nboot,1)
-        #print shape1
         singular.create_empty(shape1,shape2,1)
         singular.set_ranges(np.array([[[10,15]]]),[[1,]])
         # usually only one correlator is taken into account
@@ -923,7 +987,7 @@ class FitResult(object):
         return q2
 
     def evaluate_quark_mass(self, amu_s, obs_eval, obs1, obs2=None, obs3=None,
-        meth=0, parobs=1):
+        meth=0, parobs=1, combine_all=True, debug=0):
       """ evaluate the strange quark mass at obs_match
 
       Parameters
@@ -937,6 +1001,8 @@ class FitResult(object):
                           2: quadratic interpolation
       parobs : int
                Which parameter of the results should be taken
+      combine_all : Boolean
+                    Whether or not all combinations of fit ranges are taken
       """
       if obs2==None and obs3==None:
         raise ValueError("Matching not possible, check input of 2nd (and 3rd) observable!")
@@ -947,8 +1013,12 @@ class FitResult(object):
       shape1 = obs1.data[0].shape
       shape2 = obs1.pval[0].shape
       # prepare shapes
-      layout1 = (shape1[0],shape1[-1])
-      layout2 = [shape2[0],]
+      if combine_all:
+          dim_fr1 = shape1[-1]
+          dim_fr2 = obs2.data[0].shape[-1]
+          layout1 = (shape1[0],dim_fr1*dim_fr2)
+      else:
+          layout1 = (shape1[0],shape1[-1])
 
       _obs1 = obs1.data[0][:,parobs]
       _obsweight1 = obs1.pval[0][0]
@@ -959,15 +1029,16 @@ class FitResult(object):
           _obs3 = obs3.data[0][:,parobs]
           _obsweight3 = obs3.pval[0][0]
       _obs_eval = obs_eval
-      print("observable to evaluate at")
-      print(_obs_eval)
+      if debug > 0:
+          print("observable to evaluate at")
+          print(_obs_eval)
 
       self.create_empty(layout1, layout1, 1)
       # Decide method beforehand, cheaper in the end
 
       if meth == 0:
           for res in evaluate_lin(_obs1, _obs2, amu_s, _obsweight1,
-                _obsweight2, _obs_eval):
+              _obsweight2, _obs_eval,combine_all=combine_all):
               self.add_data(*res)
 
       if meth == 1:
@@ -981,7 +1052,7 @@ class FitResult(object):
               self.add_data(*res)
 
     def match_quark_mass(self, amu_s, obs_match, obs1, obs2=None, obs3=None,
-        meth=0, evaluate=False):
+        meth=0, parobs=1, combine_all = True, debug=0):
       """ Match the strange quark mass to an observable in lattice units.
 
       Parameters
@@ -997,51 +1068,56 @@ class FitResult(object):
       """
       if obs2==None and obs3==None:
           raise ValueError("Matching not possible, check input of 2nd (and 3rd) observable!")
+      if obs2==None and obs3==None:
+          raise ValueError("Matching not possible, check input of 2nd (and 3rd) observable!")
       #if obs3==None:
       # Get the we
       # Result has the same layout as one of the observables!
       # TODO: If observables have different layouts break
-      layout = obs1.data[0].shape
-      print(layout)
-      _obs1 = obs1.data[0]
+      shape1 = obs1.data[0].shape
+      shape2 = obs1.pval[0].shape
+      # prepare shapes
+      if combine_all:
+        dim_fr1 = shape1[-1]
+        dim_fr2 = obs2.data[0].shape[-1]
+        dim_fr3 = obs3.data[0].shape[-1]
+        # if we need 3 observables more fit ranges needed
+        if meth > 0:
+          layout1 = (shape1[0],dim_fr1*dim_fr2*dim_fr3)
+        else:
+          layout1 = (shape1[0],dim_fr1*dim_fr2)
+      else:
+        layout1 = (shape1[0],shape1[-1])
+
+      _obs1 = obs1.data[0][:,parobs]
       _obsweight1 = obs1.pval[0][0]
       if obs2 is not None:
-          _obs2 = obs2.data[0]
+          _obs2 = obs2.data[0][:,parobs]
           _obsweight2 = obs2.pval[0][0]
       if obs3 is not None:
-          _obs3 = obs3.data[0]
+          _obs3 = obs3.data[0][:,parobs]
           _obsweight3 = obs3.pval[0][0]
-      if evaluate is True:
-          _obs_match = obs_match.data[0]
-          _obs_match_weight = obs_match.pval[0][0]
-      else:
-          _obs_match = obs_match
-          _obs_match_weight = None
-      print("observable to match")
-      print(_obs_match)
+      _obs_match = obs_match
+      if debug > 0:
+        print("observable to evaluate at")
+        print(_obs_match)
 
-      boots = layout[0] 
-      ranges1 = layout[1]
-      if obs1.data[0].ndim == 3:
-          ranges2 = layout[2]
-      else:
-          ranges2 = 0
-      self.create_empty(layout, layout, 1)
+      self.create_empty(layout1, layout1, 1)
       # Decide method beforehand, cheaper in the end
 
       if meth == 0:
           for res in match_lin(_obs1, _obs2, amu_s, _obsweight1,
-                _obsweight2, _obs_match, _obs_match_weight, evaluate):
+              _obsweight2, _obs_match, combine_all):
               self.add_data(*res)
 
       elif meth == 1:
           for res in match_quad(_obs1, _obs2, _obs3, _obsweight1,
-                _obsweight2, _obsweight3, amu_s, obs_match):
+              _obsweight2, _obsweight3, amu_s, _obs_match, combine_all):
               self.add_data(*res)
 
       elif meth == 2:
           for res in match_fit(_obs1, _obs2, _obs3, _obsweight1,
-                _obsweight2, _obsweight3, amu_s, obs_match):
+              _obsweight2, _obsweight3, amu_s, _obs_match):
               self.add_data(*res)
 
     def mult_obs(self, other, corr_id="Product", isdependend=False):
@@ -1197,8 +1273,8 @@ class FitResult(object):
                 flat_weights = self.pval[0][0].reshape(ndim)
         else:
             ndim = self.data[0].shape[2]
-            print ndim
-            print self.data[0][:,1].shape
+            print(ndim)
+            print(self.data[0][:,1].shape)
             flat_data = self.data[0][:,1].reshape((boots,ndim))
             flat_weights = self.pval[0][0].reshape(ndim)
 
@@ -1290,6 +1366,30 @@ class FitResult(object):
         if self.error is not None:
             self.error = None
             self.calc_error()
+
+def init_fitreslst(fnames):
+  """Read fitresults from a list of filenames and return the list
+  """
+  reslst = []
+  for f in fnames:
+    tmp = FitResult.read(f)
+    reslst.append(tmp)
+  return reslst
+
+
+def get_fr_idx(search,find):
+    
+    # loop over outer dimension of search
+    idx=[]
+    for i,r in enumerate(search):
+      if r[0] == find[0]:
+        if r[1] == find[1]:
+          idx.append(i)
+    if len(idx) == 0:
+      idx.append(0)
+      print("fit range not found")
+    return idx[0]
+
 
 if __name__ == "__main__":
     pass

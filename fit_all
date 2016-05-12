@@ -124,7 +124,7 @@ def main():
     print(kkcorr.shape)
 
     fit_ratio = ana.LatticeFit(1, dt=min_size_ratio, dt_i=1, dt_f=1, xshift=0.5)
-    start_ratio = [3., 1.]
+    start_ratio = [1.8, 0.002]
     # ratiofit
     if readtwofit == False:
         print("fitting")

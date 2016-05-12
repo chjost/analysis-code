@@ -7,7 +7,7 @@ import itertools
 
 from utils import *
 
-def compute_error(data, axis=0):
+def compute_error(data, axis=0, mean=None):
     """Calculates the mean and standard deviation of the data.
 
     Parameters
@@ -24,9 +24,9 @@ def compute_error(data, axis=0):
     ndarray
         The standard deviation of the data.
     """
-    if axis != 0:
-        raise ValueError("compute_error not implemented for axis = %d" % axis)
-    return mean_std(data)
+    #if axis != 0:
+    #    raise ValueError("compute_error not implemented for axis = %d" % axis)
+    return mean_std(data,axis=axis,mean=mean)
 
 def weighted_quantile(data, weights, quantile=0.5):
     """Compute the weighted quantile, where a fixed percentage of the sum of

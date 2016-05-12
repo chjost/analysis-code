@@ -29,7 +29,7 @@ def print_label(keys, vals, xpos=0.7, ypos=0.8):
     y = ylim()[1] * ypos
 
 def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=False,
-        fmt="r", col="red"):
+        fmt="k", col="black"):
     """A function that plots a function.
 
     Parameters
@@ -60,7 +60,11 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
             x1 = np.linspace(X[lfunc], X[ufunc], 1000)
     else:
         x1 = np.linspace(X[0], X[-1], 1000)
-
+    #print("option summary:")
+    #print("function name is %s" % func)
+    #print("shape of arguments (nb_samples, nb_parameters):")
+    #print(args.shape)
+    #print("Plot an errorband: %s" % ploterror)
     # check dimensions of args, if more than one,
     # iterate over first dimension
     _args = np.asarray(args)
@@ -125,7 +129,8 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
         else:
             # no additional arguments, iterate over args
             #iterate over x
-            for x in x1:
+            print("using function")
+            for j,x in enumerate(x1):
                 y1.append(func(_args[0], x))
                 if ploterror:
                     tmp = [y1[-1]]
@@ -158,10 +163,13 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
             else:
                 # calculate on original data
                 y1.append(func(_args, x))
+    print(len(x1),len(y1))
     plt.plot(x1, y1, fmt, label=label)
     if ymax and ymin:
+        print(ymax[0])
+        print(x1[0])
         plt.fill_between(x1, ymin, ymax, facecolor=col,
-            edgecolor=col, alpha=0.3)
+            edgecolor=col, alpha=0.2)
     plt.legend()
 
 def plot_data(X, Y, dY, label, plotrange=None, fmt="x",col='b'):
