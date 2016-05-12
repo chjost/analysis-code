@@ -22,7 +22,7 @@ def main():
 
     # get data from input file
     prefix = ens.get_data("path")
-    print prefix
+    #print prefix
     lat = ens.name()
     nboot = ens.get_data("nboot")
     datadir = ens.get_data("datadir")
@@ -37,63 +37,82 @@ def main():
     T2 = ens.T2()
     addT = np.ones((nboot,)) * T
     addT2 = np.ones((nboot,)) * T2
-    ts = 0
+    tslist = [x for x in range(T2)]
+    #tslist = [0, 1, 10]
     c = 27
+    gmax = 1
+    if lat == "A30.32":
+        confs = (1000, 3240, 8)
+    else:
+        confs = None
 
-
+    print("--------------")
+    print("%s"%lat )
+    print("--------------")
 
     # two particle correlator
     print("read two particle corrs")
-    files = ["%s/kk_charged_A1_TP%d_%d%d.dat" % (datadir, d2, i, j) for i in\
-        range(gmax+1) for j in range(gmax+1)]
-    #files = ["%s/pipi_pipi_A1_corr_TP%d_%d%d.dat" % (datadir, d2, i, j) for i in\
+    #files = ["%s/kk_charged_A1_TP%d_%d%d.dat" % (datadir, d2, i, j) for i in\
     #    range(gmax+1) for j in range(gmax+1)]
-    print files
+    files = ["%s/pipi_pipi_A1_corr_TP%d_%d%d.dat" % (prefix, d2, i, j) for i in\
+        range(gmax+1) for j in range(gmax+1)]
+    #print files
     if readtwodata == False:
         kkcorr = ana.Correlators(files, matrix=False)
-        print(kkcorr.data.shape)
+        #print(kkcorr.data.shape)
 
         #popped = kkcorr.omit([9e+5,2e+6])
         #print(popped)
-        print(kkcorr.data.shape)
-        kkhist = kkcorr.hist(ts)
-        plotter = ana.LatticePlot("%s/hist_ts%d_kk.pdf" % (plotdir,ts))
-        label = ["4pt history","cfg","C(%d)"%ts, "data"]
-        plotter.set_env(grid=True,ylog=True)
-        plotter.history(kkhist,label)
+        #print(kkcorr.data.shape)
+        plotter = ana.LatticePlot("%s/%s/history_pipi.pdf" % (plotdir,lat))
+        for ts in tslist:
+            kkhist = kkcorr.hist(ts)
+            #plotter = ana.LatticePlot("%s/%s/hist_ts%d_pipi.pdf" % (plotdir,lat,ts))
+            label = ["4pt history %s"%lat,"cfg","C(%d)"%ts, "data"]
+            plotter.set_env(grid=True)#,ylog=True)
+            print("time %d" % ts)
+            plotter.history(kkhist,label,confs=confs,plotiqr=True)
         del plotter
 
-        kkcorr.sym_and_boot(nboot)
-        if d2 != 0:
-            dE = pifit.error[1][0][1] - pifit.error[1][0][0]
-            #print(dE)
-            kkcorr.shift(1, dE=dE)
-        else:
-            #kkcorr.shift(1)
-            pass
+        #kkcorr.sym_and_boot(nboot)
+        #if d2 != 0:
+        #    dE = pifit.error[1][0][1] - pifit.error[1][0][0]
+        #    #print(dE)
+        #    kkcorr.shift(1, dE=dE)
+        #else:
+        #    #kkcorr.shift(1)
+        #    pass
         #kkcorr.save("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
     else:
-        kkcorr = ana.Correlators.read("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
+        #kkcorr = ana.Correlators.read("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
+        pass
 
     # single particle correlator
-    print("read single particle corrs")
-    files = ["%s/k_charged_p%d.dat" % (datadir, d) for d in range(1)]
-    #files = ["%s/pi_corr_p%d.dat" % (datadir, d) for d in range(1)]
+    #print("read single particle corrs")
+    #files = ["%s/k_charged_p%d.dat" % (datadir, d) for d in range(1)]
+    #files = ["%s/C2+/C2+_uu_p000.d000.g5_p000.d000.g5.dat" % (prefix,) for d in range(1)]
+    files = ["%s/pi_corr_p%d.dat" % (prefix, d) for d in range(1)]
+    #print(files)
     if readsingledata == False:
         kcorr = ana.Correlators(files, matrix=False)
         try:
           kcorr.omit(popped)
         except: NameError
-        khist = kcorr.hist(ts)
-        plotter = ana.LatticePlot("%s/hist_ts%d_k.pdf" % (plotdir,ts))
-        plotter.set_env(grid=True,ylog=True)
-        label = ["2pt history","cfg","C(%d)" % ts, "data"]
-        plotter.history(khist,label)
+        plotter = ana.LatticePlot("%s/%s/history_pi.pdf" % (plotdir,lat))
+        for ts in tslist:
+            khist = kcorr.hist(ts)
+            #plotter = ana.LatticePlot("%s/%s/hist_ts%d_pi.pdf" % (plotdir,lat,ts))
+            plotter.set_env(grid=True)#,ylog=True)
+            label = ["2pt history %s"%lat,"cfg","C(%d)" % ts, "data"]
+            print("time %d" % ts)
+            plotter.history(khist,label,confs=confs,plotiqr=True)
+            #del plotter
         del plotter
-        kcorr.sym_and_boot(nboot)
+        #kcorr.sym_and_boot(nboot)
         #kcorr.save("%s/corr_k_%s.npy" % (datadir, lat))
     else:
-        kcorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat))
+        #kcorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat))
+        pass
 
 
 if __name__ == '__main__':

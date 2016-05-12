@@ -423,8 +423,8 @@ def build_pi0():
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':
     try:
-        #main()
-        #build_pi0()
+        main()
+        build_pi0()
         build_eta()
     except KeyboardInterrupt:
         print("\nKeyboard Interrupt, exiting...")
