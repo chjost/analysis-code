@@ -180,10 +180,10 @@ class LatticePlot(object):
                 if rel is True:
                     plot_data(X, np.d(ddata,corr.data[0,:,n]),
                         np.zeros_like(ddata), label=label[3],
-                        plotrange=[1,T],col=self.cycol())
+                        plotrange=[0,T],col=self.cycol())
                 else:
                     plot_data(X, corr.data[0,:,n], ddata, label[3],
-                        plotrange=[1,T],col=self.cycol())
+                        plotrange=[0,T],col=self.cycol())
                 plt.legend()
                 if join is False:
                   self.save()
@@ -386,24 +386,70 @@ class LatticePlot(object):
         X = np.linspace(interval[0], interval[1], 1000)
         plot_function(func, X, args, label, ploterror=True, fmt=fmt, col=col)
 
-    def history(self, data, label, par=None, confs=None, plotiqr=False):
-        self._set_env_normal()
-        self.set_title(label[0],label[1:3])
-        if confs is None:
-            xvals = np.arange(data.shape[0]) 
-        else:
-            xvals = np.arange(confs[0], confs[1]+1, confs[2])
-            xvals = xvals[:data.shape[0]]
-        plot_data(xvals,data,np.zeros_like(data),label[-1])
-        if plotiqr is True:
-            q1, q2, q3 = np.percentile(data, [25, 50, 75])
+    def history(self, data, label, ts=0, boot=False, par=None, fr=None, subplot=True):
+        """Plots the history of the input data either with bootstrapsamples or
+        configuration number
+
+        Parameters
+        ----------
+        data : a Corr or FitResult object, atm only one Correlator is supported
+        label : the label of the plot, x-axis is set automatically
+                taken
+        boot : bool, is data correlator or FitResult
+        ts : int, timeslice to take for configuration history
+        par : int, parameter from a fitresult
+        fr : int, fit range index
+        """
+        def plot_iqrange(d):
+            q1, q2, q3 = np.percentile(d, [25, 50, 75])
             iqr = 1.5*(q3 - q1)
             xmin, xmax = plt.gca().get_xlim()
             plt.hlines(q1-iqr, xmin, xmax, colors="r")
             plt.hlines(q3+iqr, xmin, xmax, colors="r")
             print("outlier configs")
-            tmp = np.concatenate((xvals[data>q3+iqr],xvals[data<q1-iqr]))
+            tmp = np.concatenate((xvals[d>q3+iqr],xvals[d<q1-iqr]))
             print(np.sort(tmp, kind="mergesort"))
+        self._set_env_normal()
+        self.set_title(label[0],label[1:3])
+        #print(data.data[0].shape)
+        if boot is False:
+            _data = data.data[:,ts,0]
+            if data.conf is not None:
+                _x = np.unique(data.conf)
+            else:
+                _x = np.arange(_data.shape[0])
+            plot_data(_x,_data,np.zeros_like(_data),label[-1])
+            if plotiqr is True:
+                plot_iqrange(_data)
+        else:
+            if data.conf is not None:
+                _x = np.unique(data.conf)
+            else:
+                _x = np.arange(_data.shape[0])
+            # take all bootstrapsamples
+            if len(data.data[0].shape)>3:
+                _data = data.data[0][:,par,0]
+                #print(_data.shape)
+            else:
+                _data = data.data[0][:,par]
+                #print(_data.shape)
+            if subplot:
+                plt.subplot(2,1,1)
+                _lbl = 'fitrange %d' % (fr)
+                plot_data(_x,_data[:,fr],np.zeros_like(_data[:,fr]),_lbl)
+                if plotiqr is True:
+                    plot_iqrange(_data[:,fr])
+                plt.subplot(2,1,2)
+                _lbl = 'fitrange %d' % (fr+1)
+                plot_data(_x,_data[:,fr],np.zeros_like(_data[:,fr]),_lbl)
+                if plotiqr is True:
+                    plot_iqrange(_data[:,fr])
+            else:
+                _data = data.data[0][:,fr]
+                #print(_data.shape)
+                plot_data(_x,_data,np.zeros_like(_data),label[-1])
+                if plotiqr is True:
+                    plot_iqrange(_data)
         self.save()
 
     def set_env(self, xlog=False, ylog=False, xlim=None, ylim=None, grid=True):
@@ -525,7 +571,7 @@ def plot_single_line(x,y,label,col):
   l = plt.axhline(y=y_val[0],ls='solid',color=col)
   l = plt.axvline(x=x_val[0],ls='solid',color=col)
   plt.errorbar(x_val[0],y_val[0],y_val[1],x_val[1],fmt =
-      'd',color=col,label=r'match: $(%f,%f)$' % (x_val[0],y_val[0]) )
+      'd',color=col,label=r'%2.4e,%2.4e' % (x_val[0],y_val[0]) )
 
 def plot_lines(x,y,label,proc=None):
   """plot horizontal and vertical lines at the specific points, labeled with

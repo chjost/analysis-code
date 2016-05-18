@@ -18,7 +18,8 @@ class Correlators(object):
     """Correlation function class.
     """
 
-    def __init__(self, filename=None, column=(1,), matrix=True, skip=1, debug=0):
+    def __init__(self, filename=None, column=(1,), matrix=True, skip=1,
+        conf_col=None, debug=0):
         """Reads in data from an ascii file.
 
         The file is assumed to have in the first line the number of
@@ -57,20 +58,27 @@ class Correlators(object):
         self.debug = debug
         self.data = None
         self.matrix = None
-
+        self.conf = None
         if filename is not None:
             if isinstance(filename, (list, tuple)):
                 if matrix:
                     self.data = in_out.read_matrix(filename, column, skip, debug)
                     self.matrix = True
+                    if isinstance(conf_col,int):
+                        self.conf = in_out.read_matrix(filename, (conf_col,), skip, debug)
                 else:
                     self.data = in_out.read_vector(filename, column, skip, debug)
                     self.matrix = False
+                    if isinstance(conf_col,int):
+                        self.conf = in_out.read_vector(filename, (conf_col,), skip, debug)
             else:
                 tmp = in_out.read_single(filename, column, skip, debug)
                 self.data = np.atleast_3d(tmp)
                 self.matrix = False
-
+                if isinstance(conf_col,int):
+                    self.conf = in_out.read_single(filename, (conf_col,), skip, debug)
+                else:
+                    self.conf = in_out.read_single(filename,skip,debug)
         if self.data is not None:
             self.shape = self.data.shape
         else:
@@ -98,11 +106,15 @@ class Correlators(object):
             If file or folder not found.
         """
         data = in_out.read_data(filename)
-        # set the data directly
         tmp = cls(debug=debug)
-        tmp.data = data
-        tmp.shape = data.shape
-        if data.shape[-2] != data.shape[-1]:
+        if isinstance(data.files,list):
+            tmp.data = data['arr_0']
+            tmp.conf = data['arr_1']
+        else:
+            # set the data directly
+            tmp.data = data
+        tmp.shape = tmp.data.shape
+        if tmp.data.shape[-2] != tmp.data.shape[-1]:
             tmp.matrix = False
         else:
             tmp.matrix = True
@@ -124,9 +136,6 @@ class Correlators(object):
         tmp.shape = data.shape
         if data.shape[-2] != data.shape[-1]:
             tmp.matrix = False
-        else:
-            tmp.matrix = True
-        return tmp
 
     def save(self, filename, asascii=False):
         """Saves the data to disk.
@@ -144,6 +153,8 @@ class Correlators(object):
         if asascii:
             in_out.write_data_ascii(self.data, filename, verbose)
         else:
+            if self.conf is not None:
+                np.savez(filename, self.data, self.conf)
             in_out.write_data(self.data, filename, verbose)
 
     def symmetrize(self):
@@ -435,7 +446,64 @@ class Correlators(object):
         history = np.asarray([self.data[c][time][0] for c in range(nb_cfg)])
         return history
 
-    def omit(self, par):
+    def omit_iqr(self, in_iqr=None, debug=1):
+      """Based on the iqr delete configurations with a certain value
+      
+      This function uses the difference between the 25 and 75 percentile
+      percentile to detect outliers.
+      IQR = |p75-p25|
+      An outlier is defined as such if not lying in the interval
+      (p25-1.5*IQR, p75+1.5*IQR). The list of the configuration numbers is
+      truncated as well as the configurations of all timeslices.
+
+      Parameters
+      ----------
+      conf : optional list of configurations to omit
+
+      Returns
+      -------
+      a list of the indices of the deleted configurations to ensure that
+      correlation is not lost
+      """
+      if in_iqr is None:
+          # get the 25% and 75% percentiles from the firsty timeslice of all
+          # configurations
+          q25, q75 = np.percentile(self.data[:,0],(25,75))
+          iqr_dn = q25-1.5*np.abs(q75-q25)
+          iqr_up = q75+1.5*np.abs(q75-q25)
+          # boolean arrays of outlier positions
+          idx_up = np.greater(self.data[:,0], iqr_up)
+          idx_dn = np.less(self.data[:,0], iqr_dn)
+          print(idx_up.shape,idx_dn.shape)
+          omit_idx = np.logical_or(idx_up,idx_dn)
+          # reshape necessary for correct slicing
+          in_iqr = np.invert(omit_idx).reshape(omit_idx.shape[0])
+          # store ommited configurations
+          omitted = self.conf[omit_idx]
+          print self.data.shape
+          self.conf = self.conf[in_iqr]
+          self.data = self.data[in_iqr]
+          print(self.data.shape)
+          self.shape = self.data.shape
+          if debug > 0:
+            print("omitted configurations:")
+            print(omitted)
+          return omitted,in_iqr
+
+      else:
+          # turn the configuration list into a boolean array...
+          #
+          # store ommited configurations
+          omitted = np.unique(self.conf[np.invert(in_iqr)])
+          self.conf = self.conf[in_iqr]
+          self.data = self.data[in_iqr]
+          if debug > 0:
+            print("omitted configurations:")
+            print(omitted)
+          return omitted,in_iqr
+          
+
+    def omit(self, par, corr):
       """Based on the first timeslice delete configurations with a certain value
       TODO:This function should be improved. I do not know how to choose the
       value to cut, perhaps by the mean over the first timeslice?
@@ -450,27 +518,39 @@ class Correlators(object):
       correlation is not lost
       """
       # Check whether to cut configurations or a value
-      if len(par) < 2:
+      # Check whether par is iterable
+      if hasattr(par,"__iter__"):
         omitted = []
         # loop over configurations 
-        for c, v in enumerate(self.data):
+        for c, v in enumerate(self.data[...,corr]):
           if v[0] > par[0]:
             omitted.append(c)
       # Check for interval
-      if len(par) == 2 and isinstance(par[0],float):
+      if isinstance(par[0],float) and len(par) == 2:
 
         par = sorted(par)
 
         omitted = []
         # loop over configurations 
-        for c, v in enumerate(self.data):
+        for c, v in enumerate(self.data[...,corr]):
           if  v[0] < par[0] or par[1] < v[0]:
             omitted.append(c)
 
       else: 
         omitted = par
-      self.data = np.delete(self.data,omitted,0)
-      return omitted
+      tmp = np.delete(self.data[...,corr],omitted,0)
+      cut = Correlators()
+      cut.skip = self.skip
+      cut.debug = self.debug
+      cut.shape = (tmp.shape[0],self.shape[1],self.shape[2])
+      cut.data = np.zeros(cut.shape)
+      cut.data[...,0] = tmp
+      print("nconf original:")
+      print(self.data.shape[0])
+      print("nconf after cut:")
+      print(cut.data.shape[0])
+      cut.matrix = self.matrix
+      return cut, omitted
 
 def get_dE(mass, d2, L, irrep="A1"):
     """Calculate the energy gap for the leading finite-T effect.

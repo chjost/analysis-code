@@ -65,14 +65,14 @@ class MatchResult(object):
       """
       # number of methods and matched quark masses fixed
       self.amu_match = np.zeros((3,nboot))
-      self.eval_obs = np.zeros_like(self.amu_match)
       self.obs = np.zeros((nb_obs,nboot))
+      self.eval_obs = np.zeros((3,nboot))
       self.amu = np.zeros(nb_obs)
       if self.obs_id is None:
         self.obs_id = obs_id
 
     # get data from collection of fitresults
-    def load_data(self,fitreslst,par,amu,square=False):
+    def load_data(self,fitreslst,par,amu,square=False,mult=None):
       """load a list of fitresults and a list of amu values into an existing instance of
       MatchResult
 
@@ -89,6 +89,9 @@ class MatchResult(object):
       for i,r in enumerate(fitreslst):
         r = r.singularize()
         self.obs[i] = r.data[0][:,par,0]
+        # multiply with observable of right shape
+        if mult is not None:
+          self.obs[i]*=mult
         if square:
           self.obs[i] = np.square(self.obs[i])
         self.amu[i] = amu[i]
@@ -131,8 +134,6 @@ class MatchResult(object):
       self.coeffs = [0,0,0]
       obs=self.obs
       amu = self.amu
-      print("shape in function")
-      print self.amu_match.shape
       
       # do only one method
       if isinstance(meth,int):
@@ -201,8 +202,10 @@ class MatchResult(object):
       self.coeffs = [0,0,0]
       obs=self.obs
       amu = self.amu
+      if  hasattr(amu_match,"__iter__") is False:
+        amu_match=np.full((3),amu_match)
       self.amu_match=amu_match
-      
+
       # do only one method
       if isinstance(meth,int):
         if meth > 2:
@@ -213,13 +216,20 @@ class MatchResult(object):
         # Method 0 only applicable for 2 observables
         if meth == 0:
           print("Using linear interpolation")
-          if in_ival(amu_match,amu[0],amu[1]):
+          if in_ival(amu_match[0],amu[0],amu[1]):
+            print("using smaller intervall")
             self.eval_obs[0], self.coeffs[0] = calc_y_lin(obs[0],obs[1],amu[0:2],amu_match[0])
-          else:
+          elif in_ival(amu_match[0],amu[1],amu[2]):
             self.eval_obs[0], self.coeffs[0] = calc_y_lin(obs[1],obs[2],amu[1:3],amu_match[0])
+          else:
+            print("Only extrapolation possible:")
+            a,b = mh.choose_ival(amu_match[0],amu)
+            self.eval_obs[0], self.coeffs[0] = calc_y_lin(obs[a],obs[b],amu[a:b+1],amu_match[0])
+            
         if meth == 1:
           if obs.shape[0] == 3:
             print("Using quadratic interpolation")
+            print(amu_match)
             self.eval_obs[1], self.coeffs[1] = calc_y_quad(obs[0],obs[1],obs[2],amu,amu_match[1])
         if meth == 2:
           print("Using linear fit")
@@ -246,7 +256,15 @@ class MatchResult(object):
       return y 
 
     def plot_match(self,obs,plotdir,ens, proc=None, meth=None, label=None):
-      pmatch = PdfPages(plotdir+ens+'/'+proc+'_%s.pdf' % self.obs_id)
+      if meth == 0:
+        _meth = '_lipol'
+      elif meth == 1:
+        _meth = '_qipol'
+      elif meth == 2:
+        _meth = '_lfit'
+      else:
+        _meth=None
+      pmatch = PdfPages(plotdir+ens+'/'+proc+_meth+'_%s.pdf' % self.obs_id)
       line = lambda p,x: p[0]*x+p[1]
       para = lambda p,x: p[0]*x**2+p[1]*x+p[2]
       # calculate errors for plot
@@ -260,26 +278,30 @@ class MatchResult(object):
                       fmt='r',col='red')
         plot_function(line,self.amu,self.coeffs[2],'lin. fit',
                       fmt='b',col='blue')
-        # plot matching lines
-        if proc == 'match':
-          plot_lines(self.amu_match,obs,label[0:2])
-        else:
-          plot_lines(self.amu_match,self.eval_obs,label[0:2])
       elif meth == 0:
         plot_data(self.amu,y_plot[:,0],y_plot[:,1],label='data')
         plot_function(line,self.amu,self.coeffs[meth],'lin. ipol',
                       ploterror=True)
-        plot_single_line(self.amu_match[meth],obs,label[0:2],col='k')
+        if proc == 'match':
+          plot_single_line(self.amu_match[meth],obs,label[0:2],col='k')
+        else:
+          plot_single_line(self.amu_match[meth],self.eval_obs[meth],label[0:2],col='k')
       elif meth == 1:
         plot_data(self.amu,y_plot[:,0],y_plot[:,1],label='data')
         plot_function(para,self.amu,self.coeffs[meth],'quad.  ipol',
                       ploterror=True,fmt='r',col='red')
-        plot_single_line(self.amu_match[meth],obs,label[0:2],col='r')
+        if proc == 'match':
+          plot_single_line(self.amu_match[meth],obs,label[0:2],col='r')
+        else:
+          plot_single_line(self.amu_match[meth],self.eval_obs[meth],label[0:2],col='r')
       elif meth == 2:
         plot_data(self.amu,y_plot[:,0],y_plot[:,1],label='data')
         plot_function(line,self.amu,self.coeffs[meth],'lin. fit',
             ploterror = True, fmt='b', col='blue')
-        plot_single_line(self.amu_match[meth],obs,label[0:2],col='b')
+        if proc == 'match':
+          plot_single_line(self.amu_match[meth],obs,label[0:2],col='b')
+        else:
+          plot_single_line(self.amu_match[meth],self.eval_obs[meth],label[0:2],col='b')
       else:
         raise ValueError("Method not known")
       plt.xlabel(label[0])

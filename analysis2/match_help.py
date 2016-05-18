@@ -138,10 +138,26 @@ def in_ival(x,a,b,):
   except:
     _a = a
   try:
-    _b = np.mean(a)
+    _b = np.mean(b)
   except:
     _b = b
   if (_a <= _x) & (_x <= _b):
     return True
   else:
     return False
+
+def choose_ival(x,mu):
+  try:
+    _x = np.mean(x)
+  except:
+    _x = x
+  if _x <= mu[0]:
+    i_dn=0
+    i_up=1
+  if mu[2] <= _x :
+    i_dn = 1
+    i_up = 2
+  return i_dn, i_up
+
+
+

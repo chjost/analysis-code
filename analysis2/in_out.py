@@ -216,7 +216,7 @@ def read_data(filename, verbose=False):
     data = np.load(filename)
     return data
 
-def write_data_ascii(data, filename, verbose=False):
+def write_data_ascii(data, filename, verbose=False, conf=None):
     """Writes the data into a file.
 
     The file is written to have L. Liu's data format so that the first
@@ -231,6 +231,7 @@ def write_data_ascii(data, filename, verbose=False):
         The data to write.
     verbose : bool
         Toggle info output
+    conf : array, list of configurations
     """
     # check file
     check_write(filename)
@@ -250,12 +251,20 @@ def write_data_ascii(data, filename, verbose=False):
     # prepare data and counter
     #_data = data.flatten()
     _data = data.reshape((T*nsamples), -1)
+    print(_data.shape)
     _counter = np.fromfunction(lambda i, *j: i%T,
                                (_data.shape[0],) + (1,)*(len(_data.shape)-1),
                                dtype=int)
-    _fdata = np.concatenate((_counter,_data), axis=1)
+    if conf is not None:
+      tmp = np.repeat(conf,T)
+      _config = tmp.reshape(tmp.shape[0],1) 
+      print(_config.shape)
+      _fdata = np.concatenate((_counter,_data,_config), axis=1)
+      fmt = ('%.0f',) + ('%.14f',) * _data[0].size + ('%.0f',)
+    else:
+      _fdata = np.concatenate((_counter,_data), axis=1)
+      fmt = ('%.0f',) + ('%.14f',) * _data[0].size
     # generate format string
-    fmt = ('%.0f',) + ('%.14f',) * _data[0].size
     # write data to file
     np.savetxt(filename, _fdata, header=head, comments='', fmt=fmt)
 
