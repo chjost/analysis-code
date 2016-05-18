@@ -42,10 +42,14 @@ def main():
     # os.path.join treats preceding slashes as new paths
     print(Corrs)
     corrpaths = [os.path.join(rawdir,mu_s,'data/') for mu_s in rawstrange]
-    datapaths = [os.path.join(rawdir,mu_s,'data/') for mu_s in strange]
+    datapaths = [os.path.join(datadir,mu_s,'data/') for mu_s in strange]
     # get all available correlators in three lists
+    # TODO: Filter out everything not starting with 'conf'
     configs_coll = [os.listdir(cp) for cp in corrpaths]
-    conf_feed = [i +'/' for i in set(configs_coll[0]).intersection(set(configs_coll[1]),set(configs_coll[2]))]
+    if isinstance(configs_coll[0], list):
+      print("is list.")
+    configs_coll = [[fld for fld in i if 'cnfg' in fld] for i in configs_coll]
+    conf_feed = sorted([i +'/' for i in set(configs_coll[0]).intersection(set(configs_coll[1]),set(configs_coll[2]))])
     print(conf_feed)
     for s in zip(corrpaths,datapaths):
       # copy common subset of configurations to appropriate target directory:
@@ -62,12 +66,12 @@ def main():
       C4_tot = ana.confs_mult(C4_tot,2)
       print("Writing to: %s..." % s[1])
       #ana.write_data_ascii(C2,s[1]+'pi_charged_p0.dat')
-      ana.write_data_ascii(C2,s[1]+'k_charged_p0.dat',conf_feed)
-      ana.write_data_ascii(C4_tot,s[1]+'kk_charged_A1_TP0_00.dat',conf_feed)
-      ana.write_data_ascii(C4D,s[1]+'C4D.dat')
-      ana.write_data_ascii(C4C,s[1]+'C4C.dat')
+      ana.write_data_ascii(C2,s[1]+'k_charged_p0.dat',conf=conf_feed)
+      ana.write_data_ascii(C4_tot,s[1]+'kk_charged_A1_TP0_00.dat',conf=conf_feed)
+      ana.write_data_ascii(C4D,s[1]+'C4D.dat',conf=conf_feed)
+      ana.write_data_ascii(C4C,s[1]+'C4C.dat',conf=conf_feed)
     
-print("Finished")
+    print("Finished")
       
       
 

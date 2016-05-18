@@ -256,9 +256,10 @@ def write_data_ascii(data, filename, verbose=False, conf=None):
                                (_data.shape[0],) + (1,)*(len(_data.shape)-1),
                                dtype=int)
     if conf is not None:
-      tmp = np.repeat(conf,T)
+      conf_int = [int(name[4:-1]) for name in conf]
+      tmp = np.repeat(conf_int,T)
       _config = tmp.reshape(tmp.shape[0],1) 
-      print(_config.shape)
+      # make ints from strings omit last character and first four
       _fdata = np.concatenate((_counter,_data,_config), axis=1)
       fmt = ('%.0f',) + ('%.14f',) * _data[0].size + ('%.0f',)
     else:
@@ -674,9 +675,9 @@ def read_confs(path,corrname,confs,_T=48,verb=False):
   C = np.zeros((len(confs),_T,2))
   for i,d in enumerate(confs):
     #Generate filename from inputlist
-    if verb is True:
-      print path, d, corrname
     _fname = path+d+corrname
+    if verb is True:
+      print(_fname)
     _C_tmp = _read_corr(_fname,_T)
     C[i] = _C_tmp
   return C
