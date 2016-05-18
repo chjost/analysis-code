@@ -88,8 +88,8 @@ def main():
     # get fit_ranges
     range_r, r_r_shape = ratiofit.get_ranges()
     #print(range_r[0])
-    t_low = [14,15,16,17,18]
-    t_hi = [36,37,38,34,35,36]
+    t_low = [12,13,14,15,16]
+    t_hi = [26,27,28,29,30]
     fr = len(t_low)*len(t_hi)
     res = np.zeros((fr, 6))
     j = 0
@@ -99,7 +99,7 @@ def main():
         idx=[]
         for s,i in enumerate(range_r[0]):
           if i[0] >= l and i[1] <= h:
-            if i[1] - i[0] >= 13:
+            if i[1] - i[0] >= 10:
               list1.append(i)
               idx.append(s)
             else:
@@ -134,7 +134,7 @@ def main():
     plt.title(lbl[0])
     plt.grid()
     plt.xlim((-1,fr+1))
-    plt.ylim((0.0000,0.003))
+    plt.ylim((0.005,0.0065))
     plt.xlabel(lbl[1])
     plt.ylabel(lbl[2])
     plt.legend()

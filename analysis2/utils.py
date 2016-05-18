@@ -36,10 +36,21 @@ def mean_std(data, axis=0, mean=None):
         _mean = data[select]
     else:
         _mean = mean
-    var = np.nansum(np.square(data - _mean), axis=axis) / data.shape[axis]
+    diff = axis_subtract(data,_mean,axis)
+    var = np.nansum(np.square(diff), axis=axis) / data.shape[axis]
     std = np.sqrt(var)
     return _mean, std
 
+def axis_subtract(data,mean,axis):
+  diff = np.zeros_like(data)
+  # check first dimension
+  if axis > 0:
+    if data.shape[0] == mean.shape[0]:
+     for i,d in enumerate(data):
+        diff[i] = d-mean[i]
+  else:
+    diff=data-mean
+  return diff
 def r0_mass(amps,ens,square=False):
   """Calculates the physical mass from pseudoscalar masses in lattice units
 

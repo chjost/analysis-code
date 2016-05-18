@@ -438,6 +438,54 @@ class FitResult(object):
             self.chi2[lindex][rindex] = chi2
             self.pval[lindex][rindex] = pval
 
+    def append_data(self, index, data, chi2, pval):
+        """Append data to FitResult.
+
+        The index contains first the indices of the correlators
+        and then the indices of the fit ranges.
+
+        Parameters
+        ----------
+        index : tuple of int
+            The index where to save the data
+        data : ndarray
+            The fit data to add.
+        chi2 : ndarray
+            The chi^2 of the data.
+        pval : ndarray
+            The p-values of the data.
+
+        Raises
+        ------
+        ValueError
+            If Index cannot be calculated.
+        RuntimeError
+            If FitResult object is not initialized.
+        """
+        if self.data is None:
+            raise RuntimeError("No place to store data, call create_empty first")
+        print(data.shape)
+        if isinstance(self.corr_num, int):
+            if len(index) != 2:
+                raise ValueError("Index has wrong length")
+            lindex = self._get_index(index[0])
+            tmp_index = data.shape[0]*index[1]
+            self.data[lindex][tmp_index:tmp_index+data.shape[0],:,0] = data
+            self.chi2[lindex][tmp_index:tmp_index+data.shape[0],0] = chi2
+            self.pval[lindex][tmp_index:tmp_index+data.shape[0],0] = pval
+        #else:
+        #    if len(index) != 2*len(self.corr_num):
+        #        raise ValueError("Index has wrong length")
+        #    lindex = self._get_index(index[:len(self.corr_num)])
+        #    if self.derived:
+        #        rindex = [slice(None)] + [x for x in index[len(self.corr_num):]]
+        #    else:
+        #        rindex = [slice(None), slice(None)] + [x for x in index[len(self.corr_num):]]
+        #    self.data[lindex][rindex] = data
+        #    rindex = [slice(None)] + [x for x in index[len(self.corr_num):]]
+        #    self.chi2[lindex][rindex] = chi2
+        #    self.pval[lindex][rindex] = pval
+
     def _get_index(self, index):
         """Linearize index.
 

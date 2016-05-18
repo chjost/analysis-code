@@ -15,6 +15,7 @@ def miss_confs(path,rng):
   for c in range(rng[0],rng[1]+1,rng[2]):
     tmp_path = path+"cnfg%d" %c 
     if os.path.exists(tmp_path) is False:
+      print(tmp_path)
       misslist.append(c)
   return misslist
 
@@ -35,13 +36,14 @@ def main():
     if len(sys.argv) < 2:
       Corrs = ana.inputnames('charged.ini',['C2+', 'C4+C', 'C4+D'])
     else:
-      Corrs = ana.inputnames(sys.argv[1],['C2+', 'C4+C', 'C4+D'])
+      Corrs = ana.inputnames(sys.argv[1],['C20', 'C40C', 'C40D'])
 
     print(rawdir)
     print(datadir)
     inputlist = []
-    cfg_rng = [500,500,4]
-    omit = []
+    cfg_rng = [714,2330,4]
+    #omit = [20, 164, 416, 540, 568, 596, 668, 1000]
+    omit=[]
     print(omit)
     missing = miss_confs(rawdir,cfg_rng)
     missing.extend(omit)
@@ -56,6 +58,7 @@ def main():
     # Read in correlators
     print("Reading Correlation functions from %s..." % rawdir)
     print("C2")
+    print(Corrs[0])
     C2 = ana.read_confs(rawdir,Corrs[0],inputlist,T)
     print("C4")
     C4D = ana.read_confs(rawdir,Corrs[1],inputlist,T)
@@ -65,9 +68,9 @@ def main():
     C4_tot = ana.confs_subtr(C4D,C4C)
     C4_tot = ana.confs_mult(C4_tot,2)
     print("Writing to: %s..." % datadir)
-    #ana.write_data_ascii(C2,datadir+'eta_s.dat')
-    ana.write_data_ascii(C2,datadir+'k_charged_p0.dat')
-    ana.write_data_ascii(C4_tot,datadir+'kk_charged_A1_TP0_00.dat')
+    #ana.write_data_ascii(C2,datadir+'pi_charged_p0.dat')
+    ana.write_data_ascii(C2,datadir+'k_charged_p0.dat',inputlist)
+    ana.write_data_ascii(C4_tot,datadir+'kk_charged_A1_TP0_00.dat',inputlist)
     ana.write_data_ascii(C4D,datadir+'C4D.dat')
     ana.write_data_ascii(C4C,datadir+'C4C.dat')
     print("Finished")

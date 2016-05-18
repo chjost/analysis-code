@@ -44,10 +44,10 @@ def main():
 
     # get mean correlators of 2 and 4pt function to compare
 
-    parent = "/hiskp2/helmes/analysis/test/solver/"
+    parent = "/hiskp2/helmes/analysis/test/eigsys_issue/pion/"
     #var = ["s_3_rnd_vec/","s_4_rnd_vec/","s_5_rnd_vec/"]
     var = ""
-    suff = ["/data/A30.32_quda/","/data/A30.32_cg/"]
+    suff = ["/data/A30_old/","/data/A30_new/"]
 
     corr_2pt = np.zeros((len(suff), 1, T2))
     corr_4ptc = np.zeros((len(suff),1, T2))
@@ -140,7 +140,7 @@ def main():
     print(tlist)
     print(y[0])
     print(yerr)
-    plt.errorbar(tlist[0:-2], y[0][0:-2], yerr[0:-2], label=label)
+    plt.errorbar(tlist[0:-2], y[0][0:-2], yerr[0:-2],fmt='x', label=label)
     #label[2] = r'$\delta (C_{4C})/C_{4C}$'
     #ana.plot_data(tlist, np.divide(err_4pt_c,mean_4pt_c), yerr, err_single, label,[3,T2])
     #label[2] = r'$\delta (C_{4D})/C_{4D}$'
