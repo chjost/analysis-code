@@ -185,7 +185,7 @@ class LatticePlot(object):
                     plot_data(X, corr.data[0,:,n], ddata, label[3],
                         plotrange=[0,T],col=self.cycol())
                 plt.legend()
-                if join is False:
+                if self.join is False:
                   self.save()
             else:
                 # iterate over fit intervals
@@ -207,7 +207,7 @@ class LatticePlot(object):
                     plot_function(fitfunc.fitfunc, X, mpar, label[4],
                             add, fi, ploterror,col=self.cycol())
                     plt.legend()
-                    if join is False:
+                    if self.join is False:
                       self.save()
         label[0] = label_save
 

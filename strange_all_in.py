@@ -42,16 +42,18 @@ def main():
     # os.path.join treats preceding slashes as new paths
     print(Corrs)
     corrpaths = [os.path.join(rawdir,mu_s,'data/') for mu_s in rawstrange]
-    datapaths = [os.path.join(datadir,mu_s,'data/') for mu_s in strange]
+    datapaths = [os.path.join(datadir,mu_s,'') for mu_s in strange]
     # get all available correlators in three lists
     # TODO: Filter out everything not starting with 'conf'
     configs_coll = [os.listdir(cp) for cp in corrpaths]
     if isinstance(configs_coll[0], list):
       print("is list.")
     configs_coll = [[fld for fld in i if 'cnfg' in fld] for i in configs_coll]
-    conf_feed = sorted([i +'/' for i in set(configs_coll[0]).intersection(set(configs_coll[1]),set(configs_coll[2]))])
+    #conf_feed = sorted([i +'/' for i in set(configs_coll[0]).intersection(set(configs_coll[1]),set(configs_coll[2]))])
+    conf_feed = sorted([i +'/' for i in set(configs_coll[0])])
     print(conf_feed)
     for s in zip(corrpaths,datapaths):
+      print(s)
       # copy common subset of configurations to appropriate target directory:
       # Read in correlators
       print("Reading Correlation functions from %s..." % s[0])

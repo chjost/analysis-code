@@ -19,7 +19,7 @@ def main():
     readsingledata = False
     plotsingle = True
     readtwodata = False
-    plottwo = False
+    plottwo = True
     compare = True
     # get data from input file
     prefix = ens.get_data("path")
@@ -57,26 +57,26 @@ def main():
     else:
         kcorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat))
 
-#    # two particle correlator
-#    print("read two particle corrs")
-#    #files = ["%s/kk_charged_A1_TP%d_%d%d.dat" % (datadir, d2, i, j) for i in\
-#    #    range(gmax+1) for j in range(gmax+1)]
-#    files = ["%s/kk_charged_A1_TP%d_%d%d.dat" % (datadir, d2, i, j) for i in\
-#        range(gmax+1) for j in range(gmax+1)]
-#    print files
-#    if readtwodata == False:
-#        kkcorr = ana.Correlators(files, matrix=False)
-#        kkcorr.sym_and_boot(nboot)
-#        #kkcorr.symmetrize(nboot)
-#        ratio = kkcorr.ratio(kcorr, ratio=2 )
-#        kkcorr.save("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
-#    else:
-#        kkcorr = ana.Correlators.read("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
-#        ratio = kkcorr.ratio(kcorr, ratio=2 )
-#
-#    #compute effective masses after ratio has been build
+    # two particle correlator
+    print("read two particle corrs")
+    #files = ["%s/kk_charged_A1_TP%d_%d%d.dat" % (datadir, d2, i, j) for i in\
+    #    range(gmax+1) for j in range(gmax+1)]
+    files = ["%s/kk_charged_A1_TP%d_%d%d.dat" % (datadir, d2, i, j) for i in\
+        range(gmax+1) for j in range(gmax+1)]
+    print files
+    if readtwodata == False:
+        kkcorr = ana.Correlators(files, matrix=False)
+        kkcorr.sym_and_boot(nboot)
+        #kkcorr.symmetrize(nboot)
+        ratio = kkcorr.ratio(kcorr, ratio=2 )
+        kkcorr.save("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
+    else:
+        kkcorr = ana.Correlators.read("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
+        ratio = kkcorr.ratio(kcorr, ratio=2 )
+
+    #compute effective masses after ratio has been build
     kcorr.mass()
-    #kkcorr.mass()
+    kkcorr.mass()
 
     #plot effective masses of kcorr and kkcorr
     if plotsingle:

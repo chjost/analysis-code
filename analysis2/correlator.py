@@ -76,9 +76,8 @@ class Correlators(object):
                 self.data = np.atleast_3d(tmp)
                 self.matrix = False
                 if isinstance(conf_col,int):
+                    print("Column for configuration numbers is %d\n" % conf_col)
                     self.conf = in_out.read_single(filename, (conf_col,), skip, debug)
-                else:
-                    self.conf = in_out.read_single(filename,skip,debug)
         if self.data is not None:
             self.shape = self.data.shape
         else:

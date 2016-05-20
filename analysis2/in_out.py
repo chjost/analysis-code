@@ -8,7 +8,7 @@ import os
 import numpy as np
 import ConfigParser as cp
 
-def read_single(fname, column, skip, debug):
+def read_single(fname, column, skip, debug=0):
     """Read a single correlation function from file.
 
     Parameters
