@@ -225,23 +225,42 @@ class ChirAna(object):
     # looping over list place data in array
     tmp_x_shape = (self.x_shape[0],self.x_shape[1]*np.asarray(self.x_shape[2]),self.x_shape[-1])
     tmp_y_shape = (self.y_shape[0],self.y_shape[1]*np.asarray(self.y_shape[2]),self.y_shape[-1])
-    print("New Shapes:")
-    print(tmp_x_shape)
-    print(tmp_y_shape)
+    #print("New Shapes:")
+    #print(tmp_x_shape)
+    #print(tmp_y_shape)
     tmp = ChirAna("reduction")
     tmp.create_empty(tmp_x_shape,tmp_y_shape)
+    # Loop over lattice spacing
     for i,d in enumerate(self.x_data):
       new_shape = (d.shape[0]*d.shape[1],d.shape[2])
+      print("reshape to:")
+      print(new_shape)
       tmp.x_data[i] = d.reshape(new_shape)
+      print(tmp.x_data)
     for i,d in enumerate(self.y_data):
       new_shape = (d.shape[0]*d.shape[1],d.shape[2])
       tmp.y_data[i] = d.reshape(new_shape)
     if self.x_shape[0] == 3: 
       x_data = np.concatenate((tmp.x_data[0],tmp.x_data[1],tmp.x_data[2]))
+      print(x_data)
       y_data = np.concatenate((tmp.y_data[0],tmp.y_data[1],tmp.y_data[2]))
+      print(y_data.shape)
+      print(x_data.shape)
       return x_data, y_data
     else:
       return None,None
+
+  def calc_plot_ranges(self):
+    """ Return the plot ranges for the different lattice spacings
+    """
+    _a_range = (0,self.x_shape[1][0]*self.x_shape[2])
+    _b_range = (_a_range[1],_a_range[1]+self.x_shape[1][1]*self.x_shape[2])
+    _d_range = (_b_range[1],_b_range[1]+self.x_shape[1][2]*self.x_shape[2])
+    print(_a_range)
+    print(_b_range)
+    print(_d_range)
+
+    return _a_range, _b_range, _d_range
 
   def plot_plain(self,x_data,y_data,label):
     x_plot=np.zeros((x_data.shape[0],4))
@@ -252,18 +271,17 @@ class ChirAna(object):
     print(y_plot)
     pfit = PdfPages("./plots2/pdf/%s.pdf" % self.proc_id)
 
-    chut.plot_ensemble(x_plot,y_plot,'s','red','A Ensembles',xid=(0,19))
-    #chut.plot_ensemble(x_plot,y_plot,'o','green','D Ensembles',xid=(6,9))
-    #chut.plot_ensemble(x_plot,y_plot,'^','blue','B Ensembles',xid=(9,10))
-    
-    chut.plot_ensemble(x_plot,y_plot,'^','blue','B Ensembles',xid=(19,22))
-    chut.plot_ensemble(x_plot,y_plot,'o','green','D Ensembles',xid=(22,23))
+    #calc xid's
+    a_range, b_range, d_range = self.calc_plot_ranges()
+    chut.plot_ensemble(x_plot,y_plot,'s','red','A Ensembles',xid = a_range)
+    chut.plot_ensemble(x_plot,y_plot,'^','blue','B Ensembles',xid = b_range)
+    chut.plot_ensemble(x_plot,y_plot,'o','green','D Ensembles',xid = d_range)
 
     plt.grid(False)
     #plt.xlim(0.,0.5)
     plt.legend(loc='best',numpoints=1)
-    plt.ylabel(r'$M_K a_0$')
-    plt.xlabel(r'$\mu_l/\mu_s$')
+    plt.ylabel(label[1])
+    plt.xlabel(label[0])
     pfit.savefig()
     pfit.close()
   

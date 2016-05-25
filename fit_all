@@ -84,7 +84,7 @@ def main():
     if plotsingle:
         print("plotting")
         plotter = ana.LatticePlot("%s/fit_k_%s.pdf" % (plotdir, lat))
-        plotter.set_env(ylog=True)
+        plotter.set_env(ylog=False)
         label = ["single particle", "t", "C(t)", "kaon"]
         plotter.plot(picorr, label, pifit, fit_single, add=addT, debug=debug)
         plotter.new_file("%s/hist_fit_k_%s.pdf" % (plotdir, lat))
