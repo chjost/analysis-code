@@ -64,7 +64,7 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
     #print("function name is %s" % func)
     #print("shape of arguments (nb_samples, nb_parameters):")
     #print(args.shape)
-    #print("Plot an errorband: %s" % ploterror)
+    print("Plot an errorband: %s" % ploterror)
     # check dimensions of args, if more than one,
     # iterate over first dimension
     _args = np.asarray(args)
@@ -172,11 +172,11 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
             else:
                 # calculate on original data
                 y1.append(func(_args, x))
-    print(len(x1),len(y1))
+    #print(len(x1),len(y1))
     plt.plot(x1, y1, fmt, label=label)
     if ymax and ymin:
-        print(ymax[0])
-        print(x1[0])
+        #print(ymax[0])
+        #print(x1[0])
         plt.fill_between(x1, ymin, ymax, facecolor=col,
             edgecolor=col, alpha=0.2)
     plt.legend()

@@ -19,8 +19,8 @@ def calc_y_lin(y1,y2,x,x_match):
   """
   coeff = mh.ipol_lin(y1, y2, x)
   result = mh.eval_lin(coeff,x_match)
-  print(coeff.shape)
-  print(result.shape)
+  #print(coeff.shape)
+  #print(result.shape)
   return result, coeff
 
 def calc_y_quad(y1,y2,y3,x,x_match):

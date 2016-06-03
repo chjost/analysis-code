@@ -534,9 +534,9 @@ def plot_single_line(x,y,label,col):
   ----------
   x,y : in general multidimensional ndarrays 
   """
-  print("line properties")
-  print(x.shape)
-  print(y)
+  #print("line properties")
+  #print(x.shape)
+  #print(y)
   x_val=np.zeros(2)
   y_val=np.zeros(2)
   try:
@@ -549,8 +549,8 @@ def plot_single_line(x,y,label,col):
   except:
      y_val[0] = y
      y_val[1] = 0
-  print(x_val)
-  print(y_val)
+  #print(x_val)
+  #print(y_val)
   l = plt.axhline(y=y_val[0],ls='solid',color=col)
   l = plt.axvline(x=x_val[0],ls='solid',color=col)
   plt.errorbar(x_val[0],y_val[0],y_val[1],x_val[1],fmt =

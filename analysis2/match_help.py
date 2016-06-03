@@ -106,7 +106,7 @@ def solve_quad(coeff, obs_match):
   """
   result = np.zeros(coeff.shape[0])
   coeff[:,-1] = np.subtract(coeff[:,-1],obs_match)
-  print(coeff.shape)
+  #print(coeff.shape)
   for b in range(result.shape[0]):
     tmp = np.roots(coeff[b])
     result[b]=tmp[1]

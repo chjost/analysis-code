@@ -237,18 +237,24 @@ def interp_fk(name, mul, mus_match):
     #Source for fk: /freedisk/urbach/delphyne/4flavour/b<beta>/mu<mu_l>/result<ens>.dat
     OS_fk = np.loadtxt(name, skiprows=1,
         usecols=(1,2,3,4,5,6))
+    # convert from ensemblename to quarkmass value
+    if isinstance(mul,basestring):
+      arr=mul.split(".", 2)
+      mul = np.float64(arr[0][1:])*10e-5
     # delete everything with wrong light quark mass
-    OS_fk = OS_fk[np.logical_not(OS_fk[:,0]!= mul)]
-
+    #print("Evaluate fk at mu_l = %f" % mul)
+    OS_fk = OS_fk[(OS_fk[:,0]-mul) < 10e-8]
     # filter the textfile for the right light quark mass
     # make numpy arrays with x and y values
     mus = OS_fk[:,1]
     fk  = OS_fk[:,4]
     dfk = OS_fk[:,5]
+    #print(mus,fk,mus_match)
     # use np.interp to interpolate to given value
     fk_ipol = np.interp(mus_match, mus, fk)
     dfk_ipol = np.interp(mus_match, mus,dfk)
-    return np.array((fk_ipol, dfk_ipol))
+    #return np.array((fk_ipol, dfk_ipol))
+    return fk_ipol
   
 def solve_lin(lin_coeff, match):
   """ Solves linear equation for x value 

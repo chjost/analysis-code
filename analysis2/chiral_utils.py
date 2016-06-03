@@ -6,6 +6,7 @@ import matplotlib
 matplotlib.use('Agg') # has to be imported before the next lines
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+import matplotlib.lines as mlines
 import numpy as np
 from numpy.polynomial import polynomial as P
 from fit_routines import fitting
@@ -37,7 +38,6 @@ def err_phys_pt(pardata,x,func):
   else:
     raise ValueError("Parameters do not have the right shape")
   y=np.asarray(_y)
-  print(y.shape)
   return ana.compute_error(y)
 
 
@@ -145,6 +145,28 @@ def prepare_mpi(x_help,ens,nboot,square=True):
   data_plot[0:2] = ana.compute_error(data_sing)
   return data_plot, data_sing
 
+def prepare_fk(x_help,ens,nboot):
+  """Build fK from fK data
+
+  The data for fK is pseudobootstrapped with its statistical error.
+  After that the statistical error is computed
+  
+  Parameters
+  ----------
+  x_help : the read in xdata from an external file
+  """
+  # returns
+  data_plot=np.zeros((4))
+  # pseudobootstrap x-var from gaussian distribution
+  data_sing = ana.draw_gauss_distributed(x_help[ens][0],
+                                               x_help[ens][1],(nboot,))
+  # first entry needs to be original data
+  data_sing[0] = x_help[ens][0]
+  # final data is fk
+  # Have no handle on systematic error here
+  data_plot[0:2] = ana.compute_error(data_sing)
+  return data_plot, data_sing
+
 def prepare_mk(name,datadir,ens,x_help,nboot,amu_s=None,strange=None):
   """Build (M_K/f_K) from M_K^2 data
 
@@ -181,23 +203,50 @@ def prepare_mk(name,datadir,ens,x_help,nboot,amu_s=None,strange=None):
   data_plot[0:2] = ana.compute_error(data_fit)
   return data_plot, data_fit
 
-def plot_ensemble(x,y,form,col,label,xid=None):
+def plot_ensemble(x,y,form,col,label,xid=None,match=False):
     if xid is not None:
       d=xid[0]
       u=xid[1]
-      print(u,d)
-      plt.errorbar(x[d:u,0], y[d:u,0], 
-                 yerr=[y[d:u,1]+y[d:u,2],y[d:u,1]+y[d:u,3]],
-                 fmt=form, color=col)
-      plt.errorbar(x[d:u,0],y[d:u,0],y[d:u,1],x[d:u,1],
-                fmt=form, color=col, label=label)
-    else:
-      plt.errorbar(x[:,0], y[:,0], 
-          yerr=[y[:,1]+y[:,2],y[:,1]+y[:,3]],
-                 fmt=form, color=col)
-      plt.errorbar(x[:,0],y[:,0],y[:,1],y[:,1],
-                fmt=form, color=col, label=label)
+      #print(u,d)
+      if len(form) is 1:
+        plt.errorbar(x[d:u,0], y[d:u,0], 
+                   yerr=[y[d:u,1]+y[d:u,2],y[d:u,1]+y[d:u,3]],
+                   fmt=form, color=col)
+        plt.errorbar(x[d:u,0],y[d:u,0],y[d:u,1],x[d:u,1],
+                  fmt=form, color=col, label=label[0])
+      else:
+        chk = 1
+        pts = None
+        for i,f in enumerate(form):
+          # determine new interval (assumes 3 strange quark masses)
+          if match:
+            _d = d+i
+            _u = _d+1
+            plt.errorbar(x[_d:_u,0], y[_d:_u,0], 
+                       yerr=[y[_d:_u,1]+y[_d:_u,2],y[_d:_u,1]+y[_d:_u,3]],
+                       fmt=f, color=col)
+            plt.errorbar(x[_d:_u,0],y[_d:_u,0],y[_d:_u,1],x[_d:_u,1],
+                      fmt=f, color=col, label=label[i])
+            chk = _u
+          else:
+            _d = d+i*3
+            _u = _d+3
+            plt.errorbar(x[_d:_u,0], y[_d:_u,0], 
+                       yerr=[y[_d:_u,1]+y[_d:_u,2],y[_d:_u,1]+y[_d:_u,3]],
+                       fmt=f, color=col)
+            plt.errorbar(x[_d:_u,0],y[_d:_u,0],y[_d:_u,1],x[_d:_u,1],
+                      fmt=f, color=col, label=label[i])
+            chk = _u
 
+        if chk is not u:
+          print("symbol coding wrong")
+
+    else:
+      pts, = plt.errorbar(x[:,0], y[:,0], 
+          yerr=[y[:,1]+y[:,2],y[:,1]+y[:,3]],
+                 fmt=form, color=col, label=label)
+      plt.errorbar(x[:,0],y[:,0],y[:,1],y[:,1],
+                fmt=form, color=col)
 
 def chiral_fit(X, Y,fitfunc,corrid="",start=None, xcut=None, ncorr=None,debug=0):
     """Fit function to data.
@@ -225,22 +274,24 @@ def chiral_fit(X, Y,fitfunc,corrid="",start=None, xcut=None, ncorr=None,debug=0)
         _start = list(start)
     else:
         _start = start
+    print("\nStart parameters are:")
+    print(_start)
     # implement a cut on the data if given
     if xcut:
         tmp = X[:,0] < xcut
-        _X = X[tmp].T
+      # Select first bootstrapsample for fit
+        _X = X[tmp,0:1].T
         _Y = Y[tmp].T
     else:
-        _X = X.T
+      # Select first bootstrapsample for fit
+        _X = X[:,0:1].T
         _Y = Y.T
-        print(_X[0], _Y[0])
-
     # create FitResults
     fitres = ana.FitResult("chiral_fit")
     #shape1 = (_Y.shape[0], len(start),_X.shape[0])
     #shape2 = (_Y.shape[0], _X.shape[0])
     # shape is (nboot)^2 with to parameters and one fit range
-    shape1 = (_Y.shape[0]*_X.shape[0], len(start),1)
+    shape1 = (_Y.shape[0]*_X.shape[0], len(_start),1)
     shape2 = (_Y.shape[0]*_X.shape[0],1)
     if ncorr is None:
       fitres.create_empty(shape1, shape2, 1)

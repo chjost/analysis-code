@@ -91,7 +91,16 @@ class MatchResult(object):
         self.obs[i] = r.data[0][:,par,0]
         # multiply with observable of right shape
         if mult is not None:
-          self.obs[i]*=mult
+          if hasattr(mult,'__iter__'):
+            if len(mult) is len(fitreslst):
+              self.obs[i]*=mult[i]
+            else:
+              try:
+                self.obs[i]*=mult
+              except:
+                raise ValueError("mult has wrong length!")
+          else:
+            self.obs[i]*=mult
         if square:
           self.obs[i] = np.square(self.obs[i])
         self.amu[i] = amu[i]
@@ -161,6 +170,11 @@ class MatchResult(object):
           print("Using linear fit")
           self.amu_match[2], self.coeffs[2] = get_x_fit(obs[0],obs[1],obs[2],
                                                         amu,obs_to_match)
+          # Summary
+        # print summary to screen
+        orig, std = compute_error(self.amu_match[meth])
+        print("%s = %f +/- %f:" %(self.obs_id, orig, std))
+
       # Do all methods  
       else:
           if (np.mean(obs[0]) <= np.mean(obs_to_match)) & (np.mean(obs_to_match) <= np.mean(obs[1])):
@@ -177,6 +191,11 @@ class MatchResult(object):
           else:
             self.amu_match[2], self.coeffs[2] = get_x__fit(obs[0],obs[1],obs[2],
                                                            amu, obs_to_match) 
+          # print summary to screen
+          meths = ['lin. ipol','quad. ipol.','lin fit']
+          for i,m in enumerate(meths):
+            orig, std = compute_error(self.amu_match[i])
+            print("%s: %s = %f +/- %f:" %(m,self.obs_id, orig, std))
       
       if plot:
         self.plot_match(obs_to_match,plotdir,ens,meth=meth,proc='match',label=label)
@@ -211,6 +230,7 @@ class MatchResult(object):
         if meth > 2:
           raise ValueError("Method not implemented yet, meth < 3")
         
+        print("\nEvaluate %s" %self.obs_id)
         # Depending on the method "meth" calculate coefficients first and evaluate
         # the root of the function to find obs_match
         # Method 0 only applicable for 2 observables
@@ -229,11 +249,13 @@ class MatchResult(object):
         if meth == 1:
           if obs.shape[0] == 3:
             print("Using quadratic interpolation")
-            print(amu_match)
             self.eval_obs[1], self.coeffs[1] = calc_y_quad(obs[0],obs[1],obs[2],amu,amu_match[1])
         if meth == 2:
           print("Using linear fit")
           self.eval_obs[2], self.coeffs[2] = calc_y_fit(obs[0],obs[1],obs[2],amu,amu_match[2])
+        # print summary to screen
+        orig, std = compute_error(self.eval_obs[meth])
+        print("%s = %f +/- %f:" %(self.obs_id, orig, std))
       # Do all methods  
       else:
         print("Using linear interpolation")
@@ -245,7 +267,13 @@ class MatchResult(object):
           self.eval_obs[1], self.coeffs[1] = calc_y_quad(obs[0],obs[1],obs[2],amu,amu_match[1])
           self.eval_obs[2], self.coeffs[2] = calc_y_fit(obs[0],obs[1],obs[2],amu,amu_match[1])
         else:
-          self.eval_obs[2], self.coeffs[2] = calc_y_fit(obs[0],obs[1],obs[2],amu,amu_match[2]) 
+          self.eval_obs[2], self.coeffs[2] = calc_y_fit(obs[0],obs[1],obs[2],amu,amu_match[2])
+
+        # print summary to screen
+        meths = ['lin. ipol','quad. ipol.','lin fit']
+        for i,m in enumerate(meths):
+          orig, std = compute_error(self.eval_obs[i])
+          print("%s: %s = %f +/- %f:" %(m,self.obs_id, orig, std))
       if plot:
         self.plot_match(self.eval_obs,plotdir,ens,meth=meth,proc='eval',label=label)
 
@@ -304,6 +332,7 @@ class MatchResult(object):
           plot_single_line(self.amu_match[meth],self.eval_obs[meth],label[0:2],col='b')
       else:
         raise ValueError("Method not known")
+      plt.title(ens)
       plt.xlabel(label[0])
       plt.ylabel(label[1])
       plt.legend(loc='best',numpoints=1,ncol=2)
