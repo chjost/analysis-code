@@ -42,8 +42,9 @@ class ChirAna(object):
     self.phys_point = None
     self.proc_id = proc_id
     self.match = None
+    self.glob = False
 
-  def create_empty(self, lyt_x, lyt_y, match=False):
+  def create_empty(self, lyt_x, lyt_y, match=False,glob=False):
     """Initialize a chiral analysis with some start parameters
     
     At the moment the first index is used to label the lattice spacing, the
@@ -63,7 +64,10 @@ class ChirAna(object):
     
     # set match-boolean
     self.match = match
-
+    
+    # set global fit boolean
+    self.glob = glob
+    
     self.y_data = []
     for a in range(lyt_y[0]):
       if len(lyt_y) == 4:
@@ -79,6 +83,67 @@ class ChirAna(object):
         tp_x = (lyt_x[1][a],lyt_x[2])
       self.x_data.append(np.zeros(tp_x))
     self.phys_point = np.zeros((2,2))
+
+  def extend_data(self,obs=['None',],dim='x'):
+    """Extend data in the givene dimension for different values
+
+    The data values in the given dimension are extended with ensemble specific
+    observables, like a/r_0. Thus the dimensionality of the data is raised in
+    order to enable global fitting.
+
+    Parameters
+    ----------
+    obs : list of strings, observabls to add to data
+    dim : string, x or ydata
+    """
+    # using data layouts create data for extra dimension
+    if dim is 'x':
+      _lyt = self.x_shape
+      self.x_shape = _lyt+((len(obs)+1),)
+    elif dim is 'y':
+      _lyt = self.y_shape
+      self.y_shape = _lyt+((len(obs)+1),)
+    else:
+      raise ValueError
+      print("Type not known, choose between 'x' or 'y'")
+    # extension is the larger array
+    extension = []
+    for a in range(_lyt[0]):
+      if len(_lyt) == 4:
+        _tp = (_lyt[1][a],_lyt[2],_lyt[3],len(obs)+1)
+      else:
+        _tp = (_lyt[1][a],_lyt[2],len(obs)+1)
+      extension.append(np.zeros(_tp))
+    # copy data over from self
+    full_lat_space = ['A','B','D']
+    for i,a in enumerate(extension):
+      if dim is 'x':
+        a[...,0] = self.x_data[i]
+        if obs[0] is 'a':
+          # initialise bootstrapsampled r0-values
+          r0 = chut.prepare_r0(full_lat_space[i],_lyt[2])
+          r0_inv_sq = np.square(1./r0)
+
+          # get array into right shape
+          if self.match is False:
+            r0_inv_sq = np.tile(r0_inv_sq,_lyt[3]).reshape((_lyt[3],_lyt[2]))
+            print("intermeidate shape of a/r0")
+            print(r0_inv_sq.shape)
+          r0_ins = np.zeros_like(a[...,0])
+          for i in r0_ins:
+            i = r0_inv_sq
+          print("shape for insertion")
+          print(r0_ins.shape)
+          a[...,1] = r0_ins
+      # update original data
+      else:
+        raise RuntimeError
+        print("global fit only for multiple x dimenisons")
+    self.x_data = a
+    print("control squared a/r0 values:")
+    for i in extension:
+      print(i[:,:,0,0])
+    return extension
 
   def add_data(self,data,idx,dim=None,op=False):
     """Add x- or y-data at aspecific index
@@ -187,6 +252,10 @@ class ChirAna(object):
     # Choose the fit data the dimensions of the data are: (a,mu_l,mu_s,nboot)
     # with lattice spacing a, light and strange quark masses mu_l and mu_s and
     # bootstrapsaFalses
+    if self.glob:
+      # for a global fit, the necessary parameters have to be given
+      self.extend_data(obs=['a',],dim='x')
+        
     if dim is None:
       x_data, y_data = self.reduction()
     else:
@@ -215,6 +284,7 @@ class ChirAna(object):
       print(x_data.shape)
       print(y_data.shape)
       self.plot(x_data,y_data,fitfunc,label,xcut=xcut,ens=ens)
+
 
   def print_summary(self,dim,index,lat_space,ens_dict,mu_s_dict=None,xcut=2):
     """This function should print a summary of the whole chiral analysis,
@@ -277,8 +347,6 @@ class ChirAna(object):
     samples)
     """
     # the outgoing data is 2 dimensional
-    #x_data_shape = (self.x_shape[1]*np.asarray(self.x_shape[2]),self.x_shape[-1])
-    #y_data_shape = (self.y_shape[1]*np.asarray(self.y_shape[2]),self.y_shape[-1])
     # looping over list place data in array
     tmp_x_shape = (self.x_shape[0],self.x_shape[1]*np.asarray(self.x_shape[2]),self.x_shape[-1])
     tmp_y_shape = (self.y_shape[0],self.y_shape[1]*np.asarray(self.y_shape[2]),self.y_shape[-1])
@@ -389,13 +457,14 @@ class ChirAna(object):
     plt.errorbar(self.phys_point[0,0],self.phys_point[1,0],self.phys_point[1,1], fmt='d', color='darkorange', label='Physical Point')
     plt.grid(False)
     # get x and y range dynamically
-    x_min = np.amin(x_plot[:,0])
+    x_tmp = np.append(x_plot[:,0],np.full_like(x_plot[:,0],self.phys_point[0,0]),axis=1)
+    x_min = np.amin(x_tmp)
     x_max = np.amax(x_plot[:,0])
     x_lim = [x_min-0.05*abs(x_min),x_max+0.05*abs(x_max)]
     y_min = np.amin(y_plot[:,0])
     y_max = np.amax(y_plot[:,0])
     y_lim = [y_min-0.1*abs(y_min),y_max+0.1*abs(y_max)]
-    plt.xlim(0,x_lim[1])
+    plt.xlim(x_lim[0],x_lim[1])
     plt.ylim(y_lim[0],y_lim[1])
     plt.legend(loc='best',numpoints=1,ncol=2,fontsize=12)
     plt.title(label[2])

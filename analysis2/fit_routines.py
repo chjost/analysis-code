@@ -374,6 +374,8 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, debug=0):
         #print cov
     else:
         cov = np.cov(Y.T)
+    print("covariance matrix has shape:")
+    print(cov.shape)
     cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
 
     # degrees of freedom
