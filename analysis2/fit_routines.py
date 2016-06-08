@@ -416,7 +416,7 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, debug=0):
             print("  %.6e +/- %.6e" % (rm, rs))
         print("Chi^2/dof: %.6e +/- %.6e" % (chisquare[0]/dof, np.std(chisquare)
               /dof))
-        print("p-value: %lf" % pvals[0]) 
+        print("p-value: %.3e" % pvals[0]) 
 
     return res, chisquare, pvals
 

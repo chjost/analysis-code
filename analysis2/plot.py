@@ -8,7 +8,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-
+matplotlib.rcParams['axes.labelsize']='large'
 from fit import LatticeFit, FitResult
 from correlator import Correlators
 from statistics import compute_error

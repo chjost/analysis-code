@@ -30,6 +30,8 @@ def lo_chipt(p,x):
 def err_phys_pt(pardata,x,func):
   _y = []
   # evaluate all parameters at one point
+  print("data shape of parameters:")
+  print(pardata.shape)
   if pardata.shape > 2:
     for i in range(pardata.shape[0]):
       for j in range(pardata.shape[-1]):
@@ -311,9 +313,9 @@ def chiral_fit(X, Y,fitfunc,corrid="",start=None, xcut=None, ncorr=None,debug=0)
         #if i % 100:
         #    print("%d of %d finished" % (i+1, _X.shape[0]))
     t1 = np.asarray(timing)
-    print("total fit time %fs" % (t1[-1] - t1[0]))
-    t2 = t1[1:] - t1[:-1]
-    print("time per fit %f +- %fs" % (np.mean(t2), np.std(t2)))
+    #print("total fit time %fs" % (t1[-1] - t1[0]))
+    #t2 = t1[1:] - t1[:-1]
+    #print("time per fit %f +- %fs" % (np.mean(t2), np.std(t2)))
     return fitres
 
 def print_line_latex(lat, dx, dy, prec=1e4):

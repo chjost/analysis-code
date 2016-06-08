@@ -7,6 +7,7 @@ matplotlib.use('Agg') # has to be imported before the next lines
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from matplotlib.backends.backend_pdf import PdfPages
+matplotlib.rcParams['font.size'] = 14
 import numpy as np
 
 from match_functions import *
@@ -123,7 +124,7 @@ class MatchResult(object):
         self.amu[idx] = amu
 
     def match_to(self, obs_to_match, meth=None, plot=True,plotdir=None,ens=None,
-        label=None):
+        label=None,debug=0):
       """Matches the quark mass to a given observable
 
       Parameters
@@ -169,7 +170,7 @@ class MatchResult(object):
         if meth == 2:
           print("Using linear fit")
           self.amu_match[2], self.coeffs[2] = get_x_fit(obs[0],obs[1],obs[2],
-                                                        amu,obs_to_match)
+                                                        amu,obs_to_match,debug=debug)
           # Summary
         # print summary to screen
         orig, std = compute_error(self.amu_match[meth])

@@ -64,8 +64,8 @@ def get_x_quad(y1,y2,y3,x,obs_match):
   return result, coeff
 
 # TODO: adapt for more than three masses
-def get_x_fit(y1,y2,y3,x,obs_match):
+def get_x_fit(y1,y2,y3,x,obs_match,debug=0):
   y=np.asarray((y1,y2,y3))
-  coeff = mh.fit_lin(y,x)
+  coeff = mh.fit_lin(y,x,debug=debug)
   result = mh.solve_lin(coeff,obs_match)
   return result, coeff

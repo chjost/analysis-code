@@ -4,6 +4,8 @@ matplotlib.use('Agg') # has to be imported before the next lines
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from matplotlib.backends.backend_pdf import PdfPages
+matplotlib.rcParams['font.size'] = 14
+matplotlib.rcParams['axes.labelsize'] = 'large'
 
 import chiral_utils as chut
 from fit import FitResult
@@ -78,7 +80,7 @@ class ChirAna(object):
       self.x_data.append(np.zeros(tp_x))
     self.phys_point = np.zeros((2,2))
 
-  def add_data(self,data,idx,dim=None):
+  def add_data(self,data,idx,dim=None,op=False):
     """Add x- or y-data at aspecific index
 
     Parameters
@@ -86,13 +88,28 @@ class ChirAna(object):
     data : ndarray, the data to add
     idx : tuple, the index where to place the data
     dim : string, is it x- or y-data?
+    op : string, should existent data at index and dimension be operated
+           with data to add?
     """
     if dim =='x':
-      self.x_data[idx[0]][idx[1:]] = data
+      if op == 'mult':
+        self.x_data[idx[0]][idx[1:]] *= data
+      # divide existent x_data by data
+      elif op == 'div':
+        self.x_data[idx[0]][idx[1:]] /= data
+      else:
+        self.x_data[idx[0]][idx[1:]] = data
+      print(self.x_data[idx[0]][idx[1:]][0])
     if dim =='y':
-      self.y_data[idx[0]][idx[1:]] = data
+      if op == 'mult':
+        self.y_data[idx[0]][idx[1:]] *= data
+      elif op == 'div':
+        self.y_data[idx[0]][idx[1:]] /= data
+      else:
+        self.y_data[idx[0]][idx[1:]] = data
+      print(self.y_data[idx[0]][idx[1:]][0])
 
-  def add_extern_data(self,filename,idx,ens,dim=None,square=True,read=None):
+  def add_extern_data(self,filename,idx,ens,dim=None,square=True,read=None,op=False):
     if read is 'mpi':
       #print("indexto insert extern data:")
       #print(dim,idx)
@@ -102,8 +119,15 @@ class ChirAna(object):
       plot,data = chut.prepare_mpi(ext_help,ens,self.x_data[0].shape[-1],square=square)
     if read is 'fk_unit':
       ext_help = chut.read_extern(filename,(1,2))
-      plot,data = chut.prepare
-    self.add_data(data,idx,dim=dim)
+      plot,data = chut.prepare_fk(ext_help,ens,self.x_data[0].shape[-1])
+    if read is 'mk_unit':
+      ext_help = chut.read_extern(filename,(1,2))
+      # prepare_fk also does the right for m_k
+      # TODO: unify this at some point
+      plot,data = chut.prepare_fk(ext_help,ens,self.x_data[0].shape[-1])
+    print("extern data added:")
+    print("%s: %f " %(read, data[0]))
+    self.add_data(data,idx,dim=dim,op=op)
 
   def get_data_fit(self,dof,index,v='y'):
     """ Collect the data for the fit from class instance
@@ -138,8 +162,8 @@ class ChirAna(object):
       raise ValueError("unknown data dimension.")
     return data
 
-  def fit(self,fitfunc,dim,index,x_phys=None,xcut=False,
-          plot=True,label=None,datadir=None,read=False,ens=None):
+  def fit(self,fitfunc,dim,index,start=[1.,],x_phys=None,xcut=False,
+          plot=True,label=None,datadir=None,read=False,ens=None,debug=0):
     """fit a chiral analysis instance to a given fitfunction
 
     This function uses the data of the ChirAna instance to fit the data to the
@@ -177,7 +201,7 @@ class ChirAna(object):
         self.fitres = FitResult.read(datadir+self.proc_id+'.npz')
     else:
       self.fitres = chut.chiral_fit(x_data,y_data,fitfunc,corrid=self.proc_id,
-                                  start=[1.,1.],xcut=xcut)
+                                  start=start,xcut=xcut,debug=debug)
     if xcut:
       self.fitres.save(datadir+self.proc_id+'_xcut_%d.npz'%xcut)
     else:
@@ -215,6 +239,7 @@ class ChirAna(object):
     # Idea: concatenate to an 5,num_datapoints array first, then print line for
     # line
     print('\midrule')
+    l = 0
     for i,a in enumerate(lat_space):
       #if i > 0:
       #  l = len(ens_dict[lat_space[i-1]])
@@ -222,12 +247,17 @@ class ChirAna(object):
       #  l = len(ens_dict[lat_space[i-1]])+ len(ens_dict[lat_space[i-2]])
       #else:
       #  l = 0
+      # number of ensembles for each lattice spacing
+      if i == 0:
+        l = 0
+      if i == 1:
+        l = len(ens_dict[lat_space[i-1]])
+      if i == 2:
+        l += len(ens_dict[lat_space[i-1]]) 
       for j,e in enumerate(ens_dict[a]):
-        # number of ensembles for each lattice spacing
-        l = len(ens_dict[a])
         # format for
         if self.match:
-            chut.print_line_latex(e,x_plot[i*l+j][0:2],y_plot[i*l+j][0:2])
+            chut.print_line_latex(e,x_plot[l+j][0:2],y_plot[l+j][0:2])
         else:
           for k,s in enumerate(mu_s_dict[a]):
             chut.print_line_latex(e,x_plot[i*l*3+j*3+k][0:2],y_plot[i*l*3+j*3+k][0:2])
@@ -235,7 +265,7 @@ class ChirAna(object):
     print("Phsyical point result:")
     if xcut is None:
       xcut = 2.
-    print("%10s & $%.1f$ & $%.4f(%1.0f)$ & $%.2f/%d$ & $%.3f $" %
+    print("%10s & $%.1f$ & $%.4f(%1.0f)$ & $%.2f/%d$ & $%.2e $" %
         (self.proc_id, xcut, self.phys_point[1,0], self.phys_point[1,1]*1e4,
           self.fitres.chi2[0][0], dof, self.fitres.pval[0][0]))
 
@@ -310,7 +340,7 @@ class ChirAna(object):
 
     plt.grid(False)
     #plt.xlim(0.,0.5)
-    plt.legend(loc='best',numpoints=1, ncol=2, fontsize=12)
+    plt.legend(loc='best',numpoints=1, ncol=2,fontsize=12)
     plt.ylabel(label[1])
     plt.xlabel(label[0])
     pfit.savefig()
@@ -358,7 +388,15 @@ class ChirAna(object):
     print("%f +/- %f" %(self.phys_point[1,0],self.phys_point[1,1]))
     plt.errorbar(self.phys_point[0,0],self.phys_point[1,0],self.phys_point[1,1], fmt='d', color='darkorange', label='Physical Point')
     plt.grid(False)
-    #plt.xlim(0.,1.6)
+    # get x and y range dynamically
+    x_min = np.amin(x_plot[:,0])
+    x_max = np.amax(x_plot[:,0])
+    x_lim = [x_min-0.05*abs(x_min),x_max+0.05*abs(x_max)]
+    y_min = np.amin(y_plot[:,0])
+    y_max = np.amax(y_plot[:,0])
+    y_lim = [y_min-0.1*abs(y_min),y_max+0.1*abs(y_max)]
+    plt.xlim(0,x_lim[1])
+    plt.ylim(y_lim[0],y_lim[1])
     plt.legend(loc='best',numpoints=1,ncol=2,fontsize=12)
     plt.title(label[2])
     plt.ylabel(label[1])
