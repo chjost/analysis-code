@@ -57,9 +57,21 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
         else:
             lfunc = _plotrange[0]
             ufunc = _plotrange[1]
-            x1 = np.linspace(X[lfunc], X[ufunc], 1000)
+            # handle data with more than two dimensions
+            if len(X.shape) > 1:
+                _x1 = np.linspace(X[lfunc,0],X[ufunc,0], 1000)
+                _x2 = np.linspace(X[lfunc,1],X[ufunc,1], 1000)
+                x1 = np.stack(_x1,_x2,axis=1)
+            else:
+                x1 = np.linspace(X[lfunc], X[ufunc], 1000)
     else:
-        x1 = np.linspace(X[0], X[-1], 1000)
+        # handle data with more than two dimensions
+        if len(X.shape) > 1:
+            _x1 = np.linspace(X[0,0],X[-1,0], 1000)
+            _x2 = np.linspace(X[0,1],X[-1,1], 1000)
+            x1 = np.column_stack((_x1,_x2))
+        else:
+            x1 = np.linspace(X[0], X[-1], 1000)
     #print("option summary:")
     #print("function name is %s" % func)
     #print("shape of arguments (nb_samples, nb_parameters):")
@@ -173,12 +185,21 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
                 # calculate on original data
                 y1.append(func(_args, x))
     #print(len(x1),len(y1))
-    plt.plot(x1, y1, fmt, label=label)
+    if len(X.shape) > 1:
+      plt.plot(x1[:,0], y1, fmt, label=label)
+    else:
+      plt.plot(x1, y1, fmt, label=label)
     if ymax and ymin:
         #print(ymax[0])
         #print(x1[0])
-        plt.fill_between(x1, ymin, ymax, facecolor=col,
-            edgecolor=col, alpha=0.2)
+        if len(X.shape) > 1:
+          print("fill shape:")
+          print(x1.shape)
+          plt.fill_between(x1[:,0], ymin, ymax, facecolor=col,
+              edgecolor=col, alpha=0.2)
+        else:
+          plt.fill_between(x1, ymin, ymax, facecolor=col,
+              edgecolor=col, alpha=0.2)
     plt.legend()
 
 def plot_data(X, Y, dY, label, plotrange=None, fmt="x",col='b'):

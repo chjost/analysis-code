@@ -28,14 +28,25 @@ def lo_chipt(p,x):
   return p[0]*x+p[1]
 
 def err_phys_pt(pardata,x,func):
+  """Compute mean and error of an observable at the physical point specified by
+  x
+  Parameters
+  ----------
+  pardata : ndarray, the bootstrapsamples of the parameters after fitting
+  x : ndarray, the xvalue to evaluate the function
+  func : the function, usually a lambda object
+  """
   _y = []
   # evaluate all parameters at one point
-  print("data shape of parameters:")
-  print(pardata.shape)
+  #print("data shape of parameters:")
+  #print(pardata.shape)
   if pardata.shape > 2:
     for i in range(pardata.shape[0]):
       for j in range(pardata.shape[-1]):
         tmp_par = pardata[i,:,j]
+        #print("info on physical point:")
+        #print(tmp_par)
+        #print(x)
         _y.append(func(tmp_par,x))
   else:
     raise ValueError("Parameters do not have the right shape")
@@ -112,13 +123,14 @@ def prepare_data(name, datadir, ens,strange=None,r0=False, square=True, par=0):
 
 def prepare_r0(ens,nsamp):
     """Return a list of bootstrapped r0 values"""
-
+    data_plot = np.zeros(4)
     #dictionary of Sommer parameter (arxiv:1403.4504v3)
     r = {'A':[5.31,0.08], 'B':[5.77,0.06], 'D':[7.60,0.08]}
     ens_count = ['A','A','A','A','A','A','B','B','B']
     r0_tmp = ana.draw_gauss_distributed(r[ens][0],r[ens][1],(nsamp,))
     r0_tmp[0] = r[ens][0]
-    return r0_tmp
+    data_plot[0:2] = ana.compute_error(r0_tmp)
+    return data_plot, r0_tmp
 
 def prepare_mpi(x_help,ens,nboot,square=True):
   """Build (r0*M_Pi)^2 from M_pi data
@@ -205,7 +217,7 @@ def prepare_mk(name,datadir,ens,x_help,nboot,amu_s=None,strange=None):
   data_plot[0:2] = ana.compute_error(data_fit)
   return data_plot, data_fit
 
-def plot_ensemble(x,y,form,col,label,xid=None,match=False):
+def plot_ensemble(x,y,form,col,label,xid=None,match=False,fitfunc=None):
     if xid is not None:
       d=xid[0]
       u=xid[1]
@@ -280,13 +292,13 @@ def chiral_fit(X, Y,fitfunc,corrid="",start=None, xcut=None, ncorr=None,debug=0)
     print(_start)
     # implement a cut on the data if given
     if xcut:
-        tmp = X[:,0] < xcut
+        tmp = X[:,...,0] < xcut
       # Select first bootstrapsample for fit
-        _X = X[tmp,0:1].T
+        _X = X[tmp,...,0:1].T
         _Y = Y[tmp].T
     else:
       # Select first bootstrapsample for fit
-        _X = X[:,0:1].T
+        _X = X[:,...,0:1].T
         _Y = Y.T
     # create FitResults
     fitres = ana.FitResult("chiral_fit")
