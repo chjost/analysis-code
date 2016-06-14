@@ -73,7 +73,7 @@ class MatchResult(object):
         self.obs_id = obs_id
 
     # get data from collection of fitresults
-    def load_data(self,fitreslst,par,amu,square=False,mult=None):
+    def load_data(self,fitreslst,par,amu,square=False,mult=None,debug=0):
       """load a list of fitresults and a list of amu values into an existing instance of
       MatchResult
 
@@ -90,6 +90,11 @@ class MatchResult(object):
       for i,r in enumerate(fitreslst):
         r = r.singularize()
         self.obs[i] = r.data[0][:,par,0]
+        if debug > 0:
+          print("Read in %s: %.4e" %(r,self.obs[i][0]))
+        # square first
+        if square:
+          self.obs[i] = np.square(self.obs[i])
         # multiply with observable of right shape
         if mult is not None:
           if hasattr(mult,'__iter__'):
@@ -102,8 +107,6 @@ class MatchResult(object):
                 raise ValueError("mult has wrong length!")
           else:
             self.obs[i]*=mult
-        if square:
-          self.obs[i] = np.square(self.obs[i])
         self.amu[i] = amu[i]
       
     # need to set all data at once and add data one at a time

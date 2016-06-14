@@ -267,6 +267,7 @@ class FitResult(object):
             The identifier of the fit results.
         derived : bool
             If the data is derived or not.
+        conf : list of integers, the configuration numbers of the original data
         """
         self.data = None
         self.pval = None
@@ -279,6 +280,7 @@ class FitResult(object):
         self.derived = derived
         self.error = None
         self.weight = None
+        self.conf = None
 
     @classmethod
     def read(cls, filename):

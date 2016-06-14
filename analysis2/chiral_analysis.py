@@ -180,6 +180,8 @@ class ChirAna(object):
       # divide existent x_data by data
       elif op == 'div':
         self.x_data[idx[0]][idx[1:]] /= data
+      elif op == 'min':
+        self.x_data[idx[0]][idx[1:],:,idx[2]] -= data
       else:
         self.x_data[idx[0]][idx[1],:,idx[2]] = data
       print(self.x_data[idx[0]][idx[1:]][0])
@@ -188,6 +190,8 @@ class ChirAna(object):
         self.y_data[idx[0]][idx[1:]] *= data
       elif op == 'div':
         self.y_data[idx[0]][idx[1:]] /= data
+      elif op == 'min':
+        self.y_data[idx[0]][idx[1:]] -= data
       else:
         self.y_data[idx[0]][idx[1:]] = data
       print(self.y_data[idx[0]][idx[1:]][0])
@@ -209,10 +213,20 @@ class ChirAna(object):
     op : string, if operation is given the data is convoluted with existing data
         at that index. if no operation is given data gets overwritten
     """
+    if read is None:
+      plot, data = np.zeros((self.x_data[0].shape[-1]))
     if read is 'r0_inv':
       _plot,_data = chut.prepare_r0(ens,self.x_data[0].shape[-1])
       plot=1./np.square(_plot)
       data=1./np.square(_data)
+    if read is 'r0':
+      _plot,_data = chut.prepare_r0(ens,self.x_data[0].shape[-1])
+      if square:
+        plot=np.square(_plot)
+        data=np.square(_data)
+      else:
+        plot=_plot
+        data=_data
     if read is 'mpi':
       #print("indexto insert extern data:")
       #print(dim,idx)
@@ -291,10 +305,11 @@ class ChirAna(object):
     # bootstrapsaFalses
     if dim is None:
       if self.glob is True:
-        x_data, y_data = self.reduction(x_shape_new = (2,1500))
+        x_data, y_data = self.reduction(x_shape_new = (1,1500))
+        #x_data, y_data = self.reduction(x_shape_new = (2,1500))
         print("0th bootstrapsamples after reduction:")
         print(x_data[:,0,0])
-        print(x_data[:,1,0])
+        #print(x_data[:,1,0])
 
       else:
         x_data, y_data = self.reduction()
@@ -321,7 +336,8 @@ class ChirAna(object):
     self.phys_point[0] = np.asarray((x_phys,0))
     if self.glob is True:
       print()
-      self.phys_point[1] = chut.err_phys_pt(args,np.asarray((x_phys,0)),fitfunc)
+      #self.phys_point[1] = chut.err_phys_pt(args,np.asarray((x_phys,0)),fitfunc)
+      self.phys_point[1] = chut.err_phys_pt(args,np.asarray((x_phys,)),fitfunc)
     else:
       self.phys_point[1] = chut.err_phys_pt(args,x_phys,fitfunc)
     if plot is True:
@@ -351,7 +367,7 @@ class ChirAna(object):
       print("x data shape for plot:")
       print(x_plot.shape)
       x_plot[:,0,0],x_plot[:,0,1] = np.asarray(compute_error(x_data[:,0],axis=1))
-      x_plot[:,1,0],x_plot[:,1,1] = np.asarray(compute_error(x_data[:,1],axis=1))
+      #x_plot[:,1,0],x_plot[:,1,1] = np.asarray(compute_error(x_data[:,1],axis=1))
       y_plot[:,0],y_plot[:,1] = np.asarray(compute_error(y_data,axis=1))
     else:
       x_plot=np.zeros((x_data.shape[0],4))
@@ -505,11 +521,12 @@ class ChirAna(object):
     """
     y_plot=np.zeros((y_data.shape[0],4))
     if self.glob:
-      x_plot=np.zeros((x_data.shape[0],2,4))
+      #x_plot=np.zeros((x_data.shape[0],2,4))
+      x_plot=np.zeros((x_data.shape[0],1,4))
       print("x data shape for plot:")
       print(x_plot.shape)
       x_plot[:,0,0],x_plot[:,0,1] = np.asarray(compute_error(x_data[:,0],axis=1))
-      x_plot[:,1,0],x_plot[:,1,1] = np.asarray(compute_error(x_data[:,1],axis=1))
+      #x_plot[:,1,0],x_plot[:,1,1] = np.asarray(compute_error(x_data[:,1],axis=1))
       y_plot[:,0],y_plot[:,1] = np.asarray(compute_error(y_data,axis=1))
     else:
       x_plot=np.zeros((x_data.shape[0],4))
@@ -571,7 +588,7 @@ class ChirAna(object):
     y_max = np.amax(y_plot[:,0])
     y_lim = [y_min-0.1*abs(y_min),y_max+0.1*abs(y_max)]
     #plt.xlim(x_lim[0],x_lim[1])
-    plt.xlim(8,x_lim[1])
+    plt.xlim(x_lim[0],x_lim[1])
     plt.ylim(y_lim[0],y_lim[1])
     plt.legend(loc='best',numpoints=1,ncol=2,fontsize=12)
     plt.title(label[2])
