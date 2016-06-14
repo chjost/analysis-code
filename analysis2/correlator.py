@@ -105,6 +105,8 @@ class Correlators(object):
             If file or folder not found.
         """
         data = in_out.read_data(filename)
+        print(data)
+        print(type(data))
         if isinstance(data.files,list):
             tmp = cls()
             tmp.data = data['arr_0']
@@ -142,8 +144,10 @@ class Correlators(object):
             in_out.write_data_ascii(self.data, filename, verbose)
         else:
             if self.conf is not None:
-                np.savez(filename, self.data, self.conf)
-            in_out.write_data(self.data, filename, verbose)
+                print("Saving configuration numbers")
+                in_out.write_data(self.data, filename, self.conf, verbose)
+            else:
+                in_out.write_data(self.data, filename, verbose)
 
     def symmetrize(self):
         """Symmetrizes the data around the second axis.

@@ -38,6 +38,7 @@ class LatticeFit(object):
             Use the full covariance matrix or just the errors.
         debug : int, optional
             The level of debugging output
+        conf : list of int, the configurations under investigation
         """
         self.debug = debug
         # chose the correct function if using predefined function
@@ -60,6 +61,7 @@ class LatticeFit(object):
         self.dt_i = dt_i
         self.dt_f = dt_f
         self.correlated = correlated
+        self.conf = None
 
     def fit(self, start, corr, ranges, corrid="", add=None, oldfit=None,
             oldfitpar=None, useall=False, lint=False):
@@ -175,7 +177,8 @@ class LatticeFit(object):
                     oldfit, add, oldfitpar, useall, self.debug, self.xshift,
                     self.correlated):
                 fitres.add_data(*res)
-
+        # get the configuration numbers from the correlator object
+        fitres.conf = corr.conf
         return fitres
 
     def chiral_fit(self, X, Y, corrid="", start=None, xcut=None, ncorr=None,debug=0):
@@ -293,6 +296,7 @@ class FitResult(object):
         obj.chi2 = tmp[3]
         obj.pval = tmp[4]
         obj.label = tmp[5]
+        obj.conf = tmp[6]
         obj.corr_num = tmp[0][1]
         obj.fit_ranges_shape = tmp[0][2]
         return obj
@@ -311,7 +315,7 @@ class FitResult(object):
         tmp[2] = self.fit_ranges_shape
         tmp[3] = self.derived
         write_fitresults(filename, tmp, self.fit_ranges, self.data, self.chi2,
-            self.pval, self.label, False)
+            self.pval, self.label, self.conf,False)
 
     def get_data(self, index):
         """Returns the data at the index.
