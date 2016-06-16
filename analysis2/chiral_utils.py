@@ -27,7 +27,7 @@ def lo_chipt(p,x):
   """
   return p[0]*x+p[1]
 
-def err_phys_pt(pardata,x,func):
+def err_phys_pt(pardata,x,func,axis=0):
   """Compute mean and error of an observable at the physical point specified by
   x
   Parameters
@@ -51,7 +51,10 @@ def err_phys_pt(pardata,x,func):
   else:
     raise ValueError("Parameters do not have the right shape")
   y=np.asarray(_y)
-  return ana.compute_error(y)
+  print("Calculated y values for error:")
+  for i,j in enumerate(y):
+    print(j,pardata[i])
+  return ana.compute_error(y,axis=axis)
 
 
 def read_extern(filename,cols):
@@ -132,7 +135,7 @@ def prepare_r0(ens,nsamp):
     data_plot[0:2] = ana.compute_error(r0_tmp)
     return data_plot, r0_tmp
 
-def prepare_mpi(x_help,ens,nboot,square=True):
+def prepare_mpi(x_help,ens,nboot,square=True,r0=True):
   """Build (r0*M_Pi)^2 from M_pi data
 
   The data for M_Pi is pseudobootstrapped with its statistical error,
@@ -150,12 +153,16 @@ def prepare_mpi(x_help,ens,nboot,square=True):
                                                x_help[ens][1],(nboot,))
   # first entry needs to be original data
   data_sing[0] = x_help[ens][0]
-  # final data is (r0*M_Pi)^2
-  if square:
-    data_sing = ana.r0_mass(data_sing,ens[0])**2
-  else:
-    data_sing = ana.r0_mass(data_sing,ens[0])
+  if r0 is True:
+    # final data is (r0*M_Pi)^2
+    if square:
+      data_sing = ana.r0_mass(data_sing,ens[0])**2
+    else:
+      data_sing = ana.r0_mass(data_sing,ens[0])
   # Have no handle on systematic error here
+  else:
+    if square:
+      data_sing *= data_sing
   data_plot[0:2] = ana.compute_error(data_sing)
   return data_plot, data_sing
 
@@ -300,6 +307,10 @@ def chiral_fit(X, Y,fitfunc,corrid="",start=None, xcut=None, ncorr=None,debug=0)
       # Select first bootstrapsample for fit
         _X = X[:,...,0:1].T
         _Y = Y.T
+    if debug > 0:
+      print("original fit data used:")
+      print(_X[0])
+      print(_Y[0])
     # create FitResults
     fitres = ana.FitResult("chiral_fit")
     #shape1 = (_Y.shape[0], len(start),_X.shape[0])
@@ -341,7 +352,7 @@ def print_line_latex(lat, dx, dy, prec=1e4):
       The data
   """
   if dx.shape[0] < 4:
-    print("%9s & $%.4f(%1.0f) & $%.4f(%1.0f) $ \\\\" % 
+    print("%9s & $%.4f(%1.0f)$ & $%.4f(%1.0f) $ \\\\" % 
               (lat, dx[0], dx[1]*prec,dy[0], dy[1]*prec))
   else:  
     print("%9s & NA & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &$%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ \\\\" % 

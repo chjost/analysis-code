@@ -10,6 +10,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 matplotlib.rcParams['font.size'] = 14
 import numpy as np
 
+import chiral_utils as chut
 from match_functions import *
 from match_help import in_ival
 from .plot import plot_lines,plot_single_line
@@ -117,14 +118,122 @@ class MatchResult(object):
       self.obs = obs
       self.amu = amu
 
-    def add_data(self,idx,obs,amu):
-      """Set observable data and amu-values at one index
+    def add_data(self,data,idx,op=False,amu=None,obs=True):
+      """Add x- or y-data at aspecific index
+
+      Parameters
+      ----------
+      data : ndarray, the data to add
+      idx : tuple, the index where to place the data
+      op : string, should existent data at index and dimension be operated
+             with data to add?
+      obs : Bool whether to add to observable or evaluated observables
       """
-      if self.obs is None:
-        raise RuntimeError("MatchResult not initialized call create empty first")
+      #print("xdata to add has shape")
+      #print(data.shape)
+      if obs == True:
+        #print("xdata to add to has shape")
+        #print(self.obs[idx].shape)
+        if op == 'mult':
+          self.obs[idx] *= data
+        # divide existent obs by data
+        elif op == 'div':
+          self.obs[idx] /= data
+        elif op == 'min':
+          self.obs[idx] -= data
+        else:
+          self.obs[idx] = data
+        if amu is not None:
+          self.amu[idx]=amu
+        print(self.obs[idx])
       else:
-        self.obs[idx] = obs
-        self.amu[idx] = amu
+        #print("xdata to add to has shape")
+        #print(self.eval_obs[idx].shape)
+        if op == 'mult':
+          self.eval_obs[idx] *= data
+        # divide existent eval_obs by data
+        elif op == 'div':
+          self.eval_obs[idx] /= data
+        elif op == 'min':
+          self.eval_obs[idx] -= data
+        else:
+          self.eval_obs[idx] = data
+        if amu is not None:
+          self.amu[idx]=amu
+        print(self.eval_obs[idx])
+
+
+    def add_extern_data(self,filename,ens,idx=None,amu=None,square=True,read=None,op=False):
+      """ This function adds data from an extern textfile to the analysis object
+      
+      The data is classified by names, the filename is given and the read in and
+      prepared data is placed at the index 
+
+      Parameters
+      ---------
+      filename : string, the filename of the extern data file
+      idx : tuple, index where to place prepared data in analysis
+      ens : string, identifier for the ensemble
+      dim : string, dimension to place the extern data at
+      square : bool, should data be squared?
+      read : string, identifier for the data read
+      op : string, if operation is given the data is convoluted with existing data
+          at that index. if no operation is given data gets overwritten
+      """
+      #if read is None:
+      #  plot, data = np.zeros((self.x_data[0].shape[-1]))
+      #if read is 'r0_inv':
+      #  _plot,_data = chut.prepare_r0(ens,self.x_data[0].shape[-1])
+      #  plot=1./np.square(_plot)
+      #  data=1./np.square(_data)
+      if read is 'r0':
+        _plot,_data = chut.prepare_r0(ens,self.obs.shape[-1])
+        if square:
+          plot=np.square(_plot)
+          data=np.square(_data)
+        else:
+          plot=_plot
+          data=_data
+      if read is 'mpi':
+        #print("indexto insert extern data:")
+        #print(dim,idx)
+        ext_help = chut.read_extern(filename,(1,2))
+        # take any y data dimension, since bootstrap samplesize shold not differ
+        # build r0M_pi
+        plot,data = chut.prepare_mpi(ext_help,ens,self.obs.shape[-1],square=square)
+      if read is 'halfmpi':
+        #print("indexto insert extern data:")
+        #print(dim,idx)
+        ext_help = chut.read_extern(filename,(1,2))
+        # take any y data dimension, since bootstrap samplesize shold not differ
+        # build r0M_pi
+        _plot,_data = chut.prepare_mpi(ext_help,ens,self.obs.shape[-1],square=square,r0=False)
+        plot= 0.5*_plot
+        data = 0.5*_data
+      #if read is 'fk_unit':
+      #  ext_help = chut.read_extern(filename,(1,2))
+      #  plot,data = chut.prepare_fk(ext_help,ens,self.x_data[0].shape[-1])
+      #if read is 'mk_unit':
+      #  ext_help = chut.read_extern(filename,(1,2))
+      #  # prepare_fk also does the right for m_k
+      #  # TODO: unify this at some point
+      #  plot,data = chut.prepare_fk(ext_help,ens,self.x_data[0].shape[-1])
+      #print("extern data added:")
+      #print("%s: %f " %(read, data[0]))
+      if idx is None:
+        for i in range(self.obs.shape[0]):
+          self.add_data(data,i,op=op,amu=amu)
+      else:
+        self.add_data(data,idx,op=op,amu=amu)
+
+    #def add_data(self,idx,obs,amu):
+    #  """Set observable data and amu-values at one index
+    #  """
+    #  if self.obs is None:
+    #    raise RuntimeError("MatchResult not initialized call create empty first")
+    #  else:
+    #    self.obs[idx] = obs
+    #    self.amu[idx] = amu
 
     def match_to(self, obs_to_match, meth=None, plot=True,plotdir=None,ens=None,
         label=None,debug=0):
@@ -295,7 +404,7 @@ class MatchResult(object):
       elif meth == 2:
         _meth = '_lfit'
       else:
-        _meth=None
+        _meth='cmp'
       pmatch = PdfPages(plotdir+ens+'/'+proc+_meth+'_%s.pdf' % self.obs_id)
       line = lambda p,x: p[0]*x+p[1]
       para = lambda p,x: p[0]*x**2+p[1]*x+p[2]

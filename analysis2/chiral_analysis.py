@@ -20,8 +20,12 @@ class ChirAna(object):
   """Class to conduct a chiral analysis in mu_l and mu_s for different
   observables
 
-  The observables are, in the most general case, 2d ndarrays, reflecting the
-  degrees of freedom in mu_l and mu_s. The dependent observables usually have
+  The observables are, in the most general case, lists of ndarrays, reflecting the
+  degrees of freedom in lattice spacing, mu_l, mu_s, fitting dimensions and bootstrapsamples.
+  Thus the shape of classobject is a tuple with 5 entries, the 0th entry is the
+  length of the 1st entry, which is a tuple itself. 
+  an example of a shape tuple is (3,(5,4,3),3,2,1500)
+  The dependent observables usually have
   the same layout
   In addition it is possible to fit the data to a given function
   """
@@ -42,9 +46,8 @@ class ChirAna(object):
     self.phys_point = None
     self.proc_id = proc_id
     self.match = None
-    self.glob = False
 
-  def create_empty(self, lyt_x, lyt_y, match=False,glob=False):
+  def create_empty(self, lyt_x, lyt_y, match=False):
     """Initialize a chiral analysis with some start parameters
     
     At the moment the first index is used to label the lattice spacing, the
@@ -64,9 +67,6 @@ class ChirAna(object):
     
     # set match-boolean
     self.match = match
-    
-    # set global fit boolean
-    self.glob = glob
     
     self.y_data = []
     for a in range(lyt_y[0]):
@@ -162,39 +162,39 @@ class ChirAna(object):
 
     Parameters
     ----------
-    data : ndarray, the data to add
-    idx : tuple, the index where to place the data
+    data : ndarray, the data to add, usually bootstrapsamples
+    idx : tuple, index as in creation: lattice spacing, ensemble index, strange
+          quark mass, fit dimension
     dim : string, is it x- or y-data?
     op : string, should existent data at index and dimension be operated
            with data to add?
     """
     if dim =='x':
-      print("xdata to add has shape")
-      print(data.shape)
-      print("xdata to add to has shape")
-      print(self.x_data[idx[0]].shape)
-
-      print()
+      #print("xdata to add has shape")
+      #print(data.shape)
+      #print("xdata to add to has shape")
+      #print(self.x_data[idx[0]].shape)
       if op == 'mult':
-        self.x_data[idx[0]][idx[1],:,idx[2]] *= data
+        self.x_data[idx[0]][idx[1],idx[2],idx[3]] *= data
       # divide existent x_data by data
       elif op == 'div':
-        self.x_data[idx[0]][idx[1:]] /= data
+        self.x_data[idx[0]][idx[1],idx[2],idx[3]] /= data
       elif op == 'min':
-        self.x_data[idx[0]][idx[1:],:,idx[2]] -= data
+        self.x_data[idx[0]][idx[1],idx[2],idx[3]] -= data
       else:
-        self.x_data[idx[0]][idx[1],:,idx[2]] = data
-      print(self.x_data[idx[0]][idx[1:]][0])
+        self.x_data[idx[0]][idx[1],idx[2],idx[3]] = data
+        #self.x_data[idx[0]][idx[1],:,idx[2]] = data
+      print(self.x_data[idx[0]][idx[1],idx[2],idx[3]][0])
     if dim =='y':
       if op == 'mult':
-        self.y_data[idx[0]][idx[1:]] *= data
+        self.y_data[idx[0]][idx[1],idx[2],idx[3]] *= data
       elif op == 'div':
-        self.y_data[idx[0]][idx[1:]] /= data
+        self.y_data[idx[0]][idx[1],idx[2],idx[3]] /= data
       elif op == 'min':
-        self.y_data[idx[0]][idx[1:]] -= data
+        self.y_data[idx[0]][idx[1],idx[2],idx[3]] -= data
       else:
-        self.y_data[idx[0]][idx[1:]] = data
-      print(self.y_data[idx[0]][idx[1:]][0])
+        self.y_data[idx[0]][idx[1],idx[2],idx[3]] = data
+      print(self.y_data[idx[0]][idx[1],idx[2],idx[3]][0])
 
   def add_extern_data(self,filename,idx,ens,dim=None,square=True,read=None,op=False):
     """ This function adds data from an extern textfile to the analysis object
@@ -234,6 +234,9 @@ class ChirAna(object):
       # take any y data dimension, since bootstrap samplesize shold not differ
       # build r0M_pi
       plot,data = chut.prepare_mpi(ext_help,ens,self.x_data[0].shape[-1],square=square)
+    if read is 'mpiL':
+      ext_help = chut.read_extern(filename,(1,2))
+      plot,data = chut.prepare_mpi(ext_help,ens,self.x_data[0].shape[-1],square=square,r0=False)
     if read is 'fk_unit':
       ext_help = chut.read_extern(filename,(1,2))
       plot,data = chut.prepare_fk(ext_help,ens,self.x_data[0].shape[-1])
@@ -269,6 +272,8 @@ class ChirAna(object):
     # get all data for a fixed mu_s
     elif dof == 'mu_s':
       data = np.concatenate((_data[0][:,index],_data[1][:,index],_data[2][:,index]))
+      _tmp_lyt = data.shape
+      data=data.reshape((_tmp_lyt[0]*_tmp_lyt[1],_tmp_lyt[2]))
       print("chose data")
       print(data.shape)
     elif dof == 'nboot':
@@ -303,21 +308,27 @@ class ChirAna(object):
     # Choose the fit data the dimensions of the data are: (a,mu_l,mu_s,nboot)
     # with lattice spacing a, light and strange quark masses mu_l and mu_s and
     # bootstrapsaFalses
-    if dim is None:
-      if self.glob is True:
-        x_data, y_data = self.reduction(x_shape_new = (1,1500))
-        #x_data, y_data = self.reduction(x_shape_new = (2,1500))
-        print("0th bootstrapsamples after reduction:")
-        print(x_data[:,0,0])
-        #print(x_data[:,1,0])
+    #if dim is None:
+    # Get data for fit (several fit dimensions for x, only one for y)
+    x_data, y_data = self.reduction(x_shape_new = (self.x_shape[3],self.x_shape[4]),
+                                    y_shape_new = (self.y_shape[4],))
+    #x_data, y_data = self.reduction(x_shape_new = (2,1500))
+    #print("0th bootstrapsamples after reduction:")
+    #print(x_data[:,0,0])
+    #if self.x_shape[3] > 1:
+    #  print(x_data[:,1,0])
 
-      else:
-        x_data, y_data = self.reduction()
-    else:
-      y_data = self.get_data_fit(dim,index,'y')
-      x_data = self.get_data_fit(dim,index,'x')
+    #else:
+    #  x_data, y_data = self.reduction()
+    #else:
+    #  y_data = self.get_data_fit(dim,index,'y')
+    #  x_data = self.get_data_fit(dim,index,'x')
     print("data used for fit")
+    print("x:shape,data")
+    print(x_data.shape)
     print(x_data[...,0])
+    print("y:shape,data")
+    print(y_data.shape)
     print(y_data[...,0])
     if read:
       if xcut:
@@ -333,13 +344,10 @@ class ChirAna(object):
       self.fitres.save(datadir+self.proc_id+'.npz')
     args = self.fitres.data[0]
     self.phys_point = np.zeros((2,2))
-    self.phys_point[0] = np.asarray((x_phys,0))
-    if self.glob is True:
-      print()
-      #self.phys_point[1] = chut.err_phys_pt(args,np.asarray((x_phys,0)),fitfunc)
-      self.phys_point[1] = chut.err_phys_pt(args,np.asarray((x_phys,)),fitfunc)
-    else:
-      self.phys_point[1] = chut.err_phys_pt(args,x_phys,fitfunc)
+    self.phys_point[0] = x_phys[0:2]
+    self.phys_point[1] = chut.err_phys_pt(args,x_phys,fitfunc)
+    print("Calculated physical point to be:")
+    print(self.phys_point)
     if plot is True:
       label=label
       print(x_data.shape)
@@ -357,25 +365,29 @@ class ChirAna(object):
     # Load data
 
     if dim is None:
-      x_data, y_data = self.reduction()
-    else:
-      y_data = self.get_data_fit(dim,index,'y')
-      x_data = self.get_data_fit(dim,index,'x')
+      x_data, y_data = self.reduction(x_shape_new = (self.x_shape[3],self.x_shape[4]),
+                                    y_shape_new = (self.y_shape[4],))
+      #x_data, y_data = self.reduction()
+    #else:
+      #y_data = self.get_data_fit(dim,index,'y')
+      #x_data = self.get_data_fit(dim,index,'x')
     y_plot=np.zeros((y_data.shape[0],4))
-    if self.glob:
-      x_plot=np.zeros((x_data.shape[0],2,4))
-      print("x data shape for plot:")
-      print(x_plot.shape)
-      x_plot[:,0,0],x_plot[:,0,1] = np.asarray(compute_error(x_data[:,0],axis=1))
-      #x_plot[:,1,0],x_plot[:,1,1] = np.asarray(compute_error(x_data[:,1],axis=1))
-      y_plot[:,0],y_plot[:,1] = np.asarray(compute_error(y_data,axis=1))
-    else:
-      x_plot=np.zeros((x_data.shape[0],4))
-      x_plot[:,0],x_plot[:,1] = np.asarray(compute_error(x_data,axis=1))
-      y_plot[:,0],y_plot[:,1] = np.asarray(compute_error(y_data,axis=1))
-    print(x_plot.shape)
-    print(lat_space)
-    print(ens_dict)
+    #if self.glob:
+    x_plot=np.zeros((x_data.shape[0],self.x_shape[3],4))
+    #print("x data shape for plot:")
+    #print(x_plot.shape)
+    x_plot[:,0,0],x_plot[:,0,1] = np.asarray(compute_error(x_data[:,0],axis=1))
+    #x_plot[:,1,0],x_plot[:,1,1] = np.asarray(compute_error(x_data[:,1],axis=1))
+    y_plot[:,0],y_plot[:,1] = np.asarray(compute_error(y_data,axis=1))
+    print("summary data")
+    print(x_plot,y_plot)
+    #else:
+    #  x_plot=np.zeros((x_data.shape[0],4))
+    #  x_plot[:,0],x_plot[:,1] = np.asarray(compute_error(x_data,axis=1))
+    #  y_plot[:,0],y_plot[:,1] = np.asarray(compute_error(y_data,axis=1))
+    #print(x_plot.shape)
+    #print(lat_space)
+    #print(ens_dict)
     # print ens_table
     #TODO: Indexing not correct, think about it
     # Idea: concatenate to an 5,num_datapoints array first, then print line for
@@ -399,7 +411,7 @@ class ChirAna(object):
       for j,e in enumerate(ens_dict[a]):
         # format for
         if self.match:
-            chut.print_line_latex(e,x_plot[l+j][0:2],y_plot[l+j][0:2])
+            chut.print_line_latex(e,x_plot[l+j][0:2,0],y_plot[l+j][0:2])
         else:
           if self.glob:
             for k,s in enumerate(mu_s_dict[a]):
@@ -419,20 +431,23 @@ class ChirAna(object):
   def reduction(self,x_shape_new=None,y_shape_new=None):
     """Function to reduce the dimensionality of the data to a two dimensional
     ndarray that can be handled by the plot function
+    The final layout should concatenate the light and strange quark dependence. 
 
     The x and y data are cast to an 2d ndarray with same shape (apart from bootstrap
-    samples)
+    sa#mples)
     """
     # the outgoing data is 2 dimensional
+    # new x-data has shape (ens1*ms+ens2*ms+ens3*ms,fitdim,samples)
     # looping over list place data in array
     if x_shape_new is None:
-      tmp_x_shape = (self.x_shape[0],self.x_shape[1]*np.asarray(self.x_shape[2]),self.x_shape[-1])
+      tmp_x_shape = (self.x_shape[0],self.x_shape[1]*np.asarray(self.x_shape[2]),self.xshape[3],self.x_shape[-1])
     else:
       tmp_x_shape = (self.x_shape[0],self.x_shape[1]*np.asarray(self.x_shape[2]),x_shape_new[0],x_shape_new[1])
     if y_shape_new is None: 
+      #tmp_y_shape = (self.y_shape[0],self.y_shape[1]*np.asarray(self.y_shape[2]),self.y_shape[-1])
       tmp_y_shape = (self.y_shape[0],self.y_shape[1]*np.asarray(self.y_shape[2]),self.y_shape[-1])
     else:
-      tmp_y_shape = (self.y_shape[0],self.y_shape[1]*np.asarray(self.y_shape[2]),x_shape_new[0],x_shape_new[1])
+      tmp_y_shape = (self.y_shape[0],self.y_shape[1]*np.asarray(self.y_shape[2]),y_shape_new[0])
     print("New Shapes:")
     print(tmp_x_shape)
     print(tmp_y_shape)
@@ -441,15 +456,22 @@ class ChirAna(object):
     # Loop over lattice spacing
     for i,d in enumerate(self.x_data):
       if x_shape_new is None:
-        new_shape = (d.shape[0]*d.shape[1],d.shape[2],d.shape[3])
+        try:
+          new_shape = (d.shape[0]*d.shape[1],d.shape[2],d.shape[3])
+        except:
+          new_shape = (d.shape[0]*d.shape[1],d.shape[2])
+          pass
       else:
         new_shape = (d.shape[0]*d.shape[1],x_shape_new[0],x_shape_new[1])
-      print("reshape to:")
-      print(new_shape)
+      #print("reshape to:")
+      #print(new_shape)
       tmp.x_data[i] = d.reshape(new_shape)
-      print(tmp.x_data)
+      #print(tmp.x_data)
     for i,d in enumerate(self.y_data):
-      new_shape = (d.shape[0]*d.shape[1],d.shape[2])
+      if d.shape[2] == 1:
+        new_shape = (d.shape[0]*d.shape[1],d.shape[-1]) 
+      else:
+        new_shape = (d.shape[0]*d.shape[1],d.shape[2],d.shape[-1])
       tmp.y_data[i] = d.reshape(new_shape)
     if self.x_shape[0] == 3: 
       x_data = np.concatenate((tmp.x_data[0],tmp.x_data[1],tmp.x_data[2]))
@@ -489,7 +511,7 @@ class ChirAna(object):
     #calc xid's
     a_range, b_range, d_range = self.calc_plot_ranges()
     chut.plot_ensemble(x_plot,y_plot,'^vspho','red',ens['A'],xid = a_range)
-    chut.plot_ensemble(x_plot,y_plot,'vso','blue',ens['B'],xid = b_range)
+    chut.plot_ensemble(x_plot,y_plot,'^vso','blue',ens['B'],xid = b_range)
     chut.plot_ensemble(x_plot,y_plot,'^','green',ens['D'],xid = d_range)
 
     plt.grid(False)
@@ -520,18 +542,25 @@ class ChirAna(object):
     plotfunc: an optional second function
     """
     y_plot=np.zeros((y_data.shape[0],4))
-    if self.glob:
+   # if self.glob:
       #x_plot=np.zeros((x_data.shape[0],2,4))
-      x_plot=np.zeros((x_data.shape[0],1,4))
-      print("x data shape for plot:")
-      print(x_plot.shape)
-      x_plot[:,0,0],x_plot[:,0,1] = np.asarray(compute_error(x_data[:,0],axis=1))
-      #x_plot[:,1,0],x_plot[:,1,1] = np.asarray(compute_error(x_data[:,1],axis=1))
-      y_plot[:,0],y_plot[:,1] = np.asarray(compute_error(y_data,axis=1))
-    else:
-      x_plot=np.zeros((x_data.shape[0],4))
-      x_plot[:,0],x_plot[:,1] = np.asarray(compute_error(x_data,axis=1))
-      y_plot[:,0],y_plot[:,1] = np.asarray(compute_error(y_data,axis=1))
+    x_plot=np.zeros((x_data.shape[0],self.x_shape[3],4))
+    #print("x data shape for plot:")
+    #print(x_data.shape)
+    #print(y_data.shape)
+    #print(x_plot.shape)
+    # usually the first fit dimenison is the one to get plotted, think about 3d
+    # plots
+    x_plot[:,0,0],x_plot[:,0,1] = np.asarray(compute_error(x_data[:,0],axis=1))
+    #x_plot[:,0,0],x_plot[:,0,1] = np.asarray(compute_error(np.sqrt(x_data[:,0]),axis=1))
+    x_plot[:,1,0],x_plot[:,1,1] = np.asarray(compute_error(x_data[:,1],axis=1))
+    x_plot[:,2,0],x_plot[:,2,1] = np.asarray(compute_error(x_data[:,1],axis=1))
+    y_plot[:,0],y_plot[:,1] = np.asarray(compute_error(y_data,axis=1))
+   # else:
+   #   x_plot=np.zeros((x_data.shape[0],4))
+   #   x_plot[:,0],x_plot[:,1] = np.asarray(compute_error(x_data,axis=1))
+   #   #x_plot[:,0],x_plot[:,1] = np.asarray(compute_error(np.sqrt(x_data),axis=1))
+   #   y_plot[:,0],y_plot[:,1] = np.asarray(compute_error(y_data,axis=1))
     print("\nData used for plot: ")
     print("x-data:")
     print(x_plot)
@@ -544,31 +573,34 @@ class ChirAna(object):
 
     x = np.linspace(0,np.amax(x_plot),1000)
     args = self.fitres.data[0]
+    #print("arguments for plotting are:")
+    #print(args)
     a_range, b_range, d_range = self.calc_plot_ranges()
     #calc xid's
-    if self.glob is False:
-      chut.plot_ensemble(x_plot,y_plot,'^vspho','red',ens['A'],
-                         xid = a_range,match=self.match)
-      chut.plot_ensemble(x_plot,y_plot,'vso','blue',ens['B'],
-                         xid = b_range,match=self.match)
-      chut.plot_ensemble(x_plot,y_plot,'^','green',ens['D'],
-                           xid = d_range,match=self.match)
+    #  chut.plot_ensemble(x_plot,y_plot,'^vspho','red',ens['A'],
+    #                     xid = a_range,match=self.match)
+    #  chut.plot_ensemble(x_plot,y_plot,'vso','blue',ens['B'],
+    #                     xid = b_range,match=self.match)
+    #  chut.plot_ensemble(x_plot,y_plot,'^','green',ens['D'],
+    #                       xid = d_range,match=self.match)
+    print("x-data for function plot:")
+    print(x_plot[a_range[0]:a_range[1],:,0])
+    #print(x_plot[b_range[0]:b_range[1]])
+    #print(x_plot[d_range[0]:d_range[1]])
+    plot_function(fitfunc,x_plot[a_range[0]:a_range[1],:,0],
+                  args[:,:,0],label=r'NLO-fit A',ploterror=True,col='red')
+    chut.plot_ensemble(x_plot[:,0],y_plot,'^vspho','red',ens['A'],
+                       xid = a_range,match=self.match)
 
-    else:
-      plot_function(fitfunc,x_plot[a_range[0]:a_range[1],:,0],
-                    args[:,:,0],label=r'NLO-fit A',ploterror=True,col='red')
-      chut.plot_ensemble(x_plot[:,0],y_plot,'^vspho','red',ens['A'],
-                         xid = a_range,match=self.match)
+    plot_function(fitfunc,x_plot[b_range[0]:b_range[1],:,0],
+                  args[:,:,0],label=r'NLO-fit B',ploterror=True,col='blue')
+    chut.plot_ensemble(x_plot[:,0],y_plot,'^vso','blue',ens['B'],
+                       xid = b_range,match=self.match)
 
-      plot_function(fitfunc,x_plot[b_range[0]:b_range[1],:,0],
-                    args[:,:,0],label=r'NLO-fit B',ploterror=True,col='blue')
-      chut.plot_ensemble(x_plot[:,0],y_plot,'vso','blue',ens['B'],
-                         xid = b_range,match=self.match)
-
-      plot_function(fitfunc,x_plot[d_range[0]:d_range[1],:,0],
-                    args[:,:,0],label=r'NLO-fit D',ploterror=True,col='green')
-      chut.plot_ensemble(x_plot[:,0],y_plot,'^','green',ens['D'],
-                           xid = d_range,match=self.match)
+    plot_function(fitfunc,x_plot[d_range[0]:d_range[1],:,0],
+                  args[:,:,0],label=r'NLO-fit D',ploterror=True,col='green')
+    chut.plot_ensemble(x_plot[:,0],y_plot,'^','green',ens['D'],
+                         xid = d_range,match=self.match)
 
     if xcut:
       y = fitfunc(args[0,:,0], xcut)
@@ -588,8 +620,9 @@ class ChirAna(object):
     y_max = np.amax(y_plot[:,0])
     y_lim = [y_min-0.1*abs(y_min),y_max+0.1*abs(y_max)]
     #plt.xlim(x_lim[0],x_lim[1])
-    plt.xlim(x_lim[0],x_lim[1])
+    plt.xlim(0,x_lim[1])
     plt.ylim(y_lim[0],y_lim[1])
+    #plt.vlines(self.phys_point[0,0],y_lim[0],y_lim[1],color="k",label=label[3])
     plt.legend(loc='best',numpoints=1,ncol=2,fontsize=12)
     plt.title(label[2])
     plt.ylabel(label[1])

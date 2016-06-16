@@ -29,7 +29,7 @@ def print_label(keys, vals, xpos=0.7, ypos=0.8):
     y = ylim()[1] * ypos
 
 def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=False,
-        fmt="k", col="black"):
+        fmt="k", col="black",debug=0):
     """A function that plots a function.
 
     Parameters
@@ -58,11 +58,13 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
             lfunc = _plotrange[0]
             ufunc = _plotrange[1]
             # handle data with more than two dimensions
-            if len(X.shape) > 1:
-                _x1 = np.linspace(X[lfunc,0],X[ufunc,0], 1000)
+            #if len(X.shape) > 1:
+            if True:
+                x1 = np.linspace(X[lfunc,0],X[ufunc,0], 1000)
                 try:
-                  _x2 = np.linspace(X[lfunc,1],X[ufunc,1], 1000)
-                  x1 = np.stack(_x1,_x2,axis=1)
+                  for i in range(1,X.shape[1]):
+                    _tmp = np.linspace(X[lfunc,i],X[ufunc,i], 1000)
+                    x1 = np.stack(x1,_tmp,axis=1)
                 except:
                   print RuntimeWarning("Data not truly two dimensional")
                   x1 = np.asarray((_x1,))
@@ -73,21 +75,28 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
     else:
         # handle data with more than two dimensions
         if len(X.shape) > 1:
-            _x1 = np.linspace(X[0,0],X[-1,0], 1000)
-            try:
-              _x2 = np.linspace(X[0,1],X[-1,1], 1000)
-              x1 = np.column_stack((_x1,_x2))
-            except:
-              print RuntimeWarning("Data not truly two dimensional")
-              x1 = np.asarray((_x1,))
-              pass
+            print(X.shape)
+            x1 = np.zeros((1000,X.shape[1]))
+            #x1 = np.linspace(X[0,0],X[-1,0], 1000)
+            #try:
+            x1[:,0] = np.linspace(X[0,0],X[-1,0], 1000) 
+            #for i in range(x1.shape[1]):
+            #    print("bounds at index %d are:" %i)
+            #    print(X[0,i],X[-1,i])
+            #    x1[:,i] = np.linspace(X[0,i],X[-1,i], 1000)
+            #   #x1 = np.concatenate((x1,_tmp),axis=1)
+            #except:
+            #  print RuntimeWarning("Data not truly two dimensional")
+            #  x1 = np.asarray((_x1,))
+            #  pass
         else:
             x1 = np.linspace(X[0], X[-1], 1000)
-    #print("option summary:")
-    #print("function name is %s" % func)
-    #print("shape of arguments (nb_samples, nb_parameters):")
-    #print(args.shape)
-    print("Plot an errorband: %s" % ploterror)
+    if debug > 2:
+      print("option summary:")
+      print("function name is %s" % func)
+      print("shape of arguments (nb_samples, nb_parameters):")
+      print(args.shape)
+      print("Plot an errorband: %s" % ploterror)
     # check dimensions of args, if more than one,
     # iterate over first dimension
     _args = np.asarray(args)
@@ -204,8 +213,8 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
         #print(ymax[0])
         #print(x1[0])
         if len(X.shape) > 1:
-          print("fill shape:")
-          print(x1.shape)
+          #print("fill shape:")
+          #print(x1.shape)
           plt.fill_between(x1[:,0], ymin, ymax, facecolor=col,
               edgecolor=col, alpha=0.2)
         else:
