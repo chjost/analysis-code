@@ -52,8 +52,8 @@ def err_phys_pt(pardata,x,func,axis=0):
     raise ValueError("Parameters do not have the right shape")
   y=np.asarray(_y)
   print("Calculated y values for error:")
-  for i,j in enumerate(y):
-    print(j,pardata[i])
+  #for i,j in enumerate(y):
+  #  print(j,pardata[i])
   return ana.compute_error(y,axis=axis)
 
 

@@ -58,18 +58,12 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
             lfunc = _plotrange[0]
             ufunc = _plotrange[1]
             # handle data with more than two dimensions
-            #if len(X.shape) > 1:
-            if True:
-                x1 = np.linspace(X[lfunc,0],X[ufunc,0], 1000)
-                try:
-                  for i in range(1,X.shape[1]):
-                    _tmp = np.linspace(X[lfunc,i],X[ufunc,i], 1000)
-                    x1 = np.stack(x1,_tmp,axis=1)
-                except:
-                  print RuntimeWarning("Data not truly two dimensional")
-                  x1 = np.asarray((_x1,))
-                  pass
-                  
+            if len(X.shape) > 1:
+                x1 = np.zeros((1000,X.shape[1]))
+                for i in range(x1.shape[1]):
+                    print("bounds at index %d are:" %i)
+                    print(X[lfunc,i],X[ufunc,i])
+                    x1[:,i] = np.linspace(X[lfunc,i],X[ufunc,i], 1000)
             else:
                 x1 = np.linspace(X[lfunc], X[ufunc], 1000)
     else:
@@ -79,12 +73,14 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
             x1 = np.zeros((1000,X.shape[1]))
             #x1 = np.linspace(X[0,0],X[-1,0], 1000)
             #try:
-            x1[:,0] = np.linspace(X[0,0],X[-1,0], 1000) 
-            #for i in range(x1.shape[1]):
-            #    print("bounds at index %d are:" %i)
-            #    print(X[0,i],X[-1,i])
-            #    x1[:,i] = np.linspace(X[0,i],X[-1,i], 1000)
-            #   #x1 = np.concatenate((x1,_tmp),axis=1)
+            #x1[:,0] = np.linspace(X[0,0],X[-1,0], 1000) 
+            for i in range(x1.shape[1]):
+                print("bounds at index %d are:" %i)
+                print(X[0,i],X[-1,i])
+                x1[:,i] = np.linspace(X[0,i],X[-1,i], 1000)
+                if X.shape[0] == 1:
+                  x1[:,0] = np.linspace(0,1.4,1000)
+
             #except:
             #  print RuntimeWarning("Data not truly two dimensional")
             #  x1 = np.asarray((_x1,))

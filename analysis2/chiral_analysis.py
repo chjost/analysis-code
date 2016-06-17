@@ -554,7 +554,7 @@ class ChirAna(object):
     x_plot[:,0,0],x_plot[:,0,1] = np.asarray(compute_error(x_data[:,0],axis=1))
     #x_plot[:,0,0],x_plot[:,0,1] = np.asarray(compute_error(np.sqrt(x_data[:,0]),axis=1))
     x_plot[:,1,0],x_plot[:,1,1] = np.asarray(compute_error(x_data[:,1],axis=1))
-    x_plot[:,2,0],x_plot[:,2,1] = np.asarray(compute_error(x_data[:,1],axis=1))
+    #x_plot[:,2,0],x_plot[:,2,1] = np.asarray(compute_error(x_data[:,1],axis=1))
     y_plot[:,0],y_plot[:,1] = np.asarray(compute_error(y_data,axis=1))
    # else:
    #   x_plot=np.zeros((x_data.shape[0],4))
@@ -585,8 +585,8 @@ class ChirAna(object):
     #                       xid = d_range,match=self.match)
     print("x-data for function plot:")
     print(x_plot[a_range[0]:a_range[1],:,0])
-    #print(x_plot[b_range[0]:b_range[1]])
-    #print(x_plot[d_range[0]:d_range[1]])
+    print(x_plot[b_range[0]:b_range[1]])
+    print(x_plot[d_range[0]:d_range[1]])
     plot_function(fitfunc,x_plot[a_range[0]:a_range[1],:,0],
                   args[:,:,0],label=r'NLO-fit A',ploterror=True,col='red')
     chut.plot_ensemble(x_plot[:,0],y_plot,'^vspho','red',ens['A'],
@@ -596,7 +596,6 @@ class ChirAna(object):
                   args[:,:,0],label=r'NLO-fit B',ploterror=True,col='blue')
     chut.plot_ensemble(x_plot[:,0],y_plot,'^vso','blue',ens['B'],
                        xid = b_range,match=self.match)
-
     plot_function(fitfunc,x_plot[d_range[0]:d_range[1],:,0],
                   args[:,:,0],label=r'NLO-fit D',ploterror=True,col='green')
     chut.plot_ensemble(x_plot[:,0],y_plot,'^','green',ens['D'],
