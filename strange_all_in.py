@@ -38,7 +38,7 @@ def main():
     if len(sys.argv) < 2:
       Corrs = ana.inputnames('charged.ini',['C20', 'C40C', 'C40D'])
     else:
-      Corrs = ana.inputnames(sys.argv[1],['C20', 'C40C', 'C40D'])
+      Corrs = ana.inputnames(sys.argv[1],['C2+', 'C4+C', 'C4+D'])
     # os.path.join treats preceding slashes as new paths
     print(Corrs)
     corrpaths = [os.path.join(rawdir,mu_s,'data/') for mu_s in rawstrange]
@@ -68,8 +68,8 @@ def main():
       C4_tot = ana.confs_mult(C4_tot,2)
       print("Writing to: %s..." % s[1])
       #ana.write_data_ascii(C2,s[1]+'pi_charged_p0.dat')
-      ana.write_data_ascii(C2,s[1]+'k_charged_p0.dat',conf=conf_feed)
-      ana.write_data_ascii(C4_tot,s[1]+'kk_charged_A1_TP0_00.dat',conf=conf_feed)
+      ana.write_data_ascii(C2,s[1]+'k_charged_p0_outlier.dat',conf=conf_feed)
+      ana.write_data_ascii(C4_tot,s[1]+'kk_charged_A1_TP0_00_outlier.dat',conf=conf_feed)
       ana.write_data_ascii(C4D,s[1]+'C4D.dat',conf=conf_feed)
       ana.write_data_ascii(C4C,s[1]+'C4C.dat',conf=conf_feed)
     

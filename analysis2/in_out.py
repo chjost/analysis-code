@@ -260,9 +260,14 @@ def write_data_ascii(data, filename, verbose=False, conf=None):
                                (_data.shape[0],) + (1,)*(len(_data.shape)-1),
                                dtype=int)
     if conf is not None:
-      conf_int = [int(name[4:-1]) for name in conf]
-      tmp = np.repeat(conf_int,T)
-      _config = tmp.reshape(tmp.shape[0],1) 
+      # try to make ints from strings otherwise reshape directly
+      try:
+        conf_int = [int(name[4:-1]) for name in conf]
+        tmp = np.repeat(conf_int,T)
+        _config = tmp.reshape(tmp.shape[0],1) 
+      except:
+        _config = conf.reshape(conf.shape[0]*T,1)
+        pass
       # make ints from strings omit last character and first four
       _fdata = np.concatenate((_counter,_data,_config), axis=1)
       fmt = ('%.0f',) + ('%.14f',) * _data[0].size + ('%.0f',)

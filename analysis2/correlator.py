@@ -141,7 +141,11 @@ class Correlators(object):
         """
         verbose = (self.debug > 0) and True or False
         if asascii:
-            in_out.write_data_ascii(self.data, filename, verbose)
+            if self.conf is not None:
+                print("Saving configuration numbers")
+                in_out.write_data_ascii(self.data, filename, verbose, self.conf)
+            else:
+                in_out.rite_data_ascii(self.data, filename, verbose)
         else:
             if self.conf is not None:
                 print("Saving configuration numbers")
@@ -456,7 +460,7 @@ class Correlators(object):
       correlation is not lost
       """
       if in_iqr is None:
-          # get the 25% and 75% percentiles from the firsty timeslice of all
+          # get the 25% and 75% percentiles from the real part of the first timeslice of all
           # configurations
           q25, q75 = np.percentile(self.data[:,0],(25,75))
           iqr_dn = q25-1.5*np.abs(q75-q25)
@@ -464,10 +468,14 @@ class Correlators(object):
           # boolean arrays of outlier positions
           idx_up = np.greater(self.data[:,0], iqr_up)
           idx_dn = np.less(self.data[:,0], iqr_dn)
+          print("index shapes are:")
           print(idx_up.shape,idx_dn.shape)
           omit_idx = np.logical_or(idx_up,idx_dn)
           # reshape necessary for correct slicing
+          print("omit_idx has shape")
+          print(omit_idx.shape)
           in_iqr = np.invert(omit_idx).reshape(omit_idx.shape[0])
+          #in_iqr = np.invert(omit_idx)
           # store ommited configurations
           omitted = self.conf[omit_idx]
           print self.data.shape

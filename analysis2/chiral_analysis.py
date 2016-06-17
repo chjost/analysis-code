@@ -411,7 +411,7 @@ class ChirAna(object):
       for j,e in enumerate(ens_dict[a]):
         # format for
         if self.match:
-            chut.print_line_latex(e,x_plot[l+j][0:2,0],y_plot[l+j][0:2])
+            chut.print_line_latex(e,x_plot[l+j][0:2],y_plot[l+j][0:2])
         else:
           if self.glob:
             for k,s in enumerate(mu_s_dict[a]):
