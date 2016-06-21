@@ -230,7 +230,8 @@ def plot_ensemble(x,y,form,col,label,xid=None,match=False,fitfunc=None):
       u=xid[1]
       #print(u,d)
       if len(form) is 1:
-        plt.errorbar(x[d:u,0], y[d:u,0], 
+        plt.errorbar(x[d:u,0], y[d:u,0],
+                   xerr=[x[d:u,1]+x[d:u,2],x[d:u,1]+x[d:u,3]],
                    yerr=[y[d:u,1]+y[d:u,2],y[d:u,1]+y[d:u,3]],
                    fmt=form, color=col)
         plt.errorbar(x[d:u,0],y[d:u,0],y[d:u,1],x[d:u,1],
@@ -244,6 +245,7 @@ def plot_ensemble(x,y,form,col,label,xid=None,match=False,fitfunc=None):
             _d = d+i
             _u = _d+1
             plt.errorbar(x[_d:_u,0], y[_d:_u,0], 
+                       xerr=[x[_d:_u,1]+x[_d:_u,2],x[_d:_u,1]+x[_d:_u,3]],
                        yerr=[y[_d:_u,1]+y[_d:_u,2],y[_d:_u,1]+y[_d:_u,3]],
                        fmt=f, color=col)
             plt.errorbar(x[_d:_u,0],y[_d:_u,0],y[_d:_u,1],x[_d:_u,1],
@@ -253,6 +255,7 @@ def plot_ensemble(x,y,form,col,label,xid=None,match=False,fitfunc=None):
             _d = d+i*3
             _u = _d+3
             plt.errorbar(x[_d:_u,0], y[_d:_u,0], 
+                       xerr=[x[_d:_u,1]+x[_d:_u,2],x[_d:_u,1]+x[_d:_u,3]],
                        yerr=[y[_d:_u,1]+y[_d:_u,2],y[_d:_u,1]+y[_d:_u,3]],
                        fmt=f, color=col)
             plt.errorbar(x[_d:_u,0],y[_d:_u,0],y[_d:_u,1],x[_d:_u,1],
@@ -264,6 +267,7 @@ def plot_ensemble(x,y,form,col,label,xid=None,match=False,fitfunc=None):
 
     else:
       pts, = plt.errorbar(x[:,0], y[:,0], 
+          xerr=[x[:,1]+x[:,2],x[:,1]+x[:,3]],
           yerr=[y[:,1]+y[:,2],y[:,1]+y[:,3]],
                  fmt=form, color=col, label=label)
       plt.errorbar(x[:,0],y[:,0],y[:,1],y[:,1],
@@ -341,6 +345,10 @@ def chiral_fit(X, Y,fitfunc,corrid="",start=None, xcut=None, ncorr=None,debug=0)
     #print("time per fit %f +- %fs" % (np.mean(t2), np.std(t2)))
     return fitres
 
+def print_table_header(col_names):
+  """ Print the header for a latex table"""
+  print(' & '.join(col_names))
+
 def print_line_latex(lat, dx, dy, prec=1e4):
   """Print summary line.
 
@@ -351,11 +359,13 @@ def print_line_latex(lat, dx, dy, prec=1e4):
   d : tuple, list
       The data
   """
-  if dx.shape[0] < 4:
-    print("%9s & $%.4f(%1.0f)$ & $%.4f(%1.0f) $ \\\\" % 
-              (lat, dx[0], dx[1]*prec,dy[0], dy[1]*prec))
-  else:  
-    print("%9s & NA & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &$%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ \\\\" % 
-              (lat, d[0], dx[1]*prec, dx[2]*prec, dx[3]*prec, dy[0], dy[1]*prec,
-                dy[2]*prec, dy[3]*prec))
+  if dx.shape[0] == 2:
+    print("%9s & NA & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &$%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ \\\\" % 
+                (lat, dx[0][0], dx[0][1]*prec, dx[0][2]*prec, dx[0][3]*prec,
+                  dx[1][0], dx[1][1]*prec, dx[1][2]*prec, dx[1][3]*prec,
+                  dy[0], dy[1]*prec, dy[2]*prec, dy[3]*prec))
+  else:
+    print("%9s & NA & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$  & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ \\\\" % 
+                (lat, dx[0][0], dx[0][1]*prec, dx[0][2]*prec, dx[0][3]*prec,
+                  dy[0], dy[1]*prec, dy[2]*prec, dy[3]*prec))
     
