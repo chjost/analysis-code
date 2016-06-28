@@ -49,7 +49,8 @@ def main():
     if isinstance(configs_coll[0], list):
       print("is list.")
     configs_coll = [[fld for fld in i if 'cnfg' in fld] for i in configs_coll]
-    conf_feed = sorted([i +'/' for i in set(configs_coll[0]).intersection(set(configs_coll[1]),set(configs_coll[2]))])
+    conf_feed = sorted([i +'/' for i in set(configs_coll[0]).intersection(set(configs_coll[1]),set(configs_coll[2]))],
+              key = lambda fold: int(fold[4:-1]))
     #conf_feed = sorted([i +'/' for i in set(configs_coll[0])])
     print(conf_feed)
     for s in zip(corrpaths,datapaths):

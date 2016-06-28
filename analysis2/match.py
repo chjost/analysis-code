@@ -11,6 +11,7 @@ matplotlib.rcParams['font.size'] = 14
 import numpy as np
 
 import chiral_utils as chut
+import fit
 from match_functions import *
 from match_help import in_ival
 from .plot import plot_lines,plot_single_line
@@ -53,10 +54,95 @@ class MatchResult(object):
       # observable for with matching is done
       self.obs_id = obs_id
     
+    @classmethod
+    def read(cls, filename, debug=0):
+        """Reads data in numpy format.
+
+        If the last two axis have the same extent, it is assumed a
+        correlation function matrix is read, otherwise a single
+        correlation function is assumed. This has implications on some
+        class functions.
+
+        Parameters
+        ----------
+        filename : str
+            The name of the data file.
+        debug : int, optional
+            The amount of debug information printed.
+
+        Raises
+        ------
+        IOError
+            If file or folder not found.
+        """
+        data = in_out.read_data(filename)
+        print(data)
+        print(type(data))
+        if isinstance(data.files,list):
+            tmp = cls()
+            tmp.data = data['arr_0']
+            tmp.conf = data['arr_1']
+            tmp.shape = tmp.data.shape
+        else:
+            # set the data directly
+            tmp = cls()
+            tmp.data = data
+            print("data shape read in:")
+            print(tmp.data[:][1])
+            tmp.shape = data.shape
+            if data.shape[1] > 2:
+                tmp.shape = data.shape[:-1]
+            if data.shape[-2] != data.shape[-1]:
+                tmp.matrix = False
+            else:
+                tmp.matrix = True
+        return tmp
     #@classmethod
     #def read()
-    #def save()
-    def create_empty(self, nboot, nb_obs, obs_id):
+    def save(self, filename):
+        """Save a match result
+        
+        For every ensemble, and possibly different stragne
+        quark masses, the match result is saved in a binary numpy format.
+        In principle the data layout is oriented at the correlator layout.
+        
+        Parameters
+        ----------
+        filename : string indicating where to save the data
+        """
+        _match_save = fit.FitResult(corr_id=self.obs_id,derived=True)
+        _match_save.create_empty((4,3,1,1500),(4,3,1,1500),1)
+        _match_save.corr_num=1
+        # place data in numpy array
+        # 3 evaluation methods or strange quarkmasses, 1 "fitrange", samples
+        tmp = np.zeros((4,3,1,1500))
+        print(self.amu.shape)
+        print(self.obs.shape)
+        print(self.amu_match.shape)
+        print(self.eval_obs.shape)
+        # shape of one data element
+        el_shape = tmp[0].shape
+        ## save x_data used in matching
+        ## the amu values used in the matching procedure
+        _amu_save = np.repeat(self.amu,el_shape[1]*el_shape[-1]).reshape(el_shape)
+        tmp[0] = _amu_save
+        ## the observables belonging to the amu values
+        tmp[1] = self.obs.reshape(el_shape)
+        ## the matched amu value
+        _amu_match_save = np.zeros(el_shape)
+        if len(self.amu_match.shape) < 2:
+          _amu_match_save=self.amu_match.reshape(el_shape[1],el_shape[2]).repeat(el_shape[0],axis=0)
+          print(_amu_match_save)
+        tmp[2] = _amu_match_save.reshape(el_shape)
+        ## the evaluated observable at amu_match
+        tmp[3] = self.eval_obs.reshape(el_shape)
+        _match_save.data=tmp
+        ## save coefficients as fit parameters, distinguish between matching and
+        ## evaluation`
+        _match_save.save(filename)
+
+
+    def create_empty(self, nboot, nb_obs, obs_id=None):
       """Create an empty matching class, setting up the appropriate shapes
 
       Parameters

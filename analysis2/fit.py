@@ -17,6 +17,7 @@ from statistics import (compute_error, sys_error, sys_error_der, draw_weighted,
 from energies import calc_q2, calc_Ecm
 from zeta_wrapper import Z
 from scattering_length import calculate_scat_len
+from chiral_utils import evaluate_phys
 
 class LatticeFit(object):
     def __init__(self, fitfunc, dt_i=2, dt_f=2, dt=4, xshift=0.,
@@ -871,6 +872,34 @@ class FitResult(object):
                 isdependend, d2, irrep):
             delta.add_data(*res)
         return delta
+
+    def calc_mk_a0_phys(self, val_phys, func, parself=0, parmass=0, isdependend=True):
+        """Calculate the physical point result from fitresult parameters 
+
+        Parameters
+        ----------
+        val_phys : The physical value at which to evaluate, could change to a
+            fitresult
+        func : callable, chipt function used for evaluation
+        parself, parmass : int, optional
+            The parameters for which to do this.
+        isdependend : bool
+            If mass and self are dependend on each other.
+        """
+        # we need the weight of both mass and self are the fit parameters of a
+        # ChiPT fit
+        self.calc_error()
+        # mass.calc_error()
+        _pars = self.data[0]
+        _pars_w = self.weight[:][0]
+        nsam = self.data[0].shape[0]
+        newshape = (nsam, _pars.shape[-1])
+        mka0_phys = FitResult("mka0_phys", True)
+        mka0_phys.create_empty(newshape, newshape, 1)
+        #for res in evaluate_phys(_ma, _ma_w, _energy, _energy_w, isdependend):
+        for res in evaluate_phys(val_phys, _pars, _pars_w, func, isdependend):
+            mka0_phys.add_data(*res)
+        return mka0_phys
 
     def calc_dE(self, mass, parself=0, parmass=0, isdependend=True):
         """Calculate dE from own data and the mass of the particles.

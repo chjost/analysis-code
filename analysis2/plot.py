@@ -464,7 +464,7 @@ class LatticePlot(object):
         """
         print(label)
         self.plot_correlation(data, label, inverse=inverse)
-
+    
     def plot_correlation(self, data, label, inverse=False):
         """Plots the covariance matrix of given data
 

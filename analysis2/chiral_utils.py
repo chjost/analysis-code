@@ -27,7 +27,7 @@ def lo_chipt(p,x):
   """
   return p[0]*x+p[1]
 
-def err_phys_pt(pardata,x,func,axis=0):
+def samp_phys_pt(pardata,x,func,axis=0):
   """Compute mean and error of an observable at the physical point specified by
   x
   Parameters
@@ -55,6 +55,68 @@ def err_phys_pt(pardata,x,func,axis=0):
   #for i,j in enumerate(y):
   #  print(j,pardata[i])
   return ana.compute_error(y,axis=axis)
+
+def evaluate_phys(x, args, args_w ,func, isdependend):
+  """Evaluate a given function at the specified physical point
+  
+  The parameters of the given function are fitresult data the physical point x
+  is evaluated on every sample. The weights are multiplied if the x-value has a
+  weight
+
+  Parameters
+  ----------
+  x : the x value at which to evaluate, could changeto samples in the future
+  func : callable, the function to evaluate
+  args : the function arguments from a FitResult
+  args_w : the corresponding weights
+  
+  """
+  nsam = args.shape[0]
+  # loop over the fitrange of parameters
+  weight = np.full(nsam, args_w)
+  needed = np.zeros((nsam,))
+  result = np.full(nsam,np.nan)
+  # loop over samples
+  for b in range(nsam):
+    y = func(args[b],x)
+    if y.shape[0] == 2:
+      y = y[0]
+    result[b] = y
+  yield (0, 0), result, needed, weight
+
+    
+def err_phys_pt(pardata,x,func,axis=0,out=None):
+  """Compute mean and error of an observable at the physical point specified by
+  x
+  Parameters
+  ----------
+  pardata : ndarray, the bootstrapsamples of the parameters after fitting
+  x : ndarray, the xvalue to evaluate the function
+  func : the function, usually a lambda object
+  """
+  _y = []
+  # evaluate all parameters at one point
+  #print("data shape of parameters:")
+  #print(pardata.shape)
+  if pardata.shape > 2:
+    for i in range(pardata.shape[0]):
+      for j in range(pardata.shape[-1]):
+        tmp_par = pardata[i,:,j]
+        #print("info on physical point:")
+        #print(tmp_par)
+        #print(x)
+        _y.append(func(tmp_par,x))
+  else:
+    raise ValueError("Parameters do not have the right shape")
+  y=np.asarray(_y)
+  print("Calculated y values for error:")
+  #for i,j in enumerate(y):
+  #  print(j,pardata[i])
+  if out is None:
+    return ana.compute_error(y,axis=axis)
+  # return bootstrapsamples
+  elif out is 'boot':
+    return y
 
 
 def read_extern(filename,cols):
@@ -254,6 +316,9 @@ def plot_ensemble(x,y,form,col,label,xid=None,match=False,fitfunc=None):
           else:
             _d = d+i*3
             _u = _d+3
+            print("plotting in interval:")
+            print(_d,_u)
+            print(x[_d:_u,0])
             plt.errorbar(x[_d:_u,0], y[_d:_u,0], 
                        xerr=[x[_d:_u,1]+x[_d:_u,2],x[_d:_u,1]+x[_d:_u,3]],
                        yerr=[y[_d:_u,1]+y[_d:_u,2],y[_d:_u,1]+y[_d:_u,3]],
@@ -273,7 +338,8 @@ def plot_ensemble(x,y,form,col,label,xid=None,match=False,fitfunc=None):
       plt.errorbar(x[:,0],y[:,0],y[:,1],y[:,1],
                 fmt=form, color=col)
 
-def chiral_fit(X, Y,fitfunc,corrid="",start=None, xcut=None, ncorr=None,debug=0):
+def chiral_fit(X, Y,fitfunc,corrid="",start=None, xcut=None,
+    ncorr=None,correlated=True,debug=0):
     """Fit function to data.
     
     Parameters
@@ -302,6 +368,10 @@ def chiral_fit(X, Y,fitfunc,corrid="",start=None, xcut=None, ncorr=None,debug=0)
     print("\nStart parameters are:")
     print(_start)
     # implement a cut on the data if given
+    if len(Y.shape) > 2:
+      Y = np.concatenate((Y[:,0],Y[:,1]),axis=0)
+      print("Concatenated Y to shape:")
+      print(Y.shape)
     if xcut:
         tmp = X[:,...,0] < xcut
       # Select first bootstrapsample for fit
@@ -333,9 +403,12 @@ def chiral_fit(X, Y,fitfunc,corrid="",start=None, xcut=None, ncorr=None,debug=0)
     dof = _X.shape[-1] - len(_start)
     # fit every bootstrap sample
     timing = []
+    print("_Y used in chiral fit has shape:")
+    print(_Y.shape)
     for i, x in enumerate(_X):
         timing.append(time.clock())
-        tmpres, tmpchi2, tmppval = fitting(fitfunc, x, _Y, _start, debug=debug)
+        tmpres, tmpchi2, tmppval = fitting(fitfunc, x, _Y,
+            _start,correlated=correlated, debug=debug)
         fitres.append_data((0,i), tmpres, tmpchi2, tmppval)
         #if i % 100:
         #    print("%d of %d finished" % (i+1, _X.shape[0]))
@@ -349,7 +422,7 @@ def print_table_header(col_names):
   """ Print the header for a latex table"""
   print(' & '.join(col_names))
 
-def print_line_latex(lat, dx, dy, prec=1e4):
+def print_line_latex(lat, dx, dy, dm=None, prec=1e4):
   """Print summary line.
 
   Parameter
@@ -360,12 +433,58 @@ def print_line_latex(lat, dx, dy, prec=1e4):
       The data
   """
   if dx.shape[0] == 2:
-    print("%9s & NA & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &$%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ \\\\" % 
-                (lat, dx[0][0], dx[0][1]*prec, dx[0][2]*prec, dx[0][3]*prec,
-                  dx[1][0], dx[1][1]*prec, dx[1][2]*prec, dx[1][3]*prec,
-                  dy[0], dy[1]*prec, dy[2]*prec, dy[3]*prec))
+    if dm is None:
+      print("%9s & NA & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &$%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ \\\\" % 
+                  (lat, dx[0][0], dx[0][1]*prec, dx[0][2]*prec, dx[0][3]*prec,
+                    dx[1][0], dx[1][1]*prec, dx[1][2]*prec, dx[1][3]*prec,
+                    dy[0], dy[1]*prec, dy[2]*prec, dy[3]*prec))
+    else:
+      print("%9s & $%.4f(%1.0f)$ & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &$%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ \\\\" % 
+                  (lat, dm[0],dm[1]*prec,dx[0][0], dx[0][1]*prec, dx[0][2]*prec, dx[0][3]*prec,
+                    dx[1][0], dx[1][1]*prec, dx[1][2]*prec, dx[1][3]*prec,
+                    dy[0], dy[1]*prec, dy[2]*prec, dy[3]*prec))
+
   else:
     print("%9s & NA & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$  & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ \\\\" % 
                 (lat, dx[0][0], dx[0][1]*prec, dx[0][2]*prec, dx[0][3]*prec,
                   dy[0], dy[1]*prec, dy[2]*prec, dy[3]*prec))
     
+def amu_q_from_mq_ren(r0_in,zp,nboot):
+  """Calculate the bare strange quark mass per lattice spacing
+  
+  The lattice data for r0 and the renormalization constant are converted to
+  bootstrapsamples of amu_q
+
+  Parameters:
+  -----------
+  r0 : tuple,Lattice calculation of Sommer parameter
+  zp : tuple, the renormalization constant
+  """
+  _r0 = ana.draw_gauss_distributed(0.474,0.014,(nboot,),origin=True)
+  _ms = ana.draw_gauss_distributed(99.6,4.3,(nboot,),origin=True)
+  # Latticer input
+  _r0_lat = ana.draw_gauss_distributed(r0_in[0],r0_in[1],(nboot,),origin=True)
+  _zp_ms_bar = ana.draw_gauss_distributed(zp[0],zp[1],(nboot,),origin=True)
+
+  _bare_mass = _r0*_ms*_zp_ms_bar/(193.37*_r0_lat)
+  return _bare_mass
+
+def r0_mk_sq_phys(nboot):
+  _r0 = ana.draw_gauss_distributed(0.474,0.014,(nboot,),origin=True)
+  _mk = ana.draw_gauss_distributed(493.677,0.016,(nboot,),origin=True)
+  _res = (_r0*_mk/197.37)**2
+  #print(compute_error(res))
+  return _res
+
+def mk_mpi_diff(nboot):
+
+  _r0 = ana.draw_gauss_distributed(0.474,0.014,(nboot,),origin=True)
+  _mk = ana.draw_gauss_distributed(493.677,0.016,(nboot,),origin=True)
+  _mpi = ana.draw_gauss_distributed(134.9766,0.0006,(nboot,),origin=True)
+  _diff = _r0**2*(_mk**2-0.5*_mpi**2)/(197.37**2)
+  return _diff
+
+
+
+
+

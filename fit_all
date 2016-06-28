@@ -65,7 +65,7 @@ def main():
     else:
         picorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat))
 
-    fit_single = ana.LatticeFit(0, dt_i=1, dt_f=-1, dt=min_size_mass)
+    fit_single = ana.LatticeFit(0, dt_i=1, dt_f=-1, dt=min_size_mass, debug=5)
     if readsinglefit == False:
         print("fitting")
         pifit = fit_single.fit(None, picorr, [t_mass], corrid="epi", add=addT)
@@ -123,7 +123,8 @@ def main():
         ratio = kkcorr.ratio(picorr, ratio=2 )
     print(kkcorr.shape)
 
-    fit_ratio = ana.LatticeFit(1, dt=min_size_ratio, dt_i=1, dt_f=1, xshift=0.5)
+    fit_ratio = ana.LatticeFit(1, dt=min_size_ratio, dt_i=1, dt_f=1, xshift=0.5,
+        debug=5)
     start_ratio = [1.8, 0.002]
     # ratiofit
     if readtwofit == False:

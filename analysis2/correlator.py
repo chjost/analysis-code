@@ -133,7 +133,7 @@ class Correlators(object):
         The data can be saved in numpy format or plain ascii.
 
         Parameters
-        ----------
+       ----------
         filename : str
             The name of the file to write to.
         asascii : bool, optional
