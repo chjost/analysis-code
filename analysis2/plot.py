@@ -8,7 +8,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-
+matplotlib.rcParams['axes.labelsize']='large'
 from fit import LatticeFit, FitResult
 from correlator import Correlators
 from statistics import compute_error
@@ -185,7 +185,7 @@ class LatticePlot(object):
                     plot_data(X, corr.data[0,:,n], ddata, label[3],
                         plotrange=[0,T],col=self.cycol())
                 plt.legend()
-                if join is False:
+                if self.join is False:
                   self.save()
             else:
                 # iterate over fit intervals
@@ -207,7 +207,7 @@ class LatticePlot(object):
                     plot_function(fitfunc.fitfunc, X, mpar, label[4],
                             add, fi, ploterror,col=self.cycol())
                     plt.legend()
-                    if join is False:
+                    if self.join is False:
                       self.save()
         label[0] = label_save
 
@@ -481,7 +481,7 @@ class LatticePlot(object):
         """
         print(label)
         self.plot_correlation(data, label, inverse=inverse)
-
+    
     def plot_correlation(self, data, label, inverse=False):
         """Plots the covariance matrix of given data
 
@@ -551,9 +551,9 @@ def plot_single_line(x,y,label,col):
   ----------
   x,y : in general multidimensional ndarrays 
   """
-  print("line properties")
-  print(x.shape)
-  print(y)
+  #print("line properties")
+  #print(x.shape)
+  #print(y)
   x_val=np.zeros(2)
   y_val=np.zeros(2)
   try:
@@ -566,8 +566,8 @@ def plot_single_line(x,y,label,col):
   except:
      y_val[0] = y
      y_val[1] = 0
-  print(x_val)
-  print(y_val)
+  #print(x_val)
+  #print(y_val)
   l = plt.axhline(y=y_val[0],ls='solid',color=col)
   l = plt.axvline(x=x_val[0],ls='solid',color=col)
   plt.errorbar(x_val[0],y_val[0],y_val[1],x_val[1],fmt =

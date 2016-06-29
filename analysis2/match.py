@@ -7,8 +7,11 @@ matplotlib.use('Agg') # has to be imported before the next lines
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from matplotlib.backends.backend_pdf import PdfPages
+matplotlib.rcParams['font.size'] = 14
 import numpy as np
 
+import chiral_utils as chut
+import fit
 from match_functions import *
 from match_help import in_ival
 from .plot import plot_lines,plot_single_line
@@ -51,10 +54,95 @@ class MatchResult(object):
       # observable for with matching is done
       self.obs_id = obs_id
     
+    @classmethod
+    def read(cls, filename, debug=0):
+        """Reads data in numpy format.
+
+        If the last two axis have the same extent, it is assumed a
+        correlation function matrix is read, otherwise a single
+        correlation function is assumed. This has implications on some
+        class functions.
+
+        Parameters
+        ----------
+        filename : str
+            The name of the data file.
+        debug : int, optional
+            The amount of debug information printed.
+
+        Raises
+        ------
+        IOError
+            If file or folder not found.
+        """
+        data = in_out.read_data(filename)
+        print(data)
+        print(type(data))
+        if isinstance(data.files,list):
+            tmp = cls()
+            tmp.data = data['arr_0']
+            tmp.conf = data['arr_1']
+            tmp.shape = tmp.data.shape
+        else:
+            # set the data directly
+            tmp = cls()
+            tmp.data = data
+            print("data shape read in:")
+            print(tmp.data[:][1])
+            tmp.shape = data.shape
+            if data.shape[1] > 2:
+                tmp.shape = data.shape[:-1]
+            if data.shape[-2] != data.shape[-1]:
+                tmp.matrix = False
+            else:
+                tmp.matrix = True
+        return tmp
     #@classmethod
     #def read()
-    #def save()
-    def create_empty(self, nboot, nb_obs, obs_id):
+    def save(self, filename):
+        """Save a match result
+        
+        For every ensemble, and possibly different stragne
+        quark masses, the match result is saved in a binary numpy format.
+        In principle the data layout is oriented at the correlator layout.
+        
+        Parameters
+        ----------
+        filename : string indicating where to save the data
+        """
+        _match_save = fit.FitResult(corr_id=self.obs_id,derived=True)
+        _match_save.create_empty((4,3,1,1500),(4,3,1,1500),1)
+        _match_save.corr_num=1
+        # place data in numpy array
+        # 3 evaluation methods or strange quarkmasses, 1 "fitrange", samples
+        tmp = np.zeros((4,3,1,1500))
+        print(self.amu.shape)
+        print(self.obs.shape)
+        print(self.amu_match.shape)
+        print(self.eval_obs.shape)
+        # shape of one data element
+        el_shape = tmp[0].shape
+        ## save x_data used in matching
+        ## the amu values used in the matching procedure
+        _amu_save = np.repeat(self.amu,el_shape[1]*el_shape[-1]).reshape(el_shape)
+        tmp[0] = _amu_save
+        ## the observables belonging to the amu values
+        tmp[1] = self.obs.reshape(el_shape)
+        ## the matched amu value
+        _amu_match_save = np.zeros(el_shape)
+        if len(self.amu_match.shape) < 2:
+          _amu_match_save=self.amu_match.reshape(el_shape[1],el_shape[2]).repeat(el_shape[0],axis=0)
+          print(_amu_match_save)
+        tmp[2] = _amu_match_save.reshape(el_shape)
+        ## the evaluated observable at amu_match
+        tmp[3] = self.eval_obs.reshape(el_shape)
+        _match_save.data=tmp
+        ## save coefficients as fit parameters, distinguish between matching and
+        ## evaluation`
+        _match_save.save(filename)
+
+
+    def create_empty(self, nboot, nb_obs, obs_id=None):
       """Create an empty matching class, setting up the appropriate shapes
 
       Parameters
@@ -72,7 +160,7 @@ class MatchResult(object):
         self.obs_id = obs_id
 
     # get data from collection of fitresults
-    def load_data(self,fitreslst,par,amu,square=False,mult=None):
+    def load_data(self,fitreslst,par,amu,square=False,mult=None,debug=0):
       """load a list of fitresults and a list of amu values into an existing instance of
       MatchResult
 
@@ -89,11 +177,23 @@ class MatchResult(object):
       for i,r in enumerate(fitreslst):
         r = r.singularize()
         self.obs[i] = r.data[0][:,par,0]
-        # multiply with observable of right shape
-        if mult is not None:
-          self.obs[i]*=mult
+        if debug > 0:
+          print("Read in %s: %.4e" %(r,self.obs[i][0]))
+        # square first
         if square:
           self.obs[i] = np.square(self.obs[i])
+        # multiply with observable of right shape
+        if mult is not None:
+          if hasattr(mult,'__iter__'):
+            if len(mult) is len(fitreslst):
+              self.obs[i]*=mult[i]
+            else:
+              try:
+                self.obs[i]*=mult
+              except:
+                raise ValueError("mult has wrong length!")
+          else:
+            self.obs[i]*=mult
         self.amu[i] = amu[i]
       
     # need to set all data at once and add data one at a time
@@ -104,17 +204,125 @@ class MatchResult(object):
       self.obs = obs
       self.amu = amu
 
-    def add_data(self,idx,obs,amu):
-      """Set observable data and amu-values at one index
+    def add_data(self,data,idx,op=False,amu=None,obs=True):
+      """Add x- or y-data at aspecific index
+
+      Parameters
+      ----------
+      data : ndarray, the data to add
+      idx : tuple, the index where to place the data
+      op : string, should existent data at index and dimension be operated
+             with data to add?
+      obs : Bool whether to add to observable or evaluated observables
       """
-      if self.obs is None:
-        raise RuntimeError("MatchResult not initialized call create empty first")
+      #print("xdata to add has shape")
+      #print(data.shape)
+      if obs == True:
+        #print("xdata to add to has shape")
+        #print(self.obs[idx].shape)
+        if op == 'mult':
+          self.obs[idx] *= data
+        # divide existent obs by data
+        elif op == 'div':
+          self.obs[idx] /= data
+        elif op == 'min':
+          self.obs[idx] -= data
+        else:
+          self.obs[idx] = data
+        if amu is not None:
+          self.amu[idx]=amu
+        print(self.obs[idx])
       else:
-        self.obs[idx] = obs
-        self.amu[idx] = amu
+        #print("xdata to add to has shape")
+        #print(self.eval_obs[idx].shape)
+        if op == 'mult':
+          self.eval_obs[idx] *= data
+        # divide existent eval_obs by data
+        elif op == 'div':
+          self.eval_obs[idx] /= data
+        elif op == 'min':
+          self.eval_obs[idx] -= data
+        else:
+          self.eval_obs[idx] = data
+        if amu is not None:
+          self.amu[idx]=amu
+        print(self.eval_obs[idx])
+
+
+    def add_extern_data(self,filename,ens,idx=None,amu=None,square=True,read=None,op=False):
+      """ This function adds data from an extern textfile to the analysis object
+      
+      The data is classified by names, the filename is given and the read in and
+      prepared data is placed at the index 
+
+      Parameters
+      ---------
+      filename : string, the filename of the extern data file
+      idx : tuple, index where to place prepared data in analysis
+      ens : string, identifier for the ensemble
+      dim : string, dimension to place the extern data at
+      square : bool, should data be squared?
+      read : string, identifier for the data read
+      op : string, if operation is given the data is convoluted with existing data
+          at that index. if no operation is given data gets overwritten
+      """
+      #if read is None:
+      #  plot, data = np.zeros((self.x_data[0].shape[-1]))
+      #if read is 'r0_inv':
+      #  _plot,_data = chut.prepare_r0(ens,self.x_data[0].shape[-1])
+      #  plot=1./np.square(_plot)
+      #  data=1./np.square(_data)
+      if read is 'r0':
+        _plot,_data = chut.prepare_r0(ens,self.obs.shape[-1])
+        if square:
+          plot=np.square(_plot)
+          data=np.square(_data)
+        else:
+          plot=_plot
+          data=_data
+      if read is 'mpi':
+        #print("indexto insert extern data:")
+        #print(dim,idx)
+        ext_help = chut.read_extern(filename,(1,2))
+        # take any y data dimension, since bootstrap samplesize shold not differ
+        # build r0M_pi
+        plot,data = chut.prepare_mpi(ext_help,ens,self.obs.shape[-1],square=square)
+      if read is 'halfmpi':
+        #print("indexto insert extern data:")
+        #print(dim,idx)
+        ext_help = chut.read_extern(filename,(1,2))
+        # take any y data dimension, since bootstrap samplesize shold not differ
+        # build r0M_pi
+        _plot,_data = chut.prepare_mpi(ext_help,ens,self.obs.shape[-1],square=square,r0=False)
+        plot= 0.5*_plot
+        data = 0.5*_data
+      #if read is 'fk_unit':
+      #  ext_help = chut.read_extern(filename,(1,2))
+      #  plot,data = chut.prepare_fk(ext_help,ens,self.x_data[0].shape[-1])
+      #if read is 'mk_unit':
+      #  ext_help = chut.read_extern(filename,(1,2))
+      #  # prepare_fk also does the right for m_k
+      #  # TODO: unify this at some point
+      #  plot,data = chut.prepare_fk(ext_help,ens,self.x_data[0].shape[-1])
+      #print("extern data added:")
+      #print("%s: %f " %(read, data[0]))
+      if idx is None:
+        for i in range(self.obs.shape[0]):
+          self.add_data(data,i,op=op,amu=amu)
+      else:
+        self.add_data(data,idx,op=op,amu=amu)
+
+    #def add_data(self,idx,obs,amu):
+    #  """Set observable data and amu-values at one index
+    #  """
+    #  if self.obs is None:
+    #    raise RuntimeError("MatchResult not initialized call create empty first")
+    #  else:
+    #    self.obs[idx] = obs
+    #    self.amu[idx] = amu
 
     def match_to(self, obs_to_match, meth=None, plot=True,plotdir=None,ens=None,
-        label=None):
+        label=None,debug=0):
       """Matches the quark mass to a given observable
 
       Parameters
@@ -160,7 +368,12 @@ class MatchResult(object):
         if meth == 2:
           print("Using linear fit")
           self.amu_match[2], self.coeffs[2] = get_x_fit(obs[0],obs[1],obs[2],
-                                                        amu,obs_to_match)
+                                                        amu,obs_to_match,debug=debug)
+          # Summary
+        # print summary to screen
+        orig, std = compute_error(self.amu_match[meth])
+        print("%s = %f +/- %f:" %(self.obs_id, orig, std))
+
       # Do all methods  
       else:
           if (np.mean(obs[0]) <= np.mean(obs_to_match)) & (np.mean(obs_to_match) <= np.mean(obs[1])):
@@ -177,6 +390,11 @@ class MatchResult(object):
           else:
             self.amu_match[2], self.coeffs[2] = get_x__fit(obs[0],obs[1],obs[2],
                                                            amu, obs_to_match) 
+          # print summary to screen
+          meths = ['lin. ipol','quad. ipol.','lin fit']
+          for i,m in enumerate(meths):
+            orig, std = compute_error(self.amu_match[i])
+            print("%s: %s = %f +/- %f:" %(m,self.obs_id, orig, std))
       
       if plot:
         self.plot_match(obs_to_match,plotdir,ens,meth=meth,proc='match',label=label)
@@ -211,6 +429,7 @@ class MatchResult(object):
         if meth > 2:
           raise ValueError("Method not implemented yet, meth < 3")
         
+        print("\nEvaluate %s" %self.obs_id)
         # Depending on the method "meth" calculate coefficients first and evaluate
         # the root of the function to find obs_match
         # Method 0 only applicable for 2 observables
@@ -229,11 +448,13 @@ class MatchResult(object):
         if meth == 1:
           if obs.shape[0] == 3:
             print("Using quadratic interpolation")
-            print(amu_match)
             self.eval_obs[1], self.coeffs[1] = calc_y_quad(obs[0],obs[1],obs[2],amu,amu_match[1])
         if meth == 2:
           print("Using linear fit")
           self.eval_obs[2], self.coeffs[2] = calc_y_fit(obs[0],obs[1],obs[2],amu,amu_match[2])
+        # print summary to screen
+        orig, std = compute_error(self.eval_obs[meth])
+        print("%s = %f +/- %f:" %(self.obs_id, orig, std))
       # Do all methods  
       else:
         print("Using linear interpolation")
@@ -245,7 +466,13 @@ class MatchResult(object):
           self.eval_obs[1], self.coeffs[1] = calc_y_quad(obs[0],obs[1],obs[2],amu,amu_match[1])
           self.eval_obs[2], self.coeffs[2] = calc_y_fit(obs[0],obs[1],obs[2],amu,amu_match[1])
         else:
-          self.eval_obs[2], self.coeffs[2] = calc_y_fit(obs[0],obs[1],obs[2],amu,amu_match[2]) 
+          self.eval_obs[2], self.coeffs[2] = calc_y_fit(obs[0],obs[1],obs[2],amu,amu_match[2])
+
+        # print summary to screen
+        meths = ['lin. ipol','quad. ipol.','lin fit']
+        for i,m in enumerate(meths):
+          orig, std = compute_error(self.eval_obs[i])
+          print("%s: %s = %f +/- %f:" %(m,self.obs_id, orig, std))
       if plot:
         self.plot_match(self.eval_obs,plotdir,ens,meth=meth,proc='eval',label=label)
 
@@ -263,7 +490,7 @@ class MatchResult(object):
       elif meth == 2:
         _meth = '_lfit'
       else:
-        _meth=None
+        _meth='cmp'
       pmatch = PdfPages(plotdir+ens+'/'+proc+_meth+'_%s.pdf' % self.obs_id)
       line = lambda p,x: p[0]*x+p[1]
       para = lambda p,x: p[0]*x**2+p[1]*x+p[2]
@@ -304,6 +531,7 @@ class MatchResult(object):
           plot_single_line(self.amu_match[meth],self.eval_obs[meth],label[0:2],col='b')
       else:
         raise ValueError("Method not known")
+      plt.title(ens)
       plt.xlabel(label[0])
       plt.ylabel(label[1])
       plt.legend(loc='best',numpoints=1,ncol=2)

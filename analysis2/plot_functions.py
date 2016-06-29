@@ -29,7 +29,7 @@ def print_label(keys, vals, xpos=0.7, ypos=0.8):
     y = ylim()[1] * ypos
 
 def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=False,
-        fmt="k", col="black"):
+        fmt="k", col="black",debug=0):
     """A function that plots a function.
 
     Parameters
@@ -57,14 +57,42 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
         else:
             lfunc = _plotrange[0]
             ufunc = _plotrange[1]
-            x1 = np.linspace(X[lfunc], X[ufunc], 1000)
+            # handle data with more than two dimensions
+            if len(X.shape) > 1:
+                x1 = np.zeros((1000,X.shape[1]))
+                for i in range(x1.shape[1]):
+                    print("bounds at index %d are:" %i)
+                    print(X[lfunc,i],X[ufunc,i])
+                    x1[:,i] = np.linspace(X[lfunc,i],X[ufunc,i], 1000)
+            else:
+                x1 = np.linspace(X[lfunc], X[ufunc], 1000)
     else:
-        x1 = np.linspace(X[0], X[-1], 1000)
-    #print("option summary:")
-    #print("function name is %s" % func)
-    #print("shape of arguments (nb_samples, nb_parameters):")
-    #print(args.shape)
-    #print("Plot an errorband: %s" % ploterror)
+        # handle data with more than two dimensions
+        if len(X.shape) > 1:
+            print(X.shape)
+            x1 = np.zeros((1000,X.shape[1]))
+            #x1 = np.linspace(X[0,0],X[-1,0], 1000)
+            #try:
+            #x1[:,0] = np.linspace(X[0,0],X[-1,0], 1000) 
+            for i in range(x1.shape[1]):
+                print("bounds at index %d are:" %i)
+                print(X[0,i],X[-1,i])
+                x1[:,i] = np.linspace(X[0,i],X[-1,i], 1000)
+                if X.shape[0] == 1:
+                  x1[:,0] = np.linspace(0,1.4,1000)
+
+            #except:
+            #  print RuntimeWarning("Data not truly two dimensional")
+            #  x1 = np.asarray((_x1,))
+            #  pass
+        else:
+            x1 = np.linspace(X[0], X[-1], 1000)
+    if debug > 2:
+      print("option summary:")
+      print("function name is %s" % func)
+      print("shape of arguments (nb_samples, nb_parameters):")
+      print(args.shape)
+      print("Plot an errorband: %s" % ploterror)
     # check dimensions of args, if more than one,
     # iterate over first dimension
     _args = np.asarray(args)
@@ -164,12 +192,21 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
                 # calculate on original data
                 y1.append(func(_args, x))
     #print(len(x1),len(y1))
-    plt.plot(x1, y1, fmt, label=label)
+    if len(X.shape) > 1:
+        plt.plot(x1[:,0], y1, fmt, label=label)
+    else:
+        plt.plot(x1, y1, fmt, label=label)
     if ymax and ymin:
-        #print(ymax[0])
-        #print(x1[0])
-        plt.fill_between(x1, ymin, ymax, facecolor=col,
-            edgecolor=col, alpha=0.2)
+          #print(ymax[0])
+          #print(x1[0])
+          if len(X.shape) > 1:
+              #print("fill shape:")
+              #print(x1.shape)
+              plt.fill_between(x1[:,0], ymin, ymax, facecolor=col,
+                  edgecolor=col, alpha=0.2)
+          else:
+              plt.fill_between(x1, ymin, ymax, facecolor=col,
+                  edgecolor=col, alpha=0.2)
     plt.legend()
 
 def plot_data(X, Y, dY, label, plotrange=None, fmt="x",col='b'):

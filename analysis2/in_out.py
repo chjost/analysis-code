@@ -8,7 +8,7 @@ import os
 import numpy as np
 import ConfigParser as cp
 
-def read_single(fname, column, skip, debug):
+def read_single(fname, column, skip, debug=0):
     """Read a single correlation function from file.
 
     Parameters
@@ -174,7 +174,7 @@ def read_matrix(fname, column, skip, debug):
 
     return sym_matrix
 
-def write_data(data, filename, verbose=False):
+def write_data(data, filename, conf=None, verbose=False):
     """Write numpy array to binary numpy format.
 
     Parameters
@@ -189,7 +189,11 @@ def write_data(data, filename, verbose=False):
     check_write(filename)
     if verbose:
         print("saving to file" + str(filename))
-    np.save(filename, data)
+    if conf is None:
+        np.save(filename, data)
+    else:
+        _filename = filename.replace(".npy",".npz")
+        np.savez(_filename, data, conf)
 
 def read_data(filename, verbose=False):
     """Reads numpy data from binary numpy format.
@@ -256,9 +260,15 @@ def write_data_ascii(data, filename, verbose=False, conf=None):
                                (_data.shape[0],) + (1,)*(len(_data.shape)-1),
                                dtype=int)
     if conf is not None:
-      tmp = np.repeat(conf,T)
-      _config = tmp.reshape(tmp.shape[0],1) 
-      print(_config.shape)
+      # try to make ints from strings otherwise reshape directly
+      try:
+        conf_int = [int(name[4:-1]) for name in conf]
+        tmp = np.repeat(conf_int,T)
+        _config = tmp.reshape(tmp.shape[0],1) 
+      except:
+        _config = conf.reshape(conf.shape[0]*T,1)
+        pass
+      # make ints from strings omit last character and first four
       _fdata = np.concatenate((_counter,_data,_config), axis=1)
       fmt = ('%.0f',) + ('%.14f',) * _data[0].size + ('%.0f',)
     else:
@@ -401,7 +411,7 @@ def read_data_w_err_ascii(filename, datacol=(1,), errcol=(2,), verbose=False):
     _data = read_data_ascii(filename, column=cols, verbose=verbose)
     return _data[:,:,:len(datacol)], _data[:,:,len(datacol):]
 
-def write_fitresults(filename, data, fitint, par, chi2, pvals, label,
+def write_fitresults(filename, data, fitint, par, chi2, pvals, label, conf=None,
     verbose=False):
     """Writes the fitresults to a numpy file.
 
@@ -424,6 +434,7 @@ def write_fitresults(filename, data, fitint, par, chi2, pvals, label,
         The p-values of the fit
     label : ndarray
         The labels of the fit.
+    conf : ndarray of int, Configuration numbers
     verbose : bool
         Toggle info output
     """
@@ -439,6 +450,7 @@ def write_fitresults(filename, data, fitint, par, chi2, pvals, label,
     # be always shorter than the other names.
     dic = {"data": data}
     dic.update({'fi': fitint})
+    dic.update({'cfg': conf})
     dic.update({'pi%02d' % i: p for (i, p) in enumerate(par)})
     dic.update({'ch%02d' % i: p for (i, p) in enumerate(chi2)})
     dic.update({'pv%02d' % i: p for (i, p) in enumerate(pvals)})
@@ -487,19 +499,24 @@ def read_fitresults(filename, verbose=False):
     if verbose:
         print("reading %d items" % len(f.files))
     L = f.files
-    n = (len(L) - 2) // 4
+    b = len(L) % 4
+    #n = (len(L) - 2) // 4
+    n = (len(L) - b) // 4
     par, chi2, pvals = [], [], []
     fitint, label = [], []
     label = []
     data = f['data']
     fitint = f['fi']
+    conf = None
+    if b == 3:
+      conf = f['cfg']
     for i in range(n):
         par.append(f['pi%02d' % i])
         chi2.append(f['ch%02d' % i])
         pvals.append(f['pv%02d' % i])
         label.append(f['la%02d' % i])
     f.close()
-    return data, fitint, par, chi2, pvals, label
+    return data, fitint, par, chi2, pvals, label, conf
 
 def read_header(filename, verbose=False):
     """Parses the first line of the data format of L. Liu.
@@ -679,9 +696,9 @@ def read_confs(path,corrname,confs,_T=48,verb=False):
     C = np.zeros((len(confs),_T,2))
     for i,d in enumerate(confs):
         #Generate filename from inputlist
-        if verb is True:
-            print path, d, corrname
         _fname = path+d+corrname
+        if verb is True:
+            print(_fname)
         _C_tmp = _read_corr(_fname,_T)
         C[i] = _C_tmp
     return C

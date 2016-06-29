@@ -19,6 +19,7 @@ from zeta_wrapper import Z
 from scattering_length import calculate_scat_len
 from phaseshift_functions import compute_phaseshift
 from utils import mean_std
+from chiral_utils import evaluate_phys
 
 class LatticeFit(object):
     def __init__(self, fitfunc, dt_i=2, dt_f=2, dt=4, xshift=0.,
@@ -40,6 +41,7 @@ class LatticeFit(object):
             Use the full covariance matrix or just the errors.
         debug : int, optional
             The level of debugging output
+        conf : list of int, the configurations under investigation
         """
         self.debug = debug
         # chose the correct function if using predefined function
@@ -62,6 +64,7 @@ class LatticeFit(object):
         self.dt_i = dt_i
         self.dt_f = dt_f
         self.correlated = correlated
+        self.conf = None
 
     def fit(self, start, corr, ranges, corrid="", add=None, oldfit=None,
             oldfitpar=None, useall=False, lint=False):
@@ -177,7 +180,8 @@ class LatticeFit(object):
                     oldfit, add, oldfitpar, useall, self.debug, self.xshift,
                     self.correlated):
                 fitres.add_data(*res)
-
+        # get the configuration numbers from the correlator object
+        fitres.conf = corr.conf
         return fitres
 
     def chiral_fit(self, X, Y, corrid="", start=None, xcut=None, ncorr=None,debug=0):
@@ -269,6 +273,7 @@ class FitResult(object):
             The identifier of the fit results.
         derived : bool
             If the data is derived or not.
+        conf : list of integers, the configuration numbers of the original data
         """
         self.data = None
         self.pval = None
@@ -281,6 +286,7 @@ class FitResult(object):
         self.derived = derived
         self.error = None
         self.weight = None
+        self.conf = None
 
     @classmethod
     def read(cls, filename):
@@ -293,6 +299,7 @@ class FitResult(object):
         obj.chi2 = tmp[3]
         obj.pval = tmp[4]
         obj.label = tmp[5]
+        obj.conf = tmp[6]
         obj.corr_num = tmp[0][1]
         obj.fit_ranges_shape = tmp[0][2]
         return obj
@@ -311,7 +318,7 @@ class FitResult(object):
         tmp[2] = self.fit_ranges_shape
         tmp[3] = self.derived
         write_fitresults(filename, tmp, self.fit_ranges, self.data, self.chi2,
-            self.pval, self.label, False)
+            self.pval, self.label, self.conf,False)
 
     def get_data(self, index):
         """Returns the data at the index.
@@ -869,6 +876,34 @@ class FitResult(object):
             cotdelta.add_data(*res)
             delta.add_data(*res1)
         return delta, cotdelta
+
+    def calc_mk_a0_phys(self, val_phys, func, parself=0, parmass=0, isdependend=True):
+        """Calculate the physical point result from fitresult parameters 
+
+        Parameters
+        ----------
+        val_phys : The physical value at which to evaluate, could change to a
+            fitresult
+        func : callable, chipt function used for evaluation
+        parself, parmass : int, optional
+            The parameters for which to do this.
+        isdependend : bool
+            If mass and self are dependend on each other.
+        """
+        # we need the weight of both mass and self are the fit parameters of a
+        # ChiPT fit
+        self.calc_error()
+        # mass.calc_error()
+        _pars = self.data[0]
+        _pars_w = self.weight[:][0]
+        nsam = self.data[0].shape[0]
+        newshape = (nsam, _pars.shape[-1])
+        mka0_phys = FitResult("mka0_phys", True)
+        mka0_phys.create_empty(newshape, newshape, 1)
+        #for res in evaluate_phys(_ma, _ma_w, _energy, _energy_w, isdependend):
+        for res in evaluate_phys(val_phys, _pars, _pars_w, func, isdependend):
+            mka0_phys.add_data(*res)
+        return mka0_phys
 
     def calc_dE(self, mass, parself=0, parmass=0, isdependend=True):
         """Calculate dE from own data and the mass of the particles.

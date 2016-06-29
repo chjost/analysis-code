@@ -76,9 +76,8 @@ class Correlators(object):
                 self.data = np.atleast_3d(tmp)
                 self.matrix = False
                 if isinstance(conf_col,int):
+                    print("Column for configuration numbers is %d\n" % conf_col)
                     self.conf = in_out.read_single(filename, (conf_col,), skip, debug)
-                else:
-                    self.conf = in_out.read_single(filename,skip,debug)
         if self.data is not None:
             self.shape = self.data.shape
         else:
@@ -107,15 +106,14 @@ class Correlators(object):
         """
         data = in_out.read_data(filename)
         tmp = cls(debug=debug)
-        try:
-            if isinstance(data.files,list):
-                tmp.data = data['arr_0']
-                tmp.conf = data['arr_1']
-            else:
-                # set the data directly
-                tmp.data = data
-        except AttributeError:
+        if isinstance(data.files,list):
+            tmp.data = data['arr_0']
+            tmp.conf = data['arr_1']
+        else:
+            # set the data directly
             tmp.data = data
+            if data.shape[-2] != data.shape[-1]:
+                tmp.matrix = False
         tmp.shape = tmp.data.shape
         if tmp.data.shape[-2] != tmp.data.shape[-1]:
             tmp.matrix = False
@@ -149,7 +147,7 @@ class Correlators(object):
         The data can be saved in numpy format or plain ascii.
 
         Parameters
-        ----------
+       ----------
         filename : str
             The name of the file to write to.
         asascii : bool, optional
@@ -157,11 +155,17 @@ class Correlators(object):
         """
         verbose = (self.debug > 0) and True or False
         if asascii:
-            in_out.write_data_ascii(self.data, filename, verbose)
+            if self.conf is not None:
+                print("Saving configuration numbers")
+                in_out.write_data_ascii(self.data, filename, verbose, self.conf)
+            else:
+                in_out.rite_data_ascii(self.data, filename, verbose)
         else:
             if self.conf is not None:
-                np.savez(filename, self.data, self.conf)
-            in_out.write_data(self.data, filename, verbose)
+                print("Saving configuration numbers")
+                in_out.write_data(self.data, filename, self.conf, verbose)
+            else:
+                in_out.write_data(self.data, filename, verbose)
 
     def symmetrize(self):
         """Symmetrizes the data around the second axis.
@@ -472,7 +476,7 @@ class Correlators(object):
       correlation is not lost
       """
       if in_iqr is None:
-          # get the 25% and 75% percentiles from the firsty timeslice of all
+          # get the 25% and 75% percentiles from the real part of the first timeslice of all
           # configurations
           q25, q75 = np.percentile(self.data[:,0],(25,75))
           iqr_dn = q25-1.5*np.abs(q75-q25)
@@ -480,10 +484,14 @@ class Correlators(object):
           # boolean arrays of outlier positions
           idx_up = np.greater(self.data[:,0], iqr_up)
           idx_dn = np.less(self.data[:,0], iqr_dn)
+          print("index shapes are:")
           print(idx_up.shape,idx_dn.shape)
           omit_idx = np.logical_or(idx_up,idx_dn)
           # reshape necessary for correct slicing
+          print("omit_idx has shape")
+          print(omit_idx.shape)
           in_iqr = np.invert(omit_idx).reshape(omit_idx.shape[0])
+          #in_iqr = np.invert(omit_idx)
           # store ommited configurations
           omitted = self.conf[omit_idx]
           print self.data.shape

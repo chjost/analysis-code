@@ -41,7 +41,7 @@ def main():
     print(rawdir)
     print(datadir)
     inputlist = []
-    cfg_rng = [714,2330,4]
+    cfg_rng = [714,1114,4]
     #omit = [20, 164, 416, 540, 568, 596, 668, 1000]
     omit=[]
     print(omit)

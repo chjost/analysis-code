@@ -376,6 +376,8 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, debug=0):
     else:
         cov = np.cov(Y.T)
     cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
+    print("Correlation matrix:")
+    print(np.corrcoef(Y.T))
 
     # degrees of freedom
     dof = float(Y.shape[1]-len(start)) 
@@ -401,7 +403,6 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, debug=0):
             res[b] = np.array(p)
     # calculate mean and standard deviation
     res_mean, res_std = compute_error(res)
-    #print(res_mean, res_std)
     # p-value calculated
     pvals = 1. - scipy.stats.chi2.cdf(chisquare, dof)
 
@@ -419,7 +420,7 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, debug=0):
             print("  %.6e +/- %.6e" % (rm, rs))
         print("Chi^2/dof: %.6e +/- %.6e" % (chisquare[0]/dof, np.std(chisquare)
               /dof))
-        print("p-value: %lf" % pvals[0]) 
+        print("p-value: %.3e" % pvals[0]) 
 
     return res, chisquare, pvals
 

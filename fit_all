@@ -56,7 +56,7 @@ def main():
     #files = ["%s/pi_corr_p%d.dat" % (prefix, d) for d in range(4)]
     files = ["%s/k_charged_p%d.dat" % (datadir, d) for d in range(1)]
     if readsingledata == False:
-        picorr = ana.Correlators(files, matrix=False)
+        picorr = ana.Correlators(files, matrix=False,conf_col = 2)
         print(picorr.data)
         picorr.sym_and_boot(nboot)
         #picorr.symmetrize()
@@ -65,7 +65,7 @@ def main():
     else:
         picorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat))
 
-    fit_single = ana.LatticeFit(0, dt_i=1, dt_f=-1, dt=min_size_mass)
+    fit_single = ana.LatticeFit(0, dt_i=1, dt_f=-1, dt=min_size_mass, debug=5)
     if readsinglefit == False:
         print("fitting")
         pifit = fit_single.fit(None, picorr, [t_mass], corrid="epi", add=addT)
@@ -84,7 +84,7 @@ def main():
     if plotsingle:
         print("plotting")
         plotter = ana.LatticePlot("%s/fit_k_%s.pdf" % (plotdir, lat))
-        plotter.set_env(ylog=True)
+        plotter.set_env(ylog=False)
         label = ["single particle", "t", "C(t)", "kaon"]
         plotter.plot(picorr, label, pifit, fit_single, add=addT, debug=debug)
         plotter.new_file("%s/hist_fit_k_%s.pdf" % (plotdir, lat))
@@ -102,7 +102,7 @@ def main():
         range(gmax+1) for j in range(gmax+1)]
     print files
     if readtwodata == False:
-        kkcorr = ana.Correlators(files, matrix=False)
+        kkcorr = ana.Correlators(files, matrix=False,conf_col=2)
         kkcorr.sym_and_boot(nboot)
         #kkcorr.symmetrize(nboot)
         if d2 != 0:
@@ -123,7 +123,8 @@ def main():
         ratio = kkcorr.ratio(picorr, ratio=2 )
     print(kkcorr.shape)
 
-    fit_ratio = ana.LatticeFit(1, dt=min_size_ratio, dt_i=1, dt_f=1, xshift=0.5)
+    fit_ratio = ana.LatticeFit(1, dt=min_size_ratio, dt_i=1, dt_f=1, xshift=0.5,
+        debug=5)
     start_ratio = [1.8, 0.002]
     # ratiofit
     if readtwofit == False:
