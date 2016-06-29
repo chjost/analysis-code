@@ -220,14 +220,14 @@ class LatticeFit(object):
         #shape1 = (_X.shape[0], 1, _X.shape[0])
         #shape1 = (_X.shape[0], len(start), _Y.shape[0])
         #shape2 = (_X.shape[0], _Y.shape[0])
-        shape1 = (_Y.shape[0], len(start), _X.shape[0])
+        shape1 = (_Y.shape[0], len(_start), _X.shape[0])
         shape2 = (_Y.shape[0], _X.shape[0])
         if ncorr is None:
-          fitres.create_empty(shape1, shape2, 1)
+            fitres.create_empty(shape1, shape2, 1)
         elif isinstance(ncorr, int):
-          fitres.create_empty(shape1, shape2,ncorr)
+            fitres.create_empty(shape1, shape2, ncorr)
         else:
-          raise ValueError("ncorr needs to be integer")
+            raise ValueError("ncorr needs to be integer")
 
         # fit the data
         dof = _X.shape[-1] - len(_start)

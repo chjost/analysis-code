@@ -401,7 +401,7 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, debug=0):
             res[b] = np.array(p)
     # calculate mean and standard deviation
     res_mean, res_std = compute_error(res)
-    print(res_mean, res_std)
+    #print(res_mean, res_std)
     # p-value calculated
     pvals = 1. - scipy.stats.chi2.cdf(chisquare, dof)
 

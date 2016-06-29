@@ -107,11 +107,14 @@ class Correlators(object):
         """
         data = in_out.read_data(filename)
         tmp = cls(debug=debug)
-        if isinstance(data.files,list):
-            tmp.data = data['arr_0']
-            tmp.conf = data['arr_1']
-        else:
-            # set the data directly
+        try:
+            if isinstance(data.files,list):
+                tmp.data = data['arr_0']
+                tmp.conf = data['arr_1']
+            else:
+                # set the data directly
+                tmp.data = data
+        except AttributeError:
             tmp.data = data
         tmp.shape = tmp.data.shape
         if tmp.data.shape[-2] != tmp.data.shape[-1]:
@@ -121,7 +124,7 @@ class Correlators(object):
         return tmp
 
     @classmethod
-    def create(cls, data, debug=0):
+    def create(cls, data, conf=None, debug=0):
         """Create correlator class from preexisting data.
 
         Parameters
@@ -134,8 +137,11 @@ class Correlators(object):
         tmp = cls(debug=debug)
         tmp.data = data
         tmp.shape = data.shape
+        if conf is not None:
+            tmp.conf=conf
         if data.shape[-2] != data.shape[-1]:
             tmp.matrix = False
+        return tmp
 
     def save(self, filename, asascii=False):
         """Saves the data to disk.

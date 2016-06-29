@@ -33,6 +33,18 @@ import ConfigParser
 
 import analysis2 as ana
 
+def parse_list_int(data):
+    tmp = []
+    for d in data.split(","):
+        tmp.append(int(d.strip()))
+    return tmp
+
+def parse_list_str(data):
+    tmp = []
+    for d in data.split(","):
+        tmp.append(str(d.strip()))
+    return tmp
+
 def main():
     if len(os.sys.argv) < 2:
         fname = "./ini/uncharged.ini"
@@ -51,22 +63,19 @@ def main():
     nbranu = config.getint("main", "nbran")
     nbrans = nbranu-1
     # workaround: missing needs ints, config reads strings
-    diag = config.get("main", "diagrams").split(",")
-    miss = config.get("main", "missing").split(",")
-    missing = []
-    for m in miss:
-        missing.append(int(m.strip()))
-    diagrams = []
-    for d in diag:
-        diagrams.append(str(d.strip()))
+    diagrams = parse_list_str(config.get("main", "diagrams"))
+    missing = parse_list_int(config.get("main", "missing"))
     #innames = ana.inputnames(fname, ["C1"])
     innames = ana.inputnames(fname, diagrams)
 
     inputlist = []
+    confs = []
     for i in range(confmin, confmax, confstep):
         if i in missing:
             continue
         inputlist.append("cnfg%d/" % i)
+        confs.append(i)
+    confs = np.asarray(confs)
     if debug > 0:
         print("number of files: %d" % len(innames))
         print("number of configs: %d" % len(inputlist))
@@ -78,7 +87,6 @@ def main():
         print(inputlist)
         print(missing)
 
-    calcvev = False
     for d in innames:
         if debug > 0:
             print(d)
@@ -87,10 +95,13 @@ def main():
         if d.startswith("C1"):
             if "_u_" in d:
                 nbran = nbranu
+                outfile = "disc.uu."
             elif "_s_" in d:
                 nbran = nbrans
+                outfile = "disc.ss."
             elif "_c_" in d:
                 nbran = nbranc
+                outfile = "disc.cc."
             # read in data
             for i in inputlist:
                 inname = "".join((inputpath, i, d))
@@ -99,13 +110,6 @@ def main():
                 data.append(tmp)
             tmp = np.asarray(data)
             T = tmp.shape[-1]
-            # calc vev explicitly
-            #tst = np.zeros((tmp.shape[0],1,2))
-            #tst[:,0,0] = np.mean(tmp.real, axis=(1,2))
-            #tst[:,0,1] = np.mean(tmp.imag, axis=(1,2))
-            #outname = "".join((outputpath, "/C1/", "vev.dat"))
-            #ctmp = ana.Correlators.create(tst)
-            #ctmp.save(outname, True)
             # build all rnd vec combinations explicitly
             data = np.zeros(tmp[:,0].shape+(2,))
             for i in range(nbran):
@@ -163,7 +167,7 @@ def main():
             tmp[...,1] = data.imag
             data = tmp
         # create a correlator from the data
-        corrs = ana.Correlators.create(data)
+        corrs = ana.Correlators.create(data, conf=confs)
         # save the data
         outname = "".join((outputpath, d))
         if debug > 1:

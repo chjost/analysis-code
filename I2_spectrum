@@ -25,7 +25,7 @@ def plot_spectrum(datafolder, plotfolder, lattices, irreps=[["A1"]]):
         the inner which irreps to read in.
     """
     ## variables
-    verbose = False
+    verbose = True
     xcut = None
 
     # read data
@@ -88,21 +88,27 @@ def plot_spectrum(datafolder, plotfolder, lattices, irreps=[["A1"]]):
     # symbol code the irrep
     irrepfmt = {"A1":"o", "E":"s", "T2":"D", "B1":"^"}
     # color code the total momentum
-    p2fmt = ["r", "b", "g", "k"]
+    p2fmt = ["r", "b", "g", "k", "m"]
     # axis labels
     axlab = ["L/a", "aE$_{cm}$(L)"]
     # plot the data
     # pipi[lattice][total momentum][irrep][correlator]
     for p2 in range(len(irreps)):
+        if verbose:
+            print("plotting p^2 = %d" % p2)
         for j, irr in enumerate(irreps[p2]):
+            if verbose:
+                print("plotting irrep %s" % irr)
             plotter.set_title("total momentum %d, irrep %s" % (p2, irr), axlab)
-            maxn = 0
+            maxn = 2
             for i, lat in enumerate(lattices):
                 L = int(lat.split(".")[-1])
                 tmppipi = pipi[i][p2][j]
-                if len(tmppipi) > maxn:
-                    maxn = len(tmppipi)
-                for k in range(len(tmppipi)):
+                if len(tmppipi[0]) > maxn:
+                    maxn = 3
+                    #maxn = len(tmppipi[0])
+                #for k in range(len(tmppipi[0])):
+                for k in range(maxn):
                     y = tmppipi[0][k][0]
                     dy = [[np.sqrt(tmppipi[1][k]**2 + tmppipi[2][k][0]**2)],
                           [np.sqrt(tmppipi[1][k]**2 + tmppipi[2][k][1]**2)]]
@@ -148,6 +154,10 @@ def plot_expected(n, p2, irrep, mpi=0.14):
         if p2 == 0:
             k1 = [1, 2, 4]
             k2 = [1, 2, 2]
+    elif irrep == "T2":
+        if p2 == 0:
+            k1 = [2, 3]
+            k2 = [2, 3]
     else:
         raise RuntimeError("not implemented yet")
     xlim = plt.gca().get_xlim()
@@ -167,7 +177,7 @@ def main():
     datafolder = "./data/I2/"
     plotfolder = "./plots/I2/summary/"
     # construct list with irreps, giving also total momentum
-    irreps = [["A1", "E"], ["A1"], ["A1"]]
+    irreps = [["A1", "E", "T2"], ["A1"], ["A1"]]
     plot_spectrum(datafolder, plotfolder, Aens, irreps)
     return
 

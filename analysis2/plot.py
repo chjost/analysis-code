@@ -382,9 +382,9 @@ class LatticePlot(object):
                     self.save()
         label[0] = label_save
 
-    def plot_func(self, func, args, interval, label, fmt="k", col="black"):
-        X = np.linspace(interval[0], interval[1], 1000)
-        plot_function(func, X, args, label, ploterror=True, fmt=fmt, col=col)
+    def plot_func(self, func, args, interval, label, fmt="k", col="black", ploterror=True):
+        #X = np.linspace(interval[0], interval[1], 1000)
+        plot_function(func, interval, args, label, ploterror=ploterror, fmt=fmt, col=col)
 
     def history(self, data, label, ts=0, boot=False, par=None, fr=None, subplot=True):
         """Plots the history of the input data either with bootstrapsamples or

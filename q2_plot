@@ -26,7 +26,7 @@ def print_summary(datafolder, plotfolder, lattices, irreps=[["A1"]]):
         the inner which irreps to read in.
     """
     ## variables
-    verbose = False
+    verbose = True
     xcut = None
     readnewdata = True
 
@@ -42,7 +42,7 @@ def print_summary(datafolder, plotfolder, lattices, irreps=[["A1"]]):
         for lat in lattices:
             if verbose:
                 print("reading data for lattice: %s" % lat)
-            fname = "%s/summary/collected_delta_%s.npz" % (datafolder, lat)
+            #fname = "%s/summary/collected_delta_%s.npz" % (datafolder, lat)
             lq2 = []
             ldelta = []
             # iterate over the total momentum
@@ -180,9 +180,9 @@ def print_summary(datafolder, plotfolder, lattices, irreps=[["A1"]]):
     print("nb of data %d, chi^2 = %.2f, p = %.2f" % (res.shape[0], chi2[0], pval[0]))
     print("a_0 = %.2f +- %.2f" % ( data[0][0], data[1][0]))
     print("r_0 = %.2f +- %.2f" % ( data[0][1], data[1][1]))
-    print("a_0 = %.2f +- %.2f" % ( data[0][2], data[1][2]))
+    print("a_2 = %.2f +- %.2f" % ( data[0][2], data[1][2]))
 
-    nsamples = 500
+    nsamples = 100
     # sample liumings results
     res_l = np.zeros((nsamples, 3))
     np.random.seed(1228)
@@ -192,13 +192,16 @@ def print_summary(datafolder, plotfolder, lattices, irreps=[["A1"]]):
     np.random.seed(1228)
     res_l[:,2] = 26.*np.random.randn(nsamples) - 46.
     # sample Dudek et al's result, using mpi*a_i
+    mpi_dudek = np.zeros((nsamples,))
+    np.random.seed(1228)
+    mpi_dudek = 0.00013*np.random.randn(nsamples) + 0.06906
     res_d = np.zeros((nsamples, 3))
     np.random.seed(1228)
-    res_d[:,0] = (0.013*np.random.randn(nsamples) - 0.307)/0.145
+    res_d[:,0] = (0.013*np.random.randn(nsamples) - 0.307)/mpi_dudek
     np.random.seed(1228)
-    res_d[:,1] = (0.13*np.random.randn(nsamples) - 0.26)/0.145
+    res_d[:,1] = (0.13*np.random.randn(nsamples) - 0.26)/mpi_dudek
     np.random.seed(1228)
-    res_d[:,2] = (0.53*np.random.randn(nsamples) - 1.89)/np.power(0.145,5)*1e-6
+    res_d[:,2] = (0.53*np.random.randn(nsamples) - 1.89)/np.power(mpi_dudek,5)*1e-6
 
     # plot the functions
     plotter.plot_func(dofp0, res_l[:,:2], ran, "$\delta_0$ (l)", fmt="b", col="b")
@@ -216,12 +219,12 @@ def print_summary(datafolder, plotfolder, lattices, irreps=[["A1"]]):
     return
 
 def main():
-    #Aens = ["A40.24"]
-    Aens = ["A40.20", "A40.24", "A40.32"]
+    Aens = ["A40.32"]
+    #Aens = ["A40.20", "A40.24", "A40.32"]
     datafolder = "./data/I2/"
     plotfolder = "./plots/I2/summary/"
     # construct list with irreps, giving also total momentum
-    irreps = [["A1"],["A1"]]
+    irreps = [["A1", "E"]]
     print_summary(datafolder, plotfolder, Aens, irreps)
     return
 

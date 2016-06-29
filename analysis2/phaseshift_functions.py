@@ -52,6 +52,8 @@ def get_solution(q2, gamma, d2, irrep="A1"):
         cotd, delta = solutions_A1(q2, gamma, d2)
     elif irrep == "E":
         cotd, delta = solutions_E(q2, gamma, d2)
+    elif irrep == "T2":
+        cotd, delta = solutions_T2(q2, gamma, d2)
     else:
         raise RuntimeWarning("irrep %s not implemented" % irrep)
         cotd, delta = None, None
@@ -84,11 +86,13 @@ def solutions_A1(q2, gamma, d2):
     w_00 = omega(q2, gamma).real
     if d2 == 0:
         cotd = w_00
-        delta = np.arctan(1./cotd)*180./np.pi
+        delta = np.arctan2(1.,cotd)*180./np.pi
+        #delta = np.arctan(1./cotd)*180./np.pi
     elif d2 == 1:
         w_20 = omega(q2, gamma, l=2).real
-        cotd = 5. * np.square(w_20) + w_00
-        delta = np.arctan(1./cotd) * 180. / np.pi
+        cotd = w_00 - 5. * np.square(w_20)
+        delta = np.arctan2(1.,cotd) * 180. / np.pi
+        #delta = np.arctan(1./cotd) * 180. / np.pi
     elif d2 == 2:
         w_20 = np.square(omega(q2, gamma, l=2)).real
         w_22 = np.square(omega(q2, gamma, l=2, m=2)).real
@@ -198,9 +202,9 @@ def solutions_E(q2, gamma, d2):
     """
     w_00 = omega(q2, gamma).real
     if d2 == 0:
-        w_20 = omega(q2, gamma, l=2).real
-        cotd = w_00 - 1./np.sqrt(5) * w_20
-        delta = np.arctan(1./cotd) * 180. / np.pi
+        w_40 = omega(q2, gamma, l=4).real
+        cotd = w_00 + 18./7. * w_40
+        delta = np.arctan2(1.,cotd) * 180. / np.pi
     elif d2 == 1:
         w_20 = omega(q2, gamma, l=2).real
         w_40 = omega(q2, gamma, l=4).real
@@ -210,7 +214,35 @@ def solutions_E(q2, gamma, d2):
         w_22 = omega(q2, gamma, l=2, m=2).real
         w_40 = omega(q2, gamma, l=4).real
         w_42 = omega(q2, gamma, l=4, m=2).real
-        
+    else:
+        cotd = None
+        delta = None
+    return cotd, delta
+
+def solutions_T2(q2, gamma, d2):
+    """Calculates cot(delta_2) and delta_2 for the E irrep.
+
+    Parameters
+    ----------
+    q2 : ndarray
+        The squared momentum.
+    gamma : ndarray
+        The Lorentz boost of the system.
+    d2 : int
+        The total momentum squared.
+
+    Returns
+    -------
+    cotd : ndarray
+        The cotangent of the phaseshift.
+    delta : ndarray
+        The phaseshift.
+    """
+    w_00 = omega(q2, gamma).real
+    if d2 == 0:
+        w_40 = omega(q2, gamma, l=4).real
+        cotd = w_00 - 12./7. * w_40
+        delta = np.arctan2(1.,cotd) * 180. / np.pi
     else:
         cotd = None
         delta = None

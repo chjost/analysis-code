@@ -104,6 +104,7 @@ def K_mpi():
              "D15.48": (1.0081, 0.0022),
              "D30.48": (1.0021, 0.0007),
              "D45.32": (1.0047, 0.0013), # values for D20.48
+             # not known
              "cA2.09.48": (1.0, 0.001),
              "cA2.30.24": (1.0, 0.001)}
     return k_mpi
@@ -128,8 +129,8 @@ def mf_paper():
              "D30.48": (2.070, 0.010),
              "D45.32": (2.485, 0.012),
              # calculated from arxiv 1507.05068
-             "cA2.09.48": (1.0255, 0.011),
-             "cA2.30.24": (1.8791, 0.011)}
+             "cA2.09.48": (1.0258, 0.015),
+             "cA2.30.24": (1.8791, 0.018)}
     return p_mf
 
 def carsten_plot():
@@ -152,24 +153,13 @@ def a0_corrections(mpi, L):
     res = -mpi / (2 * np.pi) * _sum
     return ana.mean_std(res)
 
-def print_summary(datafolder, plotfolder, lattices, d2=0):
-    """Print a summary of the lattices given.
-
-    Args:
-        datafolder: where the raw data is stored
-        plotfolder: where to store the plots
-        lattices: list of lattices to work on
-    """
+def read_data(datafolder, lattices, d2=0):
     verbose=False
     ## other variables
     filempi = "fit_pi.npz"
     par_mpi=1
     #fileam = "am_pi_TP%d.npz" % d2
     fileam = "am_pi_ratio_TP%d.npz" % d2
-    xcut = 2.5
-
-    fchiptLO = lambda p, x: -x*x/(8.*np.pi)
-    fchiptNLO = lambda p, x: -x*x/(8.*np.pi)*(1+x*x/(16*np.pi*np.pi)*(3.*np.log(x*x)-1.-p))
 
     # get reference values
     fpi = ottnad_f_pi()
@@ -178,7 +168,7 @@ def print_summary(datafolder, plotfolder, lattices, d2=0):
     p_mf = mf_paper()
 
     # read data
-    readnewdata = True
+    readnewdata = False
     fname = "%s/summary/collected_data.npz" % datafolder
     if readnewdata:
         summ_ampi, summ_mf = [], []
@@ -233,6 +223,23 @@ def print_summary(datafolder, plotfolder, lattices, d2=0):
         usumm_ampi = tmpfile["uampi"]
         usumm_mf = tmpfile["umf"]
         del tmpfile
+    return summ_ampi, summ_mf, usumm_ampi, usumm_mf
+
+def print_summary(data, datafolder, plotfolder, lattices):
+    """Print a summary of the lattices given.
+
+    Args:
+        datafolder: where the raw data is stored
+        plotfolder: where to store the plots
+        lattices: list of lattices to work on
+    """
+    verbose=False
+    xcut = 2.5
+    summ_ampi = data[0]
+    summ_mf = data[1]
+    usumm_ampi = data[2]
+    usumm_mf = data[3]
+
     # regroup data for fit
     all_data_x, all_data_y = [], []
     for mf in summ_mf:
@@ -248,16 +255,19 @@ def print_summary(datafolder, plotfolder, lattices, d2=0):
     #    ty = ana.mean_std(dy)
     #    print("(%.3f +- %.3f, %.3f +- %.3f)" % (tx[0], tx[1], ty[0], ty[1]))
 
+    fchiptLO = lambda p, x: -x*x/(8.*np.pi)
+    fchiptNLO = lambda p, x: -x*x/(8.*np.pi)*(1+x*x/(16*np.pi*np.pi)*(3.*np.log(x*x)-1.-p))
+
     # fit
     readfit = True
     if not readfit:
         print("NLO fit")
         fit_chi = ana.LatticeFit(fchiptNLO)
         fitres = fit_chi.chiral_fit(all_data_x, all_data_y, xcut=xcut)
-        #if xcut:
-        #    fitres.save("%s/summary/chiral_fit_xcut%.1f.npz" % (datafolder, xcut))
-        #else:
-        #    fitres.save("%s/summary/chiral_fit.npz" % (datafolder))
+        if xcut:
+            fitres.save("%s/summary/chiral_fit_xcut%.1f.npz" % (datafolder, xcut))
+        else:
+            fitres.save("%s/summary/chiral_fit.npz" % (datafolder))
     else:
         if xcut:
             fitres = ana.FitResult.read("%s/summary/chiral_fit_xcut%.1f.npz" % (datafolder, xcut))
@@ -304,9 +314,10 @@ def print_summary(datafolder, plotfolder, lattices, d2=0):
         plt.errorbar(x, y, yerr=dy, xerr=dx, fmt=fmt[i], label=labels[i])
 
     # plot ChiPT formula
-    plotter.plot_func(fchiptLO, None, [1., 3.], "LO ChiPT", fmt="--k")
+    print(np.atleast_2d(retval[0][0]).shape)
+    plotter.plot_func(fchiptLO, None, [1., 3.], "LO ChiPT", fmt="--k", ploterror=False)
     #plotter.plot_func(fchiptNLO, 3.79, [1., 3.], "NLO ChiPT", fmt="--k")
-    plotter.plot_func(fchiptNLO, retval[0][0][0], [1., 3.], "NLO ChiPT")
+    plotter.plot_func(fchiptNLO, np.atleast_2d(retval[0][0]).T, [1., 3.], "NLO ChiPT")
     if xcut:
         y = fchiptNLO(retval[0][0][0], xcut)
         plt.vlines(xcut, 0.8*y, 1.2*y, colors="k", label="")
@@ -325,34 +336,34 @@ def print_summary(datafolder, plotfolder, lattices, d2=0):
     # compare to Carsten data
     #fmt = ["or", "sb", "^c", "Dg"]
     #labels = ["A ensembles", "B ensembles", "c Ensembles", "D ensembles"]
-    cdata = carsten_plot()
-    plotter.set_title("", ["M$_\pi$/f$_\pi$", "M$_\pi$a$_0$"])
-    for i, mf in enumerate(summ_mf):
-        x = [d[0][0] for d in mf]
-        y = [d[0][0] for d in summ_ampi[i]]
-        dx = [d[1] for d in mf]
-        dy = np.asarray([d[1] for d in summ_ampi[i]])
-        dy1 = np.asarray([d[2] for d in summ_ampi[i]])
-        dy2 = np.asarray([d[3] for d in summ_ampi[i]])
-        dytot = [np.sqrt(dy**2 + dy1**2), np.sqrt(dy**2 + dy2**2)]
-        plt.errorbar(x, y, yerr=dytot, xerr=dx, fmt=fmt[i], label=labels[i])
-    for i, latt in enumerate(lattices):
-        x, y, dx, dy = [], [], [], []
-        for lat in latt:
-            try:
-                j = cdata[0].index(lat)
-            except ValueError:
-                #print("%s not found" % lat)
-                continue
-            x.append(cdata[3][j])
-            y.append(cdata[1][j])
-            dx.append(cdata[4][j])
-            dy.append(cdata[2][j])
-            #print("%9s (%.3f +- %.3f, %.3f +- %.3f)" % (lat, x[-1], dx[-1], y[-1], dy[-1]))
-        plt.errorbar(x, y, yerr=dy, xerr=dx, fmt=fmt[i], label=labels[i], mfc="None")
-    plt.grid(True)
-    plt.xlim([1.5,2.5])
-    plotter.save()
+    #cdata = carsten_plot()
+    #plotter.set_title("", ["M$_\pi$/f$_\pi$", "M$_\pi$a$_0$"])
+    #for i, mf in enumerate(summ_mf):
+    #    x = [d[0][0] for d in mf]
+    #    y = [d[0][0] for d in summ_ampi[i]]
+    #    dx = [d[1] for d in mf]
+    #    dy = np.asarray([d[1] for d in summ_ampi[i]])
+    #    dy1 = np.asarray([d[2] for d in summ_ampi[i]])
+    #    dy2 = np.asarray([d[3] for d in summ_ampi[i]])
+    #    dytot = [np.sqrt(dy**2 + dy1**2), np.sqrt(dy**2 + dy2**2)]
+    #    plt.errorbar(x, y, yerr=dytot, xerr=dx, fmt=fmt[i], label=labels[i])
+    #for i, latt in enumerate(lattices):
+    #    x, y, dx, dy = [], [], [], []
+    #    for lat in latt:
+    #        try:
+    #            j = cdata[0].index(lat)
+    #        except ValueError:
+    #            #print("%s not found" % lat)
+    #            continue
+    #        x.append(cdata[3][j])
+    #        y.append(cdata[1][j])
+    #        dx.append(cdata[4][j])
+    #        dy.append(cdata[2][j])
+    #        #print("%9s (%.3f +- %.3f, %.3f +- %.3f)" % (lat, x[-1], dx[-1], y[-1], dy[-1]))
+    #    plt.errorbar(x, y, yerr=dy, xerr=dx, fmt=fmt[i], label=labels[i], mfc="None")
+    #plt.grid(True)
+    #plt.xlim([1.5,2.5])
+    #plotter.save()
 
     # compare to uncorrected data
     #fmt = ["or", "sb", "Dg"]
@@ -394,20 +405,23 @@ def main():
     d0 = np.array([0., 0., 0.]) # total momentum of the system
     s = 1
     # left out A40.20 since f_pi not known
+    # D30.48 missing
     #Aens = ["A30.32", "A40.32", "A60.24"]
     #Bens, Dens = [], []
     Aens = ["A30.32", "A40.24", "A40.32", "A60.24",
             "A80.24", "A100.24"]
     Bens = ["B25.32", "B35.32", "B35.48", "B55.32", "B85.24"]
-    Dens = ["D15.48", "D30.48", "D45.32"]
-    Cens = ["cA2.09.48", "cA2.30.24"]
+    Dens = ["D15.48", "D45.32"]
+    Cens = []
+    #Cens = ["cA2.09.48", "cA2.30.24"]
     #Aens = ["A30.32", "A40.32", "A60.24",
     #        "A80.24", "A100.24"]
     #Bens = ["B35.32", "B55.32", "B85.24"]
     #Dens = ["D45.32"]
     datafolder = "./data/I2/"
     plotfolder = "./plots/I2/summary/"
-    print_summary(datafolder, plotfolder, [Aens, Bens, Cens, Dens])
+    data = read_data(datafolder, [Aens, Bens, Cens, Dens])
+    print_summary(data, datafolder, plotfolder, [Aens, Bens, Cens, Dens])
     return
 
 # make this script importable, according to the Google Python Style Guide

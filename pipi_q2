@@ -39,7 +39,7 @@ def main():
     print("read single particle corrs")
     picorr = ana.Correlators.read("%s/corr_pi.npy" % (datadir))
     pifit = ana.FitResult.read("%s/fit_pi.npz" % (datadir))
-    #pifit.print_data(1)
+    pifit.print_data(1)
     #pifit.print_details()
 
     # two particle correlator

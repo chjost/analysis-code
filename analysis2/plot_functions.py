@@ -129,7 +129,7 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
         else:
             # no additional arguments, iterate over args
             #iterate over x
-            print("using function")
+            #print("using function")
             for j,x in enumerate(x1):
                 y1.append(func(_args[0], x))
                 if ploterror:
@@ -163,11 +163,11 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
             else:
                 # calculate on original data
                 y1.append(func(_args, x))
-    print(len(x1),len(y1))
+    #print(len(x1),len(y1))
     plt.plot(x1, y1, fmt, label=label)
     if ymax and ymin:
-        print(ymax[0])
-        print(x1[0])
+        #print(ymax[0])
+        #print(x1[0])
         plt.fill_between(x1, ymin, ymax, facecolor=col,
             edgecolor=col, alpha=0.2)
     plt.legend()
