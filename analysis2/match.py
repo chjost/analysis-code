@@ -231,7 +231,7 @@ class MatchResult(object):
           self.obs[idx] = data
         if amu is not None:
           self.amu[idx]=amu
-        print(self.obs[idx])
+        #print(self.obs[idx])
       else:
         #print("xdata to add to has shape")
         #print(self.eval_obs[idx].shape)
@@ -246,7 +246,7 @@ class MatchResult(object):
           self.eval_obs[idx] = data
         if amu is not None:
           self.amu[idx]=amu
-        print(self.eval_obs[idx])
+        #print(self.eval_obs[idx])
 
 
     def add_extern_data(self,filename,ens,idx=None,amu=None,square=True,read=None,op=False):

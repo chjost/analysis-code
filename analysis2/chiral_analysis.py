@@ -72,7 +72,7 @@ class ChirAna(object):
     lyt_x : tuple, shape of the x data
     match : boolean to state if matched data is to be analysed, default is False
     """
-    print(len(lyt_x),len(lyt_y))
+    #print(len(lyt_x),len(lyt_y))
     # save layout for later use
     self.y_shape = lyt_y
     self.x_shape = lyt_x
@@ -166,13 +166,13 @@ class ChirAna(object):
           # get array into right shape
           if self.match is False:
             r0_inv_sq = np.tile(r0_inv_sq,_lyt[3]).reshape((_lyt[3],_lyt[2]))
-            print("intermeidate shape of a/r0")
-            print(r0_inv_sq.shape)
+            #print("intermeidate shape of a/r0")
+            #print(r0_inv_sq.shape)
           r0_ins = np.zeros_like(a[...,0])
           for i in r0_ins:
             i = r0_inv_sq
-          print("shape for insertion")
-          print(r0_ins.shape)
+          #print("shape for insertion")
+          #print(r0_ins.shape)
           a[...,1] = r0_ins
       # update original data
       else:
@@ -211,7 +211,7 @@ class ChirAna(object):
       else:
         self.x_data[idx[0]][idx[1],idx[2],idx[3]] = data
         #self.x_data[idx[0]][idx[1],:,idx[2]] = data
-      print(self.x_data[idx[0]][idx[1],idx[2],idx[3]][0])
+      #print(self.x_data[idx[0]][idx[1],idx[2],idx[3]][0])
     if dim =='y':
       if op == 'mult':
         self.y_data[idx[0]][idx[1],idx[2],idx[3]] *= data
@@ -221,7 +221,7 @@ class ChirAna(object):
         self.y_data[idx[0]][idx[1],idx[2],idx[3]] -= data
       else:
         self.y_data[idx[0]][idx[1],idx[2],idx[3]] = data
-      print(self.y_data[idx[0]][idx[1],idx[2],idx[3]][0])
+      #print(self.y_data[idx[0]][idx[1],idx[2],idx[3]][0])
     if dim =='mu':
       if op == 'mult':
         self.amu_matched_to[idx[0]][idx[1],idx[2],idx[3]] *= data
@@ -251,10 +251,12 @@ class ChirAna(object):
     """
     if read is None:
       plot, data = np.zeros((self.x_data[0].shape[-1]))
+
     if read is 'r0_inv':
       _plot,_data = chut.prepare_r0(ens,self.x_data[0].shape[-1])
       plot=1./np.square(_plot)
       data=1./np.square(_data)
+
     if read is 'r0':
       _plot,_data = chut.prepare_r0(ens,self.x_data[0].shape[-1])
       if square:
@@ -263,6 +265,16 @@ class ChirAna(object):
       else:
         plot=_plot
         data=_data
+
+    if read is 'a':
+      _plot,_data = chut.prepare_a(ens,self.x_data[0].shape[-1])
+      if square:
+        plot=np.square(_plot)
+        data=np.square(_data)
+      else:
+        plot=_plot
+        data=_data
+
     if read is 'mpi':
       #print("indexto insert extern data:")
       #print(dim,idx)
@@ -270,12 +282,15 @@ class ChirAna(object):
       # take any y data dimension, since bootstrap samplesize shold not differ
       # build r0M_pi
       plot,data = chut.prepare_mpi(ext_help,ens,self.x_data[0].shape[-1],square=square)
+
     if read is 'mpiL':
       ext_help = chut.read_extern(filename,(1,2))
       plot,data = chut.prepare_mpi(ext_help,ens,self.x_data[0].shape[-1],square=square,r0=False)
+
     if read is 'fk_unit':
       ext_help = chut.read_extern(filename,(1,2))
       plot,data = chut.prepare_fk(ext_help,ens,self.x_data[0].shape[-1])
+
     if read is 'mk_unit':
       ext_help = chut.read_extern(filename,(1,2))
       # prepare_fk also does the right for m_k
@@ -284,6 +299,16 @@ class ChirAna(object):
     print("extern data added:")
     print("%s: %f " %(read, data[0]))
     self.add_data(data,idx,dim=dim,op=op)
+
+  def get_data(self,idx,dim):
+    """return data at agiven index tuple before any reduction"""
+    if dim == 'y':
+      _data = self.y_data[idx[0]][idx[1],idx[2],idx[3]]
+    elif dim == 'x':
+      _data = self.x_data[idx[0]][idx[1],idx[2],idx[3]]
+    else:
+      print("datadimension not known")
+    return _data
 
   def get_data_fit(self,dof,index,v='y'):
     """ Collect the data for the fit from class instance
@@ -310,8 +335,8 @@ class ChirAna(object):
       data = np.concatenate((_data[0][:,index],_data[1][:,index],_data[2][:,index]))
       _tmp_lyt = data.shape
       data=data.reshape((_tmp_lyt[0]*_tmp_lyt[1],_tmp_lyt[2]))
-      print("chose data")
-      print(data.shape)
+      #print("chose data")
+      #print(data.shape)
     elif dof == 'nboot':
       tp = (slice(None),slice(None),slice(None),index)
       data = _data[tp]
@@ -319,7 +344,7 @@ class ChirAna(object):
       raise ValueError("unknown data dimension.")
     return data
 
-  def get_mu_plot(self,debug=0):
+  def get_mu_plot(self,dim=0,debug=0):
     """ Returns the data suited for plotting and printing a summary
 
     The data dimenisons are reduced such that for each datapoint there is an
@@ -330,13 +355,16 @@ class ChirAna(object):
     """
     # Get data for fit (several fit dimensions for x, only one for y)
     dummy,dummy,_mu_data = self.reduction(x_shape_new = (self.x_shape[3],self.x_shape[4]),
-                                    y_shape_new = (self.y_shape[4],))
+                                    y_shape_new = (self.y_shape[3],self.y_shape[4],))
     # initialize plot data
     _mu_plot = np.zeros((_mu_data.shape[0],4))
     # calculate errors and fill
     # Loop over ensembles (eventually including quark mass)
     for e in range(_mu_plot.shape[0]):
-      _mu_plot[e][0:2] = compute_error(_mu_data[e])
+      if _mu_data.shape[1] == 2:
+        _mu_plot[e][0:2] = compute_error(_mu_data[e,dim])
+      else:
+        _mu_plot[e][0:2] = compute_error(_mu_data[e])
     if debug > 0:
       print("_mu_data is:")
       print(_mu_data)
@@ -408,20 +436,25 @@ class ChirAna(object):
       x_data, y_data, mu_data = self.reduction(x_shape_new = (self.x_shape[3],self.x_shape[4]),
                                     y_shape_new = (self.y_shape[4],))
 
-      print("data used for fit")
-      print("x:shape,data")
-      print(x_data.shape)
-      print(x_data[...,0])
-      print("y:shape,data")
-      print(y_data.shape)
-      print(y_data[...,0])
+      #print("data used for fit")
+      #print("x:shape,data")
+      #print(x_data.shape)
+      #print(x_data[...,0])
+      #print("y:shape,data")
+      #print(y_data.shape)
+      #print(y_data[...,0])
       if read:
         if xcut:
           self.fitres = FitResult.read(datadir+self.proc_id+'_xcut_%d.npz'%xcut)
         else:
           self.fitres = FitResult.read(datadir+self.proc_id+'.npz')
       else:
-        self.fitres = chut.chiral_fit(x_data,y_data,fitfunc,corrid=self.proc_id,
+        if self.combined is True:
+          self.fitres = chut.chiral_fit(x_data,y_data,fitfunc,corrid=self.proc_id,
+                                    start=start,xcut=xcut,correlated=self.correlated,
+                                    mute=chut.mutilate_cov,debug=debug)
+        else:
+          self.fitres = chut.chiral_fit(x_data,y_data,fitfunc,corrid=self.proc_id,
                                     start=start,xcut=xcut,correlated=self.correlated,
                                     debug=debug)
       if xcut:
@@ -466,8 +499,8 @@ class ChirAna(object):
           print(self.phys_point)
     if plot is True:
       label=label
-      print(x_data.shape)
-      print(y_data.shape)
+      #print(x_data.shape)
+      #print(y_data.shape)
       #if self.glob is True:
       #  self.plot_plain(x_data,y_data,fitfunc,xcut=xcut,ens=ens)
       #  self.plot_glob_func(x_data,y_data,fitfunc,xcut=xcut,ens=ens)
@@ -490,7 +523,7 @@ class ChirAna(object):
     print("summary data:")
     print(_x_summ.shape)
     if self.match is True:
-      _mu_summ = self.get_mu_plot(debug=2)
+      _mu_summ = self.get_mu_plot(dim=0,debug=2)
     if head is None:
       header=['Ens','$a\mu_s$','$(r_0M_{\pi})^2$','$(a/r_0)^2$', '$M_Ka_0$']
     else:
@@ -528,16 +561,22 @@ class ChirAna(object):
     # TODO: Automate that
     if hasattr(self.fitres,"__iter__"):
       dof =  _x_summ.shape[0] - self.fitres[0].data[0].shape[1]
+      if self.combined:
+        dof = 2*_x_summ.shape[0] - self.fitres[0].data[0].shape[1]
       print("%10s & $%.1f$ & $%.4f(%1.0f)$ & $%.2f/%d$ & $%.2e $" %
           (self.proc_id, xcut, self.phys_point[0,1,0], self.phys_point[0,1,1]*1e4,
            self.fitres[0].chi2[0][0], dof, self.fitres[0].pval[0][0]))
 
-      dof =  _x_summ.shape[0] - self.fitres[1].data[0].shape[1]
-      print("%10s & $%.1f$ & $%.4f(%1.0f)$ & $%.2f/%d$ & $%.2e $" %
-          (self.proc_id, xcut, self.phys_point[1,1,0], self.phys_point[1,1,1]*1e4,
-           self.fitres[1].chi2[0][0], dof, self.fitres[1].pval[0][0]))
+      #dof =  _x_summ.shape[0] - self.fitres[1].data[0].shape[1]
+      #print("%10s & $%.1f$ & $%.4f(%1.0f)$ & $%.2f/%d$ & $%.2e $" %
+      #    (self.proc_id, xcut, self.phys_point[1,1,0], self.phys_point[1,1,1]*1e4,
+      #     self.fitres[1].chi2[0][0], dof, self.fitres[1].pval[0][0]))
     else:
       dof = _x_summ.shape[0] - self.fitres.data[0].shape[1]
+      if self.combined:
+        print(_x_summ.shape[0])
+        print(self.fitres[0].data[0].shape[1])
+        dof = 2*_x_summ.shape[0] - self.fitres[0].data[0].shape[1]
       print("Phsyical point result:")
       if xcut is None:
         xcut = 2.
@@ -565,9 +604,9 @@ class ChirAna(object):
       tmp_y_shape = (self.y_shape[0],self.y_shape[1]*np.asarray(self.y_shape[2]),self.y_shape[-1])
     else:
       tmp_y_shape = (self.y_shape[0],self.y_shape[1]*np.asarray(self.y_shape[2]),y_shape_new[0])
-    print("New Shapes:")
-    print(tmp_x_shape)
-    print(tmp_y_shape)
+    #print("New Shapes:")
+    #print(tmp_x_shape)
+    #print(tmp_y_shape)
     tmp = ChirAna("reduction",match=self.match)
     tmp.create_empty(tmp_x_shape,tmp_y_shape)
     # Loop over lattice spacing
@@ -623,9 +662,9 @@ class ChirAna(object):
       _a_range = (0,self.x_shape[1][0]*self.x_shape[2])
       _b_range = (_a_range[1],_a_range[1]+self.x_shape[1][1]*self.x_shape[2])
       _d_range = (_b_range[1],_b_range[1]+self.x_shape[1][2]*self.x_shape[2])
-    print(_a_range)
-    print(_b_range)
-    print(_d_range)
+    #print(_a_range)
+    #print(_b_range)
+    #print(_d_range)
 
     return _a_range, _b_range, _d_range
 
@@ -633,11 +672,11 @@ class ChirAna(object):
     x_plot,y_plot = self.get_data_plot()
     pfit = PdfPages("./plots2/pdf/%s.pdf" % self.proc_id)
 
-    print("\nData used for plot: ")
-    print("x-data:")
-    print(x_plot)
-    print("y-data")
-    print(y_plot)
+    #print("\nData used for plot: ")
+    #print("x-data:")
+    #print(x_plot)
+    #print("y-data")
+    #print(y_plot)
 
     if savedir is not None:
       path = savedir
@@ -663,10 +702,6 @@ class ChirAna(object):
     pfit.close()
     plt.clf()
 
- # def plot_glob_func(self,x_data,y_data,fitfunc,xcut=False,ens=None):
- #   determine the shapes used for each lattice spacing
-    
-  
   def plot(self,x_data,y_data,label,xcut=False,ens=None,plotfunc=None,
            savedir=None,loc=None,suffix=None,dim=0):
     """Plot the chiral analysis data and the fitted function
@@ -706,10 +741,10 @@ class ChirAna(object):
     #print("arguments for plotting are:")
     #print(args)
     a_range, b_range, d_range = self.calc_plot_ranges()
-    print("x-data for function plot:")
-    print(x_plot[a_range[0]:a_range[1],:,0])
-    print(x_plot[b_range[0]:b_range[1]])
-    print(x_plot[d_range[0]:d_range[1]])
+    #print("x-data for function plot:")
+    #print(x_plot[a_range[0]:a_range[1],:,0])
+    #print(x_plot[b_range[0]:b_range[1]])
+    #print(x_plot[d_range[0]:d_range[1]])
 
     # check if several fits are made:
     if hasattr(self.fitres,"__iter__"):
@@ -732,14 +767,10 @@ class ChirAna(object):
       # Convention: if dim is 1 take argument 0,3,2 instead of 0,1,2,
       if dim == 0:
         args = self.fitres.data[0]
-        print(args.shape)
       if dim == 1:
         arg_shape = self.fitres.data[0].shape
         args = np.column_stack((self.fitres.data[0][:,0],self.fitres.data[0][:,3],
                          self.fitres.data[0][:,2])).reshape(arg_shape[0],3,arg_shape[-1])
-        print("Arguments used for plot:")
-        print(args.shape)
-        print(args[:,:,0])
       plot_function(plotfunc,x_plot[a_range[0]:a_range[1],:,0],
                     args[:,:,0],label=r'NLO-fit A',ploterror=True,col='red')
       chut.plot_ensemble(x_plot[:,0],y_plot,'^vspho','red',ens['A'],
@@ -780,6 +811,8 @@ class ChirAna(object):
     ##plt.xlim(x_lim[0],x_lim[1])
     #plt.xlim(0,x_lim[1])
     #plt.ylim(y_lim[0],y_lim[1])
+    plt.xlim(0,50)
+    plt.ylim(1.15,2.3)
     #plt.vlines(self.phys_point[0,0],y_lim[0],y_lim[1],color="k",label=label[3])
     if loc==None:
       plt.legend(loc='best',numpoints=1,ncol=2,fontsize=12)

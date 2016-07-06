@@ -327,7 +327,7 @@ def get_ranges2(lower, upper, dt_i=2, dt_f=2, dt=4):
                     ran.append((lo, up))
     return np.asarray(ran)
 
-def fitting(fitfunc, X, Y, start, add=None, correlated=True, debug=0):
+def fitting(fitfunc, X, Y, start, add=None, correlated=True, mute=None, debug=0):
     """A function that fits a correlation function.
 
     This function fits the given function fitfunc to the data given in
@@ -346,6 +346,7 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, debug=0):
         The additional parameters for the fit.
     correlated : bool
         Flag to use a correlated or uncorrelated fit.
+    mute : callable, function to act on the covariance matrix
     debug : int
         The amount of info printed.
 
@@ -374,9 +375,15 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, debug=0):
         #print cov
     else:
         cov = np.cov(Y.T)
+        cov_inv = np.linalg.inv(cov)
+        #print("Covariance matrix multiplied its inverse")
+        #print(cov.dot(cov_inv))
+        if mute is not None:
+          #print("Mutilating Covariance Matrix")
+          cov = mute(cov)
+          #print("Covariance Matrix:")
+          #print(cov)
     cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
-    print("Correlation matrix:")
-    print(np.corrcoef(Y.T))
 
     # degrees of freedom
     dof = float(Y.shape[1]-len(start)) 

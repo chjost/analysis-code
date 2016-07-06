@@ -134,7 +134,7 @@ def main():
     plt.title(lbl[0])
     plt.grid()
     plt.xlim((-1,fr+1))
-    plt.ylim((0.005,0.0065))
+    #plt.ylim((0.0023,0.0030))
     plt.xlabel(lbl[1])
     plt.ylabel(lbl[2])
     plt.legend()

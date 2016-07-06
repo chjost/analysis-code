@@ -33,7 +33,8 @@ def mean_std(data, axis=0, mean=None):
     if mean is None:
         select = [slice(None),] * data.ndim
         select[axis] = 0
-        _mean = np.mean(data[select])
+        #_mean = np.mean(data[select])
+        _mean = data[select]
     else:
         _mean = mean
     diff = axis_subtract(data,_mean,axis)

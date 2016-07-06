@@ -11,7 +11,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 matplotlib.rcParams['axes.labelsize']='large'
 from fit import LatticeFit, FitResult
 from correlator import Correlators
-from statistics import compute_error
+from statistics import compute_error, draw_gauss_distributed
 from plot_functions import plot_data, plot_function, plot_histogram
 from in_out import check_write
 
@@ -194,6 +194,7 @@ class LatticePlot(object):
                         print("plotting fit ranges %s" % str(r))
                     fi = ranges[n][r]
                     mpar, dpar = compute_error(fitresult.data[n][:,:,r])
+                    print(mpar,dpar)
 
                     # set up labels
                     label[0] = "%s, pc %d" % (label_save, n)
@@ -380,6 +381,39 @@ class LatticePlot(object):
                     plt.legend()
                     self.save()
         label[0] = label_save
+
+    def qq_plot(self, fitresult, label, par=0, corr=0):
+        """A quantile-quantile-plot for Fitresults
+
+        Calculate the theoretical quantiles (gaussian with mean and standard
+        deviation from fitresult), and the measured ones, then plot them against
+        each other together with a straight line to visualize the deviation
+
+        Parameters
+        ----------
+        fitresult : FitResult object
+        label : str title of plot
+        par : int, which parameter of fit result should be taken
+        """
+
+        if fitresult.error is None:
+          fitresult.calc_error()
+        q_meas = fitresult.error[par][corr][0]
+        _dummy,_std = compute_error(q_meas)
+        print("Gaussian input:")
+        print("mean : %.4f" %_dummy)
+        print("stdev : %.4f" % _std)
+        # draw gaussian distributed data with same size
+        q_theo = draw_gauss_distributed(q_meas[0],_std ,(q_meas.shape[0],))
+        # Lambda function for bisection
+        bisec = lambda p,x : x
+        plot_data(np.sort(q_theo),np.sort(q_meas),None,label,
+            fmt='o',markerfill ='none')
+        plot_function(bisec,np.sort(q_theo),None,'',fmt='r')
+        plt.legend()
+        self.save()
+        plt.clf()
+
 
     def plot_func(self, func, args, interval, label, fmt="k", col="black"):
         X = np.linspace(interval[0], interval[1], 1000)

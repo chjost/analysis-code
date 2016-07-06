@@ -1,4 +1,4 @@
-import sys
+#import sys
 from scipy import stats
 from scipy import interpolate as ip
 import time
@@ -77,6 +77,7 @@ def evaluate_phys(x, args, args_w ,func, isdependend):
   needed = np.zeros((nsam,))
   result = np.full(nsam,np.nan)
   # loop over samples
+  print x.shape
   for b in range(nsam):
     y = func(args[b],x)
     if y.shape[0] == 2:
@@ -186,14 +187,21 @@ def prepare_data(name, datadir, ens,strange=None,r0=False, square=True, par=0):
 
   return data_plot, data_fit
 
+def prepare_a(ens,nsamp):
+    """Return a list of bootstrapped r0 values"""
+    data_plot = np.zeros(4)
+    #dictionary of lattice spacing (arxiv:1403.4504v3)
+    r = {'A':[0.0885,0.0036], 'B':[0.0815,0.003], 'D':[0.0619,0.0018]}
+    r0_tmp = ana.draw_gauss_distributed(r[ens][0],r[ens][1],(nsamp,),origin=True)
+    data_plot[0:2] = ana.compute_error(r0_tmp)
+    return data_plot, r0_tmp
+
 def prepare_r0(ens,nsamp):
     """Return a list of bootstrapped r0 values"""
     data_plot = np.zeros(4)
     #dictionary of Sommer parameter (arxiv:1403.4504v3)
     r = {'A':[5.31,0.08], 'B':[5.77,0.06], 'D':[7.60,0.08]}
-    ens_count = ['A','A','A','A','A','A','B','B','B']
-    r0_tmp = ana.draw_gauss_distributed(r[ens][0],r[ens][1],(nsamp,))
-    r0_tmp[0] = r[ens][0]
+    r0_tmp = ana.draw_gauss_distributed(r[ens][0],r[ens][1],(nsamp,),origin=True)
     data_plot[0:2] = ana.compute_error(r0_tmp)
     return data_plot, r0_tmp
 
@@ -338,8 +346,33 @@ def plot_ensemble(x,y,form,col,label,xid=None,match=False,fitfunc=None):
       plt.errorbar(x[:,0],y[:,0],y[:,1],y[:,1],
                 fmt=form, color=col)
 
+def mutilate_cov(cov):
+    """Set elements of covariance matrix to zero explicitly
+
+    Parameters:
+    ----------
+    cov : the covariance matrix from the original estimate
+    
+    Returns : 
+    --------
+    _cov_out : The mutilated covariance matrix
+    """
+    d = cov.shape[0]
+    d2 = d/2
+    _cov_out = np.diag((np.asarray(cov.diagonal(0)).reshape(d)))
+    # Get upper subdiagonal from cov and place them in _cov_out
+    subdiag_up = cov.diagonal(d2,0,1)
+    subdiag_up = np.asarray(subdiag_up).reshape(d2)
+    _cov_out[d2:d,0:d2] = np.diag(subdiag_up)
+    # Get lower subdiagonal and place it likewise
+    subdiag_down = cov.diagonal(d2,1,0)
+    subdiag_down = np.asarray(subdiag_down).reshape(d2)
+    _cov_out[0:d2,d2:d] = np.diag(subdiag_down)
+    return _cov_out
+        
+
 def chiral_fit(X, Y,fitfunc,corrid="",start=None, xcut=None,
-    ncorr=None,correlated=True,debug=0):
+    ncorr=None,correlated=True,mute=None,debug=0):
     """Fit function to data.
     
     Parameters
@@ -408,7 +441,7 @@ def chiral_fit(X, Y,fitfunc,corrid="",start=None, xcut=None,
     for i, x in enumerate(_X):
         timing.append(time.clock())
         tmpres, tmpchi2, tmppval = fitting(fitfunc, x, _Y,
-            _start,correlated=correlated, debug=debug)
+            _start,correlated=correlated,mute=mute, debug=debug)
         fitres.append_data((0,i), tmpres, tmpchi2, tmppval)
         #if i % 100:
         #    print("%d of %d finished" % (i+1, _X.shape[0]))
@@ -449,7 +482,34 @@ def print_line_latex(lat, dx, dy, dm=None, prec=1e4):
                 (lat, dx[0][0], dx[0][1]*prec, dx[0][2]*prec, dx[0][3]*prec,
                   dy[0], dy[1]*prec, dy[2]*prec, dy[3]*prec))
     
-def amu_q_from_mq_ren(r0_in,zp,nboot):
+def amu_q_from_mq_ren(r0_in,zp,nboot,mq_in=(99.6,4.3),mq_guess=None):
+  """Calculate the bare strange quark mass per lattice spacing
+  
+  The lattice data for r0 and the renormalization constant are converted to
+  bootstrapsamples of amu_q
+
+  Parameters:
+  -----------
+  r0 : tuple,Lattice calculation of Sommer parameter
+  zp : tuple, the renormalization constant
+  mq_guess : 1darray, bootstrapsamples of guessed quark mass
+  """
+  _r0 = ana.draw_gauss_distributed(0.474,0.014,(nboot,),origin=True)
+  if mq_guess is None:
+    _ms = ana.draw_gauss_distributed(mq_in[0],mq_in[1],(nboot,),origin=True)
+  else:
+    if mq_guess.shape[0] != nboot:
+      raise ValueError("guessed quark mass and nboot do not match")
+    else:
+      _ms = mq_guess
+  # Latticer input
+  _r0_lat = ana.draw_gauss_distributed(r0_in[0],r0_in[1],(nboot,),origin=True)
+  _zp_ms_bar = ana.draw_gauss_distributed(zp[0],zp[1],(nboot,),origin=True)
+
+  _bare_mass = _r0*_ms*_zp_ms_bar/(197.37*_r0_lat)
+  return _bare_mass
+
+def amu_q_from_mq_pdg(r0_in,zp,nboot):
   """Calculate the bare strange quark mass per lattice spacing
   
   The lattice data for r0 and the renormalization constant are converted to
@@ -461,30 +521,80 @@ def amu_q_from_mq_ren(r0_in,zp,nboot):
   zp : tuple, the renormalization constant
   """
   _r0 = ana.draw_gauss_distributed(0.474,0.014,(nboot,),origin=True)
-  _ms = ana.draw_gauss_distributed(99.6,4.3,(nboot,),origin=True)
+  _ms = ana.draw_gauss_distributed(95.,5,(nboot,),origin=True)
   # Latticer input
   _r0_lat = ana.draw_gauss_distributed(r0_in[0],r0_in[1],(nboot,),origin=True)
   _zp_ms_bar = ana.draw_gauss_distributed(zp[0],zp[1],(nboot,),origin=True)
 
-  _bare_mass = _r0*_ms*_zp_ms_bar/(193.37*_r0_lat)
+  _bare_mass = _r0*_ms*_zp_ms_bar/(197.37*_r0_lat)
   return _bare_mass
 
-def r0_mk_sq_phys(nboot):
+def mk_phys_paper(nboot):
+  """Returns bootstrapsamples of M_K^2 in MeV"""
+  # Value for M_K from arxiv:1403.4504v3
+  _mk = ana.draw_gauss_distributed(494.2,0.4,(nboot,),origin=True)
+  _res = _mk
+  #print(compute_error(res))
+  return _res
+
+def mk_phys_from_r0_mk_sq_lat(r0mk_in,nboot):
+  """Returns bootstrpasamples of M_K in MeV calculated from lattice values of
+  (r_0 M_K)^2 in continuum"""
   _r0 = ana.draw_gauss_distributed(0.474,0.014,(nboot,),origin=True)
-  _mk = ana.draw_gauss_distributed(493.677,0.016,(nboot,),origin=True)
+  _res = (np.sqrt(r0mk_in)*197.37/(_r0))
+  print(ana.compute_error(_res))
+  return _res
+
+def mk_to_lat(ens,nboot):
+  # lattice identifier from ensemblename
+  a = ens[0]
+  # dicitionary of lattice spacings
+  """Convert physical kaon mass to lattice units using a"""
+  a_dict = {'A':(0.0885,0.0036),'B':(0.0815,0.003),'D':(0.0619,0.0018)}
+  _a = ana.draw_gauss_distributed(a_dict[a][0],a_dict[a][1],(nboot,),origin=True)
+  # Value for M_K from arxiv:1403.4504v3
+  _mk = ana.draw_gauss_distributed(494.2,0.4,(nboot,),origin=True)
+  mk_lat = _a*_mk/197.37
+  return mk_lat
+
+def r0_mk_sq_phys(nboot):
+  """Returns bootstrapped values of (r_0 M_K)^2 in lattice units"""
+  # Value for M_K from arxiv:1403.4504v3
+  _mk = ana.draw_gauss_distributed(494.2,0.4,(nboot,),origin=True)
+  _r0 = ana.draw_gauss_distributed(0.474,0.014,(nboot,),origin=True)
+  # Value for M_K from PDG
+  #_mk = ana.draw_gauss_distributed(493.677,0.016,(nboot,),origin=True)
   _res = (_r0*_mk/197.37)**2
   #print(compute_error(res))
   return _res
 
 def mk_mpi_diff(nboot):
-
   _r0 = ana.draw_gauss_distributed(0.474,0.014,(nboot,),origin=True)
   _mk = ana.draw_gauss_distributed(493.677,0.016,(nboot,),origin=True)
   _mpi = ana.draw_gauss_distributed(134.9766,0.0006,(nboot,),origin=True)
   _diff = _r0**2*(_mk**2-0.5*_mpi**2)/(197.37**2)
   return _diff
 
+def r0_ms(data,r0_in,zp):
+  nboot = data.shape[0]
+  # Latticer input
+  _r0 = ana.draw_gauss_distributed(0.474,0.014,(nboot,),origin=True)
+  _r0_lat = ana.draw_gauss_distributed(r0_in[0],r0_in[1],(nboot,),origin=True)
+  _zp_ms_bar = ana.draw_gauss_distributed(zp[0],zp[1],(nboot,),origin=True)
+  hc = 197.37
+  _ms_phys = data*_r0_lat[0]*hc/(_zp_ms_bar[0]*_r0[0])
 
+  return _ms_phys
 
+def ml_ren_from_amu_q(dict_a,a_in,zp_in,nboot,dict_mul):
+  if(len(dict_mul)==len(dict_a)):
+    _zp_ms_bar = ana.draw_gauss_distributed(zp_in[0],zp_in[1],(nboot,),origin=True)
+    _a_lat = ana.draw_gauss_distributed(a_in[0],a_in[1],(nboot,),origin=True)
+    _dict = {}
+    for i,e in enumerate(dict_a):
+      _dict[e] = dict_mul[i]*197.37/(_a_lat*_zp_ms_bar)
+    return _dict
+  else:
+    raise ValueError("Number of ensembles and mu_l values differ")
 
 

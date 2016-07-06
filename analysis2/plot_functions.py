@@ -79,7 +79,7 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
                 print(X[0,i],X[-1,i])
                 x1[:,i] = np.linspace(X[0,i],X[-1,i], 1000)
                 if X.shape[0] == 1:
-                  x1[:,0] = np.linspace(0,1.4,1000)
+                  x1[:,0] = np.linspace(0,50,1000)
 
             #except:
             #  print RuntimeWarning("Data not truly two dimensional")
@@ -95,6 +95,7 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
       print("Plot an errorband: %s" % ploterror)
     # check dimensions of args, if more than one,
     # iterate over first dimension
+    print(args)
     _args = np.asarray(args)
     if add is not None:
         _add = np.asarray(add)
@@ -218,7 +219,7 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
               edgecolor=col, alpha=0.2)
     plt.legend()
 
-def plot_data(X, Y, dY, label, plotrange=None, fmt="x",col='b'):
+def plot_data(X, Y, dY, label, plotrange=None, fmt="x",col='b',markerfill=None):
     """A function that plots data.
 
     Parameters
@@ -243,10 +244,12 @@ def plot_data(X, Y, dY, label, plotrange=None, fmt="x",col='b'):
             l = int(plotrange[0])
             u = int(plotrange[1])
         # plot the data
-        plt.errorbar(X[l:u], Y[l:u], dY[l:u], fmt=fmt, label=label, c=col)
+        plt.errorbar(X[l:u], Y[l:u], dY[l:u], fmt=fmt, label=label,
+            c=col,markerfacecolor=markerfill)
     else:
         # plot the data
-        plt.errorbar(X, Y, dY, fmt=fmt, label=label,c=col)
+        plt.errorbar(X, Y, dY, fmt=fmt, label=label,
+            c=col, markerfacecolor=markerfill)
     plt.legend()
 
 def plot_data_with_fit(X, Y, dY, fitfunc, args, label, plotrange=None,

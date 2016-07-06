@@ -74,7 +74,7 @@ def main():
         plotter = ana.LatticePlot("%s/fit_k_%s_old.pdf" % (plotdir, lat))
         plotter.set_env(ylog=True)
         label = ["single particle", "t", "C(t)", "eta"]
-        plotter.plot(picorr, label, pifit, fit_single, add=addT, debug=2)
+        plotter.plot(picorr, label, pifit, fit_single, add=addT, debug=4)
         plotter.new_file("%s/hist_fit_k_%s.pdf" % (plotdir, lat))
         label = ["K energy", "E$_K$/a", "E$_K$"]
         plotter.histogram(pifit, label, 1)
