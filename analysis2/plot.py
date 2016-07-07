@@ -11,7 +11,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 matplotlib.rcParams['axes.labelsize']='large'
 from fit import LatticeFit, FitResult
 from correlator import Correlators
-from statistics import compute_error, draw_gauss_distributed
+from statistics import compute_error, draw_gauss_distributed, acf
 from plot_functions import plot_data, plot_function, plot_histogram
 from in_out import check_write
 
@@ -381,6 +381,40 @@ class LatticePlot(object):
                     plt.legend()
                     self.save()
         label[0] = label_save
+    
+    def correlogram(self, correlator, label, num=0):
+        """Plot the autocorrelation versus lagtime for data in a correlator
+        object
+
+        Implemented version is the one with more bias: Have T timesteps and B
+        measurements at eacht time t of observable Y
+        
+        r(k) = \sum_t=1^{T}
+
+        Parameters
+        ----------
+        correlator : a Correlator object
+        label : the label of the correlogram
+        num : which entry of the correlator object to take
+        """
+
+        correlogram_raw = acf(correlator.data)
+        _t = np.linspace(0,correlator.data.shape[1],correlator.data.shape[1])
+        _mean,_std = compute_error(correlogram_raw,axis=0)
+        print("Data shapes in correlogram:")
+        print(_mean.shape)
+        print(_std.shape)
+        print(_t.shape)
+        #plot_data(_t,_mean,_std,None,
+        #    fmt='o',markerfill ='none')
+        plt.stem(_t,_mean)
+        plt.title(label[0])
+        plt.xlabel(r'Lag $k$ in $t/a$')
+        plt.ylabel(r'acf($k$)')
+        self.save()
+        plt.clf()
+
+
 
     def qq_plot(self, fitresult, label, par=0, corr=0):
         """A quantile-quantile-plot for Fitresults
@@ -407,10 +441,16 @@ class LatticePlot(object):
         q_theo = draw_gauss_distributed(q_meas[0],_std ,(q_meas.shape[0],))
         # Lambda function for bisection
         bisec = lambda p,x : x
-        plot_data(np.sort(q_theo),np.sort(q_meas),None,label,
+        plot_data(np.sort(q_theo),np.sort(q_meas),None,label[1],
             fmt='o',markerfill ='none')
         plot_function(bisec,np.sort(q_theo),None,'',fmt='r')
-        plt.legend()
+        #plt.legend(loc='best')
+        plt.locator_params(axis='x',nbins=4)
+        plt.locator_params(axis='y',nbins=4)
+        plt.title(label[0])
+        plt.xlabel(r'theoretical quantiles $N_{\bar{\mu},\Delta\mu}$')
+        plt.ylabel(r'measured quantiles')
+        plt.axes().set_aspect('equal')
         self.save()
         plt.clf()
 

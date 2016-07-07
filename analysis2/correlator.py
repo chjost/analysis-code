@@ -107,14 +107,13 @@ class Correlators(object):
         data = in_out.read_data(filename)
         print(data)
         print(type(data))
-        if isinstance(data.files,list):
-            tmp = cls()
+        tmp = cls()
+        try:
             tmp.data = data['arr_0']
             tmp.conf = data['arr_1']
             tmp.shape = tmp.data.shape
-        else:
+        except:
             # set the data directly
-            tmp = cls()
             tmp.data = data
             print("data shape read in:")
             print(tmp.data[:][1])

@@ -28,6 +28,22 @@ def compute_error(data, axis=0, mean=None):
     #    raise ValueError("compute_error not implemented for axis = %d" % axis)
     return mean_std(data,axis=axis,mean=mean)
 
+def acf(y):
+    y_sub = y-np.mean(y, axis=1,keepdims=True)
+    print("Subtracted data has shape")
+    #print y_sub[0], y[0],
+    r = np.zeros((y.shape[0],y.shape[1]))
+    # Bootstrapsamples
+    for b in range(y.shape[0]):
+        # lag time
+        for k in range(y.shape[1]):
+            for t in range(y.shape[1]-k):
+                r[b,k] += y_sub[b,t]*y_sub[b,t+k]
+            
+    #_y = np.asarray([np.correlate(y_sub[b].ravel(),y_sub[b].ravel()) for b in range(y.shape[0])]).T 
+    print(r[0])
+    return r/np.sum(y_sub**2,axis=1)
+
 def weighted_quantile(data, weights, quantile=0.5):
     """Compute the weighted quantile, where a fixed percentage of the sum of
     all weights lie below.
