@@ -28,21 +28,38 @@ def compute_error(data, axis=0, mean=None):
     #    raise ValueError("compute_error not implemented for axis = %d" % axis)
     return mean_std(data,axis=axis,mean=mean)
 
-def acf(y):
+def acf(y,start=0,debug=0):
+    """Autocorrelation function of bootstrapped data
+
+    Implemented version is the one with more bias: Have T timesteps and B
+    measurements at eacht time t of observable Y
+    
+    r(k) = \sum_t=1^{T} (y(t)-\bar{y})(y(t+k)-\bar{y})/(var(y))
+
+    \bar{y} is the mean over time
+
+    The bootstrapped data is correlated in time and normalised.
+
+    Parameters
+    ----------
+    y : 3darray with shape (nsample,t,y(b,t))
+    start : starting timeslice for computation of acf
+    Returns
+    -------
+    2darray, the bootstrapsamples of the normalised autocorrelated data
+    """
     y_sub = y-np.mean(y, axis=1,keepdims=True)
-    print("Subtracted data has shape")
-    #print y_sub[0], y[0],
-    r = np.zeros((y.shape[0],y.shape[1]))
-    # Bootstrapsamples
+    if debug > 0:
+        print("Subtracted data has shape")
+        print y_sub[0]
+    r = np.zeros((y.shape[0],y.shape[1]-start))
+    # Loop over Bootstrapsamples
     for b in range(y.shape[0]):
-        # lag time
-        for k in range(y.shape[1]):
-            for t in range(y.shape[1]-k):
-                r[b,k] += y_sub[b,t]*y_sub[b,t+k]
-            
-    #_y = np.asarray([np.correlate(y_sub[b].ravel(),y_sub[b].ravel()) for b in range(y.shape[0])]).T 
-    print(r[0])
-    return r/np.sum(y_sub**2,axis=1)
+        # Fully correlate each bootstrapsample in time with itself
+        _tmp =np.correlate(y_sub[b].ravel()[start:],y_sub[b].ravel()[start:],mode='full') 
+        # Take half of the full correlation of the signal with itself
+        r[b] = _tmp[_tmp.size/2:]
+    return r/np.sum(y_sub[:,start:]**2,axis=1)
 
 def weighted_quantile(data, weights, quantile=0.5):
     """Compute the weighted quantile, where a fixed percentage of the sum of

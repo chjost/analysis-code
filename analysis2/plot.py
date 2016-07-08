@@ -382,34 +382,28 @@ class LatticePlot(object):
                     self.save()
         label[0] = label_save
     
-    def correlogram(self, correlator, label, num=0):
+    def correlogram(self, correlator, label, start=0, num=0):
         """Plot the autocorrelation versus lagtime for data in a correlator
         object
 
-        Implemented version is the one with more bias: Have T timesteps and B
-        measurements at eacht time t of observable Y
-        
-        r(k) = \sum_t=1^{T}
 
         Parameters
         ----------
         correlator : a Correlator object
         label : the label of the correlogram
+        start : time index where to start the calculation of acf
         num : which entry of the correlator object to take
         """
 
-        correlogram_raw = acf(correlator.data)
-        _t = np.linspace(0,correlator.data.shape[1],correlator.data.shape[1])
+        correlogram_raw = acf(correlator.data,start=start)
         _mean,_std = compute_error(correlogram_raw,axis=0)
         print("Data shapes in correlogram:")
         print(_mean.shape)
         print(_std.shape)
-        print(_t.shape)
-        #plot_data(_t,_mean,_std,None,
-        #    fmt='o',markerfill ='none')
-        plt.stem(_t,_mean)
+        plt.stem(_mean)
+        plt.xlim(-0.2,correlator.data.shape[1])
         plt.title(label[0])
-        plt.xlabel(r'Lag $k$ in $t/a$')
+        plt.xlabel(r'Lag $k$ from $t_{i}=$%s' %start)
         plt.ylabel(r'acf($k$)')
         self.save()
         plt.clf()
