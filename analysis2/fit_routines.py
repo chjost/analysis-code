@@ -376,8 +376,8 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, debug=0):
     else:
         cov = np.cov(Y.T)
     cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
-    print("Correlation matrix:")
-    print(np.corrcoef(Y.T))
+    #print("Correlation matrix:")
+    #print(np.corrcoef(Y.T))
 
     # degrees of freedom
     dof = float(Y.shape[1]-len(start)) 

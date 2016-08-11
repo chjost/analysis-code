@@ -167,7 +167,7 @@ def main():
             tmp[...,1] = data.imag
             data = tmp
         # create a correlator from the data
-        corrs = ana.Correlators.create(data, conf=confs)
+        corrs = ana.Correlators.create(data)
         # save the data
         outname = "".join((outputpath, d))
         if debug > 1:
@@ -238,9 +238,12 @@ def build_eta():
                 fC = conn_fac["".join((q,q))]
         # calc correlator
         print("%s: fC = %f, fD = %f" % (q, fC, fD))
+        print(conn.data[0])
+        print(disc.data[0])
         newdata = fC * conn.data + fD * disc.data
+        print(newdata[0])
         # save correlator
-        fname = "".join((datapath, "eta_%s%s_corr_p0.dat" % (q, q)))
+        fname = "".join((datapath, "old/eta_%s%s_corr_p0.dat" % (q, q)))
         eta = ana.Correlators.create(np.atleast_3d(newdata))
         eta.save(fname, asascii=True)
         # plot correlator
@@ -280,7 +283,7 @@ def build_eta():
             print("%s%s: fD = %f" % (q1, q2, fD))
             newdata = fD * disc.data
             # save correlator
-            fname = "".join((datapath, "eta_%s%s_corr_p0.dat" % (q1, q2)))
+            fname = "".join((datapath, "old/eta_%s%s_corr_p0.dat" % (q1, q2)))
             eta = ana.Correlators.create(np.atleast_3d(newdata))
             eta.save(fname, asascii=True)
             # plot correlator
@@ -400,7 +403,7 @@ def build_pi0():
     newdata = -conn.data + 2. * disc.data
 
     pi0 = ana.Correlators.create(np.atleast_3d(newdata))
-    tmpname = "".join((datapath, "pi_corr_p0.dat"))
+    tmpname = "".join((datapath, "old/pi_corr_p0.dat"))
     pi0.save(tmpname, asascii=True)
     plotter = ana.LatticePlot(tmpname.replace(".dat", ".pdf"))
     labels = ["correlation function", "t", "C(t)", "data"]
@@ -427,8 +430,8 @@ def build_pi0():
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':
     try:
-        main()
-        build_pi0()
+        #main()
+        #build_pi0()
         build_eta()
     except KeyboardInterrupt:
         print("\nKeyboard Interrupt, exiting...")

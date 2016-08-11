@@ -1,0 +1,401 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+##!/usr/bin/python2
+################################################################################
+#
+# Author: Christian Jost (jost@hiskp.uni-bonn.de)
+# Date:   Februar 2015
+#
+# Copyright (C) 2015 Christian Jost
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Function: At the moment this is a test program, this file will change a lot
+#
+# For informations on input parameters see the description of the function.
+#
+################################################################################
+
+import os
+import numpy as np
+import ConfigParser
+import itertools
+
+import analysis2 as ana
+
+def parse_list_int(data):
+    tmp = []
+    for d in data.split(","):
+        tmp.append(int(d.strip()))
+    return tmp
+
+def parse_list_str(data):
+    tmp = []
+    for d in data.split(","):
+        tmp.append(str(d.strip()))
+    return tmp
+
+def calc_loop_single(paths, inname, nbran):
+    data = []
+    for i in paths:
+        fname = "/".join((i, inname))
+        ## read in data
+        tmp = np.fromfile(fname, dtype=complex).reshape((nbran, -1))
+        data.append(tmp)
+    tmp = np.asarray(data)
+    T = tmp.shape[-1]
+    # build all rnd vec combinations explicitly
+    data = np.zeros(tmp[:,0].shape+(2,))
+    for i in range(nbran):
+        for j in range(nbran):
+            if i == j:
+                continue
+            tst = np.zeros_like(data)
+            for t1 in range(T):
+                for t2 in range(T):
+                    dt = (t2 - t1 + T)%T
+                    tst[:,dt,0] = tmp[:,j,t1].real*tmp[:,i,t2].real
+                    tst[:,dt,1] = tmp[:,j,t1].imag*tmp[:,i,t2].imag
+                data += tst
+    data /= (nbran*(nbran-1)*T)
+    return data
+
+def calc_loop_multi(paths, innames, nbran):
+    # explicitly use only the first two elements!
+    data = [ [] for i in range(2)]
+    for j,i in enumerate(zip(innames[:2], nbran[:2])):
+        for p in paths:
+            inname = "/".join((p, i[0]))
+            ## read in data
+            tmp = np.fromfile(inname, dtype=complex).reshape((i[1], -1))
+            data[j].append(tmp)
+    tmp = [np.sum(np.asarray(d),axis=1) for d in data]
+    T = tmp[0].shape[-1]
+    # build all rnd vec combinations explicitly
+    data = np.zeros(tmp[0].shape+(2,))
+    tst = np.zeros_like(data)
+    for t1 in range(T):
+        for t2 in range(T):
+            dt = (t2 - t1 + T)%T
+            tst[:,dt,0] = tmp[0][:,t1].real*tmp[1][:,t2].real
+            tst[:,dt,1] = tmp[0][:,t1].imag*tmp[1][:,t2].imag
+        data += tst
+    data /= (np.prod(nbran[:2])*T)
+    return data
+
+def extract_data(config, innames):
+    debug = config.getint("main", "debug")
+    #debug = 3
+    inputpath = config.get("main", "inputpath")
+    outputpath = config.get("main", "outputpath")
+    nbran = parse_list_int(config.get("main", "nbran"))
+    masses = parse_list_str(config.get("main", "strange_masses"))
+    smassdirs = ["strange_%s" % (m.ljust(4, "0")) for m in masses]
+
+    # build paths to data
+    corrpaths = [os.path.join(inputpath,m) for m in smassdirs]
+    # get all configs
+    # need a workaround to get only config dirs
+    configsall = [set([x for x in os.listdir(cp) if x.startswith("cnfg")]) for cp in corrpaths]
+    # get all the configs available for all masses
+    configssorted = sorted(set.intersection(*configsall), key=lambda x: int(x[4:]))
+    # for easier path building and because some functions expect this
+    configssorted = [x+"/" for x in configssorted]
+    # build all paths
+    paths = [[os.path.join(cp, co) for co in configssorted] for cp in corrpaths]
+
+    # build output paths
+    outpaths = [os.path.join(outputpath,m) for m in smassdirs]
+
+    if debug > 0:
+        print("number of files: %d" % len(innames))
+        print("number of configs: %d" % len(configssorted))
+    if debug > 1:
+        print(inputpath)
+        print(outputpath)
+    if debug > 2:
+        print(innames)
+        print(configssorted)
+        #print(smassdirs)
+        #print(outpaths)
+        #print(paths)
+
+    # build single flavor correlator loops
+    if debug > 0:
+        print("single flavor loops")
+    matches = [x for x in innames if x.startswith("C1")]
+    for p,o in zip(paths, outpaths):
+        print(p, o)
+        for m in matches:
+            # get the correct number of random vecs
+            if "_u_" in m:
+                nr = nbran[0]
+            elif "_s_" in m:
+                nr = nbran[1]
+            # calculate the loop
+            data = calc_loop_single(p, m, nr)
+            # create correlator object and save
+            outname = os.path.join(o, m.replace("C1/C1", "disc"))
+            outname = outname.replace(m[5:8], "_%s%s_" % (m[6],m[6]))
+            corr = ana.Correlators.create(data, conf=configssorted)
+            corr.save(outname, asascii=True)
+    # see if there is more than one quark
+    # if so, build cross correlators
+    if len(matches) > 1:
+        if debug > 0:
+            print("multi flavor loops")
+        for p,o in zip(paths, outpaths):
+            for m in itertools.combinations(matches, 2):
+                # get the two flavors involved
+                fl = [x[6] for x in m]
+                # get the number of random vecs for the flavors
+                nr = [-1, -1]
+                for i,f in enumerate(fl):
+                    if "u" == f:
+                        nr[i] = nbran[0]
+                    elif "s" == f:
+                        nr[i] = nbran[1]
+                    elif "c" == f:
+                        nr[i] = nbran[2]
+                    else:
+                        raise RuntimeWarning("flavor not known")
+                # calculate the loop
+                data = calc_loop_multi(p, m, nbran)
+                # create correlator object and save
+                outname = os.path.join(o, m[0].replace("C1/C1", "disc"))
+                outname = outname.replace(m[0][5:8], "_%s%s_" % (fl[0], fl[1]))
+                corr = ana.Correlators.create(data, conf=configssorted)
+                corr.save(outname, asascii=True)
+                # since the combination is symmetric, save also
+                # flavors exchanged
+                outname = outname.replace("_%s%s_" % (fl[0], fl[1]),
+                    "_%s%s_" % (fl[1], fl[0]))
+                corr.save(outname, asascii=True)
+
+    if debug > 0:
+        print("connected diagrams")
+    matches = [x for x in innames if x.startswith("C20")]
+    for plist,o in zip(paths, outpaths):
+        for m in matches:
+            # build file name
+            outname = os.path.join(o,m.replace("C20/C20", "conn"))
+            data = [] 
+            for p in plist:
+                fname = os.path.join(p, m)
+                data.append(np.fromfile(fname, dtype=complex))
+            data = np.asarray(data)
+            tmp = np.empty(data.shape + (2,))
+            tmp[...,0] = data.real
+            tmp[...,1] = data.imag
+            data = tmp
+            corr = ana.Correlators.create(data, conf=configssorted)
+            corr.save(outname, asascii=True)
+    return
+
+def build_eta(config, innames):
+    datapath = config.get("main", "outputpath")
+    masses = parse_list_str(config.get("main", "strange_masses"))
+    smassdirs = ["strange_%s" % (m.ljust(4, "0")) for m in masses]
+
+    # build paths to data
+    paths = [os.path.join(datapath,m) for m in smassdirs]
+
+    # dictionary with factors
+    disc_fac = {"uu": -2., "ss": -1., "cc": -1.,
+                "us": -np.sqrt(2.), "uc": -np.sqrt(2.), "sc": -1.}
+    conn_fac = {"uu": -1., "ss": -1., "cc": -1.}
+    # get the quarks needed
+    quarks = []
+    for name in [x for x in innames if x.startswith("C1")]:
+        if "_u_" in name and "u" not in quarks:
+            quarks.append("u")
+        elif "_s_" in name and "s" not in quarks:
+            quarks.append("s") 
+        elif "_c_" in name and "c" not in quarks:
+            quarks.append("c") 
+    
+    # build the diagonal elements
+    print("diagonal parts for eta")
+    for p in paths:
+        for q in quarks:
+            st1 = "_%s_" % q
+            st2 = "_%s%s_" % (q,q)
+            fC, fD = 0, 0
+            for i in innames:
+                if i.startswith("C1") and st1 in i:
+                    fname = os.path.join(p, i.replace("C1/C1", "disc"))
+                    fname = fname.replace(st1, st2)
+                    print(fname)
+                    disc = ana.Correlators(fname, column=(2,), conf_col=-1)
+                    fD = disc_fac["".join((q,q))]
+                elif i.startswith("C20") and st2 in i:
+                    fname = os.path.join(p, i.replace("C20/C20", "conn"))
+                    print(fname)
+                    conn = ana.Correlators(fname, conf_col=-1)
+                    fC = conn_fac["".join((q,q))]
+            print("%s: fC = %f, fD = %f" % (q, fC, fD))
+            #print(conn.data[0])
+            #print(disc.data[0])
+            newdata = fC * conn.data + fD * disc.data
+            #print(newdata[0])
+            # save correlator
+            fname = os.path.join(p, "eta%scorr_p0.dat" % st2)
+            eta = ana.Correlators.create(np.atleast_3d(newdata), conf=conn.conf)
+            eta.save(fname, asascii=True)
+            # plot correlator
+            plotter = ana.LatticePlot(fname.replace(".dat", ".pdf"))
+            labels = ["correlation function", "t", "C(t)", "data"]
+            eta.sym_and_boot(500)
+            plotter.plot(eta, labels)
+            #plotter.set_env(ylog=True)
+            #plotter.plot(eta, labels)
+            #plotter.set_env(ylog=False)
+            #labels[0] = "shifted correlation function"
+            #eta.shift(dt=1)
+            #plotter.plot(eta, labels)
+            #plotter.set_env(ylog=True)
+            #plotter.plot(eta, labels)
+            #plotter.set_env(ylog=False)
+
+            #plotter.set_env(ylim=[0., 0.2])
+            eta.mass()
+            #print(eta.data[0])
+            labels = ["eff. mass", "t", "m(t)", "data"]
+            plotter.plot(eta, labels)
+            del plotter
+            del eta
+
+    # build the diagonal elements
+    # start string for file names
+    print("off-diagonal parts for eta")
+    tmpstr = [x for x in innames if x.startswith("C1")][0]
+    tmpstr = tmpstr.replace(tmpstr[6], "x")
+    tmpstr = tmpstr.replace("C1/C1", "disc")
+    for p in paths:
+        # need a start string for the file name
+        tmpname = os.path.join(p, tmpstr)
+        for q in itertools.combinations(quarks, 2):
+            st1 = "_%s%s_" % (q[0],q[1])
+            st2 = "_%s%s_" % (q[1],q[0])
+            fD = disc_fac["".join(q)]
+            fname = tmpname.replace("_x_", st1)
+            print(fname)
+            disc = ana.Correlators(fname, column=(2,), conf_col=-1)
+            # calc correlator
+            newdata = fD * disc.data
+            # save correlator
+            # due to symmetry save twice!
+            eta = ana.Correlators.create(np.atleast_3d(newdata), conf=disc.conf)
+            fname = os.path.join(p, "eta%scorr_p0.dat" % st2)
+            eta.save(fname, asascii=True)
+            fname = os.path.join(p, "eta%scorr_p0.dat" % st1)
+            eta.save(fname, asascii=True)
+            # plot correlator
+            plotter = ana.LatticePlot(fname.replace(".dat", ".pdf"))
+            labels = ["correlation function", "t", "C(t)", "data"]
+            eta.sym_and_boot(500)
+            plotter.plot(eta, labels)
+            #plotter.set_env(ylog=True)
+            #plotter.plot(eta, labels)
+            #plotter.set_env(ylog=False)
+            #labels[0] = "shifted correlation function"
+            #eta.shift(dt=1)
+            #plotter.plot(eta, labels)
+            #plotter.set_env(ylog=True)
+            #plotter.plot(eta, labels)
+            #plotter.set_env(ylog=False)
+
+            #plotter.set_env(ylim=[0., 0.2])
+            eta.mass()
+            #print(eta.data[0])
+            labels = ["eff. mass", "t", "m(t)", "data"]
+            plotter.plot(eta, labels)
+            del plotter
+            del eta
+    return
+
+def build_pi0(config, innames):
+    datapath = config.get("main", "outputpath")
+    masses = parse_list_str(config.get("main", "strange_masses"))
+    smassdirs = ["strange_%s" % (m.ljust(4, "0")) for m in masses]
+
+    # build paths to data
+    paths = [os.path.join(datapath,m) for m in smassdirs]
+
+    print("build pi^0")
+    for p in paths:
+        for i in innames:
+            if i.startswith("C1") and "_u_" in i:
+                fname = os.path.join(p, i.replace("C1/C1", "disc"))
+                fname = fname.replace("_u_", "_uu_")
+                print(fname)
+                disc = ana.Correlators(fname, conf_col=-1)
+            elif i.startswith("C20") and "_uu_" in i:
+                fname = os.path.join(p, i.replace("C20/C20", "conn"))
+                print(fname)
+                conn = ana.Correlators(fname, conf_col=-1)
+
+        #print(conn.data.shape)
+        newdata = -conn.data + 2. * disc.data
+
+        pi0 = ana.Correlators.create(np.atleast_3d(newdata), conf=conn.conf)
+        outname = os.path.join(p, "pi_corr_p0.dat")
+        pi0.save(outname, asascii=True)
+        plotter = ana.LatticePlot(outname.replace(".dat", ".pdf"))
+        labels = ["correlation function", "t", "C(t)", "data"]
+        pi0.sym_and_boot(1500)
+        plotter.plot(pi0, labels)
+        plotter.set_env(ylog=True)
+        plotter.plot(pi0, labels)
+        plotter.set_env(ylog=False)
+        labels[0] = "shifted correlation function"
+        pi0.shift(dt=1)
+        plotter.plot(pi0, labels)
+        plotter.set_env(ylog=True)
+        plotter.plot(pi0, labels)
+        plotter.set_env(ylog=False)
+
+        #plotter.set_env(ylim=[0., 0.2])
+        #print(pi0.data[0])
+        pi0.mass()
+        #print(pi0.data[0])
+        labels = ["eff. mass", "t", "m(t)", "data"]
+        plotter.plot(pi0, labels)
+        del plotter
+        del pi0
+
+def main():
+    # parse the config file, if given
+    if len(os.sys.argv) < 2:
+        fname = "./ini/uncharged.ini"
+    else:
+        fname = os.sys.argv[1]
+    # parse the input file for variables
+    config = ConfigParser.SafeConfigParser()
+    config.read(fname)
+    innames = ana.inputnames(fname, ["C1", "C20"])
+
+    # extract data
+    extract_data(config, innames)
+
+    # build the particle correlation functions
+    build_pi0(config, innames)
+    build_eta(config, innames)
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nKeyboard Interrupt, exiting...")

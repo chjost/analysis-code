@@ -255,7 +255,6 @@ def write_data_ascii(data, filename, verbose=False, conf=None):
     # prepare data and counter
     #_data = data.flatten()
     _data = data.reshape((T*nsamples), -1)
-    print(_data.shape)
     _counter = np.fromfunction(lambda i, *j: i%T,
                                (_data.shape[0],) + (1,)*(len(_data.shape)-1),
                                dtype=int)

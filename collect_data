@@ -27,7 +27,17 @@ def main():
         tmpchi2 = np.hstack((tmpchi2, r))
     print(tmpchi2.shape)
     fname = "".join((path, "gfitdata.npz"))
-    np.savez(fname, res=tmpres, chi2=tmpchi2[0])
+    #np.savez(fname, res=tmpres, chi2=tmpchi2[0])
+    mean = tmpres[0]
+    print(mean)
+    mean[0] = 1./mean[0]
+    mean[2] = 1./mean[2]
+    std = np.std(tmpres, axis=0)
+    print(std)
+    std[0] = np.std(1./tmpres[0])
+    std[2] = np.std(1./tmpres[2])
+    print(mean)
+    print(std)
 
 
 # make this script importable, according to the Google Python Style Guide

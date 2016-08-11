@@ -49,6 +49,7 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
     ploterror : bool, optional
         Plot the error of the fit function.
     """
+    _X = np.asarray(X)
     # check for plotting range
     if isinstance(plotrange, (np.ndarray, list, tuple)):
         _plotrange = np.asarray(plotrange).flatten()
@@ -58,27 +59,27 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
             lfunc = _plotrange[0]
             ufunc = _plotrange[1]
             # handle data with more than two dimensions
-            if len(X.shape) > 1:
-                x1 = np.zeros((1000,X.shape[1]))
+            if len(_X.shape) > 1:
+                x1 = np.zeros((1000,_X.shape[1]))
                 for i in range(x1.shape[1]):
                     print("bounds at index %d are:" %i)
-                    print(X[lfunc,i],X[ufunc,i])
-                    x1[:,i] = np.linspace(X[lfunc,i],X[ufunc,i], 1000)
+                    print(_X[lfunc,i],_X[ufunc,i])
+                    x1[:,i] = np.linspace(_X[lfunc,i],_X[ufunc,i], 1000)
             else:
-                x1 = np.linspace(X[lfunc], X[ufunc], 1000)
+                x1 = np.linspace(_X[lfunc], _X[ufunc], 1000)
     else:
         # handle data with more than two dimensions
-        if len(X.shape) > 1:
-            print(X.shape)
-            x1 = np.zeros((1000,X.shape[1]))
+        if len(_X.shape) > 1:
+            print(_X.shape)
+            x1 = np.zeros((1000,_X.shape[1]))
             #x1 = np.linspace(X[0,0],X[-1,0], 1000)
             #try:
             #x1[:,0] = np.linspace(X[0,0],X[-1,0], 1000) 
             for i in range(x1.shape[1]):
                 print("bounds at index %d are:" %i)
-                print(X[0,i],X[-1,i])
-                x1[:,i] = np.linspace(X[0,i],X[-1,i], 1000)
-                if X.shape[0] == 1:
+                print(_X[0,i],_X[-1,i])
+                x1[:,i] = np.linspace(_X[0,i],_X[-1,i], 1000)
+                if _X.shape[0] == 1:
                   x1[:,0] = np.linspace(0,1.4,1000)
 
             #except:
@@ -86,7 +87,7 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
             #  x1 = np.asarray((_x1,))
             #  pass
         else:
-            x1 = np.linspace(X[0], X[-1], 1000)
+            x1 = np.linspace(_X[0], _X[-1], 1000)
     if debug > 2:
       print("option summary:")
       print("function name is %s" % func)
@@ -192,14 +193,14 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
                 # calculate on original data
                 y1.append(func(_args, x))
     #print(len(x1),len(y1))
-    if len(X.shape) > 1:
+    if len(_X.shape) > 1:
         plt.plot(x1[:,0], y1, fmt, label=label)
     else:
         plt.plot(x1, y1, fmt, label=label)
     if ymax and ymin:
           #print(ymax[0])
           #print(x1[0])
-          if len(X.shape) > 1:
+          if len(_X.shape) > 1:
               #print("fill shape:")
               #print(x1.shape)
               plt.fill_between(x1[:,0], ymin, ymax, facecolor=col,

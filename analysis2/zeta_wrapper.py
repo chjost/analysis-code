@@ -75,15 +75,19 @@ def omega(q2, gamma=None, l=0, m=0, d=np.array([0., 0., 0.]), m_split=1.,
     float or ndarray
         The value of the Zeta function.
     """
+    if gamma is None:
+        _gamma = np.ones_like(q2)
+    else:
+        _gamma = gamma
     if exFac:
         if l is not 0:
             factor = np.power(np.sqrt(q2), l) * np.sqrt(2*l)
         else:
             factor = 1.
     else:
-        factor = gamma*np.power(np.sqrt(q2), l+1)*np.power(np.pi, 1.5)*\
+        factor = _gamma*np.power(np.sqrt(q2), l+1)*np.power(np.pi, 1.5)*\
                  np.sqrt(2*l+1)
-    var =  Z(q2, gamma, l, m, d, m_split, prec, verbose)
+    var =  Z(q2, _gamma, l, m, d, m_split, prec, verbose)
     return var / factor
 
 if __name__ == "main":

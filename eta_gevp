@@ -1,5 +1,6 @@
 #!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
 
+import os
 import sys
 import numpy as np
 import ConfigParser
@@ -13,18 +14,18 @@ def main():
         ens = ana.LatticeEnsemble.parse(sys.argv[1])
 
     # read settings
-    readdata = True
-    preparedata = False
-    readfit = True
-    plotdata = False
+    readdata = False
+    preparedata = True
+    readfit = False
+    plotdata = True
     d2 = 0
 
     # get data from input file
     prefix = ens.get_data("path")
     lat = ens.name()
     nboot = int(ens.get_data("nboot"))
-    datadir = "/".join((ens.get_data("datadir"), lat))
-    plotdir = "/".join((ens.get_data("plotdir"), lat))
+    ddir = "/".join((ens.get_data("datadir"), lat))
+    pdir = "/".join((ens.get_data("plotdir"), lat))
     L = ens.L()
     quarks = ens.get_data("quarks")
     Ti = ens.get_data("ti")
@@ -42,70 +43,82 @@ def main():
     except KeyError:
         irrep = "A1"
     if irrep == "A1":
-        suffix = "TP%d.npy" % d2
+        suffix = "TP%d.npz" % d2
     else:
-        suffix = "TP%d_%s.npy" % (d2, irrep)
+        suffix = "TP%d_%s.npz" % (d2, irrep)
+    masses = ens.get_data("strange_masses")
+    smassdirs = ["strange_%s" % (m.ljust(4, "0")) for m in masses]
 
     # generate file names
-    files = ["%s/eta_%s%s_corr_p0.dat" % (prefix, i, j) for i in quarks for j in quarks]
+    files = [["%s/%s/eta_%s%s_corr_p0.dat" % (prefix, s, i, j) for i in quarks for j in quarks] for s in smassdirs ]
+    files = files[0]
+    datadir = [os.path.join(ddir, s) for s in smassdirs]
+    plotdir = [os.path.join(pdir, s) for s in smassdirs]
     #print(files)
+    #print(datadir)
+    #print(plotdir)
 
-    # read data
-    if readdata == False:
-        print("read new data")
-        corr = ana.Correlators(files)
-        corr.sym_and_boot(nboot)
-        corr.save("%s/corr_eta_raw_%s" % (datadir, suffix))
-    else:
-        print("read data from file")
-        corr = ana.Correlators.read("%s/corr_eta_raw_%s" % (datadir, suffix))
+    for d, p in zip(datadir, plotdir):
+        print("data dir %s\nplot dir %s" % (d, p))
+        # read data
+        if readdata == False:
+            print("read new data")
+            corr = ana.Correlators(files)
+            corr.sym_and_boot(nboot)
+            corr.save("%s/corr_eta_raw_%s" % (d, suffix))
+        else:
+            print("read data from file")
+            corr = ana.Correlators.read("%s/corr_eta_raw_%s" % (d, suffix))
 
-    if preparedata:
-        print("prepare data")
-        corr.shift(1)
-        corr.gevp(1)
-        corr.save("%s/corr_eta_%s" % (datadir, suffix))
-    else:
-        print("read prepared data")
-        corr = ana.Correlators.read("%s/corr_eta_%s" % (datadir, suffix))
+        if preparedata:
+            print("prepare data")
+            corr.shift(1)
+            corr.gevp(1)
+            corr.save("%s/corr_eta_%s" % (d, suffix))
+        else:
+            print("read prepared data")
+            corr = ana.Correlators.read("%s/corr_eta_%s" % (d, suffix))
 
-    # fit the data
-    fitter = ana.LatticeFit(5, dt_i=dti, dt_f=dtf, dt=dt, correlated=True, xshift=0.5)
-    if readfit == False:
-        print("fit data")
-        fitranges = [[Ti, Ti+5, Tf-5, Tf],] + [[4, 10, 7, 13],]
-        print(fitranges)
-        fitres = fitter.fit(None, corr, fitranges, corrid="E", add=addT, lint=True)
-        fitres.save("%s/fit_eta_%s" % (datadir, suffix.replace(".npy", ".npz")))
-    else:
-        print("read fitted data")
-        fitres = ana.FitResult.read("%s/fit_eta_%s" % (datadir, suffix.replace(".npy", ".npz")))
-    #fitres.print_data(0)
-    fitres.print_data(1)
-    fitres.print_details()
+        # fit the data
+        fitter = ana.LatticeFit(5, dt_i=dti, dt_f=dtf, dt=dt, correlated=True, xshift=0.5)
+        if readfit == False:
+            print("fit data")
+            fitranges = [[Ti, Ti+5, Tf-5, Tf],] + [[4, 10, 7, 13],]
+            print(fitranges)
+            fitres = fitter.fit(None, corr, fitranges, corrid="E", add=addT, lint=True)
+            fitres.save("%s/fit_eta_%s" % (d, suffix.replace(".npy", ".npz")))
+        else:
+            print("read fitted data")
+            fitres = ana.FitResult.read("%s/fit_eta_%s" % (d, suffix))
+        #fitres.print_data(0)
+        fitres.print_data(1)
+        fitres.print_details()
 
-    # plot the result
-    if plotdata:
-        print("plotting")
-        plotter = ana.LatticePlot("%s/fit_eta_%s" % (plotdir, suffix.replace(".npy", ".pdf")))
-        plotter.set_env(ylog=True)
-        label = ["eta energy", "t", "C(t)", "E$_\eta$"]
-        plotter.plot(corr, label, fitres, fitter, add=addT, xshift=0.5)
-        plotter.new_file("%s/eff_mass_eta_%s" % (plotdir, suffix.replace(".npy", ".pdf")))
-        label = ["eta correlators", "t", "C(t)", "E$_{\eta}$"]
-        plotter.set_env(ylog=False)
-        if d2 == 0:
-            plotter.plot(corr, label)
+        # plot the result
+        if plotdata:
+            print("plotting")
+            plotter = ana.LatticePlot("%s/fit_eta_%s" % (p, suffix.replace(".npz", ".pdf")))
             plotter.set_env(ylog=True)
-            plotter.plot(corr, label)
-            plotter.set_env(ylog=False, ylim=[0., 1.])
-            corr.mass()
-            label = ["eta effective mass", "t", "m$_{eff}$(t)", "m$_{\eta}$"]
-            plotter.plot(corr, label)
-        plotter.new_file("%s/hist_fit_eta_%s" % (plotdir, suffix.replace(".npy", ".pdf")))
-        label = ["eta energy", "E$_{\eta}$/a", "E$_{\eta}$"]
-        plotter.histogram(fitres, label, par=1)
-        del plotter
+            label = ["eta energy", "t", "C(t)", "E$_\eta$"]
+            plotter.plot(corr, label, fitres, fitter, add=addT, xshift=0.5)
+            plotter.new_file("%s/eff_mass_eta_%s" % (p, suffix.replace(".npz", ".pdf")))
+            label = ["eta correlators", "t", "C(t)", "E$_{\eta}$"]
+            plotter.set_env(ylog=False)
+            if d2 == 0:
+                plotter.plot(corr, label)
+                plotter.set_env(ylog=True)
+                plotter.plot(corr, label)
+                plotter.set_env(ylog=False, ylim=[0., 1.])
+                corr.mass()
+                label = ["eta effective mass", "t", "m$_{eff}$(t)", "m$_{\eta}$"]
+                plotter.plot(corr, label)
+            plotter.new_file("%s/hist_fit_eta_%s" % (p, suffix.replace(".npz", ".pdf")))
+            label = ["eta energy", "E$_{\eta}$/a", "E$_{\eta}$"]
+            plotter.histogram(fitres, label, par=1)
+            del plotter
+        del corr
+        del fitter
+        del fitres
 
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':

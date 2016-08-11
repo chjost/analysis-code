@@ -76,7 +76,7 @@ class Correlators(object):
                 self.data = np.atleast_3d(tmp)
                 self.matrix = False
                 if isinstance(conf_col,int):
-                    print("Column for configuration numbers is %d\n" % conf_col)
+                    #print("Column for configuration numbers is %d\n" % conf_col)
                     self.conf = in_out.read_single(filename, (conf_col,), skip, debug)
         if self.data is not None:
             self.shape = self.data.shape
@@ -106,16 +106,17 @@ class Correlators(object):
         """
         data = in_out.read_data(filename)
         tmp = cls(debug=debug)
-        if isinstance(data.files,list):
+        try:
             tmp.data = data['arr_0']
             tmp.conf = data['arr_1']
-        else:
+            tmp.shape = tmp.data.shape
+        except:
             # set the data directly
             tmp.data = data
-            if data.shape[-2] != data.shape[-1]:
-                tmp.matrix = False
-        tmp.shape = tmp.data.shape
-        if tmp.data.shape[-2] != tmp.data.shape[-1]:
+        tmp.shape = data.shape
+        if data.shape[1] > 2:
+            tmp.shape = data.shape[:-1]
+        if data.shape[-2] != data.shape[-1]:
             tmp.matrix = False
         else:
             tmp.matrix = True
@@ -156,13 +157,13 @@ class Correlators(object):
         verbose = (self.debug > 0) and True or False
         if asascii:
             if self.conf is not None:
-                print("Saving configuration numbers")
+                #print("Saving configuration numbers")
                 in_out.write_data_ascii(self.data, filename, verbose, self.conf)
             else:
-                in_out.rite_data_ascii(self.data, filename, verbose)
+                in_out.write_data_ascii(self.data, filename, verbose)
         else:
             if self.conf is not None:
-                print("Saving configuration numbers")
+                #print("Saving configuration numbers")
                 in_out.write_data(self.data, filename, self.conf, verbose)
             else:
                 in_out.write_data(self.data, filename, verbose)

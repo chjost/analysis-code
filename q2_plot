@@ -157,6 +157,16 @@ def print_summary(datafolder, plotfolder, lattices, irreps=[["A1"]]):
     #if verbose:
     #    print("finishing plot")
 
+    # plot points from Dudek analysis
+    print("plotting dudek's points")
+    xd1 = np.asarray([1.961e-01, 7.756e-03])
+    yd1 = np.asarray([7.469e-01 - np.pi, 1.883e-02])*180./np.pi
+    fmt = "".join((ensfmt[1], p2fmt[2]))
+    plt.errorbar(xd1[0], yd1[0], yerr=yd1[1], xerr=xd1[1], fmt=fmt, label="dudek")
+    #xd2 = np.asarray([5.528e-01, 1.786e-02])
+    #yd2 = np.asarray([-1.107e+00, 4.675e-02])*180./np.pi
+    #plt.errorbar(xd2[0], yd2[0], yerr=yd2[1], xerr=xd2[1], fmt=fmt, label="dudek")
+
     # plot function of delta
     dofp0 = lambda p, x: np.arctan(1./(1./(p[0]*x)+0.5*p[1]*x))*180/np.pi
     dofp2 = lambda p, x: np.arctan(p[0]*np.power(x, 5))*180/np.pi
@@ -204,13 +214,13 @@ def print_summary(datafolder, plotfolder, lattices, irreps=[["A1"]]):
     res_d[:,2] = (0.53*np.random.randn(nsamples) - 1.89)/np.power(mpi_dudek,5)*1e-6
 
     # plot the functions
-    plotter.plot_func(dofp0, res_l[:,:2], ran, "$\delta_0$ (l)", fmt="b", col="b")
+    #plotter.plot_func(dofp0, res_l[:,:2], ran, "$\delta_0$ (l)", fmt="b", col="b")
     plotter.plot_func(dofp0, res[:,:2], ran, "$\delta_0$ (c)", col="k")
     #plotter.plot_func(dofp0, tmp[:,:2], ran, "$\delta_0$ (c)", fmt="c", col="c")
-    plotter.plot_func(dofp0, res_d[:,:2], ran, "$\delta_0$ (d)", fmt="r", col="r")
-    plotter.plot_func(dofp2, res_l[:,(2,0)], ran, "$\delta_2$ (l)", fmt="--b", col="b")
+    #plotter.plot_func(dofp0, res_d[:,:2], ran, "$\delta_0$ (d)", fmt="r", col="r")
+    #plotter.plot_func(dofp2, res_l[:,(2,0)], ran, "$\delta_2$ (l)", fmt="--b", col="b")
     plotter.plot_func(dofp2, res[:,(2,0)], ran, "$\delta_2$ (c)", fmt="--k", col="k")
-    plotter.plot_func(dofp2, res_d[:,(2,0)], ran, "$\delta_2$ (d)", fmt="--r", col="r")
+    #plotter.plot_func(dofp2, res_d[:,(2,0)], ran, "$\delta_2$ (d)", fmt="--r", col="r")
 
     plt.legend(numpoints=1, loc=0)
     plt.grid(True)
@@ -219,12 +229,12 @@ def print_summary(datafolder, plotfolder, lattices, irreps=[["A1"]]):
     return
 
 def main():
-    Aens = ["A40.32"]
+    Aens = ["A40.24"]
     #Aens = ["A40.20", "A40.24", "A40.32"]
     datafolder = "./data/I2/"
     plotfolder = "./plots/I2/summary/"
     # construct list with irreps, giving also total momentum
-    irreps = [["A1", "E"]]
+    irreps = [[], ["A1"]]
     print_summary(datafolder, plotfolder, Aens, irreps)
     return
 
