@@ -156,8 +156,8 @@ def read_pipi_data(datafolder, lattices, irreps, cut=10.):
 def do_fit(datafolder, plotfolder, lattices, irreps, mpicut):
     """Do a global fit to the data specified in lattices and irreps."""
     # reading switches
-    readmpi = True
-    readpipi = True
+    readmpi = False
+    readpipi = False
     if len(sys.argv) > 1:
         sstart = int(sys.argv[1])
         try:
@@ -201,12 +201,14 @@ def do_fit(datafolder, plotfolder, lattices, irreps, mpicut):
     #print(levels)
 
     # minimize the data
-    #start = np.asarray([-0.48, -1.8, -33.9, 0.])
-    start = np.asarray([-.8, 15., -.05, 0.])
+    # star parameter for liumings code
+    #start = np.asarray([-.8, 15., -.05, 0.])
+    # start parameters for new code
+    start = np.asarray([-.07, 65., -.00001, 0.])
     #h = np.asarray([0.5, 2., 0.1])
     h = np.asarray([0.5, 2., 0.01])
     res, chi2 = ana.minimizer(Epipi, mpi, cor, start, h, levels, [sstart, srange])
-    fname = "/".join((datafolder, "globalfit", "gfitdata_%d.npz" % sstart))
+    fname = "/".join((datafolder, "globalfit", "gfitdata_new_%d.npz" % sstart))
     np.savez(fname, res=res, chi2=chi2)
     #np.savez("test_data1.npz", res=res, chi2=chi2)
     return

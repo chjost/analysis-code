@@ -90,7 +90,9 @@ def solutions_A1(q2, gamma, d2):
         #delta = np.arctan(1./cotd)*180./np.pi
     elif d2 == 1:
         w_20 = omega(q2, gamma, l=2).real
-        cotd = w_00 - 5. * np.square(w_20)
+        w_40 = omega(q2, gamma, l=4).real
+        tmp = w_00 +10./7.*w_20+18./7.*w_40-1./np.tan(1./(-65.13*np.sqrt(q2)))
+        cotd = w_00 - 5. * np.square(w_20)/tmp
         delta = np.arctan2(1.,cotd) * 180. / np.pi
         #delta = np.arctan(1./cotd) * 180. / np.pi
     elif d2 == 2:

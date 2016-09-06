@@ -118,9 +118,9 @@ def chi2(par, data, mpi, cov, levels, pool=None):
             elif count == 3:
                 print(data[index[0]])
                 print(data[index[1]])
-    if debug > 0:
-      for Edata, Ecalc in zip(data, Wroot):
-            print("%.7lf, %.7lf, %.4e\n" % (Edata, Ecalc, abs(Edata - Ecalc)))
+    if debug > -1:
+        for i, (Edata, Ecalc) in enumerate(zip(data, Wroot)):
+            print("DATA %02d: %.10lf, %.10lf, %.10e\n" % (i, Edata, Ecalc, np.abs(Edata - Ecalc)))
 
     # calculate chi^2
     dx = np.dot(cov, (data - Wroot))

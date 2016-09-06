@@ -73,7 +73,7 @@ def main():
     #plotter.histogram(dE, label)
     #del plotter
 
-    calca = True
+    calca = False
     if calca:
         print("calculate scattering length")
         a_pipi = pipifit.calc_scattering_length(pifit, 1, 1, L=ens.L(), isdependend=False)

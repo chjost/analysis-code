@@ -1,39 +1,48 @@
 #!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
 
 import numpy as np
+import glob
+import os
+import re
 
 def main():
-    inputlist = [x for x in range(0,1500,80)]
+    #path = "/hiskp2/jost/code/analysis-code/data/I2/globalfit/backup/"
     path = "/hiskp2/jost/code/analysis-code/data/I2/globalfit/"
+    files = glob.glob(os.path.join(path, "gfitdata_new_*.npz"))
+    def atoi(text):
+        return int(text) if text.isdigit() else text
+    def nkeys(text):
+        return [ atoi(c) for c in re.split('(\d+)', text) ]
+    files.sort(key=nkeys)
     res = []
     chi2 = []
-    for i in inputlist:
-        try:
-            fname = "".join((path, "gfitdata_%d.npz"%i))
-            f = np.load(fname)
-            res.append(f['res'])
-            chi2.append(np.atleast_2d(f['chi2']))
-            print(res[-1].shape)
-            print(chi2[-1].shape)
-        except IOError:
-            print("could not open %s" % fname)
-    print(type(res[0]))
+    print(files)
+    for f in files:
+        with np.load(f) as fhandler:
+            res.append(fhandler['res'])
+            chi2.append(np.atleast_2d(fhandler['chi2']))
     tmpres = res[0]
     for r in res[1:]:
         tmpres = np.vstack((tmpres, r))
+    print("res")
     print(tmpres.shape)
     tmpchi2 = chi2[0]
     for r in chi2[1:]:
         tmpchi2 = np.hstack((tmpchi2, r))
+    print("chi2")
     print(tmpchi2.shape)
-    fname = "".join((path, "gfitdata.npz"))
-    #np.savez(fname, res=tmpres, chi2=tmpchi2[0])
+    # the last 20 entries are 0
+    tmpres = tmpres[:-20]
+    tmpchi2 = tmpchi2[:,:-20]
+    print("parameters")
+    fname = "".join((path, "gfitdata_new.npz"))
+    np.savez(fname, res=tmpres, chi2=tmpchi2[0])
     mean = tmpres[0]
     print(mean)
-    mean[0] = 1./mean[0]
-    mean[2] = 1./mean[2]
     std = np.std(tmpres, axis=0)
     print(std)
+    mean[0] = 1./mean[0]
+    mean[2] = 1./mean[2]
     std[0] = np.std(1./tmpres[0])
     std[2] = np.std(1./tmpres[2])
     print(mean)

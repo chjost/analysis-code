@@ -181,13 +181,14 @@ def get_matrix(irrep, helicity, eta=+1, row=1, lmax=2, d=np.asarray([0,0,1])):
 def phaseshift_params(l, q):
     # TODO values taken from preliminary analysis
     if l == 2:
-        a = 1.e10
+        #a = -1.e10
         #a = -65.13
+        a = -9.
         r = 0.
     # should never be called
     elif l == 0:
-        a = -1.23
-        r = 14.20
+        a = -1.05
+        r = 147.
     # everything higher should be close to 0
     else:
         a = 1.e10
@@ -320,14 +321,41 @@ def main():
     # get the M matrix for the problem
     mat, deltas = get_matrix(irrep, 0)
     # calculate U according to Dudek's paper
-    q = np.sqrt(q2.error[0][0][0])
-    qmean, qstd = ana.mean_std(q)
-    U = get_U(mat, q, gamma)
-    shifts = get_phaseshift(U, deltas, q)
-    smean, sstd = ana.mean_std(shifts)
-    print("at q^2 = %.3e +- %.3e" % (q2.error[0][0][0][0], q2.error[0][1][0]))
-    print("phase shift \delta_%d: %.3e +- %.3e" % (deltas[0], smean[0].real, sstd[0].real))
-    print(shifts.shape)
+    _q2 = q2.error[0][0][0]
+    q = np.sqrt(_q2)
+    #qmean, qstd = ana.mean_std(q)
+    #U = get_U(mat, _q2, gamma)
+    #shifts = get_phaseshift(U, deltas, q)
+    #smean, sstd = ana.mean_std(shifts)
+    #print("at q^2 = %.3e +- %.3e" % (_q2[0], q2.error[0][1][0]))
+    #print("phase shift \delta_%d: %.3e +- %.3e" % (deltas[0], smean[0].real, sstd[0].real))
+    #print(shifts.shape)
+
+    # analytic check for the A1 irrep with p^2=1
+    w00 = ana.omega(_q2, gamma=gamma, l=0, m=0)
+    w20 = ana.omega(_q2, gamma=gamma, l=2, m=0)
+    w40 = ana.omega(_q2, gamma=gamma, l=4, m=0)
+    sw20 = 5.*np.square(w20)
+    c = 1./((w00 -1.j)*(w00+10./7.*w20+18./7.*w40-1.j) - sw20)
+    tmp1 = c*((w00 +1.j)*(w00+10./7.*w20+18./7.*w40-1.j) - sw20)
+    tmp2 = c*((w00 -1.j)*(w00+10./7.*w20+18./7.*w40+1.j) - sw20)
+    #print(c)
+    #print(tmp1)
+    #print(tmp2)
+    #print(np.exp(2.j*phaseshift_params(0, q)))
+    #print(np.exp(2.j*phaseshift_params(2, q)))
+    res = tmp1 - 4*sw20/(np.exp(2.j*phaseshift_params(2, q))-tmp2)
+    #res = tmp1 - 4*sw20/(1.-tmp2)
+    res = np.log(res/2.j)
+    print("delta_0")
+    print(np.mean(res)*180/np.pi)
+    #print(np.std(res))
+    res = tmp2 - 4*sw20/(np.exp(2.j*phaseshift_params(0, q))-tmp1)
+    #res = tmp2 - 4*sw20/(1.-tmp1)
+    res = np.log(res/2.j)
+    print("delta_2")
+    print(np.mean(res)*180/np.pi)
+    #print(np.std(res))
 
 if __name__ == '__main__':
     try:

@@ -146,7 +146,7 @@ def print_summary(datafolder, plotfolder, lattices, irreps=[["A1"]]):
                 fmt = "".join((ensfmt[i], p2fmt[p2]))
                 #fmt = "".join((irrepfmt[irreps[p2][ir]], p2fmt[p2]))
                 # buld the label for the data
-                lab = "%s, p$^2$=%d" % (lattices[i], p2)
+                lab = "%s, p$^2$=%d (G)" % (lattices[i], p2)
                 #lab = "%s, p$^2$=%d" % (irreps[p2][ir], p2)
                 #alp = 1. - 0.25*float(i)
                 alp = 1.
@@ -160,30 +160,29 @@ def print_summary(datafolder, plotfolder, lattices, irreps=[["A1"]]):
     # plot points from Dudek analysis
     print("plotting dudek's points")
     xd1 = np.asarray([1.961e-01, 7.756e-03])
-    yd1 = np.asarray([7.469e-01 - np.pi, 1.883e-02])*180./np.pi
+    #yd1 = np.asarray([7.469e-01 - np.pi, 1.883e-02])*180./np.pi
+    yd1 = np.asarray([-1.165e+00, 4.055e-02])*180./np.pi
     fmt = "".join((ensfmt[1], p2fmt[2]))
-    plt.errorbar(xd1[0], yd1[0], yerr=yd1[1], xerr=xd1[1], fmt=fmt, label="dudek")
-    #xd2 = np.asarray([5.528e-01, 1.786e-02])
+    lab1 = "A40.24, p$^2$=1 (D)"
+    plt.errorbar(xd1[0], yd1[0], yerr=yd1[1], xerr=xd1[1], fmt=fmt, label=lab1)
     #yd2 = np.asarray([-1.107e+00, 4.675e-02])*180./np.pi
-    #plt.errorbar(xd2[0], yd2[0], yerr=yd2[1], xerr=xd2[1], fmt=fmt, label="dudek")
+    #plt.errorbar(xd1[0], yd2[0], yerr=yd2[1], xerr=xd1[1], fmt=fmt, label="dudek")
 
     # plot function of delta
     dofp0 = lambda p, x: np.arctan(1./(1./(p[0]*x)+0.5*p[1]*x))*180/np.pi
     dofp2 = lambda p, x: np.arctan(p[0]*np.power(x, 5))*180/np.pi
     ran = [1e-3, 2.*0.145]
-    fname = "%s/globalfit/gfitdata.npz" % datafolder
+    #fname = "%s/globalfit/gfitdata.npz" % datafolder
+    fname = "%s/globalfit/gfitdata_new.npz" % datafolder
     f = np.load(fname)
     #f = np.load("test_data.npz")
     tmp = f['res']
-    # the last 20 entries are 0
-    tmp = tmp[:-20]
     # deal with result array
     #print(tmp[:,0])
     res = np.zeros_like(tmp)
     res[:,0] = 1./tmp[:,0]
     res[:,2] = 1./tmp[:,2]
     res[:,1] = tmp[:,1]
-    tmp = res * np.asarray([1., -1.,1.])
     data = ana.compute_error(res)
     chi2 = f['chi2']
     pval = 1. - scipy.stats.chi2.cdf(chi2, 16)
@@ -194,32 +193,33 @@ def print_summary(datafolder, plotfolder, lattices, irreps=[["A1"]]):
 
     nsamples = 100
     # sample liumings results
-    res_l = np.zeros((nsamples, 3))
-    np.random.seed(1228)
-    res_l[:,0] = 0.02*np.random.randn(nsamples) - 1.3
-    np.random.seed(1228)
-    res_l[:,1] = 0.7*np.random.randn(nsamples) + 14.1
-    np.random.seed(1228)
-    res_l[:,2] = 26.*np.random.randn(nsamples) - 46.
+    #res_l = np.zeros((nsamples, 3))
+    #np.random.seed(1228)
+    #res_l[:,0] = 0.02*np.random.randn(nsamples) - 1.3
+    #np.random.seed(1228)
+    #res_l[:,1] = 0.7*np.random.randn(nsamples) + 14.1
+    #np.random.seed(1228)
+    #res_l[:,2] = 26.*np.random.randn(nsamples) - 46.
     # sample Dudek et al's result, using mpi*a_i
-    mpi_dudek = np.zeros((nsamples,))
-    np.random.seed(1228)
-    mpi_dudek = 0.00013*np.random.randn(nsamples) + 0.06906
-    res_d = np.zeros((nsamples, 3))
-    np.random.seed(1228)
-    res_d[:,0] = (0.013*np.random.randn(nsamples) - 0.307)/mpi_dudek
-    np.random.seed(1228)
-    res_d[:,1] = (0.13*np.random.randn(nsamples) - 0.26)/mpi_dudek
-    np.random.seed(1228)
-    res_d[:,2] = (0.53*np.random.randn(nsamples) - 1.89)/np.power(mpi_dudek,5)*1e-6
+    #mpi_dudek = np.zeros((nsamples,))
+    #np.random.seed(1228)
+    #mpi_dudek = 0.00013*np.random.randn(nsamples) + 0.06906
+    #res_d = np.zeros((nsamples, 3))
+    #np.random.seed(1228)
+    #res_d[:,0] = (0.013*np.random.randn(nsamples) - 0.307)/mpi_dudek
+    #np.random.seed(1228)
+    #res_d[:,1] = (0.13*np.random.randn(nsamples) - 0.26)/mpi_dudek
+    #np.random.seed(1228)
+    #res_d[:,2] = (0.53*np.random.randn(nsamples) - 1.89)/np.power(mpi_dudek,5)*1e-6
 
     # plot the functions
     #plotter.plot_func(dofp0, res_l[:,:2], ran, "$\delta_0$ (l)", fmt="b", col="b")
-    plotter.plot_func(dofp0, res[:,:2], ran, "$\delta_0$ (c)", col="k")
+    plotter.plot_func(dofp0, res[:,:2], ran, "$\delta_0$ (GF)", col="k")
     #plotter.plot_func(dofp0, tmp[:,:2], ran, "$\delta_0$ (c)", fmt="c", col="c")
     #plotter.plot_func(dofp0, res_d[:,:2], ran, "$\delta_0$ (d)", fmt="r", col="r")
     #plotter.plot_func(dofp2, res_l[:,(2,0)], ran, "$\delta_2$ (l)", fmt="--b", col="b")
-    plotter.plot_func(dofp2, res[:,(2,0)], ran, "$\delta_2$ (c)", fmt="--k", col="k")
+    plotter.plot_func(dofp2, res[:,(2,0)], ran, "$\delta_2$ (GF)", fmt="--k", col="k")
+    #plotter.plot_func(dofp2, res[:,(2,0)], ran, "$\delta_2$ (c)", fmt="--k", col="k")
     #plotter.plot_func(dofp2, res_d[:,(2,0)], ran, "$\delta_2$ (d)", fmt="--r", col="r")
 
     plt.legend(numpoints=1, loc=0)

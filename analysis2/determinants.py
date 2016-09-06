@@ -25,7 +25,8 @@ def det000_A1(L, mpi, par, q2):
     d = np.array([0., 0., 0.])
     omega00 = omega(q2, gamma=1., l=0, m=0, d=d)
     q = np.sqrt(q2) * 2. * np.pi / float(L)
-    delta = par[0] / q + 0.5 * par[1] * q
+    delta = 1./np.tan(par[0] / q + 0.5 * par[1] * q)
+    #delta = par[0] / q + 0.5 * par[1] * q
     return (omega00 - delta).real
 
 @memoize(50)
@@ -46,7 +47,8 @@ def det000_E(L, mpi, par, q2):
     omega00 = omega(q2, gamma=1., l=0, m=0, d=d)
     omega40 = omega(q2, gamma=1., l=4, m=0, d=d)
     q = np.sqrt(q2) * 2. * np.pi / float(L)
-    delta = par[2] / q**5 + 0.5 * par[3] / q**3
+    delta = 1./np.tan(par[2] / q**5 + 0.5 * par[3] / q**3)
+    #delta = par[2] / q**5 + 0.5 * par[3] / q**3
     return (omega00 + 18. * omega40 / 7. - delta).real
 
 @memoize(50)
@@ -67,7 +69,8 @@ def det000_T2(L, mpi, par, q2):
     omega00 = omega(q2, gamma=1., l=0, m=0, d=d)
     omega40 = omega(q2, gamma=1., l=4, m=0, d=d)
     q = np.sqrt(q2) * 2. * np.pi / float(L)
-    delta = par[2] / q**5 + 0.5 * par[3] / q**3
+    delta = 1./np.tan(par[2] / q**5 + 0.5 * par[3] / q**3)
+    #delta = par[2] / q**5 + 0.5 * par[3] / q**3
     return (omega00 - 12. * omega40 / 7. - delta).real
 
 @memoize(50)
@@ -92,8 +95,10 @@ def det001_A1(L, mpi, par, q2):
     omega20 = omega(q2, gamma=gamma, l=2, m=0, d=d)
     omega40 = omega(q2, gamma=gamma, l=4, m=0, d=d)
     q = np.sqrt(q2) * 2. * np.pi / float(L)
-    delta0 = par[0] / q + 0.5 * par[1] * q
-    delta2 = par[2] / q**5 + 0.5 * par[3] / q**3
+    delta0 = 1./np.tan(par[0] / q + 0.5 * par[1] * q)
+    delta2 = 1./np.tan(par[2] / q**5 + 0.5 * par[3] / q**3)
+    #delta0 = par[0] / q + 0.5 * par[1] * q
+    #delta2 = par[2] / q**5 + 0.5 * par[3] / q**3
     return ((omega00 - delta0) * (omega00 + 10. * omega20 / 7. + \
            18. * omega40 / 7. - delta2) - 5. * omega20**2).real
 
@@ -122,8 +127,10 @@ def det110_A1(L, mpi, par, q2):
     omega42 = omega(q2, gamma=gamma, l=4, m=2, d=d)
     omega44 = omega(q2, gamma=gamma, l=4, m=4, d=d)
     q = np.sqrt(q2) * 2. * np.pi / float(L)
-    delta0 = par[0] / q + 0.5 * par[1] * q
-    delta2 = par[2] / q**5 + 0.5 * par[2] / q**3
+    delta0 = 1./np.tan(par[0] / q + 0.5 * par[1] * q)
+    delta2 = 1./np.tan(par[2] / q**5 + 0.5 * par[3] / q**3)
+    #delta0 = par[0] / q + 0.5 * par[1] * q
+    #delta2 = par[2] / q**5 + 0.5 * par[3] / q**3
     # splitted over several lines, maybe there is a way to make structure
     # more clear
     term1 =-(10. * np.sqrt(2.) * omega22 / 7. -\
@@ -169,8 +176,10 @@ def det111_A1(L, mpi, par, q2):
     omega40 = omega(q2, gamma=gamma, l=4, m=0, d=d)
     omega42 = omega(q2, gamma=gamma, l=4, m=2, d=d)
     q = np.sqrt(q2) * 2. * np.pi / float(L)
-    delta0 = par[0] / q + 0.5 * par[1] * q
-    delta2 = par[2] / q**5 + 0.5 * par[2] / q**3
+    delta0 = 1./np.tan(par[0] / q + 0.5 * par[1] * q)
+    delta2 = 1./np.tan(par[2] / q**5 + 0.5 * par[3] / q**3)
+    #delta0 = par[0] / q + 0.5 * par[1] * q
+    #delta2 = par[2] / q**5 + 0.5 * par[3] / q**3
     return ( (omega00 - delta0) *\
         (omega00 - 12. * omega40 / 7. - 12.j * np.sqrt(10.) * omega42 / 7. -\
         10.j * np.sqrt(6.) * omega22 / 7. - delta2) +\

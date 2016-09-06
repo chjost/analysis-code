@@ -390,8 +390,8 @@ def main():
     extract_data(config, innames)
 
     # build the particle correlation functions
-    build_pi0(config, innames)
-    build_eta(config, innames)
+    #build_pi0(config, innames)
+    #build_eta(config, innames)
 
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':

@@ -47,6 +47,7 @@ def Z(q2, gamma=None, l=0, m=0, d=np.array([0., 0., 0.]), m_split=1.,
         else:
             return zeta.Z(q2, gamma, l, m, d, m_split, prec, verbose)
 
+@memoize.memoize
 def omega(q2, gamma=None, l=0, m=0, d=np.array([0., 0., 0.]), m_split=1.,
         prec=10e-6, exFac=False, verbose=0):
     """Calculates the Zeta function including the some prefactor.
@@ -75,6 +76,7 @@ def omega(q2, gamma=None, l=0, m=0, d=np.array([0., 0., 0.]), m_split=1.,
     float or ndarray
         The value of the Zeta function.
     """
+    #print(q2)
     if gamma is None:
         _gamma = np.ones_like(q2)
     else:

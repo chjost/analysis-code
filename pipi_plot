@@ -168,7 +168,7 @@ def read_data(datafolder, lattices, d2=0):
     p_mf = mf_paper()
 
     # read data
-    readnewdata = False
+    readnewdata = True
     fname = "%s/summary/collected_data.npz" % datafolder
     if readnewdata:
         summ_ampi, summ_mf = [], []
@@ -259,7 +259,7 @@ def print_summary(data, datafolder, plotfolder, lattices):
     fchiptNLO = lambda p, x: -x*x/(8.*np.pi)*(1+x*x/(16*np.pi*np.pi)*(3.*np.log(x*x)-1.-p))
 
     # fit
-    readfit = True
+    readfit = False
     if not readfit:
         print("NLO fit")
         fit_chi = ana.LatticeFit(fchiptNLO)
@@ -282,7 +282,6 @@ def print_summary(data, datafolder, plotfolder, lattices):
     print("chi2 / dof = %.3f / %d" % (fitres.chi2[0][0][0], dof - 1))
     print("pval = %.3e" % (1. - scipy.stats.chi2.cdf(fitres.chi2[0][0][0], dof - 1)))
     retval = fitres.error[0]
-    rval = ana.mean_std(retval[0][0])
 
     # get the physical value of a_0*m_pi
     # m_pi/f_pi|phys = 1.0703
@@ -386,8 +385,9 @@ def print_summary(data, datafolder, plotfolder, lattices):
         dy1 = np.asarray([d[2] for d in usumm_ampi[i]])
         dy2 = np.asarray([d[3] for d in usumm_ampi[i]])
         dytot = [np.sqrt(dy**2 + dy1**2), np.sqrt(dy**2 + dy2**2)]
-        plt.errorbar(x, y, yerr=dytot, xerr=dx, fmt=fmt[i], label=labels[i], mfc="None")
+        plt.errorbar(x, y, yerr=dytot, xerr=dx, fmt=fmt[i], label="", mfc="None")
     plt.grid(True)
+    plt.legend(numpoints=1)
     plotter.save()
 
     # plot histogram
