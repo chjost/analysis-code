@@ -244,7 +244,7 @@ def write_data_ascii(data, filename, verbose=False, conf=None):
 
     # in case the dimension is 1, treat the data as one sample
     # to make the rest easier we add an extra axis
-    if len(data.shape) == 1:
+    if data.ndim == 1:
         data = data.reshape(1, -1)
     # init variables
     nsamples = data.shape[0]
@@ -259,20 +259,30 @@ def write_data_ascii(data, filename, verbose=False, conf=None):
                                (_data.shape[0],) + (1,)*(len(_data.shape)-1),
                                dtype=int)
     if conf is not None:
-      # try to make ints from strings otherwise reshape directly
-      try:
-        conf_int = [int(name[4:-1]) for name in conf]
-        tmp = np.repeat(conf_int,T)
-        _config = tmp.reshape(tmp.shape[0],1) 
-      except:
-        _config = conf.reshape(conf.shape[0]*T,1)
-        pass
-      # make ints from strings omit last character and first four
-      _fdata = np.concatenate((_counter,_data,_config), axis=1)
-      fmt = ('%.0f',) + ('%.14f',) * _data[0].size + ('%.0f',)
+        # create a list of config numbers
+        if isinstance(conf[0], str):
+            conf_int = [int(filter(str.isdigit, name)) for name in conf]
+        else:
+            conf_int = [int(x) for x in conf]
+        # match length of data
+        if len(conf_int) == nsamples:
+            _config = np.repeat(conf_int, T).reshape(-1,1)
+        else:
+            _config = np.asarray(conf_int).reshape(-1,1)
+        print(_config.shape)
+        print(_data.shape)
+        # try to make ints from strings otherwise reshape directly
+        #try:
+        #    conf_int = [int(filter(str.isdigit, name)) for name in conf]
+        #    tmp = np.repeat(conf_int,T)
+        #    _config = tmp.reshape(tmp.shape[0],1) 
+        #except:
+        #    _config = conf.reshape(conf.shape[0]*T,1)
+        _fdata = np.concatenate((_counter,_data,_config), axis=1)
+        fmt = ('%.0f',) + ('%.14e',) * _data[0].size + ('%.0f',)
     else:
-      _fdata = np.concatenate((_counter,_data), axis=1)
-      fmt = ('%.0f',) + ('%.14f',) * _data[0].size
+        _fdata = np.concatenate((_counter,_data), axis=1)
+        fmt = ('%.0f',) + ('%.14f',) * _data[0].size
     # generate format string
     # write data to file
     np.savetxt(filename, _fdata, header=head, comments='', fmt=fmt)
