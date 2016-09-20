@@ -269,15 +269,6 @@ def write_data_ascii(data, filename, verbose=False, conf=None):
             _config = np.repeat(conf_int, T).reshape(-1,1)
         else:
             _config = np.asarray(conf_int).reshape(-1,1)
-        print(_config.shape)
-        print(_data.shape)
-        # try to make ints from strings otherwise reshape directly
-        #try:
-        #    conf_int = [int(filter(str.isdigit, name)) for name in conf]
-        #    tmp = np.repeat(conf_int,T)
-        #    _config = tmp.reshape(tmp.shape[0],1) 
-        #except:
-        #    _config = conf.reshape(conf.shape[0]*T,1)
         _fdata = np.concatenate((_counter,_data,_config), axis=1)
         fmt = ('%.0f',) + ('%.14e',) * _data[0].size + ('%.0f',)
     else:
