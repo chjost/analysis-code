@@ -167,6 +167,30 @@ class Correlators(object):
             The number of bootstrap samples to be calculated.
         """
         self.data = boot.bootstrap(self.data, nsamples)
+        self.shape = self.data.shape 
+        
+    def reflect(self, kind="axis"):
+        """reflect coorelation function point symmetrically or by axis reflection
+    
+        Parameters
+        ----------
+        source : ndarray
+            The data to antisymmetrize.
+        kind : String
+            available reflections are "point" and "axis: reflections, defaults to
+            axis
+    
+        Returns
+        -------
+        the symmetrized source
+        """
+    
+        if kind == "axis":
+            self.data = boot.sym(self.data)
+        elif kind == "point":
+            self.data = boot.asym(self.data)
+        else:
+            print("Reflection type not known")
         self.shape = self.data.shape
 
     def sym_and_boot(self, nsamples):
@@ -265,8 +289,9 @@ class Correlators(object):
     def mass(self, usecosh=True):
         """Computes the effective mass.
 
-        Two formulas are implemented. The standard formula is based on the
-        cosh function, the alternative is based on the log function.
+        Three formulae are implemented. The standard formula is based on the
+        cosh function, the alternative is based on the sinh function. The third
+        option (chosen via usecosh=None) is the log
 
         Parameters
         ----------
@@ -371,17 +396,24 @@ class Correlators(object):
         obj.shape = obj.data.shape
         return obj
 
-    def back_derivative(self):
+    def back_derivative(self,t=1):
         derive = Correlators(debug=self.debug)
-        derive.data = func.compute_derivative_back(self.data[0])
+        derive.data = func.compute_derivative_back(self.data,a=t)
         derive.shape = derive.data.shape
         
         return derive
 
-    def square_corr(self):
+    def square_corr(self,corr=0):
         derive = Correlators(debug=self.debug)
         derive.data = func.compute_square(self.data[0])
-        derive.shape = derive.data.shape
+        derive.shape = derive.data[0].shape
+        
+        return derive
+
+    def mult_corr(self,fac):
+        derive = Correlators(debug=self.debug)
+        derive.data = func.multiply(self.data[0],fac)
+        derive.shape = derive.data[0].shape
         
         return derive
 
@@ -439,7 +471,7 @@ class Correlators(object):
         history = np.asarray([self.data[c][time][0] for c in range(nb_cfg)])
         return history
 
-    def omit_iqr(self, in_iqr=None, debug=1):
+    def omit_iqr(self, in_iqr=None, ts=0, debug=1):
       """Based on the iqr delete configurations with a certain value
       
       This function uses the difference between the 25 and 75 percentile
@@ -461,12 +493,12 @@ class Correlators(object):
       if in_iqr is None:
           # get the 25% and 75% percentiles from the real part of the first timeslice of all
           # configurations
-          q25, q75 = np.percentile(self.data[:,0],(25,75))
+          q25, q75 = np.percentile(self.data[:,ts],(25,75))
           iqr_dn = q25-1.5*np.abs(q75-q25)
           iqr_up = q75+1.5*np.abs(q75-q25)
           # boolean arrays of outlier positions
-          idx_up = np.greater(self.data[:,0], iqr_up)
-          idx_dn = np.less(self.data[:,0], iqr_dn)
+          idx_up = np.greater(self.data[:,ts], iqr_up)
+          idx_dn = np.less(self.data[:,ts], iqr_dn)
           print("index shapes are:")
           print(idx_up.shape,idx_dn.shape)
           omit_idx = np.logical_or(idx_up,idx_dn)

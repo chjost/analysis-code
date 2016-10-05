@@ -1,0 +1,135 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+
+# Script to plot the effective mass of 2 correlators in one plot
+
+import sys
+import numpy as np
+import analysis2 as ana
+
+def main():
+####################################################
+# parse the input file1 and setup parameters
+#####################################################
+    if len(sys.argv) < 2:
+        ens = ana.LatticeEnsemble.parse("kk_I1_TP0_A40.24.ini")
+    else:
+        ens1 = ana.LatticeEnsemble.parse(sys.argv[1])
+        ens2 = ana.LatticeEnsemble.parse(sys.argv[2])
+        ens3 = ana.LatticeEnsemble.parse(sys.argv[3])
+
+    # read settings
+    readsingledata = False
+    plotsingle = True
+    readtwodata = False
+    plottwo = False
+    plotratio = True
+    compare = True
+
+    # get data from first input file
+    prefix = [ens1.get_data("path"),ens2.get_data("path"),ens3.get_data("path")]
+    print prefix
+    lat = [ens1.name(), ens2.name(), ens3.name()]
+    nboot = [ens1.get_data("nboot"),ens2.get_data("nboot"),ens3.get_data("nboot")]
+    datadir = [ens1.get_data("datadir"),ens2.get_data("datadir"), ens3.get_data("datadir")]
+    plotdir = [ens1.get_data("plotdir"),ens2.get_data("plotdir"), ens3.get_data("plotdir")]
+    gmax = [ens1.get_data("gmax"),ens2.get_data("gmax"),ens3.get_data("gmax")]
+    d2 = [ens1.get_data("d2"),ens2.get_data("d2"),ens3.get_data("d2")]
+    try:
+        debug = ens1.get_data("debug")
+    except KeyError:
+        debug = 0
+    T = ens1.T()
+    T2 = ens1.T2()
+    addT = np.ones((nboot[0],)) * T
+    addT2 = np.ones((nboot[0],)) * T2
+
+    # get data from second input file
+
+
+#######################################################################
+# Begin calculation
+#######################################################################
+   
+    # single particle correlator
+    print("read single particle corrs")
+    #files = ["%s/pi_charged_p%d.dat" % (datadir, d) for d in range(1)]
+    files = ["%s/k_charged_p0.dat" % (d_dir) for d_dir in datadir]
+    #kcorr = ana.Correlators(files, matrix=False)
+    kcorr1 = ana.Correlators(files[0], matrix=False)
+    kcorr2 = ana.Correlators(files[1], matrix=False)
+    kcorr3 = ana.Correlators(files[2], matrix=False)
+    #kcorr.sym_and_boot(nboot)
+    #kcorr.symmetrize()
+    kcorr1.sym_and_boot(nboot[0])
+    kcorr2.sym_and_boot(nboot[1])
+    kcorr3.sym_and_boot(nboot[2])
+
+    # two particle correlator
+    print("read single particle corrs")
+    files = ["%s/kk_charged_A1_TP0_00.dat" % (d_dir) for d_dir in datadir]
+    kkcorr1 = ana.Correlators(files[0], matrix=False)
+    kkcorr2 = ana.Correlators(files[1], matrix=False)
+    kkcorr3 = ana.Correlators(files[2], matrix=False)
+    kkcorr1.sym_and_boot(nboot[0])
+    kkcorr2.sym_and_boot(nboot[1])
+    kkcorr3.sym_and_boot(nboot[2])
+
+    ratio1 = kkcorr1.ratio(kcorr1,ratio=2)
+    ratio2 = kkcorr2.ratio(kcorr2,ratio=2)
+    ratio3 = kkcorr3.ratio(kcorr3,ratio=2)
+
+    # plot 3 ratios in one file
+    if plotratio:
+        print("plotting")
+        plotter = ana.LatticePlot("%s/ratio_cmp_TP%d_%s.pdf" % (plotdir[0], d2[0],
+          lat[0]),join=True)
+        print(plotter.join)
+        plotter.set_env(ylog=False,xlim=[0,T2],ylim=[1.2,2.])
+        label = [r'Ratio', "t", "R(t)", r'$a\mu_s^{low}$']
+        plotter.plot(ratio1, label, xshift=0.5)
+        label[3]=r'$a\mu_s^{med}$'
+        plotter.plot(ratio2, label, xshift=0.5)
+        label[3]=r'$a\mu_s^{high}$'
+        plotter.plot(ratio3, label, xshift=0.5)
+        plotter.save()
+        del plotter
+
+    ##plot effective masses of kcorr and kkcorr
+    #if plotsingle:
+    #    print("plotting")
+    #    plotter = ana.LatticePlot("%s/mass_k_TP%d_%s.pdf" % (plotdir[0], d2[0],
+    #      lat[0]),join=True)
+    #    print(plotter.join)
+    #    plotter.set_env(ylog=False)
+    #    label = [r'Kaon Correlator', "t", "m_eff(t)", r'$K^+$']
+    #    #plotter.plot(kcorr, label )
+    #    plotter.plot(kcorr_splus, label )
+    #    label[3]=r'$K^{OS}$'
+    #    plotter.plot(kcorr_sminus, label )
+    #    plotter.save()
+    #    del plotter
+
+    #if plottwo:
+    #    print("plotting")
+    #    plotter = ana.LatticePlot("%s/ratio_kk_TP%d_%s.pdf" % (plotdir, d2, lat))
+    #    plotter.set_env(ylog=False)
+    #    label = ["Ratio", "t", "R(t)", "data"]
+    #    print "plotter set up"
+    #    plotter.plot(ratio, label, add=addT, xshift=0.5, debug=debug)
+    #    print "open new file for effective mass"
+    #    plotter.new_file("%s/mass_kk_TP%d_%s.pdf" % (plotdir, d2, lat))
+    #    plotter.set_env(ylog=False)
+    #    label = ["Mass 4pt-function", "$t$", "$m_{eff,KK}$","data"]
+    #    plotter.plot(kkcorr,label)
+    #    del plotter
+
+ 
+
+
+if __name__ == '__main__':
+    try:
+        print("starting")
+        main()
+    except KeyboardInterrupt:
+        pass
+

@@ -10,7 +10,7 @@ import numpy as np
 
 from statistics import compute_error
 from functions import compute_eff_mass
-from utils import loop_iterator
+from utils import loop_iterator, eig_decomp
 
 def fit_single(fitfunc, start, corr, franges, add=None, debug=0,
         correlated=True, xshift=0., npar=2):
@@ -384,6 +384,8 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, mute=None, debug=0)
           #print("Covariance Matrix:")
           #print(cov)
     cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
+    # Eigendecomposition of covariance matrix with screen output
+    # eig_decomp(cov)
 
     # degrees of freedom
     dof = float(Y.shape[1]-len(start)) 
@@ -534,5 +536,4 @@ def get_start_values_comb(ncorr, ranges, data, npar=2):
                     "funtions with npar > 3.")
     return start
 
-if __name__ == "__main__":
-    pass
+if __name__ == "__main__":    pass

@@ -8,6 +8,7 @@ matplotlib.rcParams['font.size'] = 14
 matplotlib.rcParams['axes.labelsize'] = 'large'
 
 import chiral_utils as chut
+import extern_bootstrap as extboot
 from fit import FitResult
 from statistics import compute_error
 from plot_functions import plot_function
@@ -232,7 +233,8 @@ class ChirAna(object):
       else:
         self.amu_matched_to[idx[0]][idx[1],idx[2],idx[3]] = data
 
-  def add_extern_data(self,filename,idx,ens,dim=None,square=True,read=None,op=False):
+  def add_extern_data(self,filename,idx,ens,dim=None,square=True,
+                      physical=False,read=None,op=False):
     """ This function adds data from an extern textfile to the analysis object
     
     The data is classified by names, the filename is given and the read in and
@@ -246,6 +248,8 @@ class ChirAna(object):
     dim : string, dimension to place the extern data at
     square : bool, should data be squared?
     read : string, identifier for the data read
+    physical : bool, determines if read in data should be converted to physical
+                one
     op : string, if operation is given the data is convoluted with existing data
         at that index. if no operation is given data gets overwritten
     """
@@ -253,12 +257,25 @@ class ChirAna(object):
       plot, data = np.zeros((self.x_data[0].shape[-1]))
 
     if read is 'r0_inv':
-      _plot,_data = chut.prepare_r0(ens,self.x_data[0].shape[-1])
-      plot=1./np.square(_plot)
-      data=1./np.square(_data)
+      _plot,_data = extboot.prepare_r0(ens,self.x_data[0].shape[-1])
+      if square is True:
+        plot=1./np.square(_plot)
+        data=1./np.square(_data)
+      else:
+        plot=1./_plot
+        data=1./_data
 
     if read is 'r0':
-      _plot,_data = chut.prepare_r0(ens,self.x_data[0].shape[-1])
+      _plot,_data = extboot.prepare_r0(ens,self.x_data[0].shape[-1])
+      if square:
+        plot=np.square(_plot)
+        data=np.square(_data)
+      else:
+        plot=_plot
+        data=_data
+
+    if read is 'mss':
+      _plot,_data = extboot.prepare_mss(ens,self.x_data[0].shape[-1],meth=2)
       if square:
         plot=np.square(_plot)
         data=np.square(_data)
@@ -267,7 +284,7 @@ class ChirAna(object):
         data=_data
 
     if read is 'a':
-      _plot,_data = chut.prepare_a(ens,self.x_data[0].shape[-1])
+      _plot,_data = extboot.prepare_a(ens,self.x_data[0].shape[-1])
       if square:
         plot=np.square(_plot)
         data=np.square(_data)
@@ -278,24 +295,54 @@ class ChirAna(object):
     if read is 'mpi':
       #print("indexto insert extern data:")
       #print(dim,idx)
-      ext_help = chut.read_extern(filename,(1,2))
+      ext_help = extboot.read_extern(filename,(1,2))
       # take any y data dimension, since bootstrap samplesize shold not differ
       # build r0M_pi
-      plot,data = chut.prepare_mpi(ext_help,ens,self.x_data[0].shape[-1],square=square)
+      if physical:
+        plot,data = extboot.physical_mpi(ext_help,ens,
+                                      self.x_data[0].shape[-1],
+                                      square=square)
+      else:
+        plot,data = extboot.prepare_mpi(ext_help,ens,
+                                     self.x_data[0].shape[-1],
+                                     square=square)
+    
+    if read is 'k_fse':
+      ext_help = extboot.read_extern(filename,(1,2))
+      plot,data = extboot.prepare_fse(ext_help,ens,self.x_data[0].shape[-1],square=square)
+
+    # Do finite size correction of the pion mass
+    # CAVEAT: Only useable on squared pion data
+    if read is 'fse_pi':
+      if len(filename) != 2:
+        print("Not enough files to read from")
+      # read Mpi lattice data
+      ext_help1 = extboot.read_extern(filename[0],(1,2))
+      # read K_Mpi
+      ext_help2 = extboot.read_extern(filename[1],(1,2))
+      plot,data = extboot.prepare_mpi_fse(ext_help1,ext_help2,ens,
+                    self.x_data[0].shape[-1], square=square,physical=physical)
+      
 
     if read is 'mpiL':
-      ext_help = chut.read_extern(filename,(1,2))
-      plot,data = chut.prepare_mpi(ext_help,ens,self.x_data[0].shape[-1],square=square,r0=False)
+      ext_help = extboot.read_extern(filename,(1,2))
+      plot,data = extboot.prepare_mpi(ext_help,ens,self.x_data[0].shape[-1],square=square,r0=False)
 
     if read is 'fk_unit':
-      ext_help = chut.read_extern(filename,(1,2))
-      plot,data = chut.prepare_fk(ext_help,ens,self.x_data[0].shape[-1])
+      ext_help = extboot.read_extern(filename,(1,2))
+      plot,data = extboot.prepare_fk(ext_help,ens,self.x_data[0].shape[-1])
+    
+    # Read in interpolated data
+    if read is 'fk_int':
+      ext_help = extboot.read_extern(filename,(3,4))
+      plot,data = extboot.prepare_fk(ext_help,ens,self.x_data[0].shape[-1],
+                                  square=square) 
 
     if read is 'mk_unit':
-      ext_help = chut.read_extern(filename,(1,2))
+      ext_help = extboot.read_extern(filename,(1,2))
       # prepare_fk also does the right for m_k
       # TODO: unify this at some point
-      plot,data = chut.prepare_fk(ext_help,ens,self.x_data[0].shape[-1])
+      plot,data = extboot.prepare_fk(ext_help,ens,self.x_data[0].shape[-1])
     print("extern data added:")
     print("%s: %f " %(read, data[0]))
     self.add_data(data,idx,dim=dim,op=op)
@@ -372,7 +419,7 @@ class ChirAna(object):
       print(_mu_plot)
     return _mu_plot
 
-  def get_data_plot(self,dim=0,debug=0):
+  def get_data_plot(self,dim=0,mev=False,debug=0):
     """ Returns the data suited for plotting and printing a summary
 
     The data dimenisons are reduced such that for each datapoint there is an
@@ -395,6 +442,8 @@ class ChirAna(object):
     for e in range(_x_plot.shape[0]):
       # loop over dimensions of x
       for d in range(_x_plot.shape[1]):
+        if mev:
+          _x_data[e,0] = np.sqrt(_x_data[e,0])*1.e3
         _x_plot[e,d][0:2] = compute_error(_x_data[e,d])
       
       if _y_data.shape[1] == 2:
@@ -407,7 +456,8 @@ class ChirAna(object):
     return _x_plot, _y_plot
 
   def fit(self,fitfunc,dim,index,start=[1.,],x_phys=None,xcut=False,
-          plot=True,plotfunc=None,label=None,datadir=None,read=False,ens=None,debug=0,loc=None):
+          plot=True,plotfunc=None,label=None,datadir=None,read=False,
+          ens=None,debug=0,loc=None):
     """fit a chiral analysis instance to a given fitfunction
 
     This function uses the data of the ChirAna instance to fit the data to the
@@ -465,6 +515,7 @@ class ChirAna(object):
       # save samples of physical point result as fitresult along with p-values
 
       self.phys_point_fitres = self.fitres.calc_mk_a0_phys(x_phys,fitfunc)
+      print(x_phys)
       print ("physical point from fitresult")
       print(self.phys_point_fitres.data[0],self.phys_point_fitres.pval[0])
       self.phys_point_fitres.calc_error()
@@ -505,13 +556,15 @@ class ChirAna(object):
       #  self.plot_plain(x_data,y_data,fitfunc,xcut=xcut,ens=ens)
       #  self.plot_glob_func(x_data,y_data,fitfunc,xcut=xcut,ens=ens)
       #else:
-      self.plot(x_data,y_data,label,xcut=xcut,ens=ens,plotfunc=plotfunc,
-                savedir=datadir,loc=loc)
-      # In a combined fit also plot the second plot
       if self.combined:
-        label[2]= r'$M_Ka_0$ matched to $m_{s,ren}$'
         self.plot(x_data,y_data,label,xcut=xcut,ens=ens,plotfunc=plotfunc,
-                  savedir=datadir,loc=loc,suffix="2",dim=1)
+                    savedir=datadir,loc=loc)
+        label[2]=(r'Continuum extrapolation B')
+        self.plot(x_data,y_data,label,xcut=xcut,ens=ens,plotfunc=plotfunc,
+                  savedir=datadir,loc=loc,dim=1,suffix='2')
+      else:
+          self.plot(x_data,y_data,label,xcut=xcut,ens=ens,plotfunc=plotfunc,
+                    savedir=datadir,loc=loc)
 
   def print_summary(self,dim,index,lat_space,ens_dict,
                     mu_s_dict=None,xcut=2,head=None):
@@ -519,7 +572,7 @@ class ChirAna(object):
     preferably in latex format
     """
     # Load data
-    _x_summ, _y_summ = self.get_data_plot()
+    _x_summ, _y_summ = self.get_data_plot(mev=False)
     print("summary data:")
     print(_x_summ.shape)
     if self.match is True:
@@ -668,33 +721,41 @@ class ChirAna(object):
 
     return _a_range, _b_range, _d_range
 
-  def plot_plain(self,x_data,y_data,label,ens,savedir=None,xcut=None):
-    x_plot,y_plot = self.get_data_plot()
-    pfit = PdfPages("./plots2/pdf/%s.pdf" % self.proc_id)
+# TODO: Make the chiral plots interface more with the actual LatticePlot class
+  def plot_plain(self,label,ens,savedir=None,xcut=None):
+    x_plot,y_plot = self.get_data_plot(dim=0)
+    print("Do we use matched data? %s" %self.match)
 
-    #print("\nData used for plot: ")
-    #print("x-data:")
-    #print(x_plot)
-    #print("y-data")
-    #print(y_plot)
+    print("\nData used for plot: ")
+    print("x-data:")
+    print(x_plot)
+    print(x_plot.shape)
+
+    print("y-data")
+    print(y_plot)
 
     if savedir is not None:
       path = savedir
     else:
       path = "./plots2/pdf"
+    pfit = PdfPages(path+"/%s.pdf" % self.proc_id)
     if xcut:
         pfit = PdfPages(path+"/%s_xcut_%d.pdf" % (self.proc_id,xcut))
     else:
         pfit = PdfPages(path+"/%s.pdf" % self.proc_id)
-
+    print('saving plot in: %s' %path)
     #calc xid's
     a_range, b_range, d_range = self.calc_plot_ranges()
-    chut.plot_ensemble(x_plot[:,0],y_plot,'^vspho','red',ens['A'],xid = a_range)
-    chut.plot_ensemble(x_plot[:,0],y_plot,'^vso','blue',ens['B'],xid = b_range)
-    chut.plot_ensemble(x_plot[:,0],y_plot,'^','green',ens['D'],xid = d_range)
+    chut.plot_ensemble(x_plot[:,0],y_plot,'^vspho','red',ens['A'],
+                       xid = a_range,match=self.match)
+    chut.plot_ensemble(x_plot[:,0],y_plot,'vso','blue',ens['B'],
+                       xid = b_range,match=self.match)
+    chut.plot_ensemble(x_plot[:,0],y_plot,'^','green',ens['D'],
+                       xid = d_range,match=self.match)
 
     plt.grid(False)
-    #plt.xlim(0.,0.5)
+    plt.xlim(0.002,0.011)
+    #plt.ylim(-0.45,-0.28)
     plt.legend(loc='best',numpoints=1, ncol=2,fontsize=12)
     plt.ylabel(label[1])
     plt.xlabel(label[0])
@@ -702,8 +763,105 @@ class ChirAna(object):
     pfit.close()
     plt.clf()
 
+  def plot_comp(self,cmp_name,savedir,savename,
+                cont_func=None,dim=0,label=None,func=None):
+    """Plot a continuum extrapolated curve and comparison data
+
+    The arguments to the continuum function are taken from the chiral analysis
+    object
+
+    Parameters
+    ----------
+    cont_func : callable, the continuum function
+    cmp_name : data name of the file for comparison
+    savename : string of filename
+    """
+    
+    # comparison data is assumed to be a textfile, this will be pretty much hard
+    # coded
+    # get the data and with plot function plot the continuum curve
+    mka0_comp = np.loadtxt(cmp_name[0])
+    mka0_comp2 = np.loadtxt(cmp_name[1])
+
+    #plt.axvline(self.phys_point[0,0],color='gray',ls='dashed',label='physical point')
+    # Set up a pdfPages object
+    pfit = PdfPages(savedir+"/%s.pdf" % savename)
+    # convert nplqcd pion masses to GeV^2 
+    x_comp =np.square(mka0_comp[:,1]*197.37/(mka0_comp[:,3]*1.e3)) 
+    print("NPLQCD to plot:")
+    print(x_comp)
+    # Plot the NPLQCD Data
+    plt.errorbar(x_comp[:-1],mka0_comp[:-1,4],mka0_comp[:-1,5],
+           color='black',fmt='s',label='NPLQCD, coarse')
+    plt.errorbar(x_comp[-1],mka0_comp[-1,4],mka0_comp[-1,5],
+           color='blue',fmt='s',label='NPLQCD, fine')
+
+    # Plot the PACS-CS Data
+    plt.errorbar(np.square(mka0_comp2[:,0]),mka0_comp2[:,2],mka0_comp2[:,3],
+          color='tomato',fmt='o',label='PACS-CS')
+    x_cont = np.linspace(0,50,1000)
+    x_plot,y_plot = self.get_data_plot(dim=dim,mev=True)
+    a_range, b_range, d_range = self.calc_plot_ranges()
+    # Plot the continuum curve
+    # Convention: if dim is 1 take argument 0,3,2 instead of 0,1,2,
+    if dim == 0:
+      args = self.fitres.data[0]
+    if dim == 1:
+      arg_shape = self.fitres.data[0].shape
+      args = np.column_stack((self.fitres.data[0][:,0],self.fitres.data[0][:,3],
+                       self.fitres.data[0][:,2])).reshape(arg_shape[0],3,arg_shape[-1])
+    plot_function(func,x_plot[a_range[0]:a_range[1],:,0],args[:,:,0],
+            #args[:,:,0],label=r'NLO-fit A',ploterror=True,col='red')
+            label=r'$a=0.0885$fm',ploterror=True,fmt='r--', col='red')
+    plot_function(func,x_plot[b_range[0]:b_range[1],:,0],args[:,:,0],
+            #args[:,:,0],label=r'NLO-fit B',ploterror=True,col='blue')
+            label=r'$a=0.0815$fm',ploterror=True,fmt='b:', col='blue')
+    plot_function(func,x_plot[d_range[0]:d_range[1],:,0],args[:,:,0],
+            #args[:,:,0],label=r'NLO-fit D',ploterror=True,col='green')
+            label=r'$a=0.0619$fm',ploterror=True,fmt='g-.', col='green')
+
+    cont_curve = lambda p,x : p[0]*x+p[2]
+    plot_function(cont_curve, x_cont,args[:,:,0],fmt='k--',
+            label='Cont. Ext. B',ploterror=True)
+    phys_pt = []
+    l1,a,b = plt.errorbar(self.phys_point[0,0],mka0_comp[0,6],mka0_comp[0,7],
+                 color='darkorange',fmt='s')
+    l2,a,b = plt.errorbar(self.phys_point[0,0],mka0_comp2[0,4],mka0_comp2[0,5],
+                 color='darkorange',fmt='o')
+    try:
+      for a in self.phys_point:
+        print("%f +/- %f" %(a[1,0],a[1,1]))
+      l3,a,b = plt.errorbar(self.phys_point[:,0,0],self.phys_point[:,1,0],self.phys_point[:,1,1], fmt='d', color='darkorange', label='Physical Point')
+    except:
+      print("%f +/- %f" %(self.phys_point[1,0],self.phys_point[1,1]))
+      l3,a,b = plt.errorbar(self.phys_point[0,0],self.phys_point[1,0],self.phys_point[1,1], fmt='d', color='darkorange')
+      pass
+    # Collect legends
+    phys_pt.append([l1,l2,l3])
+    #limits mka0
+    plt.xlim(0,0.52)
+    plt.ylim(-0.65,-0.28)
+    #plt.vlines(self.phys_point[0,0],y_lim[0],y_lim[1],color="k",label=label[3])
+    loc=None
+    if loc==None:
+      legend1=plt.legend(phys_pt[0],[r'NPLQCD $(M_K/f_K)^2$',
+              r'PACS-CS $(M_K/f_K)^2$','ETMC'], title='Extrapolated',
+              numpoints=1, ncol=1, fontsize=12,loc='lower left')
+      plt.legend(loc='best',numpoints=1,ncol=2,fontsize=12)
+      plt.gca().add_artist(legend1)
+    else:
+      legend1=plt.legend(phys_pt[0],ncol=1,fontsize=12,loc='lower left')
+      plt.legend(loc=loc,numpoints=1,ncol=2,fontsize=12)
+      plt.gca().add_artist(legend1)
+    plt.title('Comparison')
+    plt.ylabel(label[1])
+    plt.xlabel(label[0])
+    pfit.savefig()
+    pfit.close()
+    plt.clf()
+    
   def plot(self,x_data,y_data,label,xcut=False,ens=None,plotfunc=None,
-           savedir=None,loc=None,suffix=None,dim=0):
+           savedir=None,loc=None,suffix=None,dim=0,pfit=None):
     """Plot the chiral analysis data and the fitted function
        for the fitfunction the arguments are retrieved from the analysis object 
     Parameters
@@ -716,26 +874,37 @@ class ChirAna(object):
     ens : label for the ensemble
     plotfunc : The function used for plotting 
     """
-    x_plot,y_plot = self.get_data_plot(dim=dim)
+    x_plot,y_plot = self.get_data_plot(dim=dim,mev=False)
     print("\nData used for plot: ")
     print("x-data:")
     print(x_plot)
     print("y-data")
     print(y_plot)
-    if savedir is not None:
-      path = savedir
+    if self.combined is False:
+        if savedir is not None:
+          path = savedir
+        else:
+          path = "./plots2/pdf"
+        if xcut:
+          if suffix is not None:
+            pfit = PdfPages(path+"/%s_%s_xcut_%d.pdf" % (self.proc_id,suffix,xcut))
+          else:
+            pfit = PdfPages(path+"/%s_xcut_%d.pdf" % (self.proc_id,xcut))
+        else:
+          if suffix is not None:
+            pfit = PdfPages(path+"/%s_%s_%d.pdf" % (self.proc_id,suffix))
+          else:
+            pfit = PdfPages(path+"/%s.pdf" % (self.proc_id))
+
     else:
-      path = "./plots2/pdf"
-    if xcut:
-      if suffix is not None:
-        pfit = PdfPages(path+"/%s_%s_xcut_%d.pdf" % (self.proc_id,suffix,xcut))
-      else:
-        pfit = PdfPages(path+"/%s_xcut_%d.pdf" % (self.proc_id,xcut))
-    else:
-      if suffix is not None:
-        pfit = PdfPages(path+"/%s_%s.pdf" % (self.proc_id,suffix))
-      else:
-        pfit = PdfPages(path+"/%s.pdf" % self.proc_id)
+        if savedir is not None:
+          path = savedir
+        else:
+          path = "./plots2/pdf"
+        if suffix is not None:
+          pfit = PdfPages(path+"/%s_%s.pdf" % (self.proc_id,suffix))
+        else:
+          pfit = PdfPages(path+"/%s.pdf" % self.proc_id)
 
     x = np.linspace(0,np.amax(x_plot),1000)
     #print("arguments for plotting are:")
@@ -771,20 +940,31 @@ class ChirAna(object):
         arg_shape = self.fitres.data[0].shape
         args = np.column_stack((self.fitres.data[0][:,0],self.fitres.data[0][:,3],
                          self.fitres.data[0][:,2])).reshape(arg_shape[0],3,arg_shape[-1])
-      plot_function(plotfunc,x_plot[a_range[0]:a_range[1],:,0],
-                    args[:,:,0],label=r'NLO-fit A',ploterror=True,col='red')
-      chut.plot_ensemble(x_plot[:,0],y_plot,'^vspho','red',ens['A'],
+
+      plot_function(plotfunc,x_plot[a_range[0]:a_range[1],:,0],args[:,:,0],
+                    #args[:,:,0],label=r'NLO-fit A',ploterror=True,col='red')
+                    label=None,ploterror=True,fmt='r--', col='red')
+      #chut.plot_ensemble(x_plot[:,0],y_plot,'^vspho','red',ens['A'],
+      chut.plot_ensemble(x_plot[:,0],y_plot,'^','red',[r'$a=0.0885$fm',],
                          xid = a_range,match=self.match)
 
-      plot_function(plotfunc,x_plot[b_range[0]:b_range[1],:,0],
-                    args[:,:,0],label=r'NLO-fit B',ploterror=True,col='blue')
-      chut.plot_ensemble(x_plot[:,0],y_plot,'^vso','blue',ens['B'],
+      plot_function(plotfunc,x_plot[b_range[0]:b_range[1],:,0],args[:,:,0],
+                    #args[:,:,0],label=r'NLO-fit B',ploterror=True,col='blue')
+                    label=None,ploterror=True,fmt='b:', col='blue')
+      #chut.plot_ensemble(x_plot[:,0],y_plot,'vso','blue',ens['B'],
+      chut.plot_ensemble(x_plot[:,0],y_plot,'v','blue',[r'$a=0.0815$fm',],
                          xid = b_range,match=self.match)
-      plot_function(plotfunc,x_plot[d_range[0]:d_range[1],:,0],
-                    args[:,:,0],label=r'NLO-fit D',ploterror=True,col='green')
-      chut.plot_ensemble(x_plot[:,0],y_plot,'^','green',ens['D'],
+      plot_function(plotfunc,x_plot[d_range[0]:d_range[1],:,0],args[:,:,0],
+                    #args[:,:,0],label=r'NLO-fit D',ploterror=True,col='green')
+                    label=None,ploterror=True,fmt='g-.', col='green')
+      #chut.plot_ensemble(x_plot[:,0],y_plot,'^','green',ens['D'],
+      chut.plot_ensemble(x_plot[:,0],y_plot,'o','green',[r'$a=0.0619$fm',],
                            xid = d_range,match=self.match)
-
+      # Plot the continuum curve
+      x_cont = np.linspace(0,50,1000)
+      cont_curve = lambda p,x : p[0]*x+p[2]
+      plot_function(cont_curve, x_cont,args[:,:,0],fmt='k--',
+                    label='continuum',ploterror=True)
     if xcut:
       y = plotfunc(args[0,:,0], xcut)
       plt.vlines(xcut, 0.95*y, 1.05*y, colors="k", label="")
@@ -811,13 +991,18 @@ class ChirAna(object):
     ##plt.xlim(x_lim[0],x_lim[1])
     #plt.xlim(0,x_lim[1])
     #plt.ylim(y_lim[0],y_lim[1])
-    plt.xlim(0,50)
-    plt.ylim(1.15,2.3)
+    # limits r0mk_sq
+    #plt.xlim(0,0.1)
+    #plt.ylim(1.15,2.5)
+    #limits mka0
+    plt.xlim(0,1.7)
+    #plt.xlim(0,2.5e5)
+    plt.ylim(-0.5,-0.28)
     #plt.vlines(self.phys_point[0,0],y_lim[0],y_lim[1],color="k",label=label[3])
     if loc==None:
-      plt.legend(loc='best',numpoints=1,ncol=2,fontsize=12)
+      plt.legend(loc='best',numpoints=1,ncol=1,fontsize=12)
     else:
-      plt.legend(loc=loc,numpoints=1,ncol=2,fontsize=12)
+      plt.legend(loc=loc,numpoints=1,ncol=1,fontsize=12)
     plt.title(label[2])
     plt.ylabel(label[1])
     plt.xlabel(label[0])

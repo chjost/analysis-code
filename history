@@ -1,0 +1,123 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+
+###############################################################################
+# Analyse the history in config number or sample number
+################################################################################
+
+import sys
+import numpy as np
+import analysis2 as ana
+
+def main():
+
+###############################################################################
+# parse the input file and setup parameters
+###############################################################################
+    if len(sys.argv) < 2:
+        ens = ana.LatticeEnsemble.parse("kk_I1_TP0_A40.24.ini")
+    else:
+        ens = ana.LatticeEnsemble.parse(sys.argv[1])
+
+    # read settings
+    readsingledata = False
+    readsinglefit = False
+    plotsingle = True
+    readtwodata = False
+    readtwofit = False
+    plottwo = True
+
+    # what to analyse ('corr','ratio', 'scat_length')
+    obs = 'corr'
+    # choose between 'nboot' and 'cnfg'
+    autotime = 'cnfg'
+
+    # get data from input file
+    prefix = ens.get_data("path")
+    print prefix
+    lat = ens.name()
+    nboot = ens.get_data("nboot")
+    datadir = ens.get_data("datadir")
+    plotdir = ens.get_data("plotdir")
+    gmax = ens.get_data("gmax")
+    d2 = ens.get_data("d2")
+    lat = ens.get_data("name")
+    strange = ens.get_data("strangea")
+    try:
+        debug = ens.get_data("debug")
+    except KeyError:
+        debug = 0
+    T = ens.T()
+    T2 = ens.T2()
+    addT = np.ones((nboot,)) * T
+    addT2 = np.ones((nboot,)) * T2
+
+###############################################################################
+# Begin calculation
+###############################################################################
+#    for e in lat:
+    for s in strange:
+      if autotime is 'nboot':
+          print("Using Bootstrabsamples as autocorrelation time")
+          if obs is 'dE':
+              print("bootstrap-history of delta E")
+              ratiofit = ana.FitResult.read("%s/%s/fit_kk_TP%d_%s.npz" % (datadir, s, d2, lat))
+              plotter = ana.LatticePlot("%s/dE_boot_hist.pdf" % plotdir) 
+              label=[r'$\delta E$ Bootstrap History', 'nsambple', r'$\delta E$','fitres']
+              fr=ratiofit.data[0].shape[-1]
+              for f in range(fr/2):
+                label=[r'$\delta E$ Bootstrap History', 'nsambple', r'$\delta E$','fitrange %d'%f]
+                plotter.history(ratiofit,label,boot=True,par=1,fr=f)
+              del plotter
+          elif obs is 'scat_length':
+              print("bootstrap-history of scattering length")
+              a_kk = ana.FitResult.read("%s/%s/scat_len_TP%d_%s.npz" % (datadir, s, d2, lat))
+              fr=a_kk.data[0].shape[-1]
+              plotter = ana.LatticePlot("%s/%s/a0_boot_hist.pdf" % (plotdir, s)) 
+              for f in range(fr/2):
+                label=['Scattering length Bootstrap History', 'cnfg', r'$a_{KK}$','fitrange %d' %f]
+                plotter.history(a_kk,label,boot=True,par=0, fr=f)
+              del plotter
+      
+      elif autotime is 'cnfg':
+          ts = 0
+          print("Using Confuguration number as autocorrelation time")
+          if obs is 'ratio':
+              print("build ratio:")
+              files = ["%s/%s/k_charged_p%d.dat" % (datadir, s,d) for d in range(1)]
+              two_pt_corr = ana.Correlators(files, (1,4), matrix=False)
+              files = ["%s/$s/kk_charged_A1_TP%d_%d%d.dat" % (datadir, s, d2, i, j) for i in range(gmax+1) for j in range(gmax+1)]
+              four_pt_corr = ana.Correlators(files, (1,4), matrix=False)
+              ratio = four_pt_corr.ratio(two_pt_corr, ratio=2)
+              plotter = ana.LatticePlot("%s/%s/ratio_hist_ts%d.pdf" % (plotdir, s, ts)) 
+              label=['Ratio Configuration History', 'cnfg', r'$R(%d+0.5)$' % ts,'Ratio']
+              plotter.history(ratio,label,ts,boot=False)
+              del plotter
+          
+          elif obs is 'corr':
+              #files = ["%s/%s/%s/k_charged_p%d.dat" % (datadir,e, s,d) for d in range(1)]
+              files = ["%s/%s/k_charged_p%d.dat" % (datadir,s,d) for d in range(1)]
+              #files = "%s/k_charged_p0.dat" % datadir
+              two_pt_corr = ana.Correlators(files ,matrix=False, conf_col=3)
+              to_omit, to_omit_bool = two_pt_corr.omit_iqr()
+              two_pt_corr.save("%s/save_try" % datadir)
+              test_pt_corr=ana.Correlators.read("%s/save_try.npz" % datadir)
+              files = ["%s/%s/kk_charged_A1_TP%d_%d%d.dat" % (datadir, s, d2, i, j) for i in range(gmax+1) for j in range(gmax+1)]
+              four_pt_corr = ana.Correlators(files, matrix=False, conf_col=3)
+              test_omit, ommited_bool = four_pt_corr.omit_iqr(in_iqr=to_omit_bool)
+              print(four_pt_corr.data[:,25]/two_pt_corr.data[:,25])
+              plotter = ana.LatticePlot("%s/%s/corr_hist_ts%d.pdf" % (plotdir, s, ts)) 
+              label=['2pt Configuration History', 'cnfg', r'$C(%d)$' % ts,r'$C_2$']
+              plotter.history(two_pt_corr,label,ts,boot=False)
+              label=['4pt Configuration History', 'cnfg', r'$C(%d)$' % ts,r'$C_4$']
+              plotter.history(four_pt_corr,label,ts,boot=False)
+              del plotter
+          else:
+              print("Not possible")
+
+    # build ratio
+if __name__ == '__main__':
+    try:
+        print("starting")
+        main()
+    except KeyboardInterrupt:
+        pass

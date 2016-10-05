@@ -394,7 +394,6 @@ class LatticePlot(object):
         start : time index where to start the calculation of acf
         num : which entry of the correlator object to take
         """
-
         correlogram_raw = acf(correlator.data,start=start)
         _mean,_std = compute_error(correlogram_raw,axis=0)
         print("Data shapes in correlogram:")
@@ -409,8 +408,7 @@ class LatticePlot(object):
         plt.clf()
 
 
-
-    def qq_plot(self, fitresult, label, par=0, corr=0):
+    def qq_plot(self, fitresult, label, par=0, corr=0, fitrange=False):
         """A quantile-quantile-plot for Fitresults
 
         Calculate the theoretical quantiles (gaussian with mean and standard
@@ -422,31 +420,67 @@ class LatticePlot(object):
         fitresult : FitResult object
         label : str title of plot
         par : int, which parameter of fit result should be taken
+        fitrange : bool, if True every fitrange is plotted separately
         """
+        if fitrange is False:
+            if fitresult.error is None:
+              fitresult.calc_error()
+            q_meas = fitresult.error[par][corr][0]
+            _dummy,_std = compute_error(q_meas)
+            print("Gaussian input:")
+            print("mean : %.4f" %_dummy)
+            print("stdev : %.4f" % _std)
+            # draw gaussian distributed data with same size
+            q_theo = draw_gauss_distributed(q_meas[0],_std ,(q_meas.shape[0],))
+            # Lambda function for bisection
+            bisec = lambda p,x : x
+            plot_data(np.sort(q_theo),np.sort(q_meas),None,label[1],
+                fmt='o',markerfill ='none')
+            plot_function(bisec,np.sort(q_theo),None,'',fmt='r')
+            #plt.legend(loc='best')
+            plt.locator_params(axis='x',nbins=4)
+            plt.locator_params(axis='y',nbins=4)
+            plt.title(label[0])
+            plt.xlabel(r'theoretical quantiles $N_{\bar{\mu},\Delta\mu}$')
+            plt.ylabel(r'measured quantiles')
+            plt.axes().set_aspect('equal')
+            self.save()
+            plt.clf()
 
-        if fitresult.error is None:
-          fitresult.calc_error()
-        q_meas = fitresult.error[par][corr][0]
-        _dummy,_std = compute_error(q_meas)
-        print("Gaussian input:")
-        print("mean : %.4f" %_dummy)
-        print("stdev : %.4f" % _std)
-        # draw gaussian distributed data with same size
-        q_theo = draw_gauss_distributed(q_meas[0],_std ,(q_meas.shape[0],))
-        # Lambda function for bisection
-        bisec = lambda p,x : x
-        plot_data(np.sort(q_theo),np.sort(q_meas),None,label[1],
-            fmt='o',markerfill ='none')
-        plot_function(bisec,np.sort(q_theo),None,'',fmt='r')
-        #plt.legend(loc='best')
-        plt.locator_params(axis='x',nbins=4)
-        plt.locator_params(axis='y',nbins=4)
-        plt.title(label[0])
-        plt.xlabel(r'theoretical quantiles $N_{\bar{\mu},\Delta\mu}$')
-        plt.ylabel(r'measured quantiles')
-        plt.axes().set_aspect('equal')
-        self.save()
-        plt.clf()
+        else:
+            
+            # set up plot
+            plt.title(label[0])
+            plt.xlabel(r'theoretical quantiles $N_{\bar{\mu},\Delta\mu}$')
+            plt.ylabel(r'measured quantiles')
+            print("QQ-plot for multiple fitranges")
+            # loop over fitranges (if shape is correct)
+            #if len(fitresult.fit_ranges_shape) == 1:
+            shape = fitresult.fit_ranges_shape
+            for r in range(shape[1][0]):
+                plt.clf()
+                #print("Fit range index: %d" %r)
+                q_meas = fitresult.data[corr][:,par,0,r]
+                #print("plotting fit ranges %s" % str(r))
+                _dummy, _std = compute_error(fitresult.data[corr][:,:,0,r])
+                #print ("Result from compute error:")
+                #print(_dummy,_std)
+                #print("Gaussian input: mean : %.4f; stdev: %.4f"
+                #    %(_dummy[par],_std[par]))
+                # draw gaussian distributed data with same size
+                q_theo = draw_gauss_distributed(_dummy[par],_std[par] ,(fitresult.data[0].shape[0],))
+                # Lambda function for bisection
+                bisec = lambda p,x : x
+                plot_data(np.sort(q_theo),np.sort(q_meas),None,fitresult.fit_ranges[0,r],
+                    fmt='o',markerfill ='none')
+                plot_function(bisec,np.sort(q_theo),None,'',fmt='r')
+                plt.legend(loc='lower right')
+                plt.locator_params(axis='x',nbins=4)
+                plt.locator_params(axis='y',nbins=4)
+                plt.axes().set_aspect('equal')
+                self.save()
+            #
+            #self.save()
 
 
     def plot_func(self, func, args, interval, label, fmt="k", col="black"):
@@ -521,17 +555,34 @@ class LatticePlot(object):
         self.ylim=ylim
         self.grid=grid
 
-    def cov_plot(self, data, label, cut=False, inverse=False, norm=True):
+    def cov_plot(self, data, label, cut=False, inverse=False, norm=True,corr=0):
         """ This function is used as a wrapper to plot_covariance
         """
         print(label)
-        self.plot_covariance(data, label, cut=cut, inverse=inverse, norm=norm)
+        if len(data.shape) == 3:
+          _data = data.data.squeeze().T
+        else:
+          _data = data.data.T
+        self.plot_covariance(_data, label, cut=cut, inverse=inverse, norm=norm)
 
-    def corr_plot(self, data, label,inverse=False):
+    def corr_plot(self, data, label,inverse=False,corr=0,tstart=0):
         """ This function is used as a wrapper to plot_covariance
         """
-        print(label)
-        self.plot_correlation(data, label, inverse=inverse)
+        print("Data shape handed to corr_plot")
+        print(data.data.shape)
+        _data = data.data
+        if tstart > 0:
+          _data = _data[:,tstart:]
+          print("Modified data to shape")
+          print(_data.shape)
+        if len(data.data.shape) == 3:
+          print("squeezing array")
+          _data = _data.squeeze().T
+        else:
+          print("transpose array")
+          _data = _data.T
+        self.plot_correlation(_data, label, inverse=inverse)
+
     
     def plot_correlation(self, data, label, inverse=False):
         """Plots the covariance matrix of given data
@@ -540,6 +591,8 @@ class LatticePlot(object):
         ----------
         data : The data to plot the covariance matrix from
         """
+        print("data shape handed to plot_correlation")
+        print(data.shape)
         cov = np.corrcoef(data)
         print cov.shape
         if inverse is True:
@@ -560,6 +613,7 @@ class LatticePlot(object):
         ----------
         data : The data to plot the covariance matrix from
         """
+        print data.shape
         cov1 = np.cov(data)
         print cov1.shape
         cov = np.empty(cov1.shape)
@@ -585,7 +639,7 @@ class LatticePlot(object):
 
         if inverse is True:
           cov = np.linalg.inv(cov)
-        print(np.linalg.cond(cov))
+        print(cov)
         self.set_title(label[0],label[1])
         self.set_env(xlim=[0,cov.shape[0]],ylim = [0,cov.shape[0]])
         plt.pcolor(cov, cmap=matplotlib.cm.bwr, vmin=np.amin(cov),
@@ -593,7 +647,44 @@ class LatticePlot(object):
         plt.colorbar()
         self.save()
         plt.clf()
-        
+
+    def delete(self):
+      if self.join is True:
+        self.save()
+      del self
+#TODO: code doubling
+    def plot_single_line(self,x,y,label,col):
+      """plot horizontal and vertical lines at the specific points, labeled with
+      the specific values
+    
+      Parameters
+      ----------
+      x,y : in general multidimensional ndarrays 
+      """
+      #print("line properties")
+      #print(x.shape)
+      #print(y)
+      x_val=np.zeros(2)
+      y_val=np.zeros(2)
+      try:
+         x_val[0],x_val[1] = compute_error(x)
+      except:
+         x_val[0] = x
+         x_val[1] = 0
+      try:
+         y_val[0],y_val[1] = compute_error(y)
+      except:
+         y_val[0] = y
+         y_val[1] = 0
+      #print(x_val)
+      #print(y_val)
+      l = plt.axhline(y=y_val[0],ls='solid',color=col)
+      l = plt.axvline(x=x_val[0],ls='solid',color=col)
+      plt.errorbar(x_val[0],y_val[0],y_val[1],x_val[1],fmt =
+          #'d',color=col,label=r'%2.4e,%2.4e' % (x_val[0],y_val[0]) )
+          'd',color=col,label=label)
+      plt.legend()
+
 def plot_single_line(x,y,label,col):
   """plot horizontal and vertical lines at the specific points, labeled with
   the specific values
@@ -619,10 +710,14 @@ def plot_single_line(x,y,label,col):
      y_val[1] = 0
   #print(x_val)
   #print(y_val)
-  l = plt.axhline(y=y_val[0],ls='solid',color=col)
-  l = plt.axvline(x=x_val[0],ls='solid',color=col)
+  #l = plt.axhline(y=y_val[0],ls='dashed',color=col)
+  #l = plt.axvline(x=x_val[0],ls='dashed',color=col)
+  # Public use
   plt.errorbar(x_val[0],y_val[0],y_val[1],x_val[1],fmt =
-      'd',color=col,label=r'%2.4e,%2.4e' % (x_val[0],y_val[0]) )
+      'd',color=col,label=r'fixed data')
+  # Plot for internal use
+  #plt.errorbar(x_val[0],y_val[0],y_val[1],x_val[1],fmt =
+  #    'd',color=col,label=r'%2.4e,%2.4e' % (x_val[0],y_val[0]) )
 
 def plot_lines(x,y,label,proc=None):
   """plot horizontal and vertical lines at the specific points, labeled with
@@ -647,5 +742,6 @@ def plot_lines(x,y,label,proc=None):
       plot_single_line(x[1],y,label,col='r')
       plot_single_line(x[2],y,label,col='b')
 
+
 if __name__ == "__main__":
-    pass
+  pass

@@ -45,7 +45,8 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
     add : ndarray, optional
         Additional arguments to the fit function.
     plotrange : list of ints, optional
-        The lower and upper range of the plot.
+       The lower and upper range of the plot.
+
     ploterror : bool, optional
         Plot the error of the fit function.
     """
@@ -78,8 +79,8 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
                 print("bounds at index %d are:" %i)
                 print(X[0,i],X[-1,i])
                 x1[:,i] = np.linspace(X[0,i],X[-1,i], 1000)
-                if X.shape[0] == 1:
-                  x1[:,0] = np.linspace(0,50,1000)
+                #if X.shape[0] == 1:
+                x1[:,0] = np.linspace(0,50,1000)
 
             #except:
             #  print RuntimeWarning("Data not truly two dimensional")

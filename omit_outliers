@@ -1,0 +1,106 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+
+###############################################################################
+# Remove exceptional configurations without decorrelation in amu_s
+################################################################################
+
+import sys
+import numpy as np
+import analysis2 as ana
+
+def main():
+
+###############################################################################
+# parse the input file and setup parameters
+###############################################################################
+    if len(sys.argv) < 2:
+        ens = ana.LatticeEnsemble.parse("kk_I1_TP0_A40.24.ini")
+    else:
+        ens = ana.LatticeEnsemble.parse(sys.argv[1])
+    # get data from input file
+    #prefix = ens.get_data("path")
+    #print prefix
+    lat = ens.name()
+    #nboot = ens.get_data("nboot")
+    datadir = ens.get_data("datadir")
+    plotdir = ens.get_data("plotdir")
+    #gmax = ens.get_data("gmax")
+    #d2 = ens.get_data("d2")
+    strange = ens.get_data("strangea")
+    try:
+        debug = ens.get_data("debug")
+    except KeyError:
+        debug = 0
+################################################################################
+# Read in correlation functions and remove outliers based on 0th timeslice
+################################################################################
+    # First gather a list of all configurations that are affected by outliers
+    # (crosscheck with four point functions)
+    # list for all config indices to omit.
+    omit_all = []
+
+    ############################ Get Conf numbers ##############################
+    for i,s in enumerate(strange):
+        # for index determination reading real part column is enough
+        files = "%s/%s/k_charged_p0_outlier.dat" % (datadir, s)
+        two_pt_corr = ana.Correlators(files, column=(1,), matrix=False,conf_col=3)
+        files = "%s/%s/kk_charged_A1_TP0_00_outlier.dat" % (datadir,s) 
+        four_pt_corr = ana.Correlators(files,column=(1,), matrix=False,conf_col=3)
+
+        # plot history before omission
+        ts=3
+        plotter = ana.LatticePlot("%s/%s/outlier_corr_hist_ts%d.pdf" % (plotdir,s,ts))
+        print("Plotting to file %s/%s/outlier_corr_hist_ts%d.pdf" % (plotdir,s,ts))
+        label=['2pt Configuration History', 'cnfg', r'$C(%d)$' % ts,r'$C_2$']
+        plotter.history(two_pt_corr,label,ts,boot=False)
+        label=['4pt Configuration History', 'cnfg', r'$C(%d)$' % ts,r'$C_4$']
+        plotter.history(four_pt_corr,label,ts,boot=False)
+        del plotter
+
+        four_pt_cut, left_out_four = four_pt_corr.omit_iqr(ts=ts)
+        two_pt_cut, left_out_two = two_pt_corr.omit_iqr(ts=ts)
+
+        # for first strange quark mass initialize omit all
+        if i == 0:
+          omit_all = np.logical_and(left_out_four,left_out_two)
+        # for rest just update
+        else:
+          _tmp_omit = np.logical_and(left_out_four,left_out_two)
+          omit_all = np.logical_and(omit_all,_tmp_omit)
+
+    ########################### Clean Up ######################################
+    for s in strange:
+        # be sure to omit from both columns, otherwise array shapes are not
+        # equal for saving
+        files = "%s/%s/k_charged_p0_outlier.dat" % (datadir, s)
+        two_pt_corr = ana.Correlators(files,column=(1,2), matrix=False,conf_col=3)
+        files = "%s/%s/kk_charged_A1_TP0_00_outlier.dat" % (datadir,s) 
+        four_pt_corr = ana.Correlators(files,column=(1,2), matrix=False,conf_col=3)
+        two_pt_corr.omit_iqr(omit_all)
+        four_pt_corr.omit_iqr(omit_all)
+        print(four_pt_corr.data.shape)
+        plotter = ana.LatticePlot("%s/%s/clean_corr_hist_ts%d.pdf" % (plotdir,s,ts)) 
+        label=['2pt Configuration History', 'cnfg', r'$C(%d)$' % ts,r'$C_2$']
+        plotter.history(two_pt_corr,label,ts,boot=False)
+
+        # plot history after omission
+        ts=0
+        label=['2pt Configuration History', 'cnfg', r'$C(%d)$' % ts,r'$C_2$']
+        plotter.history(two_pt_corr,label,ts,boot=False)
+        label=['4pt Configuration History', 'cnfg', r'$C(%d)$' % ts,r'$C_4$']
+        plotter.history(four_pt_corr,label,ts,boot=False)
+
+        # Save clean correlators (OVERWRITES OLD DATA)
+        print(two_pt_corr.data.shape)
+        filesave = "%s/%s/k_charged_p0.dat" % (datadir, s)
+        two_pt_corr.save(filesave,asascii=True)
+        filesave = "%s/%s/kk_charged_A1_TP0_00.dat" % (datadir,s) 
+        four_pt_corr.save(filesave,asascii=True)
+        del plotter
+
+if __name__ == '__main__':
+    try:
+        print("starting")
+        main()
+    except KeyboardInterrupt:
+        pass

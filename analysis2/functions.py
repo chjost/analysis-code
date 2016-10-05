@@ -63,6 +63,15 @@ def compute_eff_mass(data, usecosh=True):
             for t in range(1, len(row)-1):
                 mass[b,t-1] = (row[t-1] + row[t+1])/(2.*row[t])
         mass = np.arccosh(mass)
+    elif usecosh == False:
+        # creating mass array from data array
+        mass = np.zeros_like(data[:,:-2])
+        for b, row in enumerate(data):
+            for t in range(1, len(row)-1):
+                mass[b,t-1] = (row[t-1] + row[t+1])/(2.*row[t])
+        mass = np.arccosh(mass)
+        
+        
     else:
         # creating mass array from data array
         mass = np.zeros_like(data[:,:-1])
@@ -154,6 +163,57 @@ def func_two_corr(p, t, o):
         The result.
     """
     return p[0]*np.cosh(p[1]*(t-(o[1]/2.))) + p[2]*np.exp(-o[0]*o[1])
+
+def func_two_corr_therm(p,t,T):
+    """ Function describing four point correlation function with temporally
+    constant thermal states
+
+    Parameters
+    ----------
+    p : sequence of float
+        The parameters of the function
+    t : float
+        The variable of the function
+    T : int 
+        the time extent of the lattice
+    Returns
+    -------
+    """
+    #return p[0]*(np.exp(-p[1]*(t)) + np.exp(-p[1]*(T-t))) + p[2]
+    return p[0]*np.cosh(p[1]*(0.5*T-t)) + p[2]
+
+def func_two_corr_shifted(p, t, T):
+    """A function which describes the shifted four point correlation
+    function C(t+1) - C(t)
+
+    The function is given by 2.*p[0]*(np.cosh(p[1]*(T2-(t+1))) -
+    np.cosh(p[0]*(T2-t))), where
+    * p0 is the amplitude
+    * p1 is the energy
+    * p2 is a constant in time contribution
+    * t is the time,
+    * T2 is half the lattice time extent
+
+    Parameters
+    ----------
+    p : sequence of float
+        The parameters of the function.
+    t : float
+        The variable of the function.
+    T2 : 0.5 * L_T of the lattice
+
+    Returns
+    -------
+    float
+        The result.
+    """
+    #print("Using lattice time extent %f timeslices " % T)
+    #return -p[0]*np.exp(-p[1]*(t+T+1.)) * (-1.+np.exp(p[1])) * \
+    #                     (np.exp(p[1]+2.*p[1]*t)-np.exp(p[1]*T))
+    return 0.5*p[0]*p[0]*(np.exp(-(t+0.5)*p[1]) - np.exp(-(T-t-0.5)*p[1]))
+    # Alternative expression
+    #return 2*p[0]*np.sinh(p[1]*(0.5*T-t-0.5))
+    #return 2.*p[0]*(np.cosh(p[1]*(T2-(t+1))) - np.cosh(p[1]*(T2-t)))
 
 def func_ratio(p, t, o):
     """A function which describes the ratio of a four and a two point
@@ -273,7 +333,7 @@ def simple_difference(d1, d2=None):
 
     return difference
     
-def compute_derivative_back(data):
+def compute_derivative_back(data,a=1):
     """Computes the backward derivative of a correlation function.
     as used for example in the ratios
 
@@ -298,13 +358,18 @@ def compute_derivative_back(data):
     # creating derivative array from data array
     dshape = list(data.shape)
     print dshape
-    dshape[0] = data.shape[1] - 1
+    dshape[1] = data.shape[1] - a
     derv = np.zeros(dshape, dtype=float)
     # computing the derivative
     for b, row in enumerate(data):
-        for t in range(len(row)-1):
-            derv[b,t] = row[t] - row[t+1]
+        for t in range(len(row)-a):
+            derv[b,t] = row[t] - row[t+a]
     return derv
+
+def multiply(data,fac):
+    """Multiply correlator by a factor
+    """
+    return fac*data
 
 def compute_square(data):
     """ Compute the squared correlator

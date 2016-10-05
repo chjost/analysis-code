@@ -66,7 +66,11 @@ def main():
     print files
     if readtwodata == False:
         kkcorr = ana.Correlators(files, matrix=False, conf_col=3)
+        kkshifted = kkcorr.back_derivative()
+        kkshifted.bootstrap(nboot)
+        kkshifted.reflect(kind="point")
         kkcorr.sym_and_boot(nboot)
+        #kkcorr.bootstrap(nboot)
         #kkcorr.symmetrize(nboot)
         ratio = kkcorr.ratio(kcorr, ratio=2 )
         kkcorr.save("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
@@ -74,35 +78,47 @@ def main():
         kkcorr = ana.Correlators.read("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
         ratio = kkcorr.ratio(kcorr, ratio=2 )
 
-    #compute effective masses after ratio has been build
-    kcorr.mass()
-    kkcorr.mass()
 
     #plot effective masses of kcorr and kkcorr
     if plotsingle:
         print("plotting")
-        plotter = ana.LatticePlot("%s/mass_k_TP%d_%s.pdf" % (plotdir, d2, lat))
+        plotter = ana.LatticePlot("%s/corr_k_TP%d_%s.pdf" % (plotdir, d2, lat))
+        plotter.set_env(ylog=True)
+        label = ["C_K", "t", "C_2(t)", "data"]
+        plotter.plot(kcorr, label )
+        plotter.new_file("%s/mass_k_TP%d_%s.pdf" % (plotdir, d2, lat))
         plotter.set_env(ylog=False)
         label = ["Mass Kaon", "t", "m_eff(t)", "data"]
+        kcorr.mass()
         plotter.plot(kcorr, label )
         del plotter
 
     if plottwo:
         print("plotting")
-        plotter = ana.LatticePlot("%s/ratio_kk_TP%d_%s.pdf" % (plotdir, d2, lat))
-        plotter.set_env(ylog=False)
-        label = ["Ratio", "t", "R(t)", "data"]
+        plotter = ana.LatticePlot("%s/corr_kk_shifted_TP%d_%s.pdf" % (plotdir, d2, lat))
+        plotter.set_env(ylog=True)
+        label = [r"C_{KK}(t)-C_{KK}(t+1)", "t", "C_4(t)", "data"]
         print "plotter set up"
-        plotter.plot(ratio, label, add=addT, xshift=0.5, debug=debug)
+        plotter.plot(kkshifted, label, add=addT, debug=debug)
+        plotter.new_file("%s/corr_kk_TP%d_%s.pdf" % (plotdir, d2, lat))
+        label = [r"C_{KK}(t)", "t", "C_4(t)", "data"]
+        plotter.plot(kkcorr, label, add=addT, debug=debug)
         print "open new file for effective mass"
         plotter.new_file("%s/mass_kk_TP%d_%s.pdf" % (plotdir, d2, lat))
         plotter.set_env(ylog=False)
-        label = ["Mass 4pt-function", "$t$", "$m_{eff,KK}$","data"]
+        label = [r"Effective Mass $C_4$", "$t$", "$m_{eff,KK}$","data"]
+        kkcorr.mass()
         plotter.plot(kkcorr,label) 
+        plotter.new_file("%s/mass_kk_shift_TP%d_%s.pdf" % (plotdir, d2, lat))
+        plotter.set_env(ylog=False)
+        label = [r"Effective Mass $C_4(t)-C_4(t+1)$", "$t$", "$m_{eff,KK}$","data"]
+        kkshifted.mass(usecosh=False)
+        plotter.plot(kkshifted,label) 
+        print "open new file for ratio"
+        plotter.new_file("%s/ratio_TP%d_%s.pdf" % (plotdir, d2, lat))
+        label = [r"Ratio", "t", "R(t)", "data"]
+        plotter.plot(ratio,label,add=addT,xshift=0.5,debug=debug)
         del plotter
-
-
-
 
 if __name__ == '__main__':
     try:

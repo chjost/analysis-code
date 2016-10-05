@@ -84,6 +84,39 @@ def sym_and_boot(source, nbsamples = 1000):
     boot[:,-1] = bootstrap(source[:,int(_T/2)], nbsamples)
     return boot
 
+
+#TODO: Merge with sym at some point
+def asym(source):
+    """antisymmetrizes correlation functions.
+
+    Antisymmetrizes the correlation functions given in source. The data is
+    assumed to be a numpy array with at least two dimensions. The
+    antisymmetrization is done about the second axis.
+    Parameters
+    ----------
+    source : ndarray
+        The data to antisymmetrize.
+
+    Returns
+    -------
+    symm : ndarray
+        The antisymmetrized data
+    """
+    _rshape = list(source.shape)
+    _T = _rshape[1]
+    _rshape[1] = int(_T/2)+1
+
+    # initialize symmetrized data to 0.
+    asymm = np.zeros(_rshape, dtype=float)
+    # the first timeslice is not symmetrized
+    asymm[:,0] = source[:,0]
+    for _t in range(1, int(_T/2)):
+        # symmetrize the correlation function
+        asymm[:,_t] = (source[:,_t] - source[:,(_T - _t)]) / 2.
+    # the timeslice at t = T/2 is not symmetrized
+    asymm[:,-1] = source[:, int(_T/2)]
+    return asymm
+
 def sym(source):
     """Symmetrizes correlation functions.
 

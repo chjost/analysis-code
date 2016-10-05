@@ -141,13 +141,13 @@ def simple_ratio_subtract(d1, d2, d3, shift=1, dE=None, useall=False, p2=0,
     """
     # create array from dimensions of the data
     rshape = list(d1.shape)
-    rshape[1] -= 1
+    rshape[1] -= shift
     ratio = np.zeros(rshape)
     for _s in range(rshape[0]):
         for _t in range(rshape[1]):
             # calculate ratio
-            ratio[_s,_t] = (d1[_s,_t] - d1[_s,_t+1]) / ((d2[_s,_t]*d3[_s,_t]) -
-                           (d2[_s,_t+1]*d3[_s,_t+1]))
+            ratio[_s,_t] = (d1[_s,_t] - d1[_s,_t+shift]) / ((d2[_s,_t]*d3[_s,_t]) -
+                           (d2[_s,_t+shift]*d3[_s,_t+shift]))
     return ratio
 
 def ratio(d1, d2, d3, shift=1, dE=None, useall=False, p2=0, L=24, irep="A1"):

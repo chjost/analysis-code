@@ -64,9 +64,9 @@ def main():
             plotter = ana.LatticePlot("%s/corr_k_%s.pdf" % (plotdir, lat))
         plotter.set_env(ylog=True)
         label = ["single particle", "t", "C(t)", "kaon"]
-        plotter.plot(picorr, label, add=addT, rel=False, join=False, debug=debug)
-        label = ["single particle", "t", r"$\Delta(C(t))/C(t)$", "kaon"]
-        plotter.plot(picorr, label, add=addT, rel=True, join=False, debug=debug)
+        plotter.plot(picorr, label, add=addT, debug=debug)
+        #label = ["single particle", "t", r"$\Delta(C(t))/C(t)$", "kaon"]
+        #plotter.plot(picorr, label, add=addT, rel=True, join=False, debug=debug)
         if plothist:
             plotter.new_file("%s/hist_fit_k_%s.pdf" % (plotdir, lat))
             label = ["kaon energy", "E$_\k$/a", "E$_\k$"]
@@ -75,7 +75,8 @@ def main():
 
     # two particle correlator
     kkcorr = ana.Correlators.read("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
-    ratio = kkcorr.ratio(picorr, ratio=2 )
+    #ratio = kkcorr.ratio(picorr, ratio=2 )
+    ratio = kkcorr.diff()
     if plothist:
         fit_ratio = ana.LatticeFit(1, True)
         start_ratio = [3., 1.]
@@ -93,15 +94,15 @@ def main():
         if plothist:
             plotter = ana.LatticePlot("%s/fit_ratio_kk_TP%d_%s.pdf" % (plotdir, d2, lat))
         else:
-            plotter = ana.LatticePlot("%s/ratio_kk_TP%d_%s.pdf" % (plotdir, d2, lat))
+            plotter = ana.LatticePlot("%s/diff_kk_TP%d_%s.pdf" % (plotdir, d2, lat))
         plotter.set_env(ylog=False)
         label = ["Ratio", "t", "R(t)", "data"]
         print "plotter set up"
         plotter.plot(ratio, label, add=addT,
-            oldfitpar=1, xshift=0.5,rel=False, join=False, debug=debug)
-        label = ["Ratio", "t", r"$\Delta(R(t))/R(t)$", "data"]
-        plotter.plot(ratio, label, add=addT,
-            oldfitpar=1, xshift=0.5,rel=True, join=False, debug=debug)
+            oldfitpar=1, xshift=None,  debug=debug)
+        #label = ["Ratio", "t", r"$\Delta(R(t))/R(t)$", "data"]
+        #plotter.plot(ratio, label, add=addT,
+        #    oldfitpar=1, xshift=0.5,rel=True, join=False, debug=debug)
         if plothist:
             print "open new file for deltaE"
             plotter.new_file("%s/hist_fit_kk_ratio_TP%d_%s.pdf" % (plotdir, d2, lat))

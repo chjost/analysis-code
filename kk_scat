@@ -92,6 +92,9 @@ def main():
     plotter = ana.LatticePlot("%s/scat_len_TP%d_%s.pdf" % (plotdir, d2, lat))
     label = ["scattering length", "a$_{\k\k}$", "a$_{\k\k}$"]
     plotter.histogram(a_kk, label)
+    plotter.new_file("%s/qq_a0_%s.pdf" % (plotdir, lat))
+    label = [r'QQ-Plot $a_0$ %s' % lat, r'Bootstrap samples $a_0$']
+    plotter.qq_plot(ratiofit,label,par=0)
     del plotter
 
 # make this script importable, according to the Google Python Style Guide

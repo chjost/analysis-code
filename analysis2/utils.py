@@ -3,6 +3,7 @@ Useful functions
 """
 
 import numpy as np
+import scipy.linalg as la
 import itertools
 
 def loop_iterator(ranges):
@@ -79,6 +80,30 @@ def physical_mass(amps,ens):
   print amps[0]
   phys_mass =np.multiply(pre,amps) 
   return phys_mass 
+
+def eig_decomp(mat):
+  """ Compute eigendecomposition of a matrix and print it to screen.
+
+  If the matrix is symmetric and positive definite, the eigenvalues and
+  eigenvectors are calculated and printed to screen
+
+  Parameters
+  ----------
+  mat : np.array, the matrix to decompose
+  """
+  #TODO: Check symmetry
+
+  # decompose matrix into eigenvalues and eigenvectors
+  l, v = la.eigh(mat)
+  # TODO: sort eigenvalues starting with lowest eigenvalues
+  # np.sort
+  # TODO: sort eigenvectors as the same structure
+  # print eigenvalues and corresponding eigenvalues to screen
+  for nev in range(len(l)):
+    print("\neigenpair %d:" % nev)
+    print("lambda : %f " % l[nev])
+    print("vec :")
+    print(v[:,nev])
 
 if __name__ == "__main__":
     pass

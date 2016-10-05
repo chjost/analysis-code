@@ -11,10 +11,11 @@ matplotlib.rcParams['font.size'] = 14
 import numpy as np
 
 import chiral_utils as chut
+import extern_bootstrap as extboot
 import fit
 from match_functions import *
 from match_help import in_ival
-from .plot import plot_lines,plot_single_line
+from .plot import plot_lines, plot_single_line
 from .plot_functions import plot_data, plot_function
 from .statistics import compute_error
 
@@ -249,7 +250,8 @@ class MatchResult(object):
         #print(self.eval_obs[idx])
 
 
-    def add_extern_data(self,filename,ens,idx=None,amu=None,square=True,read=None,op=False):
+    def add_extern_data(self,filename,ens,idx=None,amu=None,square=True,
+                        read=None,physical=False,op=False,fse=False):
       """ This function adds data from an extern textfile to the analysis object
       
       The data is classified by names, the filename is given and the read in and
@@ -269,57 +271,79 @@ class MatchResult(object):
       #if read is None:
       #  plot, data = np.zeros((self.x_data[0].shape[-1]))
       #if read is 'r0_inv':
-      #  _plot,_data = chut.prepare_r0(ens,self.x_data[0].shape[-1])
+      #  _plot,_data = extboot.prepare_r0(ens,self.x_data[0].shape[-1])
       #  plot=1./np.square(_plot)
       #  data=1./np.square(_data)
       if read is 'r0':
-        _plot,_data = chut.prepare_r0(ens,self.obs.shape[-1])
+        _plot,_data = extboot.prepare_r0(ens,self.obs.shape[-1])
         if square:
           plot=np.square(_plot)
           data=np.square(_data)
         else:
           plot=_plot
           data=_data
+
+      if read is 'mss':
+        _plot,_data = extboot.prepare_mss(ens,self.obs.shape[-1],meth=2)
+        if square:
+          plot=np.square(_plot)
+          data=np.square(_data)
+        else:
+          plot=_plot
+          data=_data
+
       if read is 'mpi':
         #print("indexto insert extern data:")
         #print(dim,idx)
-        ext_help = chut.read_extern(filename,(1,2))
+        ext_help = extboot.read_extern(filename,(1,2))
         # take any y data dimension, since bootstrap samplesize shold not differ
         # build r0M_pi
-        plot,data = chut.prepare_mpi(ext_help,ens,self.obs.shape[-1],square=square)
+        plot,data = extboot.prepare_mpi(ext_help,ens,self.obs.shape[-1],
+                                        square=square)
+      if read is 'fse_mk':
+        ext_help = extboot.read_extern(filename,(1,2))
+        plot,data = extboot.prepare_fse(ext_help,ens,self.obs.shape[-1],
+                                        square=square,had='k')
+
       if read is 'halfmpi':
         #print("indexto insert extern data:")
         #print(dim,idx)
-        ext_help = chut.read_extern(filename,(1,2))
+        if len(filename) > 1:
+          ext_help = extboot.read_extern(filename[0],(1,2))
+        else:
+          ext_help = extboot.read_extern(filename,(1,2))
         # take any y data dimension, since bootstrap samplesize shold not differ
         # build r0M_pi
-        _plot,_data = chut.prepare_mpi(ext_help,ens,self.obs.shape[-1],square=square,r0=False)
+        if fse is False:
+            _plot,_data = extboot.prepare_mpi(ext_help,ens,self.obs.shape[-1],
+                                              square=square,r0=False)
+        else:
+            if len(filename) != 2:
+              print("Not enough files to read from")
+            # read Mpi lattice data
+            ext_help1 = extboot.read_extern(filename[0],(1,2))
+            # read K_Mpi
+            ext_help2 = extboot.read_extern(filename[1],(1,2))
+            _plot, _data = extboot.prepare_mpi_fse(ext_help1,ext_help2,ens,
+                          self.obs.shape[-1], square=square,physical=physical)
         plot= 0.5*_plot
         data = 0.5*_data
-      #if read is 'fk_unit':
-      #  ext_help = chut.read_extern(filename,(1,2))
-      #  plot,data = chut.prepare_fk(ext_help,ens,self.x_data[0].shape[-1])
-      #if read is 'mk_unit':
-      #  ext_help = chut.read_extern(filename,(1,2))
-      #  # prepare_fk also does the right for m_k
-      #  # TODO: unify this at some point
-      #  plot,data = chut.prepare_fk(ext_help,ens,self.x_data[0].shape[-1])
-      #print("extern data added:")
-      #print("%s: %f " %(read, data[0]))
+
+      if read is 'fse_pi':
+        if len(filename) != 2:
+          print("Not enough files to read from")
+        # read Mpi lattice data
+        ext_help1 = extboot.read_extern(filename[0],(1,2))
+        # read K_Mpi
+        ext_help2 = extboot.read_extern(filename[1],(1,2))
+        plot,data = extboot.prepare_mpi_fse(ext_help1,ext_help2,ens,
+                      self.obs.shape[-1], square=square,physical=physical)
+      # Place data in MatchResult instance
       if idx is None:
         for i in range(self.obs.shape[0]):
           self.add_data(data,i,op=op,amu=amu)
       else:
         self.add_data(data,idx,op=op,amu=amu)
-
-    #def add_data(self,idx,obs,amu):
-    #  """Set observable data and amu-values at one index
-    #  """
-    #  if self.obs is None:
-    #    raise RuntimeError("MatchResult not initialized call create empty first")
-    #  else:
-    #    self.obs[idx] = obs
-    #    self.amu[idx] = amu
 
     def match_to(self, obs_to_match, meth=None, plot=True,plotdir=None,ens=None,
         label=None,debug=0):
@@ -492,49 +516,54 @@ class MatchResult(object):
       else:
         _meth='cmp'
       pmatch = PdfPages(plotdir+ens+'/'+proc+_meth+'_%s.pdf' % self.obs_id)
+
+      # functions for interpolation methods
       line = lambda p,x: p[0]*x+p[1]
       para = lambda p,x: p[0]*x**2+p[1]*x+p[2]
       # calculate errors for plot
       y_plot = self.get_plot_error()
       if meth is None:
         # plot data
-        plot_data(self.amu,y_plot[:,0],y_plot[:,1],label='data')
+        plot_data(self.amu,y_plot[:,0],y_plot[:,1],label='data',col='k')
         # plot the functions
-        plot_function(line,self.amu,self.coeffs[0],'lin.  ipol',)
+        plot_function(line,self.amu,self.coeffs[0],'lin.  ipol',fmt='--')
         plot_function(para,self.amu,self.coeffs[1],'quad. ipol',
-                      fmt='r',col='red')
+                      fmt='r--',col='red')
         plot_function(line,self.amu,self.coeffs[2],'lin. fit',
-                      fmt='b',col='blue')
+                      fmt='b--',col='blue')
       elif meth == 0:
-        plot_data(self.amu,y_plot[:,0],y_plot[:,1],label='data')
-        plot_function(line,self.amu,self.coeffs[meth],'lin. ipol',
+        plot_data(self.amu,y_plot[:,0],y_plot[:,1],label='data',col='k')
+        plot_function(line,self.amu,self.coeffs[meth],'lin. ipol',fmt='k--',
                       ploterror=True)
         if proc == 'match':
-          plot_single_line(self.amu_match[meth],obs,label[0:2],col='k')
+          plot_single_line(self.amu_match[meth],obs,label[0:2],col='g')
         else:
-          plot_single_line(self.amu_match[meth],self.eval_obs[meth],label[0:2],col='k')
+          plot_single_line(self.amu_match[meth],self.eval_obs[meth],label[0:2],col='g')
       elif meth == 1:
-        plot_data(self.amu,y_plot[:,0],y_plot[:,1],label='data')
+        plot_data(self.amu,y_plot[:,0],y_plot[:,1],label='data',col='k')
         plot_function(para,self.amu,self.coeffs[meth],'quad.  ipol',
-                      ploterror=True,fmt='r',col='red')
+                      ploterror=True,fmt='r--',col='red')
         if proc == 'match':
-          plot_single_line(self.amu_match[meth],obs,label[0:2],col='r')
+          plot_single_line(self.amu_match[meth],obs,label[0:2],col='g')
         else:
-          plot_single_line(self.amu_match[meth],self.eval_obs[meth],label[0:2],col='r')
+          plot_single_line(self.amu_match[meth],self.eval_obs[meth],label[0:2],col='g')
       elif meth == 2:
-        plot_data(self.amu,y_plot[:,0],y_plot[:,1],label='data')
+        plot_data(self.amu,y_plot[:,0],y_plot[:,1],label='data',col='k')
         plot_function(line,self.amu,self.coeffs[meth],'lin. fit',
-            ploterror = True, fmt='b', col='blue')
+            ploterror = True, fmt='b--', col='blue')
         if proc == 'match':
-          plot_single_line(self.amu_match[meth],obs,label[0:2],col='b')
+          plot_single_line(self.amu_match[meth],obs,label[0:2],col='g')
         else:
-          plot_single_line(self.amu_match[meth],self.eval_obs[meth],label[0:2],col='b')
+          plot_single_line(self.amu_match[meth],self.eval_obs[meth],label[0:2],col='g')
       else:
         raise ValueError("Method not known")
-      plt.title(ens)
+      #plt.autoscale_view(enable=True,axis='both',tight=False)
+      #TODO: Automate that, since autoscale is not working
+      #plt.xlim(0.012,0.019)
+      #plt.title(ens)
       plt.xlabel(label[0])
       plt.ylabel(label[1])
-      plt.legend(loc='best',numpoints=1,ncol=2)
+      plt.legend(loc='best',numpoints=1,ncol=1)
       pmatch.savefig()
       pmatch.close()
       plt.clf()

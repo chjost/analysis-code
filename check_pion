@@ -1,50 +1,102 @@
 #!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
-##!/usr/bin/python
 
-import matplotlib
-matplotlib.use('QT4Agg') # has to be imported before the next lines
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_pdf import PdfPages
+# Script to plot the effective mass of 1 correlator
+import sys
 import numpy as np
-
-import analysis as ana
+import analysis2 as ana
 
 def main():
-    path="/hiskp2/jost/correlationfunctions/liuming_pion/D15_all/"
-    filelist = ["pi_corr_p%d" % (x) for x in xrange(4)]
-    filelist += ["pipi_pipi_A1_corr_TP0_%02d" % (x) for x in [00, 11, 22]]
-    #filelist += ["pipi_pipi_A1_corr_TP1_%02d" % (x) for x in [00, 11]]
-    #filelist += ["pipi_pipi_A1_corr_TP2_%02d" % (x) for x in [00, 11]]
-    #filelist += ["pipi_pipi_A1_corr_TP3_%02d" % (x) for x in [00, 11]]
-    suffix = ".dat"
-    T=96
-    tlist = np.linspace(0., float(T), float(T), endpoint=False)
-    fit = lambda p, t: p[0]*np.cosh(p[1]*(int(T/2)-t))
-    label = ["single pion, D15", "time", "C(t)", "data", ""]
+####################################################
+# parse the input file1 and setup parameters
+#####################################################
+    if len(sys.argv) < 2:
+        ens = ana.LatticeEnsemble.parse("kk_I1_TP0_A40.24.ini")
+    else:
+        ens = ana.LatticeEnsemble.parse(sys.argv[1])
 
-    for f in filelist:
-        print(f)
-        data = ana.read_data_ascii("".join((path, f, suffix)))
-        #print(data.shape)
-        mdata, ddata = ana.calc_error(data)
-        mdata = np.atleast_2d(mdata)
-        ddata = np.atleast_2d(ddata)
-        #print(mdata.shape, ddata.shape)
-        res, chi2, p = ana.fitting(fit, tlist[10:-10], data[:,10:-10], [1., 0.07], verbose=True)
-        pfit = PdfPages("./plots/%s.pdf" % f)
-        label[3] = "fit %d:%d" % (tlist[10], tlist[-11])
-        #print(mdata[0].shape, ddata[0].shape, len(tlist))
-        ana.corr_fct_with_fit(tlist, mdata[0], ddata[0], fit, res[0], [1,T], label, pfit, True)
-        for i in xrange(data.shape[0]):
-            if (np.abs( data[i,1] - mdata[0,1] ) > 3. * ddata[0,1]) :
-                print("large deviation on data set %d" % i)
-            ana.corr_fct_with_fit(tlist, data[i], ddata[0], fit, res[0], [1,T], label, pfit, True)
-        pfit.close()
-    pass
+    # read settings
+    readsingledata = False
+    plotsingle = True
+    readtwodata = False
+    plottwo = False
 
-# make this script importable, according to the Google Python Style Guide
+    # get data from first input file
+    prefix = ens.get_data("path")
+    print prefix
+    lat = ens.name()
+    nboot = ens.get_data("nboot")
+    datadir = ens.get_data("datadir")
+    plotdir = ens.get_data("plotdir")
+    gmax = ens.get_data("gmax")
+    d2 = ens.get_data("d2")
+    try:
+        debug = ens.get_data("debug")
+    except KeyError:
+        debug = 0
+    T = ens.T()
+    T2 = ens.T2()
+    addT = np.ones((nboot,)) * T
+    addT2 = np.ones((nboot,)) * T2
+
+    # get data from second input file
+
+
+#######################################################################
+# Begin calculation
+#######################################################################
+   
+    # single particle correlator
+    print("read single particle corrs")
+    #files = ["%s/pi_charged_p%d.dat" % (datadir, d) for d in range(1)]
+    files = "%s/pi_charged_p0_outlier.dat" % (datadir) 
+    #kcorr = ana.Correlators(files, matrix=False)
+    kcorr_s = ana.Correlators(files, matrix=False, conf_col=3)
+    # plot history before omission
+    ts=1
+    plotter = ana.LatticePlot("%s/outlier_corr_hist_ts%d.pdf" % (plotdir,ts))
+    print("Plotting to file %s/outlier_corr_hist_ts%d.pdf" % (plotdir,ts))
+    label=['2pt Configuration History', 'cnfg', r'$C(%d)$' % ts,r'$C_2$']
+    plotter.history(kcorr_s,label,ts,boot=False)
+    two_pt_cut, left_out_two = kcorr_s.omit_iqr(ts=ts)
+    kcorr_s.sym_and_boot(nboot)
+
+    #compute effective masses after ratio has been build
+    #kcorr.mass()
+    kcorr_s.mass()
+
+    #plot effective masses of kcorr and kkcorr
+    if plotsingle:
+        print("plotting")
+        plotter = ana.LatticePlot("%s/mass_pi_TP%d_%s.pdf" % (plotdir, d2,
+          lat),join=True)
+        plotter.set_env(ylog=False)
+        label = [r'Pion Correlator', "t", "m_eff(t)", r'pion']
+        #plotter.plot(kcorr, label )
+        plotter.plot(kcorr_s, label )
+        plotter.plot_single_line(0, 0.06975,r'$m_{eff}^{unit}$','k')
+        plotter.save()
+        del plotter
+
+    if plottwo:
+        print("plotting")
+        plotter = ana.LatticePlot("%s/ratio_kk_TP%d_%s.pdf" % (plotdir, d2, lat))
+        plotter.set_env(ylog=False)
+        label = ["Ratio", "t", "R(t)", "data"]
+        print "plotter set up"
+        plotter.plot(ratio, label, add=addT, xshift=0.5, debug=debug)
+        print "open new file for effective mass"
+        plotter.new_file("%s/mass_kk_TP%d_%s.pdf" % (plotdir, d2, lat))
+        plotter.set_env(ylog=False)
+        label = ["Mass 4pt-function", "$t$", "$m_{eff,KK}$","data"]
+        plotter.plot(kkcorr,label)
+        del plotter
+
+
+
+
 if __name__ == '__main__':
     try:
+        print("starting")
         main()
     except KeyboardInterrupt:
-        print("Keyboard Interrupt")
+        pass
