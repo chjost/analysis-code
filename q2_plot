@@ -29,6 +29,7 @@ def print_summary(datafolder, plotfolder, lattices, irreps=[["A1"]]):
     verbose = True
     xcut = None
     readnewdata = True
+    al = 0.9
 
     # read data
     fname = "%s/summary/collected_delta.npz" % datafolder
@@ -120,7 +121,7 @@ def print_summary(datafolder, plotfolder, lattices, irreps=[["A1"]]):
     irrepfmt = {"A1":"o", "E":"s", "T2":"D", "B1":"^"}
     ensfmt = {0:"o", 1:"s", 2:"D", 3:"^"}
     # color code the total momentum
-    p2fmt = ["r", "b", "g", "k"]
+    p2fmt = ["r", "b", "g", "m", "c", "y", "k"]
     # plot the data
     # iterate over the lists
     # q2[lattice][total momentum][irrep]
@@ -149,24 +150,29 @@ def print_summary(datafolder, plotfolder, lattices, irreps=[["A1"]]):
                 lab = "%s, p$^2$=%d (G)" % (lattices[i], p2)
                 #lab = "%s, p$^2$=%d" % (irreps[p2][ir], p2)
                 #alp = 1. - 0.25*float(i)
-                alp = 1.
                 plt.errorbar(x, y, yerr=dytot, xerr=dxtot, fmt=fmt, label="",
-                    alpha=alp)
+                    alpha=al)
                 plt.errorbar(x, y, yerr=d[1], xerr=c[1], fmt=fmt, label=lab,
-                    alpha=alp)
+                    alpha=al)
     #if verbose:
     #    print("finishing plot")
 
     # plot points from Dudek analysis
     print("plotting dudek's points")
-    xd1 = np.asarray([1.961e-01, 7.756e-03])
-    #yd1 = np.asarray([7.469e-01 - np.pi, 1.883e-02])*180./np.pi
-    yd1 = np.asarray([-1.165e+00, 4.055e-02])*180./np.pi
+    x24 = np.asarray([0.105, 1.961e-01])
+    dx24 = np.asarray([0.034, 7.756e-03])
+    y24 = np.asarray([-21.163, -1.165*180./np.pi])
+    dy24 = np.asarray([0.337, 4.055e-02*180./np.pi])
     fmt = "".join((ensfmt[1], p2fmt[2]))
-    lab1 = "A40.24, p$^2$=1 (D)"
-    plt.errorbar(xd1[0], yd1[0], yerr=yd1[1], xerr=xd1[1], fmt=fmt, label=lab1)
-    #yd2 = np.asarray([-1.107e+00, 4.675e-02])*180./np.pi
-    #plt.errorbar(xd1[0], yd2[0], yerr=yd2[1], xerr=xd1[1], fmt=fmt, label="dudek")
+    lab1 = "A40.24, p$^2$=0,1 (D)"
+    plt.errorbar(x24, y24, yerr=dy24, xerr=dx24, fmt=fmt, label=lab1, alpha=al)
+    fmt = "".join((ensfmt[1], p2fmt[3]))
+    x32 = np.asarray([0.01, 0.2145])
+    dx32 = np.asarray([0.001, 0.0043])
+    y32 = np.asarray([-1.026, 146.961189087-180.])
+    dy32 = np.asarray([0.185, 1.])
+    lab1 = "A40.32, p$^2$=0,1 (D)"
+    plt.errorbar(x32, y32, yerr=dy32, xerr=dx32, fmt=fmt, label=lab1, alpha=al)
 
     # plot function of delta
     dofp0 = lambda p, x: np.arctan(1./(1./(p[0]*x)+0.5*p[1]*x))*180/np.pi
@@ -214,27 +220,27 @@ def print_summary(datafolder, plotfolder, lattices, irreps=[["A1"]]):
 
     # plot the functions
     #plotter.plot_func(dofp0, res_l[:,:2], ran, "$\delta_0$ (l)", fmt="b", col="b")
-    plotter.plot_func(dofp0, res[:,:2], ran, "$\delta_0$ (GF)", col="k")
+    plotter.plot_func(dofp0, res[:,:2], ran, "$\delta_0$ (GF)", col="k", ploterror=False)
     #plotter.plot_func(dofp0, tmp[:,:2], ran, "$\delta_0$ (c)", fmt="c", col="c")
     #plotter.plot_func(dofp0, res_d[:,:2], ran, "$\delta_0$ (d)", fmt="r", col="r")
     #plotter.plot_func(dofp2, res_l[:,(2,0)], ran, "$\delta_2$ (l)", fmt="--b", col="b")
-    plotter.plot_func(dofp2, res[:,(2,0)], ran, "$\delta_2$ (GF)", fmt="--k", col="k")
+    #plotter.plot_func(dofp2, res[:,(2,0)], ran, "$\delta_2$ (GF)", fmt="--k", col="k")
     #plotter.plot_func(dofp2, res[:,(2,0)], ran, "$\delta_2$ (c)", fmt="--k", col="k")
     #plotter.plot_func(dofp2, res_d[:,(2,0)], ran, "$\delta_2$ (d)", fmt="--r", col="r")
 
-    plt.legend(numpoints=1, loc=0)
+    plt.legend(numpoints=1, loc=0, framealpha=0.6)
     plt.grid(True)
     plotter.save()
     del plotter
     return
 
 def main():
-    Aens = ["A40.24"]
+    Aens = ["A40.24", "A40.32"]
     #Aens = ["A40.20", "A40.24", "A40.32"]
     datafolder = "./data/I2/"
     plotfolder = "./plots/I2/summary/"
     # construct list with irreps, giving also total momentum
-    irreps = [[], ["A1"]]
+    irreps = [["A1"], ["A1"]]
     print_summary(datafolder, plotfolder, Aens, irreps)
     return
 

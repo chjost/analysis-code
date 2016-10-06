@@ -282,7 +282,9 @@ def main():
 
     # single particle correlator
     print("read single particle corrs")
+    print(datadir)
     picorr = ana.Correlators.read("%s/corr_pi.npy" % (datadir))
+    #picorr = ana.Correlators.read("%s/corr_pi.npz" % (datadir))
     pifit = ana.FitResult.read("%s/fit_pi.npz" % (datadir))
     pifit.print_data(1)
 
@@ -356,6 +358,13 @@ def main():
     print("delta_2")
     print(np.mean(res)*180/np.pi)
     #print(np.std(res))
+    
+    if d2 == 0:
+        print("CMF")
+        tmp1 = ana.mean_std(_q2)
+        tmp2 = ana.mean_std(np.arctan2(1, w00.real)*180/np.pi-180.)
+        print("q2: %.3f +- %.3f" % (tmp1[0][0], tmp1[1]))
+        print("d0: %.3f +- %.3f" % (tmp2[0][0], tmp2[1]))
 
 if __name__ == '__main__':
     try:

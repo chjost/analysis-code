@@ -49,8 +49,8 @@ def main():
     #pipifit.print_data(1)
     #pipifit.print_details()
 
-    calcEcm = False
-    calcq2 = False
+    calcEcm = True
+    calcq2 = True
     calcdelta = True
 
     if calcEcm:
