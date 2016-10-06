@@ -1,0 +1,157 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+
+import os
+import sys
+import numpy as np
+import ConfigParser
+
+import analysis2 as ana
+
+def main():
+    if len(sys.argv) < 2:
+        ens = ana.LatticeEnsemble.parse("A40.24.ini")
+    else:
+        ens = ana.LatticeEnsemble.parse(sys.argv[1])
+
+    # read settings
+    readdata = False
+    readfit = False
+    plotdata = True
+    d2 = 0
+    plateaumin = 10
+
+    # get data from input file
+    prefix = ens.get_data("path")
+    lat = ens.name()
+    nboot = int(ens.get_data("nboot"))
+    ddir = "/".join((ens.get_data("datadir"), lat))
+    pdir = "/".join((ens.get_data("plotdir"), lat))
+    L = ens.L()
+    quarks = ens.get_data("quarks")
+    Ti = ens.get_data("ti")
+    Tf = ens.get_data("tf")
+    dti = ens.get_data("dti")
+    dtf = ens.get_data("dtf")
+    dt = ens.get_data("dt")
+    T = ens.T()
+    addT = np.ones((nboot,)) * T
+    try:
+        debug = ens.get_data("debug")
+    except KeyError:
+        debug = 0
+    try:
+        irrep = ens.get_data("irrep")
+    except KeyError:
+        irrep = "A1"
+    if irrep == "A1":
+        suffix = "TP%d.npz" % d2
+    else:
+        suffix = "TP%d_%s.npz" % (d2, irrep)
+    masses = ens.get_data("strange_masses")
+    smassdirs = ["strange_%s" % (m.ljust(4, "0")) for m in masses]
+
+    files = [["%s/%s/conn_%s%s_p000.d000.g4_p000.d000.g4.dat" % (prefix, s, i, i) for i in quarks] for s in smassdirs ]
+    filesdisc = [["%s/%s/disc_%s%s_p000.d000.g4.dat" % (prefix, s, i, j) for i in quarks for j in quarks] for s in smassdirs ]
+    datadir = [os.path.join(ddir, s) for s in smassdirs]
+    plotdir = [os.path.join(pdir, s) for s in smassdirs]
+
+    for d, p, fil, fild in zip(datadir, plotdir, files, filesdisc):
+        print("data dir %s" % (d))
+        # read data
+        if readdata == False:
+            print("read new data")
+            corr = ana.Correlators(fil, matrix=False, conf_col=3)
+            corr.data *= -1
+            #print(files)
+            corr.sym_and_boot(nboot)
+            corr.save("%s/conn_eta_%s" % (d, suffix))
+            disc = ana.Correlators(fild, column=(2,))
+            disc.data *= -1.
+            disc.sym_and_boot(nboot)
+            disc.save("%s/disc_eta_%s" % (d, suffix))
+        else:
+            print("read data from file")
+            corr = ana.Correlators.read("%s/conn_eta_%s" % (d, suffix))
+            disc = ana.Correlators.read("%s/disc_eta_%s" % (d, suffix))
+        corrrm = ana.Correlators.read("%s/conn_eta_%s" % (d, suffix))
+
+        # fit the data
+        fitter = ana.LatticeFit(0, dt_i=dti, dt_f=dtf, dt=dt, correlated=True)
+        if readfit == False:
+            print("fit data")
+            fitranges = [Ti, Tf]
+            #fitranges = [[Ti, Ti+5, Tf-5, Tf],] + [[Ti, Ti+5, Tf-5, Tf],]
+            fitres = fitter.fit(None, corr, fitranges, corrid="E", add=addT, lint=False)
+            fitres.save("%s/fit_eta_conn_%s" % (d, suffix))
+        else:
+            print("read fitted data")
+            fitres = ana.FitResult.read("%s/fit_eta_conn_%s" % (d, suffix))
+        #fitres.print_data(0)
+        fitres.print_data(1)
+        #fitres.print_details()
+
+        # excited state removal
+        # cut fit ranges that contain data left of plateaumin
+        fitres_cut = fitres.cut_data(plateaumin, Tf, dt)
+        nmin = corr.data.shape[1]
+        for i, (da, pv) in enumerate(zip(fitres_cut.data, fitres_cut.pval)):
+            # get "best" fit, determined by p-val close to 0.5
+            n = np.argmin(np.abs(pv[0]-0.5))
+            bfit = da[0,...,n]
+            # calculate difference to original data
+            tmp = [fitter.fitfunc(bfit, t, T) for t in range(nmin)]
+            tmp = (corr.data[0,:nmin,i]-np.asarray(tmp))
+            #print(tmp)
+            corrrm.data[:,:nmin,i] -= tmp
+        # save new data
+        corrrm.save("%s/eta_conn_rm_%s" % (d, suffix))
+        print(corrrm.data[0,:,0])
+
+        # create eta/eta' GEVP
+        # factors are all done by hand
+        disc.data[...,0,0] *= 2.
+        disc.data[...,0,1] *= np.sqrt(2.)
+        disc.data[...,1,0] *= np.sqrt(2.)
+        # add connected on disconnected
+        disc.data[...,0,0] += corrrm.data[...,0]
+        disc.data[...,1,1] += corrrm.data[...,1]
+        print(disc.data[0,:,0,0])
+        disc.save("%s/eta_gevp_rm_%s" % (d, suffix))
+
+        # plot the result
+        if plotdata:
+            print("plotting")
+            plotter = ana.LatticePlot("%s/fit_eta_conn_%s" % (p, suffix.replace(".npz", ".pdf")))
+            plotter.set_env(ylog=True)
+            label = ["eta energy", "t", "C(t)", "E$_\eta$"]
+            plotter.plot(corr, label, fitres, fitter, add=addT)
+            plotter.new_file("%s/fit_eta_conn_rm_%s" % (p, suffix.replace(".npz", ".pdf")))
+            plotter.plot(corrrm, label, fitres, fitter, add=addT)
+            if d2 == 0:
+                plotter.new_file("%s/eff_mass_eta_conn_%s" % (p, suffix.replace(".npz", ".pdf")))
+                label = ["eta correlators", "t", "C(t)", "E$_{\eta}$"]
+                plotter.set_env(ylog=False)
+                plotter.plot(corr, label)
+                plotter.plot(corrrm, label)
+                plotter.set_env(ylog=True)
+                plotter.plot(corr, label)
+                plotter.plot(corrrm, label)
+                plotter.set_env(ylog=False, ylim=[0., 1.])
+                corr.mass()
+                corrrm.mass()
+                label = ["eta effective mass", "t", "m$_{eff}$(t)", "m$_{\eta}$"]
+                plotter.plot(corr, label)
+                plotter.plot(corrrm, label)
+            plotter.new_file("%s/hist_fit_eta_%s" % (p, suffix.replace(".npz", ".pdf")))
+            label = ["eta energy", "E$_{\eta}$/a", "E$_{\eta}$"]
+            plotter.histogram(fitres, label, par=1)
+            del plotter
+        del corr
+        del fitres
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass

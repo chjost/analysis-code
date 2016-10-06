@@ -119,7 +119,7 @@ class LatticeFit(object):
             # no combined fit
             # get the fitranges
             dshape = corr.shape
-            ncorr = dshape[-1]
+            ncorr = corr.ncorr
             franges, fshape = calculate_ranges(ranges, dshape, dt_i=self.dt_i,
                     dt_f=self.dt_f, dt=self.dt, debug=self.debug, lintervals=lint)
 
@@ -381,19 +381,24 @@ class FitResult(object):
         shape_pval = (self.pval[0].shape[0], len(ranges))
         shape1 = [shape_dE for dE in self.data]
         shape2 = [shape_pval for p in self.pval]
-        fitres_cut.create_empty(shape1, shape2, 1)
+        ncorr = len(self.data)
+        fitres_cut.create_empty(shape1, shape2, ncorr)
     
         # Get data for error calculation
         # 0 in data is for median mass
-        dat = self.data[0][:,:,:,ranges]
-        pval = self.pval[0][:,:,ranges]
-        chi2 = self.chi2[0][:,:,ranges]
-        # add data to FitResult
-        fitres_cut.data[0] = dat
-        fitres_cut.pval[0] = pval
-        fitres_cut.chi2[0] = chi2
-        #fitres_cut.fit_ranges = range_r[ranges]
-        #fitres_cut.add_data((0,),dat,chi2,pval)
+        for i, (d, p, c) in enumerate(zip(self.data, self.pval, self.chi2)):
+            fitres_cut.data[i] = self.data[i][...,ranges]
+            fitres_cut.pval[i] = self.pval[i][...,ranges]
+            fitres_cut.chi2[i] = self.chi2[i][...,ranges]
+        #dat = self.data[0][:,:,:,ranges]
+        #pval = self.pval[0][:,:,ranges]
+        #chi2 = self.chi2[0][:,:,ranges]
+        ## add data to FitResult
+        #fitres_cut.data[0] = dat
+        #fitres_cut.pval[0] = pval
+        #fitres_cut.chi2[0] = chi2
+        ##fitres_cut.fit_ranges = range_r[ranges]
+        ##fitres_cut.add_data((0,),dat,chi2,pval)
     
         return fitres_cut
 

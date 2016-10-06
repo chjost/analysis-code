@@ -15,7 +15,7 @@ def main():
 
     # read settings
     readdata = True
-    preparedata = False
+    preparedata = True
     readfit = False
     plotdata = True
 
@@ -86,13 +86,13 @@ def main():
         #else:
         #    fitranges = [[10,20,28,35],] + [[10,12,19,20],]*(gmax-1)
         #    #fitranges = [[10,27,35,47],] + [[10,15,18,20],]*(gmax-1)
-        fitranges = [[Ti, Ti+5, Tf-5, Tf],] + [[Ti-3, Ti+2, Tf-8, Tf-3],] * (gmax-1)
+        fitranges = [[Ti, Ti+5, Tf-5, Tf],] + [[Ti-2, Ti+3, Tf-8, Tf-3],] * (gmax-1)
         print(fitranges)
         if d2 != 0:
             fitres = fitter.fit(None, corr, fitranges, corrid="E", oldfit=pifit,
                 oldfitpar=1, add=addT, lint=True)
         else:
-            fitres = fitter.fit(None, corr, fitranges, corrid="E", add=addT, lint=True)
+            fitres = fitter.fit([1e-4, 0.3], corr, fitranges, corrid="E", add=addT, lint=True)
         fitres.save("%s/fit_pipi_%s" % (datadir, suffix.replace(".npy", ".npz")))
     else:
         fitres = ana.FitResult.read("%s/fit_pipi_%s" % (datadir, suffix.replace(".npy", ".npz")))

@@ -59,25 +59,31 @@ class Correlators(object):
         self.data = None
         self.matrix = None
         self.conf = None
+        self.ncorr = None
         if filename is not None:
             if isinstance(filename, (list, tuple)):
                 if matrix:
                     self.data = in_out.read_matrix(filename, column, skip, debug)
                     self.matrix = True
+                    self.ncorr = self.data.shape[-1]
                     if isinstance(conf_col,int):
                         self.conf = in_out.read_matrix(filename, (conf_col,), skip, debug)
+                        self.conf = np.asarray([[np.unique(y) for y in x] for x in self.conf.T]).T
                 else:
                     self.data = in_out.read_vector(filename, column, skip, debug)
                     self.matrix = False
+                    self.ncorr = self.data.shape[-1]
                     if isinstance(conf_col,int):
                         self.conf = in_out.read_vector(filename, (conf_col,), skip, debug)
+                        self.conf = np.asarray([np.unique(x) for x in self.conf.T]).T
             else:
                 tmp = in_out.read_single(filename, column, skip, debug)
                 self.data = np.atleast_3d(tmp)
                 self.matrix = False
+                self.ncorr = 1
                 if isinstance(conf_col,int):
                     #print("Column for configuration numbers is %d\n" % conf_col)
-                    self.conf = in_out.read_single(filename, (conf_col,), skip, debug)
+                    self.conf = np.unique(in_out.read_single(filename, (conf_col,), skip, debug))
         if self.data is not None:
             self.shape = self.data.shape
         else:
@@ -106,20 +112,26 @@ class Correlators(object):
         """
         data = in_out.read_data(filename)
         tmp = cls(debug=debug)
+        #print(data)
         try:
             tmp.data = data['arr_0']
-            tmp.conf = data['arr_1']
-            tmp.shape = tmp.data.shape
         except:
-            # set the data directly
-            tmp.data = data
-        tmp.shape = data.shape
-        if data.shape[1] > 2:
-            tmp.shape = data.shape[:-1]
-        if data.shape[-2] != data.shape[-1]:
+            if isinstance(data, np.ndarray):
+                tmp.data = data
+            else:
+                raise RuntimeError("something went wrong while reading correlator")
+        try:
+            tmp.conf = data['arr_1']
+        except (KeyError, ValueError):
+            tmp.conf = False
+        tmp.shape = tmp.data.shape
+        if tmp.data.shape[-2] != tmp.data.shape[-1]:
             tmp.matrix = False
         else:
             tmp.matrix = True
+        tmp.ncorr = tmp.data.shape[-1]
+        if tmp.data.ndim < 3:
+            tmp.ncorr = 1
         return tmp
 
     @classmethod
@@ -134,12 +146,15 @@ class Correlators(object):
             The amount of debug information printed.
         """
         tmp = cls(debug=debug)
-        tmp.data = data
-        tmp.shape = data.shape
+        tmp.data = np.atleast_3d(data)
+        tmp.shape = tmp.data.shape
         if conf is not None:
             tmp.conf=conf
         if data.shape[-2] != data.shape[-1]:
             tmp.matrix = False
+        tmp.ncorr = data.shape[-1]
+        if tmp.data.ndim < 3:
+            tmp.ncorr = 1
         return tmp
 
     def save(self, filename, asascii=False):

@@ -15,8 +15,8 @@ def main():
 
     # read settings
     readdata = True
-    readfit = True
-    plotdata = False
+    readfit = False
+    plotdata = True
 
     # get data from input file
     prefix = ens.get_data("path")
@@ -41,27 +41,44 @@ def main():
     except KeyError:
         hasvev = False
 
-    files = ["%s/pi_corr_p%d.dat" % (prefix, d) for d in range(pmax)]
+    #files = ["%s/pi_corr_p%d.dat" % (prefix, d) for d in range(pmax)]
+    files = ["%s/pipi_I0_corr%d_33.dat" % (prefix, d) for d in [0,2]]
     addT = np.ones((nboot,)) * T
 
     print("read data")
+    xshift = 0.
+    if hasvev:
+        xshift = 0.5
     if readdata == False:
         corr = ana.Correlators(files, matrix=False)
+        # FOR TESTING
+        cnfgs = [x for x in range(714, 2751, 2)]
+        print(len(cnfgs))
+        corr = ana.Correlators.create(-corr.data[:,:,0] + 2*corr.data[:,:,1])
+        print(corr.shape)
         corr.sym_and_boot(nboot)
         if hasvev:
             corr.shift(dt=1)
-        corr.save("%s/corr_pi.npy" % (datadir))
+        #corr.save("%s/corr_pi.npz" % (datadir))
+        corr.save("%s/corr_pi_liuming.npz" % (datadir))
     else:
-        corr = ana.Correlators.read("%s/corr_pi.npy" % (datadir))
+        #corr = ana.Correlators.read("%s/corr_pi.npz" % (datadir))
+        corr = ana.Correlators.read("%s/corr_pi_liuming.npz" % (datadir))
 
     print("fitting")
-    fitter = ana.LatticeFit(0, dt_i=dti, dt_f=dtf, dt=dt, correlated=False)
+    fitter = ana.LatticeFit(5, dt_i=dti, dt_f=dtf, dt=dt, correlated=True,
+        xshift=xshift)
+    #fitter = ana.LatticeFit(0, dt_i=dti, dt_f=dtf, dt=dt, correlated=False)
     if readfit == False:
-        fitres = fitter.fit(None, corr, [10, 40], corrid="epi", add=addT)
+        #fitres = fitter.fit(None, corr, [10, 40], corrid="epi", add=addT)
         #fitres = fitter.fit(None, corr, [Ti, T], corrid="epi", add=addT)
-        fitres.save("%s/fit_pi.npz" % (datadir))
+        #fitres = fitter.fit(None, corr, [Ti, Tf], corrid="epi", add=addT)
+        fitres = fitter.fit(None, corr, [[Ti, Ti+3, Tf-3, Tf]], corrid="epi", add=addT, lint=True)
+        #fitres.save("%s/fit_pi.npz" % (datadir))
+        fitres.save("%s/fit_pi_liuming.npz" % (datadir))
     else:
-        fitres = ana.FitResult.read("%s/fit_pi.npz" % (datadir))
+        #fitres = ana.FitResult.read("%s/fit_pi.npz" % (datadir))
+        fitres = ana.FitResult.read("%s/fit_pi_liuming.npz" % (datadir))
     #print(corr.data[0][:,0])
     #fitres.print_data(0)
     fitres.print_data(1)
@@ -72,7 +89,7 @@ def main():
         plotter = ana.LatticePlot("%s/fit_pi.pdf" % (plotdir))
         plotter.set_env(ylog=True)
         label = ["single pion energy", "t", "C(t)", "E$_{\pi}$"]
-        plotter.plot(corr, label, fitres, fitter, add=addT)
+        plotter.plot(corr, label, fitres, fitter, add=addT, xshift=xshift, ploterror=True)
         plotter.new_file("%s/hist_fit_pi.pdf" % (plotdir))
         #plotter = ana.LatticePlot("%s/hist_fit_pi.pdf" % (plotdir))
         label = ["single pion energy", "E$_\pi$/a", "E$_\pi$"]

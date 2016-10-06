@@ -1,0 +1,253 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+
+import glob
+import os
+
+import numpy as np
+import matplotlib
+matplotlib.use('Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+
+import analysis2 as ana
+
+def get_x(data, data1=None):
+    xlen = []
+    for c in data:
+        if c[0] is "":
+            xlen.append(0)
+        else:
+            xlen.append(c[0].shape[0])
+    if data1 is not None:
+        for c in data1:
+            if c[0] is "":
+                xlen.append(0)
+            else:
+                xlen.append(c[0].shape[0])
+    xlen = np.max(xlen)
+    return np.linspace(0, xlen, xlen, endpoint=False)
+
+def subplot(ax, x, data, labs, markers, axislabs=["", ""], xticks=False, ylog=True,
+        shift=0., title="", ylim=None, legend=True):
+    plt.setp(ax.get_xticklabels(), visible=xticks)
+    if ylog:
+        ax.set_yscale("log")
+    for k, c in enumerate(data):
+        if c[0] is "":
+            continue
+        lab = "$\mu_s$ = 0.%s" % labs[k][-4:]
+        ax.errorbar(x+shift*k, c[0], yerr=c[1], fmt=markers[k], label=lab)
+    if axislabs[0] != "":
+        ax.set_xlabel(axislabs[0])
+    if axislabs[1] != "":
+        ax.set_ylabel(axislabs[1])
+    ax.grid(True)
+    if title != "":
+        ax.set_title(title)
+    if legend:
+        ax.legend(loc=1, numpoints=1, fontsize="small", framealpha=0.9)
+    if ylim is not None:
+        ax.set_ylim(ylim)
+
+def plot1(fn, corrs, effm, plotter, markers, folders):
+    # get length of x axis
+    x = get_x(corrs)
+    xm = get_x(effm) + 1.
+    fig, axs = plt.subplots(nrows=2, ncols=1, sharex=True)
+    fig.subplots_adjust(hspace=0.07)
+    # correlator plot
+    ax = axs[0]
+    subplot(ax, x, corrs, folders, markers, axislabs=["", "C(t)"])
+    # effective mass
+    ax = axs[1]
+    subplot(ax, xm, effm, folders, markers, axislabs=["t", "m(t)"], ylog=False, xticks=True, legend=False)
+
+    fig.suptitle(fn[:-4])
+    #plt.legend(numpoints=1, loc=0)
+    #plt.tight_layout()
+    plotter.save()
+    plt.close(fig)
+
+def plot2(corrs1, corrs2, effm1, effm2, plotter, markers, folders):
+    # get length of x axis
+    x = get_x(corrs1, corrs2)
+    xm = get_x(effm1, effm2) + 1.
+    fig, axs = plt.subplots(nrows=2, ncols=2, sharex='col', sharey='row')
+    fig.subplots_adjust(hspace=0.07, wspace=0.1)
+    # correlator plot
+    ax = axs[0,0]
+    subplot(ax, x, corrs1, folders, markers, axislabs=["", "C(t)"], title="$\eta$",
+        shift=0.15, legend=False)
+    # effective mass
+    ax = axs[1,0]
+    subplot(ax, xm, effm1, folders, markers, axislabs=["t", "m(t)"], shift=0.15,
+        legend=False, xticks=True, ylog=False, ylim=[0., 0.8])
+    ax = axs[0,1]
+    subplot(ax, x, corrs2, folders, markers, axislabs=["", ""], title="$\eta'$",
+        shift=0.15, legend=True)
+    # effective mass
+    ax = axs[1,1]
+    subplot(ax, xm, effm2, folders, markers, axislabs=["t", ""], shift=0.15,
+        legend=False, xticks=True, ylog=False, ylim=[0., 0.8])
+
+    plotter.save()
+    plt.close(fig)
+
+def main():
+    # lattice to work on
+    if len(os.sys.argv) > 1:
+        lat = os.sys.argv[1]
+    else:
+        lat = "A40.24"
+    L = lat.split(".")[1]
+    if not L[-1].isdigit():
+        L = L[:-1]
+    L = int(L)
+    # top dir in which the data resides
+    topdir = "/hiskp2/jost/correlationfunctions/eta/data/"
+    finaldir = "/hiskp2/jost/code/analysis-code/data/eta/"
+    plotdir = "/hiskp2/jost/code/analysis-code/plots/eta/"
+    print("get files")
+    # search for folders and files
+    path = os.path.join(topdir, lat)
+    dirs = glob.glob(os.path.join(path, "strange_*"))
+    files = [glob.glob(os.path.join(d, "*.dat")) for d in dirs]
+    # get all the folder names
+    folders = [os.path.basename(x) for x in dirs]
+    # get all the file names
+    filenames = [os.path.basename(x) for x in files[0]]
+    for f in files[1:]:
+        for d in f:
+            dprime = os.path.basename(d)
+            if dprime not in filenames:
+                filenames.append(dprime)
+    filenames = sorted(filenames)
+
+    print("plot")
+    markers = ["bo", "rs", "gD", "k^"]
+    ppath = os.path.join(plotdir, lat, "eta_all_%s.pdf" % lat)
+    plotter = ana.LatticePlot(ppath)
+    for fn in filenames:
+        shift=False
+        if fn.startswith("pi"):
+            shift = True  
+        if fn.startswith("disc"):
+            shift = True  
+        corrs = []
+        effm = []
+        for k, f in enumerate(files):
+            for d in f:
+                if d.endswith(fn):
+                    print("reading %s" % d)
+                    outfile = d.replace(".dat", ".npz")
+                    if os.path.isfile(outfile):
+                        corr = ana.Correlators.read(outfile)
+                    else:
+                        corr = ana.Correlators(d, matrix=False)
+                        corr.sym_and_boot(1500)
+                        corr.save(outfile)
+                    if shift:
+                        corr.shift(1, L=L)
+                    mean, std = ana.mean_std(corr.data)
+                    if mean[1] < 0:
+                        mean *= -1.
+                    corrs.append((mean[:,0], std[:,0]))
+                    corr.mass()
+                    mean, std = ana.mean_std(corr.data)
+                    effm.append((mean[:,0], std[:,0]))
+                    break
+            else:
+                corrs.append(("", ""))
+                effm.append(("", ""))
+        plot1(fn, corrs, effm, plotter, markers, folders)
+
+    # check for data after GEVP
+    path = os.path.join(finaldir, lat)
+    dirs = glob.glob(os.path.join(path, "strange_*"))
+    if dirs:
+        filestmp = [glob.glob(os.path.join(d, "corr_eta_TP?.npz")) for d in dirs]
+        files = []
+        for ft in filestmp:
+            if len(ft) > 0:
+                files.append(ft)
+        if len(files) > 0:
+            # get all the folder names
+            folders = [os.path.basename(x) for x in dirs]
+            # get all the file names
+            filenames = [os.path.basename(x) for x in files[0]]
+            for f in files[1:]:
+                for d in f:
+                    dprime = os.path.basename(d)
+                    if dprime not in filenames:
+                        filenames.append(dprime)
+            filenames = sorted(filenames)
+            # get data
+            corrs1, corrs2 = [], []
+            effm1, effm2 = [], []
+            for fn in filenames:
+                for k, f in enumerate(files):
+                    for d in f:
+                        if d.endswith(fn):
+                            print("printing %s" % d)
+                            corr = ana.Correlators.read(d)
+                            mean, std = ana.mean_std(corr.data)
+                            corrs1.append((mean[:,0], std[:,0]))
+                            corrs2.append((mean[:,1], std[:,1]))
+                            corr.mass()
+                            mean, std = ana.mean_std(corr.data)
+                            effm1.append((mean[:,0], std[:,0]))
+                            effm2.append((mean[:,1], std[:,1]))
+                            break
+                    else:
+                        corrs1.append(("", ""))
+                        corrs2.append(("", ""))
+                        effm1.append(("", ""))
+                        effm2.append(("", ""))
+                plot2(corrs1, corrs2, effm1, effm2, plotter, markers, folders)
+        filestmp = [glob.glob(os.path.join(d, "corr_eta_rm_TP?.npz")) for d in dirs]
+        files = []
+        for ft in filestmp:
+            if len(ft) > 0:
+                files.append(ft)
+        if len(files) > 0:
+            # get all the folder names
+            folders = [os.path.basename(x) for x in dirs]
+            # get all the file names
+            filenames = [os.path.basename(x) for x in files[0]]
+            for f in files[1:]:
+                for d in f:
+                    dprime = os.path.basename(d)
+                    if dprime not in filenames:
+                        filenames.append(dprime)
+            filenames = sorted(filenames)
+            # get data
+            corrs1, corrs2 = [], []
+            effm1, effm2 = [], []
+            for fn in filenames:
+                for k, f in enumerate(files):
+                    for d in f:
+                        if d.endswith(fn):
+                            print("printing %s" % d)
+                            corr = ana.Correlators.read(d)
+                            mean, std = ana.mean_std(corr.data)
+                            corrs1.append((mean[:,0], std[:,0]))
+                            corrs2.append((mean[:,1], std[:,1]))
+                            corr.mass()
+                            mean, std = ana.mean_std(corr.data)
+                            effm1.append((mean[:,0], std[:,0]))
+                            effm2.append((mean[:,1], std[:,1]))
+                            break
+                    else:
+                        corrs1.append(("", ""))
+                        corrs2.append(("", ""))
+                        effm1.append(("", ""))
+                        effm2.append(("", ""))
+                plot2(corrs1, corrs2, effm1, effm2, plotter, markers, folders)
+    del plotter
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass

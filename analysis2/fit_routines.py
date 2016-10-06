@@ -7,6 +7,7 @@ import itertools
 from scipy.optimize import leastsq
 import scipy.stats
 import numpy as np
+from itertools import repeat
 
 from statistics import compute_error
 from functions import compute_eff_mass
@@ -39,7 +40,7 @@ def fit_single(fitfunc, start, corr, franges, add=None, debug=0,
         Use the full covariance matrix or just the errors.
     """
     dshape = corr.shape
-    ncorr = dshape[-1]
+    ncorr = corr.ncorr
     # prepare X data
     if debug > 0:
         print("Get X data")
@@ -48,32 +49,44 @@ def fit_single(fitfunc, start, corr, franges, add=None, debug=0,
     # fitting
     if debug > 0:
         print("fitting the data")
-    for n in range(ncorr):
-        if debug > 1:
-            print("fitting correlator %d" % (n))
-        if isinstance(start[0], (tuple, list)) and len(start[0]) == 1:
-            for i, r in enumerate(franges[n]):
+    # check if there is a nested iterable, then loop over correlators
+    if isinstance(start, (tuple, list, np.ndarray)) and \
+        isinstance(start[0], (tuple, list, np.ndarray)):
+        # if ncorr == 1, then data has different structure
+        i1 = [slice(None)] * corr.data.ndim
+        for n in range(ncorr):
+            i1[-1] = n
+            # check for start values
+            # one value for every fit range
+            if len(start[n]) == len(franges[n]):
+                _start = start[n]
+            # one value for all fit ranges
+            elif len(start[n]) == 1:
+                _start = repeat(start[n], len(franges[n]))
+            # otherwise this does not fit
+            else:
+                raise RuntimeError("number of start values and fit ranges does not match")
+
+            # iterate over fit ranges
+            for i, (r, s) in enumerate(zip(franges[n], _start)):
                 if debug > 1:
                     print("fitting interval %d" % (i))
-                res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
-                    corr.data[:,r[0]:r[1]+1,n], start[n], add=add,
-                        correlated=correlated, debug=debug)
+                i1[1] = slice(r[0],r[1]+1)
+                res, chi, pva = fitting(fitfunc, X[i1[1]], corr.data[i1],
+                    s, add=add, correlated=correlated, debug=debug)
                 yield (n, i), res, chi, pva
-        elif isinstance(start[0], (tuple, list)):
+    # assume just one start value
+    else:
+        i1 = [slice(None)] * corr.data.ndim
+        for n in range(ncorr):
+            i1[-1] = n
+            # iterate over fit ranges
             for i, r in enumerate(franges[n]):
                 if debug > 1:
                     print("fitting interval %d" % (i))
-                res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
-                    corr.data[:,r[0]:r[1]+1,n], start[n][i], add=add,
-                        correlated=correlated, debug=debug)
-                yield (n, i), res, chi, pva
-        else:
-            for i, r in enumerate(franges[n]):
-                if debug > 1:
-                    print("fitting interval %d" % (i))
-                res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
-                    corr.data[:,r[0]:r[1]+1,n], start, add=add,
-                        correlated=correlated, debug=debug)
+                i1[1] = slice(r[0],r[1]+1)
+                res, chi, pva = fitting(fitfunc, X[i1[1]], corr.data[i1],
+                    start, add=add, correlated=correlated, debug=debug)
                 yield (n, i), res, chi, pva
 
 def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
@@ -463,18 +476,15 @@ def get_start_values(ncorr, ranges, data, npar=2):
         start.append([])
         # calculate effective values for correlator
         c_eff = np.nanmean(data[...,n], axis=0)
-        m_eff = np.nanmean(compute_eff_mass(data[...,n]), axis=0)
+        eff = np.ones((c_eff.shape[0], npar))
+        eff[:,0] = c_eff
+        if npar > 1:
+            eff[1:-1,1] = np.nanmean(compute_eff_mass(data[...,n]), axis=0)
+            eff[0,1] = np.nan
+            eff[-1,1] = np.nan
         # iterate over the ranges
         for r in ranges[n]:
-            if npar == 2:
-                start[-1].append([c_eff[r[0]], m_eff[r[0]]])
-            elif npar == 1:
-                start[-1].append([m_eff[r[0]]])
-            elif npar == 3:
-                start[-1].append([c_eff[r[0]], m_eff[r[0]], 1.])
-            else:
-                raise RuntimeError("Cannot set starting values for" +
-                    "funtions with npar > 3.")
+            start[-1].append(eff[r[0]])
     return start
 
 def get_start_values_comb(ncorr, ranges, data, npar=2):
@@ -502,8 +512,12 @@ def get_start_values_comb(ncorr, ranges, data, npar=2):
         # select all axis except 1 and the last
         # needs to be a tuple for nanmean
         ax = tuple([i for i in range(data.ndim) if i != 1])
-        c_eff = np.nanmean(data[...,n], axis=ax[:-1])
-        m_eff = np.nanmean(compute_eff_mass(data[...,n]), axis=ax[:-1])
+        if n == 1:
+            c_eff = np.nanmean(data, axis=ax[:-1])
+            m_eff = np.nanmean(compute_eff_mass(data), axis=ax[:-1])
+        else:
+            c_eff = np.nanmean(data[...,n], axis=ax[:-1])
+            m_eff = np.nanmean(compute_eff_mass(data[...,n]), axis=ax[:-1])
         # iterate over the ranges
         for r in ranges[n]:
             if npar == 2:

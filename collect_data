@@ -6,9 +6,9 @@ import os
 import re
 
 def main():
-    #path = "/hiskp2/jost/code/analysis-code/data/I2/globalfit/backup/"
-    path = "/hiskp2/jost/code/analysis-code/data/I2/globalfit/"
-    files = glob.glob(os.path.join(path, "gfitdata_new_*.npz"))
+    path = "/hiskp2/jost/code/analysis-code/data/I2/globalfit/backup/"
+    #path = "/hiskp2/jost/code/analysis-code/data/I2/globalfit/"
+    files = glob.glob(os.path.join(path, "gfitdata_[0-9]*.npz"))
     def atoi(text):
         return int(text) if text.isdigit() else text
     def nkeys(text):

@@ -30,7 +30,7 @@ def print_label(keys, vals, xpos=0.7, ypos=0.8):
     y = plt.ylim()[1] * ypos
 
 def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=False,
-        fmt="k", col="black", samples=100, debug=0):
+        fmt="k", col="black", samples=300, debug=0):
     """A function that plots a function.
 
     Parameters

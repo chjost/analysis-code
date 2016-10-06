@@ -101,10 +101,17 @@ def extract_data(config, innames):
     outputpath = config.get("main", "outputpath")
     nbran = parse_list_int(config.get("main", "nbran"))
     masses = parse_list_str(config.get("main", "strange_masses"))
-    smassdirs = ["strange_%s" % (m.ljust(4, "0")) for m in masses]
+    if masses == [""]:
+        skipstrange = True
+    else:
+        skipstrange = False
+        smassdirs = ["strange_%s" % (m.ljust(4, "0")) for m in masses]
 
     # build paths to data
-    corrpaths = [os.path.join(inputpath,m) for m in smassdirs]
+    if skipstrange:
+        corrpaths = [inputpath]
+    else:
+        corrpaths = [os.path.join(inputpath,m) for m in smassdirs]
     # get all configs
     # need a workaround to get only config dirs
     configsall = [set([x for x in os.listdir(cp) if x.startswith("cnfg")]) for cp in corrpaths]
@@ -116,7 +123,10 @@ def extract_data(config, innames):
     paths = [[os.path.join(cp, co) for co in configssorted] for cp in corrpaths]
 
     # build output paths
-    outpaths = [os.path.join(outputpath,m) for m in smassdirs]
+    if skipstrange:
+        outpaths = [outputpath]
+    else:
+        outpaths = [os.path.join(outputpath,m) for m in smassdirs]
 
     if debug > 0:
         print("number of files: %d" % len(innames))
@@ -237,6 +247,7 @@ def build_eta(config, innames):
                     fname = os.path.join(p, i.replace("C1/C1", "disc"))
                     fname = fname.replace(st1, st2)
                     print(fname)
+                    # need imaginary part of disconnected contribution
                     disc = ana.Correlators(fname, column=(2,), conf_col=-1)
                     fD = disc_fac["".join((q,q))]
                 elif i.startswith("C20") and st2 in i:
@@ -328,10 +339,17 @@ def build_eta(config, innames):
 def build_pi0(config, innames):
     datapath = config.get("main", "outputpath")
     masses = parse_list_str(config.get("main", "strange_masses"))
-    smassdirs = ["strange_%s" % (m.ljust(4, "0")) for m in masses]
+    if masses == [""]:
+        skipstrange = True
+    else:
+        skipstrange = False
+        smassdirs = ["strange_%s" % (m.ljust(4, "0")) for m in masses]
 
     # build paths to data
-    paths = [os.path.join(datapath,m) for m in smassdirs]
+    if skipstrange:
+        paths = [datapath]
+    else:
+        paths = [os.path.join(datapath,m) for m in smassdirs]
 
     print("build pi^0")
     for p in paths:
@@ -390,8 +408,8 @@ def main():
     extract_data(config, innames)
 
     # build the particle correlation functions
-    #build_pi0(config, innames)
-    #build_eta(config, innames)
+    build_pi0(config, innames)
+    build_eta(config, innames)
 
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':

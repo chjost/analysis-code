@@ -1,0 +1,150 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+
+import os
+import glob
+import numpy as np
+
+import analysis2 as ana
+
+def paper_meta():
+    """The values for a*mpi from the paper."""
+    p_am = {"A30.32": [(np.nan,)*2]*3,
+            "A40.20": [(np.nan,)*2]*3,
+            "A40.24": [(np.nan,)*2, (0.312, 0.012), (np.nan,)*2],
+            "A40.32": [(np.nan,)*2]*3,
+            "A60.24": [(np.nan,)*2, (0.329, 0.007), (np.nan,)*2],
+            "A80.24": [(np.nan,)*2, (0.341, 0.007), (np.nan,)*2],
+            "A100.24": [(np.nan,)*2, (np.nan,)*2, (0.341, 0.008)],
+            "A80.24s": [(0.313, 0.004), (np.nan,)*2, (np.nan,)*2],
+            "A100.24s": [(0.325, 0.003), (np.nan,)*2, (np.nan,)*2],
+            "B25.32": [(np.nan,)*2]*3,
+            "B35.48": [(np.nan,)*2]*3,
+            "B35.32": [(np.nan,)*2]*3,
+            "B55.32": [(np.nan,)*2, (0.275, 0.003), (np.nan,)*2],
+            "B85.24": [(0.284, 0.002), (0.293, 0.001), (0.305, 0.001)],
+            "D15.48": [(np.nan,)*2]*3,
+            "D30.48": [(np.nan,)*2]*3,
+            "D45.32": [(np.nan,)*2, (0.203, 0.007), (np.nan,)*2]}
+    return p_am
+
+def paper_metap():
+    """The values for a*mpi from the paper."""
+    p_am = {"A30.32": [(np.nan,)*2]*3,
+            "A40.20": [(np.nan,)*2]*3,
+            "A40.24": [(np.nan,)*2, (0.448, 0.015), (np.nan,)*2],
+            "A40.32": [(np.nan,)*2]*3,
+            "A60.24": [(np.nan,)*2, (0.458, 0.015), (np.nan,)*2],
+            "A80.24": [(np.nan,)*2, (0.466, 0.017), (np.nan,)*2],
+            "A100.24": [(np.nan,)*2, (np.nan,)*2, (0.442, 0.013)],
+            "A80.24s": [(0.431, 0.013), (np.nan,)*2, (np.nan,)*2],
+            "A100.24s": [(0.463, 0.020), (np.nan,)*2, (np.nan,)*2],
+            "B25.32": [(np.nan,)*2]*3,
+            "B35.48": [(np.nan,)*2]*3,
+            "B35.32": [(np.nan,)*2]*3,
+            "B55.32": [(np.nan,)*2]*3,
+            "B85.24": [(0.430, 0.007), (0.432, 0.007), (0.436, 0.006)],
+            "D15.48": [(np.nan,)*2]*3,
+            "D30.48": [(np.nan,)*2]*3,
+            "D45.32": [(np.nan,)*2, (0.271, 0.009), (np.nan,)*2]}
+    return p_am
+
+def print_table(lat, smass, data1, data2):
+    for s, d1, d2 in zip(smass, data1, data2):
+        head = "%s & 0.0%d" % (lat, s)
+        if d1[0][0] is np.nan:
+            eta1 = "---"
+        else:
+            eta1 = "$%.3f(%1.0f)$" % (d1[0][0], d1[0][1]*1e3)
+        if d1[1][0] is np.nan:
+            etap1 = "---"
+        else:
+            etap1 = "$%.3f(%1.0f)$" % (d1[1][0], d1[1][1]*1e3)
+        if d2[0][0] is np.nan:
+            eta2 = "---"
+        else:
+            eta2 = "$%.3f(%1.0f)(_{-%1.0f}^{+%1.0f})$" % (d2[0][0], d2[0][1]*1e3, d2[0][2]*1e3, d2[0][3]*1e3)
+        if d2[1][0] is np.nan:
+            etap2 = "---"
+        else:
+            etap2 = "$%.3f(%1.0f)(_{-%1.0f}^{+%1.0f})$" % (d2[1][0], d2[1][1]*1e3, d2[1][2]*1e3, d2[1][3]*1e3)
+        tmpstring = " & ".join((head, eta1, eta2, etap1, etap2 + "\\\\"))
+        print(tmpstring)
+
+
+def print_summary(datafolder, lattices):
+    """Print a summary of the lattices given.
+
+    Args:
+        datafolder: where the raw data is stored
+        plotfolder: where to store the plots
+        lattices: list of lattices to work on
+    """
+    verbose=False
+    # file name of interest
+    filefit = "fit_eta_rm_TP0.npz"
+    filefit1 = "fit_eta_TP0.npz"
+    # parameter of interest
+    pc = 1
+
+
+    sum_eta = []
+    cmp_eta = []
+    smasses = []
+    meta = paper_meta()
+    metap = paper_metap()
+    for lat in lattices:
+        print("read data for %s" % lat)
+
+        # get strange quark masses
+        topdir = os.path.join(datafolder, lat)
+        strange_masses = glob.glob(os.path.join(topdir, "strange_*"))
+        strange_masses = sorted(strange_masses, key=lambda x: os.path.basename(x).split("_")[1])
+        sm = [int(os.path.basename(s).split("_")[1]) for s in strange_masses]
+        smasses.append(sm)
+
+        # read data
+        sum_eta.append([])
+        for sdir in strange_masses:
+            try:
+                corr = ana.FitResult.read(os.path.join(sdir, filefit))
+            except IOError:
+                corr = ana.FitResult.read(os.path.join(sdir, filefit1))
+            corr.calc_error()
+            etainfo = [corr.error[pc][0][0][0], corr.error[pc][1][0],
+                corr.error[pc][2][0][0], corr.error[pc][2][0][1]]
+            etapinfo = [corr.error[pc][0][1][0], corr.error[pc][1][1],
+                corr.error[pc][2][1][0], corr.error[pc][2][1][1]]
+            sum_eta[-1].append([etainfo, etapinfo])
+
+        # prepare comparison
+        cmp_eta.append([])
+        for d1, d2 in zip(meta[lat], metap[lat]):
+            cmp_eta[-1].append([d1, d2])
+
+
+    # output to stdout
+    #print(sum_eta)
+    #print(cmp_eta)
+
+    for l, s, c, e in zip(lattices, smasses, cmp_eta, sum_eta):
+        print_table(l, s, c, e)
+        print("\\hline")
+    
+    return
+
+def main():
+    lattices=["A30.32", "A40.20", "A40.24", "A40.32", "A60.24",
+              "A100.24", "A100.24s", "B85.24"]
+    #lattices=["A30.32", "A40.20", "A40.24", "A40.32", "A60.24",
+    #          "A80.24", "A100.24", "B25.32", "B35.32", "B35.48",
+    #          "B55.32", "B85.24", "D15.48", "D30.48", "D45.32"]
+    datafolder = "./data/eta/"
+    print_summary(datafolder, lattices)
+    return
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass
