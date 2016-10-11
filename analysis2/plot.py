@@ -153,8 +153,10 @@ class LatticePlot(object):
             raise RuntimeError("not enough labels")
         if len(label) < 5:
             label.append("")
+        pltmatrix = False
         if corr.matrix:
-            raise RuntimeError("Cannot plot correlation function matrix")
+            pltmatrix = True
+            #raise RuntimeError("Cannot plot correlation function matrix")
         # get needed data
         ncorr = corr.shape[-1]
         T = corr.shape[1]
@@ -168,7 +170,11 @@ class LatticePlot(object):
         for n in range(ncorr):
             if debug > 1:
                 print("plotting correlators %d" % (n))
-            mdata, ddata = compute_error(corr.data[:,:,n])
+            if pltmatrix:
+                _data = corr.data[:,:,n,n]
+            else:
+                _data = corr.data[:,:,n]
+            mdata, ddata = compute_error(_data)
             
             if fitresult is None:
                 # set up labels
@@ -178,11 +184,11 @@ class LatticePlot(object):
                 self._set_env_normal()
                 # plot the relative error instead of data and error
                 if rel is True:
-                    plot_data(X, np.d(ddata,corr.data[0,:,n]),
+                    plot_data(X, np.d(ddata,_data[0]),
                         np.zeros_like(ddata), label=label[3],
                         plotrange=[0,T],col=self.cycol())
                 else:
-                    plot_data(X, corr.data[0,:,n], ddata, label[3],
+                    plot_data(X, _data[0], ddata, label[3],
                         plotrange=[0,T],col=self.cycol())
                 plt.legend()
                 if self.join is False:
