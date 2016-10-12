@@ -1,4 +1,4 @@
-#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+1#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
 ################################################################################
 #
 # Author: Christian Jost (jost@hiskp.uni-bonn.de)
@@ -93,7 +93,7 @@ def main():
     label = ["scattering length", "a$_{\k\k}$", "a$_{\k\k}$"]
     plotter.histogram(a_kk, label)
     plotter.new_file("%s/qq_a0_%s.pdf" % (plotdir, lat))
-    label = [r'QQ-Plot $a_0$ %s' % lat, r'Bootstrap samples $a_0$']
+    label = [r'QQ-Plot $a_0$ %s' % lat, r'weighted $a_0$']
     plotter.qq_plot(ratiofit,label,par=0)
     del plotter
 

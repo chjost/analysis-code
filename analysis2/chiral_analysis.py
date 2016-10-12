@@ -992,18 +992,19 @@ class ChirAna(object):
     #plt.xlim(0,x_lim[1])
     #plt.ylim(y_lim[0],y_lim[1])
     # limits r0mk_sq
-    #plt.xlim(0,0.1)
-    #plt.ylim(1.15,2.5)
+    plt.xlim(0,50)
+    plt.ylim(1.15,2.5)
     #limits mka0
-    plt.xlim(0,1.7)
+    #plt.xlim(0,1.7)
     #plt.xlim(0,2.5e5)
-    plt.ylim(-0.5,-0.28)
+    #plt.ylim(-0.5,-0.28)
     #plt.vlines(self.phys_point[0,0],y_lim[0],y_lim[1],color="k",label=label[3])
     if loc==None:
       plt.legend(loc='best',numpoints=1,ncol=1,fontsize=12)
     else:
       plt.legend(loc=loc,numpoints=1,ncol=1,fontsize=12)
-    plt.title(label[2])
+    #switch off title for publishing
+    #plt.title(label[2])
     plt.ylabel(label[1])
     plt.xlabel(label[0])
     pfit.savefig()

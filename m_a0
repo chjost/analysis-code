@@ -85,8 +85,12 @@ def main():
       plotter = ana.LatticePlot("%s/hist_mk_akk_%s.pdf" % (plotdir, lat))
       # Number of bins is last parameter fit ranges of 0th correlator divided
       # by 3
-      nbins = mult_obs.data[0].shape[-1]/4
-      if nbins > 0:
+      nbins1 = mult_obs.data[0].shape[-1]/4
+      if nbins1 > 0:
+          if nbins1 > 10:
+            nbins = nbins1
+          else:
+            nbins = mult_obs.data[0].shape[-1]
         label = ["Scattering length", "M$_\k$ a$_\k\k$", "M$_\k$ a$_\k\k$"]
         plotter.histogram(mult_obs, label, nb_bins=nbins)
       plotter.new_file("%s/qq_mk_a0_%s.pdf" % (plotdir, lat))

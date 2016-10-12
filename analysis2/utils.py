@@ -37,7 +37,7 @@ def mean_std(data, axis=0, mean=None):
         #_mean = np.mean(data[select])
         _mean = data[select]
     else:
-        _mean = mean
+        _mean = np.asarray(mean)
     diff = axis_subtract(data,_mean,axis)
     var = np.nansum(np.square(diff), axis=axis) / data.shape[axis]
     std = np.sqrt(var)
@@ -53,6 +53,7 @@ def axis_subtract(data,mean,axis):
   else:
     diff=data-mean
   return diff
+
 def r0_mass(amps,ens,square=False):
   """Calculates the physical mass from pseudoscalar masses in lattice units
 

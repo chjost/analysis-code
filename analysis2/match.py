@@ -444,10 +444,11 @@ class MatchResult(object):
       self.coeffs = [0,0,0]
       obs=self.obs
       amu = self.amu
-      if  hasattr(amu_match,"__iter__") is False:
-        amu_match=np.full((3),amu_match)
+      dshape = np.asarray(amu_match).shape
+      if len(dshape) < 2:
+        amu_match=np.full((3,dshape[0]),amu_match)
       self.amu_match=amu_match
-
+      print("matched value shape %r" % dshape)
       # do only one method
       if isinstance(meth,int):
         if meth > 2:
@@ -507,6 +508,8 @@ class MatchResult(object):
       return y 
 
     def plot_match(self,obs,plotdir,ens, proc=None, meth=None, label=None):
+      print("match/eval amu_s value for plot:")
+      print(self.amu_match[meth])
       if meth == 0:
         _meth = '_lipol'
       elif meth == 1:

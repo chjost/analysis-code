@@ -437,7 +437,7 @@ class LatticePlot(object):
             plot_data(np.sort(q_theo),np.sort(q_meas),None,label[1],
                 fmt='o',markerfill ='none')
             plot_function(bisec,np.sort(q_theo),None,'',fmt='r')
-            #plt.legend(loc='best')
+            plt.legend(loc='best')
             plt.locator_params(axis='x',nbins=4)
             plt.locator_params(axis='y',nbins=4)
             plt.title(label[0])

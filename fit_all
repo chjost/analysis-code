@@ -92,13 +92,17 @@ def main():
         label = ["single particle", "t", "C(t)", "kaon"]
         plotter.plot(picorr, label, pifit, fit_single, add=addT, debug=debug)
         range_mk, r_mk_shape = pifit.get_ranges()
-        nbins = r_mk_shape[0][0]/3
-        if nbins > 0:
+        nbins1 = r_mk_shape[0][0]/3
+        if nbins1 > 0:
+            if nbins1 > 10:
+              nbins = nbins1
+            else:
+              nbins = r_mk_shape[0][0]
             plotter.new_file("%s/hist_fit_k_%s.pdf" % (plotdir, lat))
             label = ["kaon energy", "E$_\k$/a", "E$_\k$"]
             plotter.histogram(pifit, label, nb_bins=nbins, par=1)
         plotter.new_file("%s/qq_fit_k_%s.pdf" % (plotdir, lat))
-        label = [r'QQ-Plot $E_K$ %s' % lat, r'Bootstrap samples $E_K$']
+        label = [r'QQ-Plot $E_K$ %s' % lat, r'weighted $E_K$']
         plotter.qq_plot(pifit,label,par=1)
 
         del plotter
@@ -160,15 +164,19 @@ def main():
            oldfitpar=1, xshift=0.5, debug=debug)
         print "open new file for deltaE"
         range_r, r_r_shape = ratiofit.get_ranges()
-        nbins = r_r_shape[1][0]/3
-        if nbins > 0:
+        nbins1 = r_r_shape[1][0]/3
+        if nbins1 > 0:
+            if nbins1 > 10:
+              nbins = nbins1
+            else:
+              nbins = r_r_shape[1][0]
             plotter.new_file("%s/hist_fit_kk_ratio_TP%d_%s.pdf" % (plotdir, d2, lat))
             label = ["ratio", "dE$_{KK}$/a", "dE$_{KK}$"]
             # Number of bins is last parameter fit ranges of 0th correlator divided
             # by 3
             plotter.histogram(ratiofit, label, nb_bins=nbins, par=1)
         plotter.new_file("%s/qq_fit_kk_%s.pdf" % (plotdir, lat))
-        label = [r'QQ-Plot $\delta E$ %s' % lat, r'Bootstrap samples $\delta E$']
+        label = [r'QQ-Plot $\delta E$ %s' % lat, r'weighted$\delta E$']
         plotter.qq_plot(ratiofit,label,par=1)
         del plotter
 

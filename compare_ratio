@@ -84,7 +84,7 @@ def main():
         plotter = ana.LatticePlot("%s/ratio_cmp_TP%d_%s.pdf" % (plotdir[0], d2[0],
           lat[0]),join=True)
         print(plotter.join)
-        plotter.set_env(ylog=False,xlim=[0,T2],ylim=[1.2,2.])
+        plotter.set_env(ylog=False,xlim=[0,T2],ylim=[1.8,2.])
         label = [r'Ratio', "t", "R(t)", r'$a\mu_s^{low}$']
         plotter.plot(ratio1, label, xshift=0.5)
         label[3]=r'$a\mu_s^{med}$'
