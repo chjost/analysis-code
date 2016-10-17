@@ -597,7 +597,7 @@ def print_line_latex(lat, dx, dy, dm=None, prec=1e4):
                 (lat, dx[0][0], dx[0][1]*prec, dx[0][2]*prec, dx[0][3]*prec,
                   dy[0], dy[1]*prec, dy[2]*prec, dy[3]*prec))
     
-def amu_q_from_mq_ren(r0_in,zp,nboot,mq_in=(99.6,4.3),mq_guess=None):
+def amu_q_from_mq_ren(a,zp,nboot,mq_in=(99.6,4.3),mq_guess=None):
   """Calculate the bare strange quark mass per lattice spacing
   
   The lattice data for r0 and the renormalization constant are converted to
@@ -605,11 +605,11 @@ def amu_q_from_mq_ren(r0_in,zp,nboot,mq_in=(99.6,4.3),mq_guess=None):
 
   Parameters:
   -----------
-  r0 : tuple,Lattice calculation of Sommer parameter
+  a : tuple,Lattice calculation of Sommer parameter
   zp : tuple, the renormalization constant
   mq_guess : 1darray, bootstrapsamples of guessed quark mass
   """
-  _r0 = ana.draw_gauss_distributed(0.474,0.014,(nboot,),origin=True)
+  #_r0 = ana.draw_gauss_distributed(0.474,0.014,(nboot,),origin=True)
   if mq_guess is None:
     _ms = ana.draw_gauss_distributed(mq_in[0],mq_in[1],(nboot,),origin=True)
   else:
@@ -618,13 +618,15 @@ def amu_q_from_mq_ren(r0_in,zp,nboot,mq_in=(99.6,4.3),mq_guess=None):
     else:
       _ms = mq_guess
   # Latticer input
-  _r0_lat = ana.draw_gauss_distributed(r0_in[0],r0_in[1],(nboot,),origin=True)
+  #_r0_lat = ana.draw_gauss_distributed(r0_in[0],r0_in[1],(nboot,),origin=True)
+  _dummy, _a = ana.prepare_a(a,nboot) 
   _zp_ms_bar = ana.draw_gauss_distributed(zp[0],zp[1],(nboot,),origin=True)
 
-  _bare_mass = _r0*_ms*_zp_ms_bar/(197.37*_r0_lat)
+  #_bare_mass = _r0*_ms*_zp_ms_bar/(197.37*_r0_lat)
+  _bare_mass = _a*_ms*_zp_ms_bar/197.37
   return _bare_mass
 
-def r0mq_from_amuq(r0_in,zp,nboot,amuq):
+def r0mq_from_amuq(a,zp,nboot,amuq):
   """Calculate r0mq from amuq samples
   
   The lattice data for r0 and the renormalization constant are converted to
@@ -637,7 +639,8 @@ def r0mq_from_amuq(r0_in,zp,nboot,amuq):
   mq_guess : 1darray, bootstrapsamples of guessed quark mass
   """
   # Latticer input
-  _r0_lat = ana.draw_gauss_distributed(r0_in[0],r0_in[1],(nboot,),origin=True)
+  #_r0_lat = ana.draw_gauss_distributed(r0_in[0],r0_in[1],(nboot,),origin=True)
+  _dummy,_r0_lat = prepare_r0(a,nboot) 
   _zp_ms_bar = ana.draw_gauss_distributed(zp[0],zp[1],(nboot,),origin=True)
 
   _r0mq = _r0_lat*amuq/_zp_ms_bar

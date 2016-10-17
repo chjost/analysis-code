@@ -156,7 +156,7 @@ class MatchResult(object):
       self.amu_match = np.zeros((3,nboot))
       self.obs = np.zeros((nb_obs,nboot))
       self.eval_obs = np.zeros((3,nboot))
-      self.amu = np.zeros(nb_obs)
+      self.amu = np.zeros((nb_obs,nboot))
       if self.obs_id is None:
         self.obs_id = obs_id
 
@@ -423,7 +423,7 @@ class MatchResult(object):
       if plot:
         self.plot_match(obs_to_match,plotdir,ens,meth=meth,proc='match',label=label)
 
-    def eval_at(self, amu_match, meth = None, ens=None,plot = True,plotdir=None,label=None):
+    def eval_at(self, amu_match, amu_x=None, meth = None, ens=None,plot = True,plotdir=None,label=None):
       """Evaluates a given observable at a matched strange quark mass
 
       Parameters
@@ -433,6 +433,8 @@ class MatchResult(object):
                           1: linear fit
                           2: quadratic interpolation      
       amu_s_match: amu_s to evaluate at (lattice units)
+      amu_x: ndarray, The x-values used in matching, if none use the predefined
+           amu values
 
       Returns
       -------
@@ -443,12 +445,24 @@ class MatchResult(object):
       # init result array:
       self.coeffs = [0,0,0]
       obs=self.obs
-      amu = self.amu
+      # Get the shape of the amu_s values to match to
       dshape = np.asarray(amu_match).shape
+      # if the array is 1d blow it up to 2d, all 3 matching methods will get the
+      # same amu_s values
       if len(dshape) < 2:
         amu_match=np.full((3,dshape[0]),amu_match)
       self.amu_match=amu_match
       print("matched value shape %r" % dshape)
+      # Set the x-values in the evaluation procedure
+      if amu_x is None:
+        amu = self.amu
+      else:
+        if len(amu_x) < 2:
+          raise ValueError("Inserted x values do not have right shape")
+        else:
+          amu = amu_x
+      #print("In evaluation amu_x values are:")
+      #print(amu_x[:,0])
       # do only one method
       if isinstance(meth,int):
         if meth > 2:
@@ -501,10 +515,15 @@ class MatchResult(object):
       if plot:
         self.plot_match(self.eval_obs,plotdir,ens,meth=meth,proc='eval',label=label)
 
-    def get_plot_error(self):
+    def get_plot_error(self,dim='y'):
       y = np.zeros((self.obs.shape[0],2))
-      for i,v in enumerate(self.obs):
-        y[i,0],y[i,1] = compute_error(v)
+      if dim is 'y':
+        for i,v in enumerate(self.obs):
+          y[i,0],y[i,1] = compute_error(v)
+      if dim is 'x':
+        for i,v in enumerate(self.amu):
+          y[i,0],y[i,1] = compute_error(v)
+
       return y 
 
     def plot_match(self,obs,plotdir,ens, proc=None, meth=None, label=None):
@@ -525,34 +544,35 @@ class MatchResult(object):
       para = lambda p,x: p[0]*x**2+p[1]*x+p[2]
       # calculate errors for plot
       y_plot = self.get_plot_error()
+      x_plot = self.get_plot_error(dim='x')
       if meth is None:
         # plot data
-        plot_data(self.amu,y_plot[:,0],y_plot[:,1],label='data',col='k')
+        plot_data(x_plot[:,0],y_plot[:,0],y_plot[:,1],label='data',dX=x_plot[:,1],col='k')
         # plot the functions
-        plot_function(line,self.amu,self.coeffs[0],'lin.  ipol',fmt='--')
-        plot_function(para,self.amu,self.coeffs[1],'quad. ipol',
+        plot_function(line,x_plot[:,0],self.coeffs[0],'lin.  ipol',fmt='--')
+        plot_function(para,x_plot[:,0],self.coeffs[1],'quad. ipol',
                       fmt='r--',col='red')
-        plot_function(line,self.amu,self.coeffs[2],'lin. fit',
+        plot_function(line,x_plot[:,0],self.coeffs[2],'lin. fit',
                       fmt='b--',col='blue')
       elif meth == 0:
-        plot_data(self.amu,y_plot[:,0],y_plot[:,1],label='data',col='k')
-        plot_function(line,self.amu,self.coeffs[meth],'lin. ipol',fmt='k--',
+        plot_data(x_plot[:,0],y_plot[:,0],y_plot[:,1],label='data',dX=x_plot[:,1],col='k')
+        plot_function(line,x_plot[:,0],self.coeffs[meth],'lin. ipol',fmt='k--',
                       ploterror=True)
         if proc == 'match':
           plot_single_line(self.amu_match[meth],obs,label[0:2],col='g')
         else:
           plot_single_line(self.amu_match[meth],self.eval_obs[meth],label[0:2],col='g')
       elif meth == 1:
-        plot_data(self.amu,y_plot[:,0],y_plot[:,1],label='data',col='k')
-        plot_function(para,self.amu,self.coeffs[meth],'quad.  ipol',
+        plot_data(x_plot[:,0],y_plot[:,0],y_plot[:,1],label='data',dX=x_plot[:,1],col='k')
+        plot_function(para,x_plot[:,0],self.coeffs[meth],'quad.  ipol',
                       ploterror=True,fmt='r--',col='red')
         if proc == 'match':
           plot_single_line(self.amu_match[meth],obs,label[0:2],col='g')
         else:
           plot_single_line(self.amu_match[meth],self.eval_obs[meth],label[0:2],col='g')
       elif meth == 2:
-        plot_data(self.amu,y_plot[:,0],y_plot[:,1],label='data',col='k')
-        plot_function(line,self.amu,self.coeffs[meth],'lin. fit',
+        plot_data(x_plot[:,0],y_plot[:,0],y_plot[:,1],label='data',dX=x_plot[:,1],col='k')
+        plot_function(line,x_plot[:,0],self.coeffs[meth],'lin. fit',
             ploterror = True, fmt='b--', col='blue')
         if proc == 'match':
           plot_single_line(self.amu_match[meth],obs,label[0:2],col='g')

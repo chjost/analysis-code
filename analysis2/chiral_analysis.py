@@ -992,12 +992,15 @@ class ChirAna(object):
     #plt.xlim(0,x_lim[1])
     #plt.ylim(y_lim[0],y_lim[1])
     # limits r0mk_sq
-    plt.xlim(0,50)
-    plt.ylim(1.15,2.5)
+    # using ml
+    #plt.xlim(0,50)
+    # using (r0M_pi)^2
+    #plt.xlim(0,1.5)
+    #plt.ylim(1.15,2.5)
     #limits mka0
-    #plt.xlim(0,1.7)
+    plt.xlim(0,1.7)
     #plt.xlim(0,2.5e5)
-    #plt.ylim(-0.5,-0.28)
+    plt.ylim(-0.5,-0.28)
     #plt.vlines(self.phys_point[0,0],y_lim[0],y_lim[1],color="k",label=label[3])
     if loc==None:
       plt.legend(loc='best',numpoints=1,ncol=1,fontsize=12)
@@ -1010,3 +1013,32 @@ class ChirAna(object):
     pfit.savefig()
     pfit.close()
     plt.clf()
+
+  def guess_error_fit(self,guess,func):
+    """ Calculate the error on the initial guess from the chiral fit result
+
+    The physical point values of the input variables and the fitted parameters
+    are used to calculate bootstrapsamples of the guessed value to obtain an
+    error on guess.
+
+    Parameters
+    -----------
+    guess: ndarray, the initially guessed values
+    func : callable, the function to use for fitting
+    """
+    y = self.phys_point_fitres.data[0]
+    p = self.fitres.data[0]
+    x = self.phys_point[0]
+    print("phys point fitres data shape:")
+    print(y.shape)
+    print("fitres parameters shape:")
+    print(p.shape)
+    print("phys_point shape:")
+    print(x.shape)
+    print("parameter 0 samples: %r" % p[:,0,0])
+    print("parameter 1 samples: %r" % p[:,1,0])
+    print("y samples: %r" % y[:,0])
+    err = func(p,x,y) 
+    print("Error samples are: %r" % err)
+    _guess = np.asarray(compute_error(err))
+    return _guess

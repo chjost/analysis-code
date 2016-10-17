@@ -397,11 +397,25 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, mute=None, debug=0)
     if debug > 1:
         print("fitting the data")
     if add is None:
-        for b in range(samples):
-            p,cov1,infodict,mesg,ier = leastsq(errfunc, start, args=(X, Y[b],
-                cov), full_output=1, factor=.1)
-            chisquare[b] = float(sum(infodict['fvec']**2.))
-            res[b] = np.array(p)
+        # Enable multiple bootstrapsamples for x-values pair samplewise
+        print("x-shape in fitting is:")
+        print(X.shape)
+        print(Y.shape)
+        # This is a nasty hack to enable fitting for several bootstrapsamples in
+        # the xdata
+        #TODO: Solve this another way, if possible, unify array layouts
+        if len(X.shape) == 2 and X.shape[-1]==Y.shape[0]: 
+            for b in range(samples):
+                p,cov1,infodict,mesg,ier = leastsq(errfunc, start, args=(X[:,b], Y[b],
+                    cov), full_output=1, factor=.1)
+                chisquare[b] = float(sum(infodict['fvec']**2.))
+                res[b] = np.array(p)
+        else:
+            for b in range(samples):
+                p,cov1,infodict,mesg,ier = leastsq(errfunc, start, args=(X, Y[b],
+                    cov), full_output=1, factor=.1)
+                chisquare[b] = float(sum(infodict['fvec']**2.))
+                res[b] = np.array(p)
     else:
         for b in range(samples):
             p,cov1,infodict,mesg,ier = leastsq(errfunc, start, args=(X, Y[b],
