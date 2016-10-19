@@ -40,6 +40,18 @@ def prepare_a(ens,nsamp):
     data_plot[0:2] = ana.compute_error(r0_tmp)
     return data_plot, r0_tmp
 
+def prepare_zp(ens,nsamp,meth=1):
+    """Return a list of bootstrapped r0 values"""
+    data_plot = np.zeros(4)
+    #dictionary of lattice spacing (arxiv:1403.4504v3)
+    if meth == 1:
+      raw = {'A':[0.529,0.007], 'B':[0.509,0.004], 'D':[0.516,0.002]}
+    if meth == 2:
+      raw = {'A':[0.574,0.004], 'B':[0.546,0.002], 'D':[0.545,0.002]}
+    raw_tmp = ana.draw_gauss_distributed(raw[ens][0],raw[ens][1],(nsamp,),origin=True)
+    data_plot[0:2] = ana.compute_error(raw_tmp)
+    return data_plot, raw_tmp
+
 #def prepare_fse_pi(ens,nsamp):
 #    """ Return bootstrapped values of correction K^{FSE}_{M^2,L} depending on
 #    L
@@ -79,7 +91,7 @@ def prepare_r0(ens,nsamp,ext=True):
     if ext is True:
       _r_ext = ana.draw_gauss_distributed(0.474,0.014,(nsamp,),origin=True)
       _a_plt,_a_tmp = prepare_a(ens,nsamp)
-      r0_tmp = np.divide(_r_ext,_a_tmp)
+      r0_tmp = np.divide(_r_ext[0],_a_tmp)
     else:
       #dictionary of Sommer parameter (arxiv:1403.4504v3)
       r = {'A':[5.31,0.08], 'B':[5.77,0.06], 'D':[7.60,0.08]}
