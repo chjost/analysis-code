@@ -41,7 +41,7 @@ def prepare_a(ens,nsamp):
     return data_plot, r0_tmp
 
 def prepare_zp(ens,nsamp,meth=1):
-    """Return a list of bootstrapped r0 values"""
+    """Return a list of bootstrapped Z_P values"""
     data_plot = np.zeros(4)
     #dictionary of lattice spacing (arxiv:1403.4504v3)
     if meth == 1:

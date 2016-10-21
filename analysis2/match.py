@@ -218,34 +218,35 @@ class MatchResult(object):
       """
       #print("xdata to add has shape")
       #print(data.shape)
-      if obs == True:
-        #print("xdata to add to has shape")
-        #print(self.obs[idx].shape)
-        if op == 'mult':
-          self.obs[idx] *= data
-        # divide existent obs by data
-        elif op == 'div':
-          self.obs[idx] /= data
-        elif op == 'min':
-          self.obs[idx] -= data
-        else:
-          self.obs[idx] = data
-        if amu is not None:
-          self.amu[idx]=amu
-        #print(self.obs[idx])
-      else:
-        #print("xdata to add to has shape")
-        #print(self.eval_obs[idx].shape)
-        if op == 'mult':
-          self.eval_obs[idx] *= data
-        # divide existent eval_obs by data
-        elif op == 'div':
-          self.eval_obs[idx] /= data
-        elif op == 'min':
-          self.eval_obs[idx] -= data
-        else:
-          self.eval_obs[idx] = data
-        if amu is not None:
+      if data is not None:
+          if obs == True:
+            #print("xdata to add to has shape")
+            #print(self.obs[idx].shape)
+            if op == 'mult':
+              self.obs[idx] *= data
+            # divide existent obs by data
+            elif op == 'div':
+              self.obs[idx] /= data
+            elif op == 'min':
+              self.obs[idx] -= data
+            else:
+              self.obs[idx] = data
+            if amu is not None:
+              self.amu[idx]=amu
+            #print(self.obs[idx])
+          else:
+            #print("xdata to add to has shape")
+            #print(self.eval_obs[idx].shape)
+            if op == 'mult':
+              self.eval_obs[idx] *= data
+            # divide existent eval_obs by data
+            elif op == 'div':
+              self.eval_obs[idx] /= data
+            elif op == 'min':
+              self.eval_obs[idx] -= data
+            else:
+              self.eval_obs[idx] = data
+      if amu is not None:
           self.amu[idx]=amu
         #print(self.eval_obs[idx])
 

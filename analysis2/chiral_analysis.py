@@ -61,10 +61,15 @@ class ChirAna(object):
     self.amu_matched_to = None
     # The functions for the continuum extrapolation and the function in the
     # continuum
+    # This is the function for fitting
     self.cont_ext = None
+    # This is the function for plotting
+    self.plot_cont_ext = None
+    # This is the function for continuum (no a-dependence)
     self.cont_func = None
 
-  def create_empty(self, lyt_x, lyt_y, match=None, cont_ext=None, cont_func=None):
+  def create_empty(self, lyt_x, lyt_y, match=None, cont_ext=None,
+      plot_cont_ext= None, cont_func=None):
     """Initialize a chiral analysis with some start parameters
     
     At the moment the first index is used to label the lattice spacing, the
@@ -123,6 +128,11 @@ class ChirAna(object):
       for i in self.x_data:
         print(i.shape)
     self.cont_ext = cont_ext
+    # Take chiral fit function for plotting unless stated otherwise
+    if plot_cont_ext is None:
+      self.plot_cont_ext = cont_ext
+    else:
+      self.plot_cont_ext = plot_cont_ext
     self.cont_func = cont_func
   #def save()
   #
@@ -531,14 +541,15 @@ class ChirAna(object):
       self.phys_point_fitres = self.fitres.calc_mk_a0_phys(x_phys,self.cont_ext)
       print(x_phys)
       print ("physical point from fitresult")
-      print(self.phys_point_fitres.data[0],self.phys_point_fitres.pval[0])
+      #print(self.phys_point_fitres.data[0],self.phys_point_fitres.pval[0])
       self.phys_point_fitres.calc_error()
       self.phys_point_fitres.print_data()
       self.phys_point_fitres.save(datadir+self.proc_id+'phys_pt.npz')
 
       self.phys_point = np.zeros((2,2))
       self.phys_point[0] = x_phys[0:2]
-      self.phys_point[1] = chut.err_phys_pt(args,x_phys,self.cont_ext)
+      r,rstd,rsys,nfits = self.phys_point_fitres.error[0] 
+      self.phys_point[1] = np.asarray((r[0][0],rstd[0])) 
       print("Calculated physical point to be:")
       print(self.phys_point)
     # if a dimension is given set up a list of fitresults
@@ -571,13 +582,13 @@ class ChirAna(object):
       #  self.plot_glob_func(x_data,y_data,self.cont_ext,xcut=xcut,ens=ens)
       #else:
       if self.combined:
-        self.plot(x_data,y_data,label,xcut=xcut,ens=ens,plotfunc=self.cont_ext,
+        self.plot(x_data,y_data,label,xcut=xcut,ens=ens,plotfunc=self.plot_cont_ext,
                     savedir=datadir,loc=loc)
-        label[2]=(r'Continuum extrapolation B')
-        self.plot(x_data,y_data,label,xcut=xcut,ens=ens,plotfunc=self.cont_ext,
+        #label[2]=(r'Continuum extrapolation B')
+        self.plot(x_data,y_data,label,xcut=xcut,ens=ens,plotfunc=self.plot_cont_ext,
                   savedir=datadir,loc=loc,dim=1,suffix='2')
       else:
-          self.plot(x_data,y_data,label,xcut=xcut,ens=ens,plotfunc=self.cont_ext,
+          self.plot(x_data,y_data,label,xcut=xcut,ens=ens,plotfunc=self.plot_cont_ext,
                     savedir=datadir,loc=loc)
 
   def print_summary(self,dim,index,lat_space,ens_dict,
@@ -1012,14 +1023,14 @@ class ChirAna(object):
     # using ml
     #plt.xlim(0,50)
     # using r0ml
-    plt.xlim(0,0.11)
+    #plt.xlim(0,0.11)
     # using (r0M_pi)^2
     #plt.xlim(0,1.5)
-    plt.ylim(1.15,2.5)
+    #plt.ylim(1.15,2.5)
     #limits mka0
-    #plt.xlim(0,1.7)
+    plt.xlim(0,1.7)
     #plt.xlim(0,2.5e5)
-    #plt.ylim(-0.5,-0.28)
+    plt.ylim(-0.5,-0.28)
     #plt.vlines(self.phys_point[0,0],y_lim[0],y_lim[1],color="k",label=label[3])
     if loc==None:
       plt.legend(loc='best',numpoints=1,ncol=1,fontsize=12)

@@ -51,6 +51,7 @@ def get_x_lin(y1,y2,x,obs_match):
   obs_match : the y data to match to
   Returns
   """
+  # Use only medain y-values, otherwise error gets taken into account twice
   coeff = mh.ipol_lin(y1, y2, x)
   # if obs_match is a FitResult, evaluate it at the coefficients
   # else solve c0*mu_s + c1 - obs_match = 0 for mu_s

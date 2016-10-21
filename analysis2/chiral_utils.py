@@ -102,10 +102,11 @@ def err_phys_pt(pardata,x,func,axis=0,out=None):
   if pardata.shape > 2:
     for i in range(pardata.shape[0]):
       for j in range(pardata.shape[-1]):
+        print("pardata indices: %d,%d" %(i,j))
         tmp_par = pardata[i,:,j]
-        #print("info on physical point:")
-        #print(tmp_par)
-        #print(x)
+        print("info on physical point:")
+        print(tmp_par)
+        print(x)
         _y.append(func(tmp_par,x))
   else:
     raise ValueError("Parameters do not have the right shape")
@@ -412,7 +413,7 @@ def amu_q_from_mq_ren(a,zp,nboot,mq_in=(99.6,4.3),mq_guess=None):
   _bare_mass = _a*_ms*_zp_ms_bar/197.37
   return _bare_mass
 
-def r0mq_from_amuq(a,zp,nboot,amuq):
+def r0mq_from_amuq(amuq,a,nboot):
   """Calculate r0mq from amuq samples
   
   The lattice data for r0 and the renormalization constant are converted to
@@ -426,8 +427,8 @@ def r0mq_from_amuq(a,zp,nboot,amuq):
   """
   # Latticer input
   #_r0_lat = ana.draw_gauss_distributed(r0_in[0],r0_in[1],(nboot,),origin=True)
-  _dummy,_r0_lat = prepare_r0(a,nboot) 
-  _zp_ms_bar = ana.draw_gauss_distributed(zp[0],zp[1],(nboot,),origin=True)
+  _dummy, _r0_lat = ana.prepare_r0(a,nboot) 
+  _dummy2, _zp_ms_bar = ana.prepare_zp(a,nboot)
 
   _r0mq = _r0_lat*amuq/_zp_ms_bar
   return _r0mq
@@ -517,6 +518,7 @@ def beta_mk_mpi_diff(nboot,beta):
   return _diff
 
 def r0_ms(data,r0_in,zp):
+  """Calculate r0ms from lattice data"""
   nboot = data.shape[0]
   # Latticer input
   _r0 = ana.draw_gauss_distributed(0.474,0.014,(nboot,),origin=True)
@@ -526,6 +528,11 @@ def r0_ms(data,r0_in,zp):
   _ms_phys = data*_r0_lat[0]*hc/(_zp_ms_bar[0]*_r0[0])
 
   return _ms_phys
+
+def r0ms_phys(ms,nboot):
+  _r0 = ana.draw_gauss_distributed(0.474,0.014,(nboot,),origin=True)
+  hcbar = 197.37
+  return _r0*ms/hcbar
 
 def ml_ren_from_amu_q(dict_a,a_in,zp_in,nboot,dict_mul):
   if(len(dict_mul)==len(dict_a)):
@@ -547,5 +554,4 @@ def r0ml_ren_from_amu_q(dict_r0,r0_in,zp_in,nboot,dict_mul):
       _dict[e] = dict_mul[i]*_r0_lat/(_zp_ms_bar)
     return _dict
   else:
-    raise ValueError("Number of ensembles and mu_l values differ")
-
+    raise ValueError("Number of ensembles and mu_l values differ") 

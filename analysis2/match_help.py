@@ -1,6 +1,7 @@
 # Linear helper functions
 import numpy as np
 from .fit_routines import fitting
+from .statistics import compute_error
 def ipol_lin(y1, y2, x):
     """ Interpolate bootstrapsamples of data linearly
 
@@ -22,13 +23,20 @@ def ipol_lin(y1, y2, x):
     c1 = y1-np.multiply(c0,x[0])
     # save slope and y-intercept
     interpol = np.zeros((len(y1),2))
+    #Debugging output
+    #print("Median values of interpolation")
+    #print("y_1:")
+    #print(compute_error(y1))
+    #print("y_2:")
+    #print(compute_error(y2))
+    #print("x = %r" %x)
     if len(c0.shape) == 2:
       interpol[:,0], interpol[:,1] = np.ravel(c0), np.ravel(c1)
     else:
       interpol[:,0], interpol[:,1] = c0, c1
     return interpol
 
-def solve_lin(lin_coeff, match):
+def solve_lin(lin_coeff, match, only_med = True):
   """ Solves linear equation for x value 
 
       Args:
@@ -37,7 +45,12 @@ def solve_lin(lin_coeff, match):
       Returns:
           eval_x: The bootstrapsamples of y values
   """
-  eval_x = np.divide((match-lin_coeff[:,1]),lin_coeff[:,0])
+  # Use only the median in solving, prevents taking error into account twice
+  if only_med is True:
+      eval_x = np.divide((match-lin_coeff[0,1]),lin_coeff[0,0])
+  else:
+      eval_x = np.divide((match-lin_coeff[:,1]),lin_coeff[:,0])
+      
   return eval_x
 
 def eval_lin(coeff,x):
@@ -45,10 +58,13 @@ def eval_lin(coeff,x):
   Evaluate a linear function given its coefficients and the x- value to evaluate
   at
   """
+  # Debugging output
+  print()
   y = coeff[:,0]*x+coeff[:,1]
   return y
 
 # quadratic helper functions
+#TODO: Enable evaluation of all bootstrapsamples
 def ipol_quad(y1,y2,y3, x):
     """ Interpolate bootstrapsamples of data quadratically
 
@@ -67,6 +83,9 @@ def ipol_quad(y1,y2,y3, x):
     # result coefficients
     interpol = np.zeros((y1.shape[0],3))
     # loop over _bootstrapsamples
+    # restrict x to the first sample
+    if len(x.shape) > 1:
+      x = x[:,0]
     for i,_b in enumerate(zip(y1,y2,y3)):
         # the known function values
         m = np.zeros((3,3)) 
@@ -151,10 +170,13 @@ def choose_ival(x,mu):
     _x = np.mean(x)
   except:
     _x = x
-  if _x <= mu[0]:
+  # mu could have more than 0ne dimension, if so choose first sample
+  if len(mu.shape) > 1:
+    _mu = mu[:,0]
+  if _x <= _mu[0]:
     i_dn=0
     i_up=1
-  if mu[2] <= _x :
+  if _mu[2] <= _x :
     i_dn = 1
     i_up = 2
   return i_dn, i_up
