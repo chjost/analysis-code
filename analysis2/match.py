@@ -142,6 +142,24 @@ class MatchResult(object):
         ## evaluation`
         _match_save.save(filename)
 
+    def save_samples_ascii(self,data,name,head,fmt = '%.4f'):
+      """ Save the samples of a data array to a text file """
+      # Append an index number as first column, taken from shape[-1] of data to
+      # be written
+      nboot = data.shape[-1]
+      smp = np.linspace(0,(nboot-1),nboot)
+      idx = np.zeros((1,nboot))
+      idx[0] = smp
+      _data = np.atleast_2d(data)
+      print("Shape of idx:")
+      print(idx.shape)
+      print("Shape of data:")
+      print(_data.shape)
+      _to_save = np.concatenate((idx,_data)).T
+      print("Data will be saved with shape:")
+      print(_to_save.shape)
+      np.savetxt(name,_to_save,header=head,fmt = fmt)
+
 
     def create_empty(self, nboot, nb_obs, obs_id=None):
       """Create an empty matching class, setting up the appropriate shapes
@@ -421,6 +439,28 @@ class MatchResult(object):
             orig, std = compute_error(self.amu_match[i])
             print("%s: %s = %f +/- %f:" %(m,self.obs_id, orig, std))
       
+      # Write out data as ascii
+      # write x-values
+      head = "Sample  r_0m_s_0  r_0m_s_1  r_0m_s_2"
+      name = plotdir +ens + "/match_x_vals.txt"
+      fmt = '%d %.4f %.4f %.4f'
+      self.save_samples_ascii(amu,name,head,fmt=fmt)
+      # write y-values
+      head = "Sample  M_diff_0  M_diff_1  M_diff_2"
+      fmt = '%d %.4f %.4f %.4f'
+      name = plotdir + ens + "/match_y_vals.txt"
+      self.save_samples_ascii(obs,name,head,fmt=fmt)
+      # write y-values to match
+      head = "Sample  M_diff_Match"
+      fmt = '%d %.4f'
+      name = plotdir + ens + "/phys_y_vals.txt"
+      self.save_samples_ascii(obs_to_match,name,head,fmt=fmt)
+      # write matched x-value
+      head = "Sample  r_0m_s_fix"
+      fmt = '%d %.4f'
+      name = plotdir + ens + "/phys_x_vals.txt"
+      self.save_samples_ascii(self.amu_match[2],name,head,fmt=fmt)
+
       if plot:
         self.plot_match(obs_to_match,plotdir,ens,meth=meth,proc='match',label=label)
 
@@ -489,6 +529,7 @@ class MatchResult(object):
           if obs.shape[0] == 3:
             print("Using quadratic interpolation")
             self.eval_obs[1], self.coeffs[1] = calc_y_quad(obs[0],obs[1],obs[2],amu,amu_match[1])
+
         if meth == 2:
           print("Using linear fit")
           self.eval_obs[2], self.coeffs[2] = calc_y_fit(obs[0],obs[1],obs[2],amu,amu_match[2])
@@ -529,7 +570,7 @@ class MatchResult(object):
 
     def plot_match(self,obs,plotdir,ens, proc=None, meth=None, label=None):
       print("match/eval amu_s value for plot:")
-      print(self.amu_match[meth])
+      print(compute_error(self.amu_match[meth]))
       if meth == 0:
         _meth = '_lipol'
       elif meth == 1:
@@ -541,11 +582,18 @@ class MatchResult(object):
       pmatch = PdfPages(plotdir+ens+'/'+proc+_meth+'_%s.pdf' % self.obs_id)
 
       # functions for interpolation methods
-      line = lambda p,x: p[0]*x+p[1]
-      para = lambda p,x: p[0]*x**2+p[1]*x+p[2]
+      line = lambda p,x: p[:,0]*x+p[:,1]
+      para = lambda p,x: p[:,0]*x**2+p[:,1]*x+p[:,2]
       # calculate errors for plot
       y_plot = self.get_plot_error()
       x_plot = self.get_plot_error(dim='x')
+      # Data points to plot
+      print("x-data for match:")
+      print(x_plot)
+      print("y-data for match:")
+      print(y_plot)
+      print("parameters to function:")
+      print(self.coeffs[meth])
       if meth is None:
         # plot data
         plot_data(x_plot[:,0],y_plot[:,0],y_plot[:,1],label='data',dX=x_plot[:,1],col='k')
@@ -557,24 +605,30 @@ class MatchResult(object):
                       fmt='b--',col='blue')
       elif meth == 0:
         plot_data(x_plot[:,0],y_plot[:,0],y_plot[:,1],label='data',dX=x_plot[:,1],col='k')
-        plot_function(line,x_plot[:,0],self.coeffs[meth],'lin. ipol',fmt='k--',
-                      ploterror=True)
+        #plot_function(line,x_plot[:,0],self.coeffs[meth],'lin. ipol',fmt='k--',
+        #              ploterror=True)
+        plot_function(line,(x_plot[0,0],x_plot[-1,0]),self.coeffs[meth],'lin.  ipol',
+            ploterror = True, fmt='k--',debug =3 )
         if proc == 'match':
           plot_single_line(self.amu_match[meth],obs,label[0:2],col='g')
         else:
           plot_single_line(self.amu_match[meth],self.eval_obs[meth],label[0:2],col='g')
       elif meth == 1:
         plot_data(x_plot[:,0],y_plot[:,0],y_plot[:,1],label='data',dX=x_plot[:,1],col='k')
-        plot_function(para,x_plot[:,0],self.coeffs[meth],'quad.  ipol',
-                      ploterror=True,fmt='r--',col='red')
+        #plot_function(para,x_plot[:,0],self.coeffs[meth],'quad.  ipol',
+        #              ploterror=True,fmt='r--',col='red')
+        plot_function(line,(x_plot[0,0],x_plot[-1,0]),self.coeffs[meth],'quad.  ipol',
+            ploterror = True, fmt='r--', col='red',debug =3 )
         if proc == 'match':
           plot_single_line(self.amu_match[meth],obs,label[0:2],col='g')
         else:
           plot_single_line(self.amu_match[meth],self.eval_obs[meth],label[0:2],col='g')
       elif meth == 2:
         plot_data(x_plot[:,0],y_plot[:,0],y_plot[:,1],label='data',dX=x_plot[:,1],col='k')
-        plot_function(line,x_plot[:,0],self.coeffs[meth],'lin. fit',
-            ploterror = True, fmt='b--', col='blue')
+        #plot_function(line,x_plot[:,0],self.coeffs[meth],'lin. fit',
+        #    ploterror = True, fmt='b--', col='blue')
+        plot_function(line,(x_plot[0,0],x_plot[-1,0]),self.coeffs[meth],'lin. fit',
+            ploterror = True, fmt='b--', col='blue',debug =3 )
         if proc == 'match':
           plot_single_line(self.amu_match[meth],obs,label[0:2],col='g')
         else:
@@ -583,7 +637,8 @@ class MatchResult(object):
         raise ValueError("Method not known")
       #plt.autoscale_view(enable=True,axis='both',tight=False)
       #TODO: Automate that, since autoscale is not working
-      #plt.xlim(0.012,0.019)
+      plt.xlim(0.015,0.022)
+      #plt.xlim(0.17,0.25)
       #plt.title(ens)
       plt.xlabel(label[0])
       plt.ylabel(label[1])

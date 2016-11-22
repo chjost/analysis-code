@@ -433,6 +433,32 @@ def r0mq_from_amuq(amuq,a,nboot):
   _r0mq = _r0_lat*amuq/_zp_ms_bar
   return _r0mq
 
+def amuq_from_r0mq(r0mq,a,nboot):
+  """Calculate amuq from r0mq samples
+  
+  The lattice data for r0 and the renormalization constant are converted to
+  bootstrapsamples of amu_q
+
+  Parameters:
+  -----------
+  r0 : tuple,Lattice calculation of Sommer parameter
+  zp : tuple, the renormalization constant
+  mq_guess : 1darray, bootstrapsamples of guessed quark mass
+  """
+  # Latticer input
+  #_r0_lat = ana.draw_gauss_distributed(r0_in[0],r0_in[1],(nboot,),origin=True)
+  _dummy, _r0_lat = ana.prepare_r0(a,nboot) 
+  _dummy2, _zp_ms_bar = ana.prepare_zp(a,nboot)
+  
+  # if r0mq has nboot samples error already has been taken into account
+  if r0mq.shape[0] == nboot:
+    _amuq = r0mq*_zp_ms_bar[0]/_r0_lat[0]
+
+  else:
+    _amuq = r0mq*_zp_ms_bar/_r0_lat
+ 
+  return _amuq
+
 def amu_q_from_mq_pdg(r0_in,zp,nboot):
   """Calculate the bare strange quark mass per lattice spacing
   
@@ -496,8 +522,21 @@ def r0_mk_sq_phys(nboot):
 
 def mk_mpi_diff(nboot):
   _r0 = ana.draw_gauss_distributed(0.474,0.014,(nboot,),origin=True)
+  # Save r_0
+  #x = np.linspace(0,nboot-1,nboot)
+  #idx = np.zeros((1,nboot))
+  #idx[0] = x
+  #_to_save = np.concatenate((idx,np.atleast_2d(_r0))).T
+  #np.savetxt("/hiskp2/helmes/analysis/scattering/analysis_vault/k_charged_wo_outliers/plots/B55.32/r_0_phys.txt",
+  #    _to_save,header="Sample r_0 [fm]",fmt = '%d %.4f')
   _mk = ana.draw_gauss_distributed(493.677,0.016,(nboot,),origin=True)
   _mpi = ana.draw_gauss_distributed(134.9766,0.0006,(nboot,),origin=True)
+  # Save Meson mass difference
+  #_fac = (_mk**2-0.5*_mpi**2)
+  #_to_save = np.concatenate((idx,np.atleast_2d(_fac))).T
+  #np.savetxt("/hiskp2/helmes/analysis/scattering/analysis_vault/k_charged_wo_outliers/plots/B55.32/M_diff_phys.txt",
+  #    _to_save,header="Sample M_K^2 - 0.5 M_pi^2 [MeV^2]",fmt = '%d %.4f')
+  
   _diff = _r0**2*(_mk**2-0.5*_mpi**2)/(197.37**2)
   return _diff
 
@@ -554,4 +593,23 @@ def r0ml_ren_from_amu_q(dict_r0,r0_in,zp_in,nboot,dict_mul):
       _dict[e] = dict_mul[i]*_r0_lat/(_zp_ms_bar)
     return _dict
   else:
-    raise ValueError("Number of ensembles and mu_l values differ") 
+    raise ValueError("Number of ensembles and mu_l values differ")
+
+def calc_r0ms(para, r0_phys, mk_phys, ml_phys):
+  """Calculate the strange quark mass from the fit parameters
+
+  Parameters
+  ----------
+  para: fitresult, parameters from fit 
+  mk_phys: fitresult, physical kaon mass
+  ml_phys: float, chirally extrapolated light quark mass
+  """
+  _hbarc = 197.37
+  _p = para.data[0]
+  _num = (r0_phys*mk_phys/_hbarc)**2
+  _den = (_p[:,0,0]*(1 + _p[:,1,0]*r0_phys*ml_phys/_hbarc))
+  _sub = r0_phys*ml_phys/_hbarc
+  #print("result components (num, den, sub): %f, %f, %f" %(_num,_den[0],_sub))
+  _r0ms = _num/_den - _sub 
+  print("samples of _r0ms: %r" % _r0ms)
+  return _r0ms

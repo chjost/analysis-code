@@ -384,6 +384,8 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, mute=None, debug=0)
           #print("Covariance Matrix:")
           #print(cov)
     cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
+    corr = np.corrcoef(Y.T)
+    print("Correlation matrix for fit is:\n %r" %corr)
     # Eigendecomposition of covariance matrix with screen output
     # eig_decomp(cov)
 

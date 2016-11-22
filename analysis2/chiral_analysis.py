@@ -30,7 +30,8 @@ class ChirAna(object):
   the same layout
   In addition it is possible to fit the data to a given function
   """
-  def __init__(self,proc_id=None,match=False,correlated=True,combined=False):
+  def __init__(self,proc_id=None,match=False,correlated=True,combined=False,
+               fit_ms=False):
     """ Initialize Chiral Analysis object
 
     Parameters
@@ -39,6 +40,7 @@ class ChirAna(object):
     match : Boolean to determine if the data is matched in amu_s
     correlated : Boolean if fit is Correlated
     combined : Boolean to decide if combined fit is done
+    fit_ms : is the strange quark mass fitted
     
     Datatypes
     ---------
@@ -59,17 +61,23 @@ class ChirAna(object):
     self.correlated = correlated
     # Result of a matching procedure
     self.amu_matched_to = None
+    # Use a flag to distinguish between fit for m_s and m_l
+    self.fit_ms=fit_ms
     # The functions for the continuum extrapolation and the function in the
-    # continuum
+    # continuum, defined for fitting and plotting separately
+
     # This is the function for fitting
     self.cont_ext = None
-    # This is the function for plotting
-    self.plot_cont_ext = None
     # This is the function for continuum (no a-dependence)
     self.cont_func = None
+    # This is the function for plotting
+    self.plot_cont_ext = None
+    # This is the function for continuum plotting
+    self.plot_cont_func = None
 
   def create_empty(self, lyt_x, lyt_y, match=None, cont_ext=None,
-      plot_cont_ext= None, cont_func=None):
+      plot_cont_ext= None, cont_func=None,
+      plot_cont_func=None):
     """Initialize a chiral analysis with some start parameters
     
     At the moment the first index is used to label the lattice spacing, the
@@ -128,12 +136,15 @@ class ChirAna(object):
       for i in self.x_data:
         print(i.shape)
     self.cont_ext = cont_ext
+    self.plot_cont_ext = plot_cont_ext
     # Take chiral fit function for plotting unless stated otherwise
     if plot_cont_ext is None:
       self.plot_cont_ext = cont_ext
     else:
       self.plot_cont_ext = plot_cont_ext
     self.cont_func = cont_func
+    self.plot_cont_func = plot_cont_func
+
   #def save()
   #
   #@classmethod
@@ -249,7 +260,7 @@ class ChirAna(object):
         self.amu_matched_to[idx[0]][idx[1],idx[2],idx[3]] = data
 
   def add_extern_data(self,filename,idx,ens,dim=None,square=True,
-                      physical=False,read=None,op=False):
+                      physical=False,read=None,op=False,meth=1):
     """ This function adds data from an extern textfile to the analysis object
     
     The data is classified by names, the filename is given and the read in and
@@ -267,6 +278,8 @@ class ChirAna(object):
                 one
     op : string, if operation is given the data is convoluted with existing data
         at that index. if no operation is given data gets overwritten
+    meth: int, 1 or 2 the method with which zp was determined in
+    arxiv:1403.4504v3
     """
     if read is None:
       plot, data = np.zeros((self.x_data[0].shape[-1]))
@@ -360,7 +373,7 @@ class ChirAna(object):
       plot,data = extboot.prepare_fk(ext_help,ens,self.x_data[0].shape[-1])
 
     if read is 'zp':
-      _plot,_data = extboot.prepare_zp(ens,self.x_data[0].shape[-1])
+      _plot,_data = extboot.prepare_zp(ens,self.x_data[0].shape[-1],meth=meth)
       if square:
         plot=np.square(_plot)
         data=np.square(_data)
@@ -464,6 +477,8 @@ class ChirAna(object):
     if _x_plot.shape[0] != _y_plot.shape[0]:
       print("x and y have wrong shapes")
     # Loop over ensembles (eventually including quark mass)
+    print("x_plot has shape:")
+    print(_x_plot.shape)
     for e in range(_x_plot.shape[0]):
       # loop over dimensions of x
       for d in range(_x_plot.shape[1]):
@@ -481,8 +496,8 @@ class ChirAna(object):
     return _x_plot, _y_plot
 
   def fit(self,index=0, start=[1.,],dim=None, x_phys=None,xcut=False,
-          plot=True,label=None,datadir=None,read=False,
-          ens=None,debug=0,loc=None):
+          plot=True,ploterr=True,label=None,datadir=None,read=False,
+          ens=None,debug=0,loc=None,xlim=None,ylim=None):
     """fit a chiral analysis instance to a given fitfunction
 
     This function uses the data of the ChirAna instance to fit the data to the
@@ -537,9 +552,7 @@ class ChirAna(object):
         self.fitres.save(datadir+self.proc_id+'.npz')
       args = self.fitres.data[0]
       # save samples of physical point result as fitresult along with p-values
-
       self.phys_point_fitres = self.fitres.calc_mk_a0_phys(x_phys,self.cont_ext)
-      print(x_phys)
       print ("physical point from fitresult")
       #print(self.phys_point_fitres.data[0],self.phys_point_fitres.pval[0])
       self.phys_point_fitres.calc_error()
@@ -582,14 +595,17 @@ class ChirAna(object):
       #  self.plot_glob_func(x_data,y_data,self.cont_ext,xcut=xcut,ens=ens)
       #else:
       if self.combined:
-        self.plot(x_data,y_data,label,xcut=xcut,ens=ens,plotfunc=self.plot_cont_ext,
-                    savedir=datadir,loc=loc)
+        #self.plot(x_data,y_data,label,xcut=xcut,ens=ens,plotfunc=self.plot_cont_ext,
+        self.plot(label,xcut=xcut,ens=ens,plotfunc=self.plot_cont_ext,
+                    savedir=datadir,loc=loc,xlim=xlim,ylim=ylim,ploterr=ploterr)
         #label[2]=(r'Continuum extrapolation B')
-        self.plot(x_data,y_data,label,xcut=xcut,ens=ens,plotfunc=self.plot_cont_ext,
-                  savedir=datadir,loc=loc,dim=1,suffix='2')
+        #self.plot(x_data,y_data,label,xcut=xcut,ens=ens,plotfunc=self.plot_cont_ext,
+        self.plot(label,xcut=xcut,ens=ens,plotfunc=self.plot_cont_ext,
+                  savedir=datadir,loc=loc,dim=1,suffix='2',xlim=xlim,ylim=ylim,ploterr=ploterr)
       else:
-          self.plot(x_data,y_data,label,xcut=xcut,ens=ens,plotfunc=self.plot_cont_ext,
-                    savedir=datadir,loc=loc)
+          #self.plot(x_data,y_data,label,xcut=xcut,ens=ens,plotfunc=self.plot_cont_ext,
+          self.plot(label,xcut=xcut,ens=ens,plotfunc=self.plot_cont_ext,
+                    savedir=datadir,loc=loc,xlim=xlim,ylim=ylim,ploterr=ploterr)
 
   def print_summary(self,dim,index,lat_space,ens_dict,
                     mu_s_dict=None,xcut=2,head=None):
@@ -668,11 +684,14 @@ class ChirAna(object):
     The final layout should concatenate the light and strange quark dependence. 
 
     The x and y data are cast to an 2d ndarray with same shape (apart from bootstrap
-    sa#mples)
+    samples)
     """
     # the outgoing data is 2 dimensional
     # new x-data has shape (ens1*ms+ens2*ms+ens3*ms,fitdim,samples)
     # looping over list place data in array
+    print("x and y data get adapted:")
+    print x_shape_new
+    print y_shape_new
     if x_shape_new is None:
       tmp_x_shape = (self.x_shape[0],self.x_shape[1]*np.asarray(self.x_shape[2]),self.xshape[3],self.x_shape[-1])
     else:
@@ -702,6 +721,7 @@ class ChirAna(object):
       tmp.x_data[i] = d.reshape(new_shape)
       #print(tmp.x_data)
     for i,d in enumerate(self.y_data):
+      print(d.shape)
       if d.shape[2] == 1:
         new_shape = (d.shape[0]*d.shape[1],d.shape[-1]) 
       else:
@@ -789,7 +809,7 @@ class ChirAna(object):
     plt.clf()
 
   def plot_comp(self,cmp_name,savedir,savename,
-                cont_func=None,dim=0,label=None,func=None):
+                cont_func=None,dim=0,label=None,func=None,xlim=None,ylim=None):
     """Plot a continuum extrapolated curve and comparison data
 
     The arguments to the continuum function are taken from the chiral analysis
@@ -835,20 +855,24 @@ class ChirAna(object):
       arg_shape = self.fitres.data[0].shape
       args = np.column_stack((self.fitres.data[0][:,0],self.fitres.data[0][:,3],
                        self.fitres.data[0][:,2])).reshape(arg_shape[0],3,arg_shape[-1])
-    plot_function(func,x_plot[a_range[0]:a_range[1],:,0],args[:,:,0],
-            #args[:,:,0],label=r'NLO-fit A',ploterror=True,col='red')
-            label=r'$a=0.0885$fm',ploterror=True,fmt='r--', col='red')
-    plot_function(func,x_plot[b_range[0]:b_range[1],:,0],args[:,:,0],
-            #args[:,:,0],label=r'NLO-fit B',ploterror=True,col='blue')
-            label=r'$a=0.0815$fm',ploterror=True,fmt='b:', col='blue')
-    plot_function(func,x_plot[d_range[0]:d_range[1],:,0],args[:,:,0],
-            #args[:,:,0],label=r'NLO-fit D',ploterror=True,col='green')
-            label=r'$a=0.0619$fm',ploterror=True,fmt='g-.', col='green')
+    #Multiply second parameter with second x-variable
+    _args_a = np.copy(args)
+    _args_a[:,1,:] *= x_plot[a_range[0],1,0] 
+    plot_function(func,xlim,_args_a[:,:,0],
+            label=r'$a=0.0885$fm',ploterror=ploterr,fmt='r--', col='red')
+    _args_b = np.copy(args)
+    _args_b[:,1,:] *= x_plot[b_range[0],1,0] 
+    plot_function(func,xlim,_args_b[:,:,0],
+            label=r'$a=0.0815$fm',ploterror=ploterr,fmt='b:', col='blue')
+    _args_d = np.copy(args)
+    _args_d[:,1,:] *= x_plot[d_range[0],1,0] 
+    plot_function(func,xlim,args[:,:,0],
+            label=r'$a=0.0619$fm',ploterror=ploterr,fmt='g-.', col='green')
 
     #cont_curve = lambda p,x : p[0]*x+p[2]
     cont_curve = self.cont_func
     plot_function(cont_curve, x_cont,args[:,:,0],fmt='k--',
-            label='Cont. Ext. B',ploterror=True)
+            label='Cont. Ext. B',ploterror=ploterr)
     phys_pt = []
     l1,a,b = plt.errorbar(self.phys_point[0,0],mka0_comp[0,6],mka0_comp[0,7],
                  color='darkorange',fmt='s')
@@ -886,8 +910,8 @@ class ChirAna(object):
     pfit.close()
     plt.clf()
     
-  def plot(self,x_data,y_data,label,xcut=False,ens=None,plotfunc=None,
-           savedir=None,loc=None,suffix=None,dim=0,pfit=None):
+  def plot(self,label,xcut=False,ens=None,plotfunc=None,ploterr=True,
+           savedir=None,loc=None,suffix=None,dim=0,pfit=None,xlim=None,ylim=None):
     """Plot the chiral analysis data and the fitted function
        for the fitfunction the arguments are retrieved from the analysis object 
     Parameters
@@ -900,6 +924,12 @@ class ChirAna(object):
     ens : label for the ensemble
     plotfunc : The function used for plotting 
     """
+    #limits for plotting
+    try:
+        plt.xlim(xlim[0],xlim[1])
+        plt.ylim(ylim[0],ylim[1])
+    except:
+        print("No plotting limits set, using default values.")
     x_plot,y_plot = self.get_data_plot(dim=dim,mev=False)
     print("\nData used for plot: ")
     print("x-data:")
@@ -966,32 +996,48 @@ class ChirAna(object):
         arg_shape = self.fitres.data[0].shape
         args = np.column_stack((self.fitres.data[0][:,0],self.fitres.data[0][:,3],
                          self.fitres.data[0][:,2])).reshape(arg_shape[0],3,arg_shape[-1])
+      print("Using Arguments")
+      print(args.shape)
+      print(args)
+      # Modify plotting parameter for strange quark mass variable r0ms
+      # modify arguments such that plot_function can handle them
+      # For that to work, the second slice of arguments must be the inverse
+      # lattice parameter spacing
+      _args_a = np.copy(args)
+      _args_b = np.copy(args)
+      _args_d = np.copy(args)
+      _args_a[:,1,:] *= x_plot[a_range[0],1,0] 
+      _args_b[:,1,:] *= x_plot[b_range[0],1,0]
+      _args_d[:,1,:] *= x_plot[d_range[0],1,0]
+      if self.fit_ms:
+          _add = np.copy(args[:,0])
+          print("physical x-value for r0ms is:")
+          print(self.amu_matched_to[0])
+          _add *= 0.223479
+          print(_add[0])
+          _add = _add.flatten()
+          print("Added argument has shape:")
+          print(_add)
+      else:
+          _add = None
+      # Plot function can only plot in one dimension.
+      plot_function(plotfunc, xlim, _args_a[:,:,0],add=_add,
+                    label=None, ploterror=ploterr, fmt='r--', col='red')
+      chut.plot_ensemble(x_plot[:,0], y_plot, '^', 'red', [r'$a=0.0885\,$fm',],
+                        xid = a_range, match=self.match)
 
-      plot_function(plotfunc,x_plot[a_range[0]:a_range[1],:,0],args[:,:,0],
-                    #args[:,:,0],label=r'NLO-fit A',ploterror=True,col='red')
-                    label=None,ploterror=True,fmt='r--', col='red')
-      #chut.plot_ensemble(x_plot[:,0],y_plot,'^vspho','red',ens['A'],
-      chut.plot_ensemble(x_plot[:,0],y_plot,'^','red',[r'$a=0.0885$fm',],
-                         xid = a_range,match=self.match)
-
-      plot_function(plotfunc,x_plot[b_range[0]:b_range[1],:,0],args[:,:,0],
-                    #args[:,:,0],label=r'NLO-fit B',ploterror=True,col='blue')
-                    label=None,ploterror=True,fmt='b:', col='blue')
-      #chut.plot_ensemble(x_plot[:,0],y_plot,'vso','blue',ens['B'],
-      chut.plot_ensemble(x_plot[:,0],y_plot,'v','blue',[r'$a=0.0815$fm',],
-                         xid = b_range,match=self.match)
-      plot_function(plotfunc,x_plot[d_range[0]:d_range[1],:,0],args[:,:,0],
-                    #args[:,:,0],label=r'NLO-fit D',ploterror=True,col='green')
-                    label=None,ploterror=True,fmt='g-.', col='green')
-      #chut.plot_ensemble(x_plot[:,0],y_plot,'^','green',ens['D'],
-      chut.plot_ensemble(x_plot[:,0],y_plot,'o','green',[r'$a=0.0619$fm',],
+      plot_function(plotfunc, xlim, _args_b[:,:,0],add=_add,
+                    label=None, ploterror=ploterr, fmt='b:', col='blue')
+      chut.plot_ensemble(x_plot[:,0], y_plot,'v', 'blue', [r'$a=0.0815\,$fm',],
+                         xid = b_range, match=self.match)
+      plot_function(plotfunc, xlim, _args_d[:,:,0],add=_add,
+                    label=None, ploterror=ploterr, fmt='g-.', col='green')
+      chut.plot_ensemble(x_plot[:,0], y_plot,'o','green',[r'$a=0.0619\,$fm',],
                            xid = d_range,match=self.match)
       # Plot the continuum curve
       x_cont = np.linspace(0,50,1000)
-      #cont_curve = lambda p,x : p[0]*x+p[2]
-      #cont_curve = lambda p,x : p[0]*(x+0.248)*(1+p[1]*x)
-      cont_curve = self.cont_func 
-      plot_function(cont_curve, x_cont,args[:,:,0],fmt='k--',
+      cont_curve = self.plot_cont_func 
+      plot_function(cont_curve, [x_cont[0],x_cont[-1]],args[:,:,0],fmt='k--',add=_add,
                     label='continuum',ploterror=True)
     if xcut:
       y = plotfunc(args[0,:,0], xcut)
@@ -1008,29 +1054,6 @@ class ChirAna(object):
       plt.errorbar(self.phys_point[0,0],self.phys_point[1,0],self.phys_point[1,1], fmt='d', color='darkorange', label='Physical Point')
       pass
     plt.grid(False)
-    # get x and y range dynamically
-    #x_tmp = np.append(x_plot[:,0],np.full_like(x_plot[:,0],self.phys_point[0,0]),axis=1)
-    #x_min = np.amin(x_tmp)
-    #x_max = np.amax(x_plot[:,0])
-    #x_lim = [x_min-0.05*abs(x_min),x_max+0.05*abs(x_max)]
-    #y_min = np.amin(y_plot[:,0])
-    #y_max = np.amax(y_plot[:,0])
-    #y_lim = [y_min-0.1*abs(y_min),y_max+0.1*abs(y_max)]
-    ##plt.xlim(x_lim[0],x_lim[1])
-    #plt.xlim(0,x_lim[1])
-    #plt.ylim(y_lim[0],y_lim[1])
-    # limits r0mk_sq
-    # using ml
-    #plt.xlim(0,50)
-    # using r0ml
-    #plt.xlim(0,0.11)
-    # using (r0M_pi)^2
-    #plt.xlim(0,1.5)
-    #plt.ylim(1.15,2.5)
-    #limits mka0
-    plt.xlim(0,1.7)
-    #plt.xlim(0,2.5e5)
-    plt.ylim(-0.5,-0.28)
     #plt.vlines(self.phys_point[0,0],y_lim[0],y_lim[1],color="k",label=label[3])
     if loc==None:
       plt.legend(loc='best',numpoints=1,ncol=1,fontsize=12)
@@ -1056,11 +1079,30 @@ class ChirAna(object):
     _hbarc = 197.37
     _p = self.fitres.data[0]
     _num = (r0_phys*mk_phys/_hbarc)**2
-    _den = (_p[:,0,0]*(1 + _p[:,1,0]*r0_phys*ml_phys/_hbarc))
+    _den = (_p[:,0,0]*(1 + _p[:,2,0]*r0_phys*ml_phys/_hbarc))
     _sub = r0_phys*ml_phys/_hbarc
-    print("result components (num, den, sub): %f, %f, %f" %(_num,_den[0],_sub))
+    #print("result components (num, den, sub): %f, %f, %f" %(_num,_den[0],_sub))
     _r0ms = _num/_den - _sub 
     _m_s = _r0ms*_hbarc/r0_phys
     print("samples of _m_s: %r" % _m_s)
-    return compute_error(_m_s)
+    return _m_s
+
+  def calc_r0ms(self, r0_phys, mk_phys, ml_phys):
+    """Calculate the strange quark mass from the fit parameters
+
+    Parameters
+    ----------
+    mk_phys: float, physical kaon mass
+    ml_phys: float, chirally extrapolated light quark mass
+    """
+    _hbarc = 197.37
+    _p = self.fitres.data[0]
+    _num = (r0_phys*mk_phys/_hbarc)**2
+    _den = (_p[:,0,0]*(1 + _p[:,1,0]*r0_phys*ml_phys/_hbarc))
+    _sub = r0_phys*ml_phys/_hbarc
+    #print("result components (num, den, sub): %f, %f, %f" %(_num,_den[0],_sub))
+    _r0ms = _num/_den - _sub 
+    print("samples of _r0ms: %r" % _r0ms)
+    return _r0ms
+    #return compute_error(_r0ms)
 

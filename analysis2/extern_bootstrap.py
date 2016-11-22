@@ -76,6 +76,20 @@ def prepare_zp(ens,nsamp,meth=1):
 #    _ksq_boot = np.full((nsamp),_ksq)
 #    return _ksq_boot
 
+def prepare_r0_lat(a,nsamp):
+    data_plot = np.zeros(4)
+    #dictionary of Sommer parameter (arxiv:1403.4504v3)
+    r = {'A':[5.31,0.08], 'B':[5.77,0.06], 'D':[7.60,0.08]}
+    r0_tmp = ana.draw_gauss_distributed(r[a][0],r[a][1],(nsamp,),origin=True)
+    data_plot[0:2] = ana.compute_error(r0_tmp)
+    return data_plot, r0_tmp
+
+def prepare_r0_ext(nsamp):
+    _r_ext = ana.draw_gauss_distributed(0.474,0.014,(nsamp,),origin=True)
+    data_plot = np.zeros(4)
+    data_plot[0:2] = ana.compute_error(r0_tmp)
+    return data_plot, r0_tmp
+
 def prepare_r0(ens,nsamp,ext=True):
     """Return a list of bootstrapped r0 values
     
@@ -91,12 +105,19 @@ def prepare_r0(ens,nsamp,ext=True):
     if ext is True:
       _r_ext = ana.draw_gauss_distributed(0.474,0.014,(nsamp,),origin=True)
       _a_plt,_a_tmp = prepare_a(ens,nsamp)
-      r0_tmp = np.divide(_r_ext[0],_a_tmp)
+      r0_tmp = np.divide(_r_ext,_a_tmp[0])
     else:
       #dictionary of Sommer parameter (arxiv:1403.4504v3)
       r = {'A':[5.31,0.08], 'B':[5.77,0.06], 'D':[7.60,0.08]}
       r0_tmp = ana.draw_gauss_distributed(r[ens][0],r[ens][1],(nsamp,),origin=True)
     data_plot[0:2] = ana.compute_error(r0_tmp)
+    # Save r0_tmp as textfile
+    x = np.linspace(0,nsamp-1,nsamp)
+    idx = np.zeros((1,1500))
+    idx[0] = x
+    _to_save = np.concatenate((idx,np.atleast_2d(r0_tmp))).T
+    np.savetxt("/hiskp2/helmes/analysis/scattering/analysis_vault/k_charged_wo_outliers/plots/B55.32/r_0_"+ens+".txt",
+        _to_save,header="Sample r_0",fmt = '%d %.4f')
     return data_plot, r0_tmp
 
 def prepare_zp(a,nsamp,meth=1):
@@ -114,6 +135,13 @@ def prepare_zp(a,nsamp,meth=1):
       zp = {'A':[0.574,0.004], 'B':[0.546,0.002], 'D':[0.545,0.002]}
     zp_tmp = ana.draw_gauss_distributed(zp[a][0],zp[a][1],(nsamp,),origin=True)
     data_plot[0:2] = ana.compute_error(zp_tmp)
+    # Save zp_tmp as textfile
+    x = np.linspace(0,nsamp-1,nsamp)
+    idx = np.zeros((1,1500))
+    idx[0] = x
+    _to_save = np.concatenate((idx,np.atleast_2d(zp_tmp))).T
+    np.savetxt("/hiskp2/helmes/analysis/scattering/analysis_vault/k_charged_wo_outliers/plots/B55.32/z_p_"+a+".txt",
+               _to_save,header="Sample z_p",fmt = '%d %.4f')
     return data_plot, zp_tmp
 
 def prepare_mss(ens,nsamp,meth=2):

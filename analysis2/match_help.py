@@ -137,7 +137,7 @@ def eval_quad(coeff, x_match):
 
 # fitting functions
 # pass a general ndarray since the number of x and y points for a fit may vary
-def fit_lin(y,x,debug=0):
+def fit_lin(y,x,debug=4):
   f = lambda p,x: p[0]*x+p[1]
   start = [1.,1.]
   res, chi2, pval = fitting(f,x,y.T,start,add=None, correlated=True,debug=debug) 
