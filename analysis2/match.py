@@ -33,6 +33,8 @@ class MatchResult(object):
 
       Members
       -------
+      x, y : the raw data coming in 2d arrays of number of observables and
+      number of bootstrap samples
       amu_match : nd array,the resulting matched values of the quark mass,
                   ordered by matching method
       eval_obs : ndarray holding data evaluated at amu_match
