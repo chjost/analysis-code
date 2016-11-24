@@ -270,7 +270,7 @@ class MatchResult(object):
 
 
     def add_extern_data(self,filename,ens,idx=None,amu=None,square=True,
-                        read=None,physical=False,op=False,fse=False):
+                        read=None,physical=False,op=False,fse=False,r0=True):
       """ This function adds data from an extern textfile to the analysis object
       
       The data is classified by names, the filename is given and the read in and
@@ -318,7 +318,7 @@ class MatchResult(object):
         # take any y data dimension, since bootstrap samplesize shold not differ
         # build r0M_pi
         plot,data = extboot.prepare_mpi(ext_help,ens,self.obs.shape[-1],
-                                        square=square)
+                                        square=square,r0=r0)
       if read is 'fse_mk':
         ext_help = extboot.read_extern(filename,(1,2))
         plot,data = extboot.prepare_fse(ext_help,ens,self.obs.shape[-1],
@@ -637,7 +637,7 @@ class MatchResult(object):
         raise ValueError("Method not known")
       #plt.autoscale_view(enable=True,axis='both',tight=False)
       #TODO: Automate that, since autoscale is not working
-      plt.xlim(0.015,0.022)
+      #plt.xlim(0.015,0.022)
       #plt.xlim(0.17,0.25)
       #plt.title(ens)
       plt.xlabel(label[0])

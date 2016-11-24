@@ -87,8 +87,8 @@ def prepare_r0_lat(a,nsamp):
 def prepare_r0_ext(nsamp):
     _r_ext = ana.draw_gauss_distributed(0.474,0.014,(nsamp,),origin=True)
     data_plot = np.zeros(4)
-    data_plot[0:2] = ana.compute_error(r0_tmp)
-    return data_plot, r0_tmp
+    data_plot[0:2] = ana.compute_error(_r_ext)
+    return data_plot, _r_ext
 
 def prepare_r0(ens,nsamp,ext=True):
     """Return a list of bootstrapped r0 values

@@ -63,6 +63,11 @@ class ChirAna(object):
     self.amu_matched_to = None
     # Use a flag to distinguish between fit for m_s and m_l
     self.fit_ms=fit_ms
+    # store external data in dictionaries sorted by lattice spacing.
+    # All variables that cannot be calculated go here
+    self.ext_dat_lat=None
+    # Furthermore we want to use the continuum extraploated data
+    self.cont_dat = None
     # The functions for the continuum extrapolation and the function in the
     # continuum, defined for fitting and plotting separately
 
