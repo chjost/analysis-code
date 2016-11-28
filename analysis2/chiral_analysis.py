@@ -503,116 +503,50 @@ class ChirAna(object):
     return _x_plot, _y_plot
 
   def fit_strange_mass(self,debug=4):
-        #ms = ChiralFit()
-        #ms.fitfunc = lambda r, z, p, x,: p[0]/r**2 * r/z * (x[0]+x[1]) * (1+p[1]*r/z*x[0]+p[2]*x[2])
-        #ms.errfunc = lambda r, z, p, x0, x1, x2, y0, y1, y2: 
-        #          r_[ms.fitfunc(r[0],z[0],p,x0)-y0,
-        #             ms.fitfunc(r[1],z[1],p,x1)-y1,
-        #             ms.fitfunc(r[2],z[2],p,x2)-y2]
-        fitfunc = lambda r, z, p, x,: p[0]/r**2 * r/z * (x[:,0]+x[:,1]) * (1+p[1]*r/z*x[:,0]+p[2]*x[:,2])
+      # Define the error function
+      fitfunc = lambda r, z, p, x,: p[0]/r**2 * r/z * (x[:,0]+x[:,1]) * (1+p[1]*r/z*x[:,0]+p[2]*x[:,2])
 
-        errfunc = lambda p, x, y, cov: np.dot(cov,np.r_[fitfunc(p[0],p[3],p[6:9],x[0:19])-y[0:19],
-            fitfunc(p[1],p[4],p[6:9],x[19:28])-y[19:28],
-            fitfunc(p[2],p[5],p[6:9],x[28:34])-y[28:34],
-            #TODO: Take the priors from extern
-            (5.31-p[0])/(0.08),(5.77-p[1])/(0.06), (7.60-p[2])/(0.06),
-            (0.529-p[3])/(0.007),(0.509-p[4])/(0.004),(0.516-p[5])/(0.002)].T)
-        # Initial guesses for the parameters
-        p = np.r_[1.,1.,1.]
-        r = np.r_[5.3,5.75,7.6]
-        z = np.r_[0.52,0.51,0.515]
-        start=np.r_[r,z,p]
-        # x,y values for beta = 1.9
-        # each array should be (n_ensembles(beta),n_ind,samples)
-        x_shape_new = (self.x_shape[1][0]*self.x_shape[2],self.x_shape[3],self.x_shape[4])
-        y_shape_new = (self.y_shape[1][0]*self.y_shape[2],self.y_shape[4])
-        x0 = self.x_data[0].reshape(x_shape_new)
-        y0 = self.y_data[0].reshape(y_shape_new)
-        # x,y values for beta = 1.95
-        x_shape_new = (self.x_shape[1][1]*self.x_shape[2],self.x_shape[3],self.x_shape[4])
-        y_shape_new = (self.y_shape[1][1]*self.y_shape[2],self.y_shape[4])
-        x1 = self.x_data[1].reshape(x_shape_new)
-        y1 = self.y_data[1].reshape(y_shape_new)
-        # x,y values for beta = 2.1
-        x_shape_new = (self.x_shape[1][2]*self.x_shape[2],self.x_shape[3],self.x_shape[4])
-        y_shape_new = (self.y_shape[1][2]*self.y_shape[2],self.y_shape[4])
-        x2 = self.x_data[2].reshape(x_shape_new)
-        y2 = self.y_data[2].reshape(y_shape_new)
-        print("shape of start")
-        print(start)
-        print("shapes of measurements")
-        #print(x0.shape)
-        #print(x1.shape)
-        #print(x2.shape)
-        x = np.r_[x0,x1,x2]
-        y = np.r_[y0,y1,y2]
-        print(x.shape)
-        print(y.shape)
-        #initialize Fitresult for storing data
-        fitres = FitResult("chiral_fit")
-        shape1 = (y.shape[-1],len(start),1)
-        shape2 = (y.shape[-1],1)
-        fitres.create_empty(shape1, shape2, 1)
-        #print("Call to errfunc yields:")
-        #print(fitfunc(r_init,z_init,p,x[0:19,:,0]))
-        #print(errfunc(start,x[...,0],y[...,0]))
-        # compute inverse, cholesky decomposed covariance matrix
-        #if not correlated:
-        cov = np.diag(np.diagonal(np.cov(y)))
-            #print cov
-        #else:
-        #    cov = np.cov(Y.T)
-        #    cov_inv = np.linalg.inv(cov)
-        #    #print("Covariance matrix multiplied its inverse")
-        #    #print(cov.dot(cov_inv))
-        #    if mute is not None:
-        #      #print("Mutilating Covariance Matrix")
-        #      cov = mute(cov)
-        #      #print("Covariance Matrix:")
-        #      #print(cov)
-        cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
-        # add errors on prior to covariance matrix
-        tmp = np.eye(cov.shape[0]+6)
-        tmp[0:cov.shape[0],0:cov.shape[1]] = cov
-        cov = tmp
-        print("Covariance matrix:")
-        print(cov.shape)
-        print(np.diag(cov))
-        #self.fitres = ms.chiral_fit(args,corrid='fit_ms')
-        #self.fitres = ms.chiral_fit(args,corrid='fit_ms')
-        samples=1500
-        chisquare=np.zeros((samples,))
-        res = np.zeros((samples,len(start)))
-
-        # degrees of freedom
-        dof = float(y.shape[0]-len(start)) 
-        for b in range(samples):
-            
-            p,cov1,infodict,mesg,ier = leastsq(errfunc, start,
-                args=(x[...,b],y[...,b],cov), full_output=1, factor=.01)
-            chisquare[b] = float(sum(infodict['fvec']**2.))
-            res[b] = np.array(p)
-            #print(res[b])
-        # calculate mean and standard deviation
-        res_mean, res_std = compute_error(res)
-        # p-value calculated
-        pvals = 1. - scipy.stats.chi2.cdf(chisquare, dof)
-
-        # writing summary to screen
-        if debug > 3:
-            print("fit results for an uncorrelated fit:")
-            print("degrees of freedom: %f\n" % dof)
-            print("bootstrap samples: %d\n" % samples)
-            
-            print("fit results:")
-            for rm, rs in zip(res[0], res_std):
-                print("  %.6e +/- %.6e, rel. err: %.6e percent" % (rm, rs, rs/rm*100.))
-            print("Chi^2/dof: %.6e" % (chisquare[0]/dof))
-            print("p-value: %.3e" % pvals[0]) 
-
-        #return res, chisquare, pval
-        fitres.append_data((0,0), res, chisquare, pvals)
-        return fitres
+      errfunc = lambda p, x, y, cov: np.dot(cov,np.r_[fitfunc(p[0],p[3],p[6:9],x[0:19])-y[0:19],
+          fitfunc(p[1],p[4],p[6:9],x[19:28])-y[19:28],
+          fitfunc(p[2],p[5],p[6:9],x[28:34])-y[28:34],
+          #TODO: Take the priors from extern
+          (5.31-p[0])/(0.08),(5.77-p[1])/(0.06), (7.60-p[2])/(0.06),
+          (0.529-p[3])/(0.007),(0.509-p[4])/(0.004),(0.516-p[5])/(0.002)].T)
+      # Initial guesses for the parameters
+      p = np.r_[1.,1.,1.]
+      r = np.r_[5.3,5.75,7.6]
+      z = np.r_[0.52,0.51,0.515]
+      start=np.r_[r,z,p]
+      # handle the data
+      # x,y values for beta = 1.9
+      # each array should be (n_ensembles(beta),n_ind,samples)
+      x_shape_new = (self.x_shape[1][0]*self.x_shape[2],self.x_shape[3],self.x_shape[4])
+      y_shape_new = (self.y_shape[1][0]*self.y_shape[2],self.y_shape[4])
+      x0 = self.x_data[0].reshape(x_shape_new)
+      y0 = self.y_data[0].reshape(y_shape_new)
+      # x,y values for beta = 1.95
+      x_shape_new = (self.x_shape[1][1]*self.x_shape[2],self.x_shape[3],self.x_shape[4])
+      y_shape_new = (self.y_shape[1][1]*self.y_shape[2],self.y_shape[4])
+      x1 = self.x_data[1].reshape(x_shape_new)
+      y1 = self.y_data[1].reshape(y_shape_new)
+      # x,y values for beta = 2.1
+      x_shape_new = (self.x_shape[1][2]*self.x_shape[2],self.x_shape[3],self.x_shape[4])
+      y_shape_new = (self.y_shape[1][2]*self.y_shape[2],self.y_shape[4])
+      x2 = self.x_data[2].reshape(x_shape_new)
+      y2 = self.y_data[2].reshape(y_shape_new)
+      print("shape of start")
+      print(start)
+      print("shapes of measurements")
+      #print(x0.shape)
+      #print(x1.shape)
+      #print(x2.shape)
+      x = np.r_[x0,x1,x2]
+      y = np.r_[y0,y1,y2]
+      print(x.shape)
+      print(y.shape)
+      # invoke a chiral fit, yielding a fitresult
+      mk_phys=ChiralFit()
+      self.fitres = mk_phys.chiral_fit()
   
   def fit(self,index=0, start=[1.,],dim=None, x_phys=None,xcut=False,
           plot=True,ploterr=True,label=None,datadir=None,read=False,
