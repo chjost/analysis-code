@@ -372,7 +372,7 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, mute=None, debug=0)
         print correlated
     if not correlated:
         cov = np.diag(np.diagonal(np.cov(Y.T)))
-        #print cov
+        print(np.diag(cov))
     else:
         cov = np.cov(Y.T)
         cov_inv = np.linalg.inv(cov)
@@ -422,6 +422,126 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, mute=None, debug=0)
         for b in range(samples):
             p,cov1,infodict,mesg,ier = leastsq(errfunc, start, args=(X, Y[b],
                 add[b], cov), full_output=1, factor=.1)
+            chisquare[b] = float(sum(infodict['fvec']**2.))
+            res[b] = np.array(p)
+    # calculate mean and standard deviation
+    res_mean, res_std = compute_error(res)
+    # p-value calculated
+    pvals = 1. - scipy.stats.chi2.cdf(chisquare, dof)
+
+    # writing summary to screen
+    if debug > 3:
+        if correlated:
+            print("fit results for a correlated fit:")
+        else:
+            print("fit results for an uncorrelated fit:")
+        print("degrees of freedom: %f\n" % dof)
+        print("bootstrap samples: %d\n" % samples)
+        
+        print("fit results:")
+        for rm, rs in zip(res[0], res_std):
+            print("  %.6e +/- %.6e" % (rm, rs))
+        print("Chi^2/dof: %.6e +/- %.6e" % (chisquare[0]/dof, np.std(chisquare)
+              /dof))
+        print("p-value: %.3e" % pvals[0]) 
+
+    return res, chisquare, pvals 
+
+def globalfitting(errfunc, args, start, add=None, correlated=False, mute=None, debug=0):
+    """A function that fits a correlation function.
+
+    This function fits the given function fitfunc to the data given in
+    X and Y. The function needs some start values, given in start, and
+    can use a correlated or an uncorrelated fit.
+
+    Parameters
+    ----------
+    fitfunc : callable
+            The function to fit to the data.
+    X, Y : ndarrays
+        The X and Y data.
+    start : sequence
+        The starting parameters for the fit.
+    add : ndarray, optional
+        The additional parameters for the fit.
+    correlated : bool
+        Flag to use a correlated or uncorrelated fit.
+    mute : callable, function to act on the covariance matrix
+    debug : int
+        The amount of info printed.
+
+    Returns
+    -------
+    ndarray
+        The fit parameters after the fit.
+    ndarray
+        The chi^2 values of the fit.
+    ndarray
+        The p-values of the fit
+    """
+    # define error function
+    #if debug > 1:
+    #    print("defining errfunc and computing covariance matrix")
+    #if add is None:
+    #    errfunc = lambda p, x, y, error: np.dot(error, (y-fitfunc(p,x)).T)
+    #else:
+    #    errfunc = lambda p, x, y, e, error: np.dot(error, (y-fitfunc(p,x,e)).T)
+
+    # compute inverse, cholesky decomposed covariance matrix
+    #if debug > 1:
+    #    print correlated
+    #if not correlated:
+    #    cov = np.diag(np.diagonal(np.cov(Y.T)))
+    #    #print cov
+    #else:
+    #    cov = np.cov(Y.T)
+    #    cov_inv = np.linalg.inv(cov)
+    #    #print("Covariance matrix multiplied its inverse")
+    #    #print(cov.dot(cov_inv))
+    #    if mute is not None:
+    #      #print("Mutilating Covariance Matrix")
+    #      cov = mute(cov)
+    #      #print("Covariance Matrix:")
+    #      #print(cov)
+    #cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
+    #corr = np.corrcoef(Y.T)
+    #print("Correlation matrix for fit is:\n %r" %corr)
+    # Eigendecomposition of covariance matrix with screen output
+    # eig_decomp(cov)
+
+    # degrees of freedom
+    dof = float(Y.shape[1]-len(start)) 
+    samples = Y.shape[0]
+    # create results arrays
+    res = np.zeros((samples, len(start)))
+    chisquare = np.zeros(samples)
+    # The FIT to the boostrap samples
+    if debug > 1:
+        print("fitting the data")
+    if add is None:
+        # Enable multiple bootstrapsamples for x-values pair samplewise
+        print("x-shape in fitting is:")
+        print(X.shape)
+        print(Y.shape)
+        # This is a nasty hack to enable fitting for several bootstrapsamples in
+        # the xdata
+        #TODO: Solve this another way, if possible, unify array layouts
+        if len(X.shape) == 2 and X.shape[-1]==Y.shape[0]: 
+            for b in range(samples):
+                p,cov1,infodict,mesg,ier = leastsq(errfunc, start, args=args,
+                                                   full_output=1, factor=.1)
+                chisquare[b] = float(sum(infodict['fvec']**2.))
+                res[b] = np.array(p)
+        else:
+            for b in range(samples):
+                p,cov1,infodict,mesg,ier = leastsq(errfunc, start, args=args,
+                                                   full_output=1, factor=.1)
+                chisquare[b] = float(sum(infodict['fvec']**2.))
+                res[b] = np.array(p)
+    else:
+        for b in range(samples):
+            p,cov1,infodict,mesg,ier = leastsq(errfunc, start, args=args,
+                                               full_output=1, factor=.1)
             chisquare[b] = float(sum(infodict['fvec']**2.))
             res[b] = np.array(p)
     # calculate mean and standard deviation

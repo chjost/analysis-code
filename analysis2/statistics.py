@@ -292,9 +292,22 @@ def freq_count(arr, verb=False):
       print(frequencies)
     return frequencies
 
-def draw_gauss_distributed(mean, std, shape, origin=False):
-    """Draw normal distributed random numbers."""
-    np.random.seed(1227)
+def draw_gauss_distributed(mean, std, shape, origin=False, seed=None):   
+    """Draw normal distributed random numbers.
+
+    Parameters
+    ----------
+    mean: float, the mean of the gaussian distributed variable
+    std: float, the standard deviation of the sample
+    shape: 1d-tuple, the samplesize
+    origin: bool, save mean as original data in 0th position
+    seed: int, if given, set as seed to RandomState
+    """
+
+    if seed is None:
+      np.random.seed(1227)
+    else:
+      np.random.seed(seed)
     # for random samples from N(\mu, \sigma^2) use
     # sigma * random(shape) + mu
     res = std * np.random.randn(*shape) + mean 
