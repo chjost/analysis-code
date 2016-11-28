@@ -21,10 +21,10 @@ class ExtDat(object):
     def __init__(self,seeds,space,nboot=1500):
         self.nsamp=nboot
         # These are the calculated values from arxiv.org/1403.4504v3
-        obs_a = {'r0_a':(5.31,0.08),'zp_a':(0.529,0.007)}
-        obs_b = {'r0_b':(5.77,0.06),'zp_b':(0.509,0.004)}
-        obs_d = {'r0_d':(7.60,0.08),'zp_d':(0.516,0.002)}
-        self.table={'a':obs_a,'b':obs_b,'d':obs_d}
+        obs_a = {'r0':(5.31,0.08),'zp':(0.529,0.007)}
+        obs_b = {'r0':(5.77,0.06),'zp':(0.509,0.004)}
+        obs_d = {'r0':(7.60,0.08),'zp':(0.516,0.002)}
+        self.table={'A':obs_a,'B':obs_b,'D':obs_d}
 
         # Start with an empty dictionary
         self.data={}
@@ -35,8 +35,8 @@ class ExtDat(object):
         # zp
         for a in zip(space,seeds):
             self.data[a[0]]={'seed':a[1]}
-            self.set_obs(a[0],'r0_'+a[0])
-            self.set_obs(a[0],'zp_'+a[0])
+            self.set_obs(a[0],'r0')
+            self.set_obs(a[0],'zp')
         
     def set_obs(self, a, obs):
         # From the initialized table take the desired observable of the correct
@@ -48,6 +48,8 @@ class ExtDat(object):
   
     #def save
     #def save_txt
-    #def get
+    def get(self,a,obs):
+        return self.data[a][obs]
+
     #def show
           
