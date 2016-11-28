@@ -21,12 +21,14 @@ from zeta_wrapper import Z
 from scattering_length import calculate_scat_len
 from chiral_utils import evaluate_phys
 
-class ChiralFit(LatticeFit):
+class ChiralFit(fit.LatticeFit):
+    
+    def __init__(self,fit_id, errfunc):
+        self.fit_id = fit_id
+        self.fitfunc = None
+        self.errfunc = errfunc
 
-    self.fitfunc=None
-    self.errfunc=None
-
-    def chiral_fit(self, args, corrid="", start=None, xcut=None, ncorr=None,debug=0):
+    def chiral_fit(self, X, Y, start=None, xcut=None, ncorr=1,debug=0):
         """Fit function to data.
         
         Parameters
@@ -47,26 +49,15 @@ class ChiralFit(LatticeFit):
         # if no start value given, take an arbitrary value
         if start is None:
             _start = [3.0]
-        # make sure start is a tuple, list, or ndarray for leastsq to work
-        #elif not isinstance(start, (np.ndarray, tuple, list)):
-        #    _start = list(start)
-        #else:
-        #    _start = start
-        ## implement a cut on the data if given
-        #if xcut:
-        #    tmp = X[:,0] < xcut
-        #    _X = X[tmp].T
-        #    _Y = Y[tmp].T
-        #else:
-        #    _X = X.T
-        #    _Y = Y
+        else:
+          _start = start
         # create FitResults
-        fitres = FitResult("chiral_fit")
+        fitres = fit.FitResult("chiral_fit")
         #shape1 = (_X.shape[0], 1, _X.shape[0])
         #shape1 = (_X.shape[0], len(start), _Y.shape[0])
         #shape2 = (_X.shape[0], _Y.shape[0])
-        shape1 = (_Y.shape[0], len(start), _X.shape[0])
-        shape2 = (_Y.shape[0], _X.shape[0])
+        shape1 = (Y.shape[-1], len(start), 1)
+        shape2 = (Y.shape[-1], 1)
         if ncorr is None:
           fitres.create_empty(shape1, shape2, 1)
         elif isinstance(ncorr, int):
@@ -75,20 +66,20 @@ class ChiralFit(LatticeFit):
           raise ValueError("ncorr needs to be integer")
 
         # fit the data
-        dof = _X.shape[-1] - len(_start)
-        # fit every bootstrap sample
-        timing = []
-        for i, x in enumerate(_X): 
-            timing.append(time.clock())
-            tmpres, tmpchi2, tmppval = globalfitting(self.errfunc, args, _start, debug=debug)
-            fitres.add_data((0,i), tmpres, tmpchi2, tmppval)
-            #if i % 100:
-            #    print("%d of %d finished" % (i+1, _X.shape[0]))
-        t1 = np.asarray(timing)
-        print("total fit time %fs" % (t1[-1] - t1[0]))
-        t2 = t1[1:] - t1[:-1]
-        print("time per fit %f +- %fs" % (np.mean(t2), np.std(t2)))
+        dof = X.shape[0] - len(_start)
+         #fit every bootstrap sample
+        tmpres, tmpchi2, tmppval = globalfitting(self.errfunc, X, Y, _start, debug=debug)
+        fitres.add_data((0,0), tmpres, tmpchi2, tmppval)
+        #timing = []
+        #for i in range(ncorr): 
+        #    timing.append(time.clock())
+        #    #if i % 100:
+        #    #    print("%d of %d finished" % (i+1, _X.shape[0]))
+        #t1 = np.asarray(timing)
+        #print("total fit time %fs" % (t1[-1] - t1[0]))
+        #t2 = t1[1:] - t1[:-1]
+        #print("time per fit %f +- %fs" % (np.mean(t2), np.std(t2)))
         return fitres
 
-class ChiralRes(FitResult):
+#class ChiralRes(FitResult):
 

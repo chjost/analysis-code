@@ -12,6 +12,7 @@ matplotlib.rcParams['axes.labelsize'] = 'large'
 import chiral_utils as chut
 import extern_bootstrap as extboot
 from fit import FitResult
+from globalfit import ChiralFit
 from statistics import compute_error
 from plot_functions import plot_function
 
@@ -545,8 +546,8 @@ class ChirAna(object):
       print(x.shape)
       print(y.shape)
       # invoke a chiral fit, yielding a fitresult
-      mk_phys=ChiralFit()
-      self.fitres = mk_phys.chiral_fit()
+      mk_phys = ChiralFit("ms_phys",errfunc)
+      self.fitres = mk_phys.chiral_fit(x,y,start,debug=debug)
   
   def fit(self,index=0, start=[1.,],dim=None, x_phys=None,xcut=False,
           plot=True,ploterr=True,label=None,datadir=None,read=False,

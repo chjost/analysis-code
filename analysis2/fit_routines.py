@@ -448,7 +448,7 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, mute=None, debug=0)
     return res, chisquare, pvals 
 
 # At the moment this is only useful for KK
-def globalfitting(errfunc, args, start, add=None, correlated=False, mute=None, debug=0):
+def globalfitting(errfunc,x,y, start, add=None, correlated=False, mute=None, debug=0):
     """A function that fits Lattice fitresults.
 
     This function fits the given function fitfunc to the data given in
@@ -480,15 +480,6 @@ def globalfitting(errfunc, args, start, add=None, correlated=False, mute=None, d
     ndarray
         The p-values of the fit
     """
-    #initialize Fitresult for storing data
-    fitres = FitResult("chiral_fit")
-    shape1 = (y.shape[-1],len(start),1)
-    shape2 = (y.shape[-1],1)
-    fitres.create_empty(shape1, shape2, 1)
-    #print("Call to errfunc yields:")
-    #print(fitfunc(r_init,z_init,p,x[0:19,:,0]))
-    #print(errfunc(start,x[...,0],y[...,0]))
-    # compute inverse, cholesky decomposed covariance matrix
     #if not correlated:
     cov = np.diag(np.diagonal(np.cov(y)))
         #print cov
@@ -542,7 +533,7 @@ def globalfitting(errfunc, args, start, add=None, correlated=False, mute=None, d
         print("Chi^2/dof: %.6e" % (chisquare[0]/dof))
         print("p-value: %.3e" % pvals[0]) 
 
-    #return res, chisquare, pval
+    return res, chisquare, pvals
 
     ## degrees of freedom
     #dof = float(Y.shape[1]-len(start)) 
