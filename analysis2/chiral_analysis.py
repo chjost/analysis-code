@@ -1142,23 +1142,26 @@ class ChirAna(object):
           _add = None
       # Plot function can only plot in one dimension.
       plot_function(plotfunc, xlim, _args_a[:,:,0],add=_add,
-                    label=r'$a=0.0885\,$fm', ploterror=ploterr, fmt='r--', col='red')
+                    #label=r'$a=0.0885\,$fm', ploterror=ploterr, fmt='r--', col='red')
+                    label=None , ploterror=ploterr, fmt='r--', col='red')
       chut.plot_ensemble(x_plot[:,0], y_plot, '^', 'red', [r'$a=0.0885\,$fm',],
                         xid = a_range, match=self.match)
 
       plot_function(plotfunc, xlim, _args_b[:,:,0],add=_add,
-                    label=r'$a=0.0815\,$fm', ploterror=ploterr, fmt='b:', col='blue')
+                    #label=r'$a=0.0815\,$fm', ploterror=ploterr, fmt='b:', col='blue')
+                    label=None, ploterror=ploterr, fmt='b:', col='blue')
       chut.plot_ensemble(x_plot[:,0], y_plot,'v', 'blue', [r'$a=0.0815\,$fm',],
                          xid = b_range, match=self.match)
       plot_function(plotfunc, xlim, _args_d[:,:,0],add=_add,
-                    label=r'$a=0.0619\,$fm', ploterror=ploterr, fmt='g-.', col='green')
+                    #label=r'$a=0.0619\,$fm', ploterror=ploterr, fmt='g-.', col='green')
+                    label=None , ploterror=ploterr, fmt='g-.', col='green')
       chut.plot_ensemble(x_plot[:,0], y_plot,'o','green',[r'$a=0.0619\,$fm',],
                            xid = d_range,match=self.match)
       # Plot the continuum curve
       x_cont = np.linspace(0,50,1000)
       cont_curve = self.plot_cont_func 
       plot_function(cont_curve, [x_cont[0],x_cont[-1]],args[:,:,0],fmt='k--',add=_add,
-                    label='continuum',ploterror=True)
+                    label='cont.',ploterror=True)
     if xcut:
       y = plotfunc(args[0,:,0], xcut)
       plt.vlines(xcut, 0.95*y, 1.05*y, colors="k", label="")
@@ -1176,13 +1179,13 @@ class ChirAna(object):
     plt.grid(False)
     #plt.vlines(self.phys_point[0,0],y_lim[0],y_lim[1],color="k",label=label[3])
     if loc==None:
-      plt.legend(loc='best',numpoints=1,ncol=2,fontsize=12)
+      plt.legend(loc='best',numpoints=1,ncol=1,fontsize=18)
     else:
-      plt.legend(loc=loc,numpoints=1,ncol=2,fontsize=12)
+      plt.legend(loc=loc,numpoints=1,ncol=1,fontsize=18)
     #switch off title for publishing
     #plt.title(label[2])
-    plt.ylabel(label[1])
-    plt.xlabel(label[0])
+    plt.ylabel(label[1],fontsize=21)
+    plt.xlabel(label[0],fontsize=21)
     pfit.savefig()
     pfit.close()
     plt.clf()
