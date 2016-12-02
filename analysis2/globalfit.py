@@ -28,7 +28,7 @@ class ChiralFit(fit.LatticeFit):
         self.fitfunc = None
         self.errfunc = errfunc
 
-    def chiral_fit(self, X, Y, start=None, xcut=None, ncorr=1,debug=0):
+    def chiral_fit(self, X, Y, start=None, xcut=None, ncorr=1,debug=3):
         """Fit function to data.
         
         Parameters

@@ -73,7 +73,9 @@ class ChirAna(object):
     self.cont_dat = None
     # The functions for the continuum extrapolation and the function in the
     # continuum, defined for fitting and plotting separately
-
+    
+    # Some ensemble names
+    self.lat_dict = None
     # This is the function for fitting
     self.cont_ext = None
     # This is the function for continuum (no a-dependence)
@@ -83,9 +85,8 @@ class ChirAna(object):
     # This is the function for continuum plotting
     self.plot_cont_func = None
 
-  def create_empty(self, lyt_x, lyt_y, match=None, cont_ext=None,
-      plot_cont_ext= None, cont_func=None,
-      plot_cont_func=None):
+  def create_empty(self, lyt_x, lyt_y, match=None, lat_dict=None, cont_ext=None,
+      plot_cont_ext= None, cont_func=None, plot_cont_func=None):
     """Initialize a chiral analysis with some start parameters
     
     At the moment the first index is used to label the lattice spacing, the
@@ -152,7 +153,8 @@ class ChirAna(object):
       self.plot_cont_ext = plot_cont_ext
     self.cont_func = cont_func
     self.plot_cont_func = plot_cont_func
-
+    # Ensemble names as dictionary sorted by lattice spacing
+    self.lat_dict = lat_dict
   #def save()
   #
   #@classmethod
@@ -505,14 +507,23 @@ class ChirAna(object):
 
   def fit_strange_mass(self,debug=4):
       # Define the error function
-      fitfunc = lambda r, z, p, x,: p[0]/r**2 * r/z * (x[:,0]+x[:,1]) * (1+p[1]*r/z*x[:,0]+p[2]*x[:,2])
+      # the fitfunction is defined per lattice spacing
+      #fitfunc = lambda r, z, p, x,: p[0]/(r*z) * (x[:,0]+x[:,1]) * (1+p[1]*r/z*x[:,0]+p[2]*x[:,2])
+      fitfunc = lambda r, z, p, x,: p[0]/z * (x[:,0]+x[:,1]) * (1+p[1]*r/z*x[:,0]+p[2]/x[:,2]**2)
 
-      errfunc = lambda p, x, y, cov: np.dot(cov,np.r_[fitfunc(p[0],p[3],p[6:9],x[0:19])-y[0:19],
+      #errfunc = lambda p, x, y, cov: np.dot(cov,np.r_[fitfunc(p[0],p[3],p[6:9],x[0:19])-y[0:19],
+      #    fitfunc(p[1],p[4],p[6:9],x[19:28])-y[19:28],
+      #    fitfunc(p[2],p[5],p[6:9],x[28:34])-y[28:34],
+      #    #TODO: Take the priors from extern
+      #    (5.31-p[0])/(0.08),(5.77-p[1])/(0.06), (7.60-p[2])/(0.06),
+      #    (0.529-p[3])/(0.007),(0.509-p[4])/(0.004),(0.516-p[5])/(0.002)].T)
+      #Vector of the residuals
+      errfunc = lambda p, x, y, err: np.multiply(err,np.r_[fitfunc(p[0],p[3],p[6:9],x[0:19])-y[0:19],
           fitfunc(p[1],p[4],p[6:9],x[19:28])-y[19:28],
           fitfunc(p[2],p[5],p[6:9],x[28:34])-y[28:34],
           #TODO: Take the priors from extern
-          (5.31-p[0])/(0.08),(5.77-p[1])/(0.06), (7.60-p[2])/(0.06),
-          (0.529-p[3])/(0.007),(0.509-p[4])/(0.004),(0.516-p[5])/(0.002)].T)
+          (5.31-p[0]),(5.77-p[1]), (7.60-p[2]),
+          (0.529-p[3]),(0.509-p[4]),(0.516-p[5])].T)
       # Initial guesses for the parameters
       p = np.r_[1.,1.,1.]
       r = np.r_[5.3,5.75,7.6]
@@ -543,11 +554,31 @@ class ChirAna(object):
       #print(x2.shape)
       x = np.r_[x0,x1,x2]
       y = np.r_[y0,y1,y2]
-      print(x.shape)
+      print(x)
       print(y.shape)
       # invoke a chiral fit, yielding a fitresult
       mk_phys = ChiralFit("ms_phys",errfunc)
       self.fitres = mk_phys.chiral_fit(x,y,start,debug=debug)
+      print("Fit Result has shape %r: " %self.fitres.data[0].shape)
+      #check the solution by computing relative deviation from measurement
+      checkfunc = np.r_[(fitfunc(start[0],start[3],start[6:9],x[0:19])-y[0:19])/y[0:19],
+          (fitfunc(start[1],start[4],start[6:9],x[19:28])-y[19:28])/y[19:28],
+          (fitfunc(start[2],start[5],start[6:9],x[28:34])-y[28:34])/y[28:34]]
+      print(checkfunc[:,0])
+
+      # Plot the data together with the fitfunction
+
+      label = [r'$a\mu_l$',r'$(aM_K)^2$']
+      # define the plotfunction for one lattice spacing
+      plotfunc = lambda q,x,ms,r0_a: q[2]/q[1]*(x + ms)*(1+q[3]*q[0]/q[1]*x+q[4]/r0_a**2)
+      # get the x and y data (copied from plot_plain())
+      x_plot,y_plot = self.get_data_plot(dim=0,debug=0)
+      # call plotfunction with correct slices of argumentsarray
+      # pick the crrect arguments
+      args = self.fitres.data[0] 
+      plot_args = np.hstack((args[:,0],args[:,3],args[:,6:]))
+      # Plot function for one lattice spacing and one strange quark mass
+      plot_function(plotfunc,(0.0,0.11),plot_args,add=[x_plot[0,1,0]])
   
   def fit(self,index=0, start=[1.,],dim=None, x_phys=None,xcut=False,
           plot=True,ploterr=True,label=None,datadir=None,read=False,
@@ -822,17 +853,18 @@ class ChirAna(object):
     return _a_range, _b_range, _d_range
 
 # TODO: Make the chiral plots interface more with the actual LatticePlot class
-  def plot_plain(self,label,ens,savedir=None,xcut=None):
-    x_plot,y_plot = self.get_data_plot(dim=0)
-    print("Do we use matched data? %s" %self.match)
+  def plot_plain(self,label,ens,savedir=None,xcut=None,xdim=0,debug=0):
+    x_plot,y_plot = self.get_data_plot(dim=0,debug=0)
+    if debug > 3:
+        print("Do we use matched data? %s" %self.match)
 
-    print("\nData used for plot: ")
-    print("x-data:")
-    print(x_plot)
-    print(x_plot.shape)
+        print("\nData used for plot: ")
+        print("x-data:")
+        print(x_plot)
+        print(x_plot.shape)
 
-    print("y-data")
-    print(y_plot)
+        print("y-data")
+        print(y_plot)
 
     if savedir is not None:
       path = savedir
@@ -846,11 +878,12 @@ class ChirAna(object):
     print('saving plot in: %s' %path)
     #calc xid's
     a_range, b_range, d_range = self.calc_plot_ranges()
-    chut.plot_ensemble(x_plot[:,0],y_plot,'^vspho','red',ens['A'],
+    print(d_range)
+    chut.plot_ensemble(x_plot[:,xdim],y_plot,'^vspho','red',ens['A'],
                        xid = a_range,match=self.match)
-    chut.plot_ensemble(x_plot[:,0],y_plot,'vso','blue',ens['B'],
+    chut.plot_ensemble(x_plot[:,xdim],y_plot,'vso','blue',ens['B'],
                        xid = b_range,match=self.match)
-    chut.plot_ensemble(x_plot[:,0],y_plot,'^','green',ens['D'],
+    chut.plot_ensemble(x_plot[:,xdim],y_plot,'^d','green',ens['D'],
                        xid = d_range,match=self.match)
 
     plt.grid(False)

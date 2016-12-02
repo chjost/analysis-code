@@ -314,6 +314,6 @@ def draw_gauss_distributed(mean, std, shape, origin=False, seed=None):
     # Optionally replace mean
     if origin is True:
       res[0] = mean
-    return res
+    return np.asarray(res)
 if __name__ == "main":
     pass

@@ -481,7 +481,7 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False, mute=None, deb
         The p-values of the fit
     """
     #if not correlated:
-    cov = np.diag(np.diagonal(np.cov(y)))
+    #cov = np.diag(np.diagonal(np.cov(y)))
         #print cov
     #else:
     #    cov = np.cov(Y.T)
@@ -493,16 +493,21 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False, mute=None, deb
     #      cov = mute(cov)
     #      #print("Covariance Matrix:")
     #      #print(cov)
-    cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
+    #cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
     # add errors on prior to covariance matrix
-    tmp = np.eye(cov.shape[0]+6)
-    tmp[0:cov.shape[0],0:cov.shape[1]] = cov
-    cov = tmp
-    print("Covariance matrix:")
-    print(cov.shape)
-    print(np.diag(cov))
+    #tmp = np.eye(cov.shape[0]+6)
+    #tmp[0:cov.shape[0],0:cov.shape[1]] = cov
+    #cov = tmp
+    #print("Covariance matrix:")
+    #print(cov.shape)
+    #print(np.diag(cov))
     #self.fitres = ms.chiral_fit(args,corrid='fit_ms')
     #self.fitres = ms.chiral_fit(args,corrid='fit_ms')
+    err = np.divide(1,np.std(y,axis=1))
+    #inverse of prior errors
+    prior_err = np.divide(1.,np.asarray((0.08,0.06,0.06,0.007,0.004,0.002)))
+    err = np.append(err,prior_err)
+    print("vector of inverse errors: %r" % err)
     samples=1500
     chisquare=np.zeros((samples,))
     res = np.zeros((samples,len(start)))
@@ -511,8 +516,10 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False, mute=None, deb
     dof = float(y.shape[0]-len(start)) 
     for b in range(samples):
         
+        #p,cov1,infodict,mesg,ier = leastsq(errfunc, start,
+        #    args=(x[...,b],y[...,b],cov), full_output=1, factor=.01)
         p,cov1,infodict,mesg,ier = leastsq(errfunc, start,
-            args=(x[...,b],y[...,b],cov), full_output=1, factor=.01)
+            args=(x[...,b],y[...,b],err), full_output=1, factor=.01)
         chisquare[b] = float(sum(infodict['fvec']**2.))
         res[b] = np.array(p)
         #print(res[b])

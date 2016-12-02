@@ -26,7 +26,7 @@ def main():
     plotdir = ens.get_data("plotdir")
     #gmax = ens.get_data("gmax")
     #d2 = ens.get_data("d2")
-    strange = ens.get_data("strangea")
+    strange = ens.get_data("strangeb")
     try:
         debug = ens.get_data("debug")
     except KeyError:

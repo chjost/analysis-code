@@ -210,6 +210,9 @@ def plot_ensemble(x,y,form,col,label,xid=None,match=False,fitfunc=None):
           if match:
             _d = d+i
             _u = _d+1
+            # print the data for debug
+            #print(x[_d:_u])
+            #print(y[_d:_u])
             plt.errorbar(x[_d:_u,0], y[_d:_u,0], 
                        xerr=[x[_d:_u,1]+x[_d:_u,2],x[_d:_u,1]+x[_d:_u,3]],
                        yerr=[y[_d:_u,1]+y[_d:_u,2],y[_d:_u,1]+y[_d:_u,3]],
@@ -224,7 +227,9 @@ def plot_ensemble(x,y,form,col,label,xid=None,match=False,fitfunc=None):
             _u = _d+3
             print("plotting in interval:")
             print(_d,_u)
-            print(x[_d:_u,0])
+            # print the data for debug
+            #print(x[_d:_u])
+            #print(y[_d:_u])
             plt.errorbar(x[_d:_u,0], y[_d:_u,0], 
                        xerr=[x[_d:_u,1]+x[_d:_u,2],x[_d:_u,1]+x[_d:_u,3]],
                        yerr=[y[_d:_u,1]+y[_d:_u,2],y[_d:_u,1]+y[_d:_u,3]],

@@ -13,7 +13,7 @@ from fit import FitResult
 from statistics import compute_error, draw_gauss_distributed
 from plot_functions import plot_function
 
-"""A class handling external data. It is meant for handling data from median
+"""Two classes handling external data. They are meant for handling data from median
 and standard deviation with a pseudobootstrap. """
 
 class ExtDat(object):
@@ -52,4 +52,37 @@ class ExtDat(object):
         return self.data[a][obs]
 
     #def show
-          
+
+class ContDat(object):
+    """Class to hold external data from continuum values"""
+    def __init__(self,seeds,nboot=1500):
+        self.nsamp=nboot
+        # These are the calculated values from arxiv.org/1403.4504v3
+        obs = {'r0':(0.474,0.014),'mk':(494.2,0.4),'mpi_0':(134.9766,0.0006),
+              'm_l':(3.7,0.17)}
+        self.table = obs
+
+        # Start with an empty dictionary
+        self.data={}
+        # test length of tuples
+        if len(seeds) != len(obs):
+            raise ValueError("Seeds and Observable tuples have incompatible lengths")
+        # initialize the dictionary with one seed for every observable
+        for a in zip(obs, seeds):
+            self.data[a[0]]={'seed':a[1]}
+            self.set_obs(a[0])
+        
+    def set_obs(self, obs):
+        # From the initialized table take the desired observable of the correct
+        # lattice spacing with its error
+        lit = self.table[obs]
+        seed = self.data[obs]['seed']
+        self.data[obs]['boot'] = draw_gauss_distributed(lit[0],lit[1],
+                                (self.nsamp,),origin=True,seed=seed)
+  
+    #def save
+    #def save_txt
+    def get(self,obs):
+        return self.data[obs]['boot']
+
+    #def show
