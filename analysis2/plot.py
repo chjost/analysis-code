@@ -652,6 +652,7 @@ class LatticePlot(object):
       if self.join is True:
         self.save()
       del self
+
 #TODO: code doubling
     def plot_single_line(self,x,y,label,col):
       """plot horizontal and vertical lines at the specific points, labeled with
@@ -685,6 +686,47 @@ class LatticePlot(object):
           'd',color=col,label=label)
       plt.legend()
 
+    def plot_chiral_fit(self,chirana,beta,label,xlim,func=None,args=None):
+        """ Function to plot a chiral fit.
+        
+        This function sets up a plotter object, puts in the data in the right
+        shape and plots the data itself as well as the function
+        
+        """
+        # Plot the data for the given lattice spacings
+        # Initialize symbols and colors for lattice spacings
+        col = ['r','b','g']
+        fmt_pts = ['^','v','o']
+
+        for i,a in enumerate(beta):
+            # get data for beta, the data passed should be 3 arrays (X,Y,dy)
+            # the light quark mass values
+            _X = chirana.x_data[i][:,:,0,0].flatten()
+            _Y = chirana.y_data[i][:,:,0,0].flatten()
+            _dy = chirana.y_data[i][:,:,0,:].reshape((chirana.y_data[i].shape[0]*chirana.y_data[i].shape[1],chirana.y_data[i].shape[-1]))
+            print("yerror shape is:")
+            print(_dy.shape)
+            _mean, _dy = compute_error(_dy,axis=1)
+            print(_dy.shape)
+            plot_data(_X,_Y,_dy,label='data',col=col[i],fmt=fmt_pts[i])
+            # Check if we want to plot a function in addition to the data
+            if func is not None:
+                # get a/r0
+                # Loop over
+                for s in chirana.x_data[i][0,:1,0]: 
+                
+                  plot_function()
+        plt.xlim(xlim[0],xlim[1])
+        plt.xlabel(label[0])
+        plt.ylabel(label[1])
+        if len(label) > 2:
+            plt.title(label[2])
+        plt.legend(loc='best',ncol=1,fontsize=14)
+        if join is False:
+          self.save()
+          plt.clf()
+
+        
 def plot_single_line(x,y,label,col):
   """plot horizontal and vertical lines at the specific points, labeled with
   the specific values

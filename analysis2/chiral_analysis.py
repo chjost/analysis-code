@@ -11,6 +11,7 @@ matplotlib.rcParams['axes.labelsize'] = 'large'
 
 import chiral_utils as chut
 import extern_bootstrap as extboot
+import plot as plot
 from fit import FitResult
 from globalfit import ChiralFit
 from statistics import compute_error
@@ -559,7 +560,7 @@ class ChirAna(object):
       # invoke a chiral fit, yielding a fitresult
       mk_phys = ChiralFit("ms_phys",errfunc)
       self.fitres = mk_phys.chiral_fit(x,y,start,debug=debug)
-      print("Fit Result has shape %r: " %self.fitres.data[0].shape)
+      #print("Fit Result has shape %r: " %self.fitres.data[0].shape)
       #check the solution by computing relative deviation from measurement
       checkfunc = np.r_[(fitfunc(start[0],start[3],start[6:9],x[0:19])-y[0:19])/y[0:19],
           (fitfunc(start[1],start[4],start[6:9],x[19:28])-y[19:28])/y[19:28],
@@ -574,12 +575,12 @@ class ChirAna(object):
       # get the x and y data (copied from plot_plain())
       x_plot,y_plot = self.get_data_plot(dim=0,debug=0)
       # call plotfunction with correct slices of argumentsarray
-      # pick the crrect arguments
-      args = self.fitres.data[0] 
-      plot_args = np.hstack((args[:,0],args[:,3],args[:,6:]))
-      # Plot function for one lattice spacing and one strange quark mass
-      plot_function(plotfunc,(0.0,0.11),plot_args,add=[x_plot[0,1,0]])
-  
+      # pick the correct arguments
+      #args = self.fitres.data[0] 
+      #plot_args = np.hstack((args[:,0],args[:,3],args[:,6:]))
+      ## Plot function for one lattice spacing and one strange quark mass
+      #plot_function(plotfunc,(0.0,0.11),plot_args,add=[x_plot[0,1,0]])
+
   def fit(self,index=0, start=[1.,],dim=None, x_phys=None,xcut=False,
           plot=True,ploterr=True,label=None,datadir=None,read=False,
           ens=None,debug=0,loc=None,xlim=None,ylim=None):
