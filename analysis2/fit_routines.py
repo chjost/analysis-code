@@ -508,6 +508,7 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False, mute=None, deb
     prior_err = np.divide(1.,np.asarray((0.08,0.06,0.06,0.007,0.004,0.002)))
     err = np.append(err,prior_err)
     print("vector of inverse errors: %r" % err)
+    #TODO: Get samplesize from elsewhere
     samples=1500
     chisquare=np.zeros((samples,))
     res = np.zeros((samples,len(start)))

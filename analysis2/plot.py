@@ -713,16 +713,23 @@ class LatticePlot(object):
             if func is not None:
                 # get a/r0
                 # Loop over
-                for s in chirana.x_data[i][0,:1,0]: 
-                
-                  plot_function()
+                # Get the r value
+                r = chirana.x_data[i][0,0,2,0]
+                print("Arguments for plotting function")
+                print(args[i])
+                for s in chirana.x_data[i][0,:,1,0]: 
+                  print(s,r)
+                  plotargs = np.hstack((args[i],s,r))
+                  print("Arguments to plotting function")
+                  print(plotargs)
+                  plot_function(func,xlim,plotargs,label=None,ploterror=True)
         plt.xlim(xlim[0],xlim[1])
         plt.xlabel(label[0])
         plt.ylabel(label[1])
         if len(label) > 2:
             plt.title(label[2])
         plt.legend(loc='best',ncol=1,fontsize=14)
-        if join is False:
+        if self.join is False:
           self.save()
           plt.clf()
 
