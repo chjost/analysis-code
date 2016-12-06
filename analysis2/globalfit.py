@@ -28,7 +28,7 @@ class ChiralFit(fit.LatticeFit):
         self.fitfunc = None
         self.errfunc = errfunc
 
-    def chiral_fit(self, X, Y, start=None, xcut=None, ncorr=1,debug=3):
+    def chiral_fit(self, X, Y, start=None, xcut=None, ncorr=1, parlim=None, debug=3):
         """Fit function to data.
         
         Parameters
@@ -43,6 +43,8 @@ class ChiralFit(fit.LatticeFit):
         xcut : float
             A maximal value for the X values. Everything above will not
             be used in the fit.
+        parlim : tuple, errors on the fitparameters, if given they are
+            considered as weights to the parameter constraints
         debug : int
             The amount of information printed to screen.
         """
@@ -68,7 +70,8 @@ class ChiralFit(fit.LatticeFit):
         # fit the data
         dof = X.shape[0] - len(_start)
          #fit every bootstrap sample
-        tmpres, tmpchi2, tmppval = globalfitting(self.errfunc, X, Y, _start, debug=debug)
+        tmpres, tmpchi2, tmppval = globalfitting(self.errfunc, X, Y, _start,
+            parlim=parlim, debug=debug)
         fitres.add_data((0,0), tmpres, tmpchi2, tmppval)
         #timing = []
         #for i in range(ncorr): 

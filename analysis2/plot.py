@@ -708,7 +708,7 @@ class LatticePlot(object):
             print(_dy.shape)
             _mean, _dy = compute_error(_dy,axis=1)
             print(_dy.shape)
-            plot_data(_X,_Y,_dy,label='data',col=col[i],fmt=fmt_pts[i])
+            plot_data(_X,_Y,_dy,label=a,col=col[i],fmt=fmt_pts[i])
             # Check if we want to plot a function in addition to the data
             if func is not None:
                 # get a/r0
@@ -719,10 +719,17 @@ class LatticePlot(object):
                 print(args[i])
                 for s in chirana.x_data[i][0,:,1,0]: 
                   print(s,r)
+                  # Check for numbers of lattice spacings, if > 1 loop over args
+                  #if len(beta)==1:
+                  #    plotargs = np.hstack((args,s,r))
+                  #else:
                   plotargs = np.hstack((args[i],s,r))
                   print("Arguments to plotting function")
                   print(plotargs)
                   plot_function(func,xlim,plotargs,label=None,ploterror=True)
+            plt.xlabel(label[0])
+            plt.ylabel(label[1])
+            self.save()
         plt.xlim(xlim[0],xlim[1])
         plt.xlabel(label[0])
         plt.ylabel(label[1])

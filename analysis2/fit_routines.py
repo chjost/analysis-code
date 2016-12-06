@@ -448,7 +448,8 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, mute=None, debug=0)
     return res, chisquare, pvals 
 
 # At the moment this is only useful for KK
-def globalfitting(errfunc,x,y, start, add=None, correlated=False, mute=None, debug=0):
+def globalfitting(errfunc,x,y, start, add=None, correlated=False,
+    mute=None, parlim=None, debug=0):
     """A function that fits Lattice fitresults.
 
     This function fits the given function fitfunc to the data given in
@@ -468,6 +469,7 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False, mute=None, deb
     correlated : bool
         Flag to use a correlated or uncorrelated fit.
     mute : callable, function to act on the covariance matrix
+    parlim: arraylike, vector of errors on the fitparameters
     debug : int
         The amount of info printed.
 
@@ -504,9 +506,11 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False, mute=None, deb
     #self.fitres = ms.chiral_fit(args,corrid='fit_ms')
     #self.fitres = ms.chiral_fit(args,corrid='fit_ms')
     err = np.divide(1,np.std(y,axis=1))
-    #inverse of prior errors
-    prior_err = np.divide(1.,np.asarray((0.08,0.06,0.06,0.007,0.004,0.002)))
-    err = np.append(err,prior_err)
+    #inverse of fitparameter errors
+    #TODO: This also has to come from outside
+    if parlim is not None:
+      prior_err = np.divide(1.,np.asarray(parlim))
+      err = np.append(err,prior_err)
     print("vector of inverse errors: %r" % err)
     #TODO: Get samplesize from elsewhere
     samples=1500
@@ -518,9 +522,11 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False, mute=None, deb
     for b in range(samples):
         
         #p,cov1,infodict,mesg,ier = leastsq(errfunc, start,
-        #    args=(x[...,b],y[...,b],cov), full_output=1, factor=.01)
+        #    args=(x[...,b],y[...,b],err), full_output=1, factor=.01)
+        # fix known parameters
+        add = 5.31,5.77,7.6,0.529,0.509,0.516
         p,cov1,infodict,mesg,ier = leastsq(errfunc, start,
-            args=(x[...,b],y[...,b],err), full_output=1, factor=.01)
+            args=(x[...,b],y[...,b],err,add), full_output=1, factor=.01)
         chisquare[b] = float(sum(infodict['fvec']**2.))
         res[b] = np.array(p)
         #print(res[b])
@@ -537,7 +543,7 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False, mute=None, deb
         
         print("fit results:")
         for rm, rs in zip(res[0], res_std):
-            print("  %.6e +/- %.6e, rel. err: %.6e percent" % (rm, rs, rs/rm*100.))
+            print("  %.6e +/- %.6e, rel. err: %.2f %%" % (rm, rs, rs/rm*100.))
         print("Chi^2/dof: %.6e" % (chisquare[0]/dof))
         print("p-value: %.3e" % pvals[0]) 
 
