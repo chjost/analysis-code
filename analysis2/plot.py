@@ -685,6 +685,48 @@ class LatticePlot(object):
           #'d',color=col,label=r'%2.4e,%2.4e' % (x_val[0],y_val[0]) )
           'd',color=col,label=label)
       plt.legend()
+    
+    def plot_comparison(self,chirana,beta,label,xlim,dep=None,debug=0):
+        # Plot the data for the given lattice spacings
+        # Initialize symbols and colors for lattice spacings
+        col = ['r','b','g']
+        fmt_pts = ['^','v','o']
+
+        for i,a in enumerate(beta):
+            # get data for beta, the data passed should be 3 arrays (X,Y,dy)
+            # the quark mass values
+            if dep is not None:
+                _X = chirana.x_data[i][:,:,dep,0].flatten()
+                _dX = chirana.x_data[i][:,:,dep,:].reshape((chirana.x_data[i].shape[0]*chirana.x_data[i].shape[1],chirana.x_data[i].shape[-1]))
+            else:
+                _X = chirana.x_data[i][:,:,0,0].flatten()
+                _dX = chirana.x_data[i][:,:,0,:].reshape((chirana.x_data[i].shape[0]*chirana.x_data[i].shape[1],chirana.x_data[i].shape[-1]))
+            _Y = chirana.y_data[i][:,:,0,0].flatten()
+            _dy = chirana.y_data[i][:,:,0,:].reshape((chirana.y_data[i].shape[0]*chirana.y_data[i].shape[1],chirana.y_data[i].shape[-1]))
+            print("yerror shape is:")
+            print(_dy.shape)
+            x_mean, _dx = compute_error(_dX,axis=1)
+            y_mean, _dy = compute_error(_dy,axis=1)
+            print(_dy.shape)
+            if debug > 0:
+                print("x_data to be plotted:")
+                print(_X)
+                print("y_data to be plotted:")
+                print(_Y)
+            #plot_data(_X,_Y,_dy,label=a,col=col[i],fmt=fmt_pts[i])
+            plot_data(_X,_Y,_dy,label=a,dX=_dx,col=col[i],fmt=fmt_pts[i])
+            plt.xlabel(label[0])
+            plt.ylabel(label[1])
+        plt.xlim(xlim[0],xlim[1])
+        plt.xlabel(label[0])
+        plt.ylabel(label[1])
+        if len(label) > 2:
+            plt.title(label[2])
+        plt.legend(loc='best',ncol=1,fontsize=14)
+        if self.join is False:
+          self.save()
+          plt.clf()
+        
 
     def plot_chiral_fit(self,chirana,beta,label,xlim,func=None,args=None):
         """ Function to plot a chiral fit.
@@ -708,22 +750,17 @@ class LatticePlot(object):
             print(_dy.shape)
             _mean, _dy = compute_error(_dy,axis=1)
             print(_dy.shape)
-            plot_data(_X,_Y,_dy,label=a,col=col[i],fmt=fmt_pts[i])
+            plot_data(_X,_Y,_dy,label=a,col=col[i],fmt=fmt_pts[i],alpha=0.4)
             # Check if we want to plot a function in addition to the data
             if func is not None:
-                # get a/r0
-                # Loop over
-                # Get the r value
-                r = chirana.x_data[i][0,0,2,0]
                 print("Arguments for plotting function")
                 print(args[i])
                 for s in chirana.x_data[i][0,:,1,0]: 
-                  print(s,r)
                   # Check for numbers of lattice spacings, if > 1 loop over args
                   #if len(beta)==1:
                   #    plotargs = np.hstack((args,s,r))
                   #else:
-                  plotargs = np.hstack((args[i],s,r))
+                  plotargs = np.hstack((args[i],s))
                   print("Arguments to plotting function")
                   print(plotargs)
                   plot_function(func,xlim,plotargs,label=None,ploterror=True)

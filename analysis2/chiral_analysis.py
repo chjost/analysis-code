@@ -515,7 +515,6 @@ class ChirAna(object):
   def fit_strange_mass_A(self,debug=4):
       # Define the error function
       # the fitfunction is defined per lattice spacing
-      #fitfunc = lambda r, z, p, x,: p[0]/(r*z) * (x[:,0]+x[:,1]) * (1+p[1]*r/z*x[:,0]+p[2]*x[:,2])
       fitfunc = lambda r, z, p, x,: p[0]/(r*z) * (x[:,0]+x[:,1]) * (1+p[1]*r/z*x[:,0]+p[2]/r**2)
 
       #Vector of the residuals
@@ -527,8 +526,8 @@ class ChirAna(object):
       #r = np.r_[5.3,5.75,7.6]
       #z = np.r_[0.52,0.51,0.515]
       p = np.r_[1.,1.,1.]
-      r = np.r_[5.]
-      z = np.r_[0.5]
+      r = np.r_[1.]
+      z = np.r_[1.]
       start=np.r_[r,z,p]
       # errors on the parameters r0/a and zp
       parerr=(0.08,0.007)
@@ -552,16 +551,24 @@ class ChirAna(object):
       # invoke a chiral fit, yielding a fitresult
       mk_phys = ChiralFit("ms_phys",errfunc)
       self.fitres = mk_phys.chiral_fit(x,y,start,parlim=parerr,debug=debug)
-      #print("Fit Result has shape %r: " %self.fitres.data[0].shape)
       #check the solution by computing relative deviation from measurement
-      checkfunc = np.r_[(fitfunc(start[0],start[1],start[2:5],x[0:19])-y[0:19])/y[0:19]]
+      # get arguments
+      args = self.fitres.data[0]
+      checkfunc = fitfunc(args[0,0,0],args[0,1,0],args[0,2:5,0],x[0:19])
+      err = np.divide(1.,np.std(y,axis=1))
+      err = np.append(err,np.divide(1.,parerr))
+      chisq = np.sum(errfunc(args[0,:,0],x[...,0],y[...,0],err)**2)
+      print("calculated values:")
       print(checkfunc[:,0])
+      print("measured values:")
+      print(y[0:19,0])
+      print("chisquared is: %.2f" %chisq)
 
   def fit_strange_mass_B(self,debug=4):
       # Define the error function
       # the fitfunction is defined per lattice spacing
       #fitfunc = lambda r, z, p, x,: p[0]/(r*z) * (x[:,0]+x[:,1]) * (1+p[1]*r/z*x[:,0]+p[2]*x[:,2])
-      fitfunc = lambda r, z, p, x,: p[0]/(r*z) * (x[:,0]+x[:,1]) * (1+p[1]*r/z*x[:,0]+p[2]/r**2)
+      fitfunc = lambda r, z, p, x: p[0]/(r*z) * (x[:,0]+x[:,1]) * (1+p[1]*r/z*x[:,0]+p[2]/r**2)
 
       #Vector of the residuals
       errfunc = lambda p, x, y, err: np.multiply(err,np.r_[fitfunc(p[0],p[1],p[2:5],x[0:10])-y[0:10],
@@ -572,8 +579,8 @@ class ChirAna(object):
       #r = np.r_[5.3,5.75,7.6]
       #z = np.r_[0.52,0.51,0.515]
       p = np.r_[1.,1.,1.]
-      r = np.r_[5.]
-      z = np.r_[0.5]
+      r = np.r_[1.]
+      z = np.r_[1.]
       start=np.r_[r,z,p]
       # errors on the parameters r0/a and zp
       parerr=(0.06,0.004)
@@ -597,29 +604,32 @@ class ChirAna(object):
       # invoke a chiral fit, yielding a fitresult
       mk_phys = ChiralFit("ms_phys",errfunc)
       self.fitres = mk_phys.chiral_fit(x,y,start,parlim=parerr,debug=debug)
-      #print("Fit Result has shape %r: " %self.fitres.data[0].shape)
       #check the solution by computing relative deviation from measurement
-      checkfunc = np.divide(fitfunc(start[0],start[1],start[2:5],x[0:10])-y[0:10],y[0:10])
-      print("relative deviation from measured values:")
-      print(checkfunc[:,0]) 
-
+      # get arguments
+      args = self.fitres.data[0]
+      checkfunc = fitfunc(args[0,0,0],args[0,1,0],args[0,2:5,0],x[0:10])
+      err = np.divide(1.,np.std(y,axis=1))
+      err = np.append(err,np.divide(1.,parerr))
+      chisq = np.sum(errfunc(args[0,:,0],x[...,0],y[...,0],err)**2)
+      print("calculated values:")
+      print(checkfunc[:,0])
+      print("measured values:")
+      print(y[0:10,0])
+      print("chisquared is: %.2f" %chisq)
+  
+  
   def fit_strange_mass_D(self,debug=4):
       # Define the error function
       # the fitfunction is defined per lattice spacing
-      #fitfunc = lambda r, z, p, x,: p[0]/(r*z) * (x[:,0]+x[:,1]) * (1+p[1]*r/z*x[:,0]+p[2]*x[:,2])
-      fitfunc = lambda r, z, p, x,: p[0]/(r*z) * (x[:,0]+x[:,1]) * (1+p[1]*r/z*x[:,0]+p[2]/r**2)
-
+      fitfunc = lambda r, z, p, x: p[0]/(r*z) * (x[:,0]+x[:,1]) * (1+p[1]*r/z*x[:,0]+p[2]/r**2)
       #Vector of the residuals
-      errfunc = lambda p, x, y, err: np.multiply(err,np.r_[fitfunc(p[0],p[1],p[2:5],x[0:7])-y[0:7],
-          #TODO: Take the priors from extern
-          (7.6-p[0]), (0.516-p[1])])
+      errfunc = lambda p,x,y,err: np.multiply(err,np.r_[fitfunc(p[0],p[1],p[2:5],x[0:7])-y[0:7],
+        #TODO: Take the priors from extern
+        (7.6-p[0]), (0.516-p[1])])
       # Initial guesses for the parameters
-      #p = np.r_[0.,0.,1.]
-      #r = np.r_[5.3,5.75,7.6]
-      #z = np.r_[0.52,0.51,0.515]
-      p = np.r_[1.,1.,1.]
-      r = np.r_[5.]
-      z = np.r_[0.5]
+      p = np.r_[6.,0.1,1.]
+      r = np.r_[1.]
+      z = np.r_[1.]
       start=np.r_[r,z,p]
       # errors on the parameters r0/a and zp
       parerr=(0.08,0.002)
@@ -630,24 +640,37 @@ class ChirAna(object):
       y_shape_new = (self.y_shape[1][0]*self.y_shape[2],self.y_shape[4])
       x0 = self.x_data[0].reshape(x_shape_new)
       y0 = self.y_data[0].reshape(y_shape_new)
-      print("shape of start")
+      print("start")
       print(start)
-      print("shapes of measurements")
-      #print(x0.shape)
-      #print(x1.shape)
-      #print(x2.shape)
       x = np.r_[x0]
       y = np.r_[y0]
-      print(x)
+      print("measurement shapes for errorfunction")
+      print(x.shape)
       print(y.shape)
       # invoke a chiral fit, yielding a fitresult
       mk_phys = ChiralFit("ms_phys",errfunc)
       self.fitres = mk_phys.chiral_fit(x,y,start,parlim=parerr,debug=debug)
-      #print("Fit Result has shape %r: " %self.fitres.data[0].shape)
       #check the solution by computing relative deviation from measurement
-      checkfunc = np.divide(fitfunc(start[0],start[1],start[2:5],x[0:7])-y[0:7],y[0:7])
-      print("relative deviation from measured values:")
-      print(checkfunc[:,0]) 
+      # get arguments
+      args = self.fitres.data[0]
+      print(args[0])
+      checkfunc = np.zeros((1500,6))
+      for b in range(1500):
+        checkfunc[b] = fitfunc(args[b,0,0],args[b,1,0],args[b,2:5,0],x[0:7,:,b])
+      # Error on calculated values
+      func_mean,func_err=compute_error(checkfunc)
+      err = np.divide(1.,np.std(y,axis=1))
+      err = np.append(err,np.divide(1.,parerr))
+      chisq = np.sum(errfunc(args[0,:,0],x[...,0],y[...,0],err)**2)
+      print("calculated values:")
+      print(checkfunc[0])
+      print("error on them:")
+      print(func_err)
+      print("measured values:")
+      print(y[0:7,0])
+      print("relative deviation from measurement (%%): %r" 
+          %(np.abs(checkfunc[0]-y[:,0])*100./y[:,0]))
+      print("chisquared is: %.2f" %chisq)
 
   def fit_strange_mass_AB(self,debug=4):
       # Define the error function
@@ -714,38 +737,32 @@ class ChirAna(object):
   def fit_strange_mass(self,debug=4):
       # Define the error function
       # the fitfunction is defined per lattice spacing
-      #fitfunc = lambda r, z, p, x,: p[0]/(r*z) * (x[:,0]+x[:,1]) * (1+p[1]*r/z*x[:,0]+p[2]*x[:,2])
       fitfunc = lambda r, z, p, x,: p[0]/(r*z) * (x[:,0]+x[:,1]) * (1+p[1]*(r/z)*x[:,0]+p[2]/(r**2))
 
-      #errfunc = lambda p, x, y, cov: np.dot(cov,np.r_[fitfunc(p[0],p[3],p[6:9],x[0:19])-y[0:19],
-      #    fitfunc(p[1],p[4],p[6:9],x[19:28])-y[19:28],
-      #    fitfunc(p[2],p[5],p[6:9],x[28:34])-y[28:34],
-      #    #TODO: Take the priors from extern
-      #    (5.31-p[0])/(0.08),(5.77-p[1])/(0.06), (7.60-p[2])/(0.06),
-      #    (0.529-p[3])/(0.007),(0.509-p[4])/(0.004),(0.516-p[5])/(0.002)].T)
       #Vector of the residuals
-      #errfunc = lambda p, x, y, err: np.multiply(err,np.r_[fitfunc(p[0],p[3],p[6:9],x[0:19])-y[0:19],
-      #    fitfunc(p[1],p[4],p[6:9],x[19:28])-y[19:28],
-      #    fitfunc(p[2],p[5],p[6:9],x[28:34])-y[28:34],
-      #    #TODO: Take the priors from extern
-      #    (5.31-p[0]),(5.77-p[1]), (7.60-p[2]),
-      #    (0.529-p[3]),(0.509-p[4]),(0.516-p[5])].T)
-      errfunc = lambda p, x, y, err, add: np.multiply(err,np.r_[fitfunc(add[0],add[3],p[0:3],x[0:19])-y[0:19],
-          fitfunc(add[1],add[4],p[0:3],x[19:28])-y[19:28],
-          fitfunc(add[2],add[5],p[0:3],x[28:34])-y[28:34]].T)
+      errfunc = lambda p, x, y, err: np.multiply(err,
+          np.r_[fitfunc(p[0],p[3],p[6:9],x[0:18])-y[0:18],
+                fitfunc(p[1],p[4],p[6:9],x[18:27])-y[18:27],
+                fitfunc(p[2],p[5],p[6:9],x[27:33])-y[27:33],
+                (5.31-p[0]),(5.77-p[1]), (7.60-p[2]),
+                (0.529-p[3]),(0.509-p[4]),(0.516-p[5])])
           #TODO: Take the priors from extern
+      #errfunc = lambda p, x, y, err, add: np.multiply(err,np.r_[fitfunc(add[0],add[3],p[0:3],x[0:19])-y[0:19],
+      #    fitfunc(add[1],add[4],p[0:3],x[19:28])-y[19:28],
+      #    fitfunc(add[2],add[5],p[0:3],x[28:34])-y[28:34]].T)
+      #    #TODO: Take the priors from extern
       # Initial guesses for the parameters
       #p = np.r_[0.,0.,1.]
-      #r = np.r_[5.3,5.75,7.6]
-      #z = np.r_[0.52,0.51,0.515]
-      r = np.r_[5.3,5.7,7.6]
-      z = np.r_[0.53,0.5,0.51]
-      p = np.r_[1.,1.,1.]
-      #start=np.r_[r,z,p]
-      start = np.r_[p]
+      #r = np.r_[5.31,5.77,7.6]
+      #z = np.r_[0.529,0.509,0.515]
+      r = np.r_[1.,1.,1.]
+      z = np.r_[1.,1.,1.]
+      p = np.r_[6.,0.1,1.]
+      start=np.r_[r,z,p]
+      #start = np.r_[p]
       # Constraints on known fit parameters first half of entries for r0, second
       # for zp
-      #parerror = (0.08,0.06,0.08,0.007,0.004,0.002)
+      parerror = (0.08,0.06,0.08,0.007,0.004,0.002)
       # handle the data
       # x,y values for beta = 1.9
       # each array should be (n_ensembles(beta),n_ind,samples)
@@ -766,23 +783,44 @@ class ChirAna(object):
       print("shape of start")
       print(start)
       print("shapes of measurements")
-      #print(x0.shape)
-      #print(x1.shape)
-      #print(x2.shape)
       x = np.r_[x0,x1,x2]
       y = np.r_[y0,y1,y2]
       print(x)
       print(y.shape)
       # invoke a chiral fit, yielding a fitresult
+      #glob_r = np.r_[5.2177797,5.8396635,7.5680187]
+      #glob_z = np.r_[0.5245885,0.5117499,0.5156841]
+      #glob_p = np.r_[5.5208619,0.1503539,5.3351859]
+      #glob_p = np.r_[glob_r,glob_z,glob_p]
+      #checkfunc = np.r_[fitfunc(glob_p[0],glob_p[3],glob_p[6:10],x[0:19,:,0]),
+      #    fitfunc(glob_p[1],glob_p[4],glob_p[6:10],x[19:28,:,0]),
+      #    fitfunc(glob_p[2],glob_p[5],glob_p[6:10],x[28:34,:,0])]
+      #print(checkfunc)
+      #print(y[:,0])
+      #err = np.divide(1.,np.std(y,axis=1))
+      #err = np.append(err,np.divide(1.,parerror))
+      #fvec = errfunc(glob_p,x[...,0],y[...,0],err)**2
+      #chisq = np.sum(fvec)
+      #print("Chi^2:")
+      #print(fvec)
+      #print(chisq)
       mk_phys = ChiralFit("ms_phys",errfunc)
-      #self.fitres = mk_phys.chiral_fit(x,y,start,parlim=parerror,debug=debug)
-      self.fitres = mk_phys.chiral_fit(x,y,start,debug=debug)
-      #print("Fit Result has shape %r: " %self.fitres.data[0].shape)
+      self.fitres = mk_phys.chiral_fit(x,y,start,parlim=parerror,debug=debug)
       #check the solution by computing relative deviation from measurement
-      #checkfunc = np.r_[(fitfunc(start[0],start[3],start[6:9],x[0:19])-y[0:19])/y[0:19],
-      #    (fitfunc(start[1],start[4],start[6:9],x[19:28])-y[19:28])/y[19:28],
-      #    (fitfunc(start[2],start[5],start[6:9],x[28:34])-y[28:34])/y[28:34]]
-      #print(checkfunc[:,0])
+      # get arguments
+      args = self.fitres.data[0]
+      print(args[0])
+      checkfunc = np.r_[fitfunc(args[0,0,0],args[0,3,0],args[0,6:10,0],x[0:19]),
+                        fitfunc(args[0,1,0],args[0,4,0],args[0,6:10,0],x[19:28]),
+                        fitfunc(args[0,2,0],args[0,5,0],args[0,6:10,0],x[28:34])]
+      err = np.divide(1.,np.std(y,axis=1))
+      err = np.append(err,np.divide(1.,parerror))
+      chisq = np.sum(errfunc(args[0,:,0],x[...,0],y[...,0],err)**2)
+      print("calculated values:")
+      print(checkfunc[:,0])
+      print("measured values:")
+      print(y[:,0])
+      print("chisquared is: %.2f" %chisq)
 
 
   def fit(self,index=0, start=[1.,],dim=None, x_phys=None,xcut=False,

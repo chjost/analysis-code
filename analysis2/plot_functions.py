@@ -340,7 +340,8 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
 #              edgecolor=col, alpha=0.2)
 #    plt.legend()
 
-def plot_data(X, Y, dY, label, dX=None,plotrange=None, fmt="x",col='b',markerfill=None):
+def plot_data(X, Y, dY, label, dX=None,plotrange=None,
+    fmt="x",col='b',markerfill=None,alpha=1.):
     """A function that plots data.
 
     Parameters
@@ -369,18 +370,18 @@ def plot_data(X, Y, dY, label, dX=None,plotrange=None, fmt="x",col='b',markerfil
         # plot the data
         if dX is not None:
           plt.errorbar(X[l:u], Y[l:u], dY[l:u], dX[l:u], fmt=fmt, label=label,
-                c=col,markerfacecolor=markerfill)
+                c=col,markerfacecolor=markerfill,alpha=alpha)
         else:
             plt.errorbar(X[l:u], Y[l:u], dY[l:u], fmt=fmt, label=label,
-                c=col,markerfacecolor=markerfill)
+                c=col,markerfacecolor=markerfill,alpha=alpha)
     else:
         # plot the data
         if dX is not None:
             plt.errorbar(X, Y, dY, dX,fmt=fmt, label=label,
-                c=col, markerfacecolor=markerfill)
+                c=col, markerfacecolor=markerfill,alpha=alpha)
         else:
             plt.errorbar(X, Y, dY, fmt=fmt, label=label,
-                c=col, markerfacecolor=markerfill)
+                c=col, markerfacecolor=markerfill,alpha=alpha)
     plt.legend()
 
 def plot_data_with_fit(X, Y, dY, fitfunc, args, label, plotrange=None,

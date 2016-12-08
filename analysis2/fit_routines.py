@@ -512,23 +512,31 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
       prior_err = np.divide(1.,np.asarray(parlim))
       err = np.append(err,prior_err)
     print("vector of inverse errors: %r" % err)
+    print("vector of x-values: %r" % x[...,0])
+    print("vector of y-values: %r" % y[...,0])
     #TODO: Get samplesize from elsewhere
     samples=1500
     chisquare=np.zeros((samples,))
     res = np.zeros((samples,len(start)))
-
     # degrees of freedom
-    dof = float(y.shape[0]-len(start)) 
+    #dof = float(y.shape[0]-len(start)) 
+    # for one lattice spacing adapt number of dof
+    #dof = float(y.shape[0]+2.-len(start))
+    # for three lattice spacing adapt number of dof
+    dof = float(y.shape[0]+6.-len(start))
+    diag = np.ones(len(start))
     for b in range(samples):
-        
-        #p,cov1,infodict,mesg,ier = leastsq(errfunc, start,
-        #    args=(x[...,b],y[...,b],err), full_output=1, factor=.01)
-        # fix known parameters
-        add = 5.31,5.77,7.6,0.529,0.509,0.516
+        #print("data for fit %d" %b)
+        #print(err,x[...,b],y[...,b]) 
         p,cov1,infodict,mesg,ier = leastsq(errfunc, start,
-            args=(x[...,b],y[...,b],err,add), full_output=1, factor=.01)
+            args=(x[...,b],y[...,b],err),ftol=1e-10,xtol=1e-10, full_output=1,diag=diag, factor=.1)
+        # fix known parameters
+        #add = 5.31,5.77,7.6,0.529,0.509,0.516
+        #p,cov1,infodict,mesg,ier = leastsq(errfunc, start,
+        #    args=(x[...,b],y[...,b],err,add), full_output=1, factor=.01)
         chisquare[b] = float(sum(infodict['fvec']**2.))
         res[b] = np.array(p)
+        #print("Fit %d converged with reason %d, %s" %(b,ier,mesg))
         #print(res[b])
     # calculate mean and standard deviation
     res_mean, res_std = compute_error(res)
@@ -543,9 +551,9 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
         
         print("fit results:")
         for rm, rs in zip(res[0], res_std):
-            print("  %.6e +/- %.6e, rel. err: %.2f %%" % (rm, rs, rs/rm*100.))
-        print("Chi^2/dof: %.6e" % (chisquare[0]/dof))
-        print("p-value: %.3e" % pvals[0]) 
+            print("  %.3f +/- %.3f, rel. err: %.2f %%" % (rm, rs, rs/rm*100.))
+        print("Chi^2/dof: %.3f" % (chisquare[0]/dof))
+        print("p-value: %.3f" % pvals[0]) 
 
     return res, chisquare, pvals
 

@@ -660,3 +660,32 @@ def calc_r0ms(para, r0_phys, mk_phys, ml_phys):
   _r0ms = _num/_den - _sub 
   print("samples of _r0ms: %r" % _r0ms)
   return _r0ms
+
+def compute_bare_mu_s(r0,ml,mk,mul,args):
+  """ Compute the bare strange quark mass from the fitparameters, the continuum
+  values of ml,r0 and mk
+
+  The function to calculate reads:
+  amu_s = (pz (r_0*M_K)^2 )/(pr * p0 * (1 + p1*(r_0*m_l) + p2/pr**2)) - amu_l
+  
+  pr and pz depend on the lattice spacing, p0-p2 are the global fit parameters.
+  
+  Parameters
+  ----------
+  r0,ml,mk: 1d array, pseudosamples for continuum values of the Sommer
+            parameter, the light quark mass and the Kaon mass
+  mul: float, value of the bare light quark mass of ensemble under consideration
+  args: ndarray, fitparameters of the global fit to the squared kaon mass
+  
+  Returns
+  -------
+  _mus: 1d array of samples of the bare strange quark mass
+  """
+  _nom = args[1] * (r0*mk)**2
+  _par = 1 + args[3] * r0 * ml + args[4]/args[0]**2
+  _denom = (args[0] * args[2]) * _par
+  _frac = np.divide(_nom,_denom)
+  _mus = np.subtract(_frac,mul)
+  return _mus
+
+
