@@ -681,11 +681,23 @@ def compute_bare_mu_s(r0,ml,mk,mul,args):
   -------
   _mus: 1d array of samples of the bare strange quark mass
   """
-  _nom = args[1] * (r0*mk)**2
-  _par = 1 + args[3] * r0 * ml + args[4]/args[0]**2
-  _denom = (args[0] * args[2]) * _par
+  #print("arguments to mu_s function:")
+  #print("Physical values of r0, ml and mk: %.3f, %.3f, %.3f"
+  #    %(r0[0],ml[0],mk[0]))
+  #print("Arguments from fit:")
+  #print(args[0])
+  #print("Bare light quark mass: %4f" %mul)
+  _hbarc = 197.37
+  _mul = args[:,1]/args[:,0]*(r0*ml)/_hbarc
+  _nom = args[:,1] * (r0*mk/_hbarc)**2
+  #_par = 1 + args[:,3] * (r0 * ml)/_hbarc + args[:,4]/args[:,0]**2
+  _par = 1 + args[:,3] * (r0 * ml)/_hbarc 
+  _denom = (args[:,0] * args[:,2]) * _par
+  print("Parts to construct bare mus:")
+  print(_nom[0],_par[0],_denom[0])
   _frac = np.divide(_nom,_denom)
-  _mus = np.subtract(_frac,mul)
+  #_mus = np.subtract(_frac,mul)
+  _mus = np.subtract(_frac,_mul)
   return _mus
 
 

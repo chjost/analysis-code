@@ -65,6 +65,9 @@ class ChirAna(object):
     self.correlated = correlated
     # Result of a matching procedure
     self.amu_matched_to = None
+    # Dictionary of values to evaluate at sorted by lattice spacing and
+    # ensemblename
+    self.eval_at = None
     # Use a flag to distinguish between fit for m_s and m_l
     self.fit_ms=fit_ms
     # store external data in dictionaries sorted by lattice spacing.
@@ -1437,3 +1440,38 @@ class ChirAna(object):
     return _r0ms
     #return compute_error(_r0ms)
 
+  def bare_mu_s(self, space, ens, cont_data, mul):
+    """ Fill a dictionary at self.eval_at with amus values computed from
+    a fit
+
+    Parameters
+    ----------
+    """
+
+    if self.eval_at is None:
+      self.eval_at = {}
+      print(self.eval_at)
+      # Get physical variables
+      _r0 = cont_data.get('r0')
+      _ml = cont_data.get('m_l')
+      _mk = cont_data.get('mk')
+      # Check input of physical observables
+      # Select the correct Arguments from fitres for each lattice spacing it is
+      # pr,pz,p0,p1,p2
+      # TODO: What happens for two lattice spacings
+      _tmp = self.fitres.data[0]
+      _args = np.asarray([np.hstack((_tmp[:,0+i],_tmp[:,3+i],_tmp[:,6:,0])) 
+              for i in range(3)])
+      # For loop over lattice spacings
+      for i,a in enumerate(space):
+        # For loop over each ensemble
+        for j,e in enumerate(ens[a]):
+          _mul = mul[a][j]
+          _mus = chut.compute_bare_mu_s(_r0,_ml,_mk,_mul,_args[i])
+          #print(e,_mus)
+          _mus_m, _mus_err = compute_error(_mus)
+          print("mus on Ensemble %s is : %.4f +- %.4f" %(e,_mus_m,_mus_err))
+          self.eval_at[e] = _mus
+      #compute_bare_mu_s
+    else:
+      print("Prevented data override, nothing happened.")
