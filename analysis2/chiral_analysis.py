@@ -14,7 +14,7 @@ import extern_bootstrap as extboot
 import plot as plot
 from fit import FitResult
 from globalfit import ChiralFit
-from statistics import compute_error
+from statistics import compute_error, draw_gaussian_correlated
 from plot_functions import plot_function
 
 """A class used for chiral analyses of matched results, does fitting and
@@ -743,25 +743,36 @@ class ChirAna(object):
       fitfunc = lambda r, z, p, x,: p[0]/(r*z) * (x[:,0]+x[:,1]) * (1+p[1]*(r/z)*x[:,0]+p[2]/(r**2))
 
       #Vector of the residuals
+      #errfunc = lambda p, x, y, err: np.multiply(err,
+      #    np.r_[fitfunc(p[0],p[3],p[6:9],x[0:18])-y[0:18],
+      #          fitfunc(p[1],p[4],p[6:9],x[18:27])-y[18:27],
+      #          fitfunc(p[2],p[5],p[6:9],x[27:33])-y[27:33],
+      #          (5.31-p[0]),(5.77-p[1]), (7.60-p[2]),
+      #          (0.529-p[3]),(0.509-p[4]),(0.516-p[5])])
       errfunc = lambda p, x, y, err: np.multiply(err,
           np.r_[fitfunc(p[0],p[3],p[6:9],x[0:18])-y[0:18],
                 fitfunc(p[1],p[4],p[6:9],x[18:27])-y[18:27],
                 fitfunc(p[2],p[5],p[6:9],x[27:33])-y[27:33],
-                (5.31-p[0]),(5.77-p[1]), (7.60-p[2]),
-                (0.529-p[3]),(0.509-p[4]),(0.516-p[5])])
+                (y[33]-p[0]),(y[34]-p[1]), (y[35]-p[2]),
+                (y[36]-p[3]),(y[37]-p[4]),(y[38]-p[5])])
           #TODO: Take the priors from extern
-      #errfunc = lambda p, x, y, err, add: np.multiply(err,np.r_[fitfunc(add[0],add[3],p[0:3],x[0:19])-y[0:19],
-      #    fitfunc(add[1],add[4],p[0:3],x[19:28])-y[19:28],
-      #    fitfunc(add[2],add[5],p[0:3],x[28:34])-y[28:34]].T)
       #    #TODO: Take the priors from extern
-      # Initial guesses for the parameters
-      #p = np.r_[0.,0.,1.]
-      #r = np.r_[5.31,5.77,7.6]
-      #z = np.r_[0.529,0.509,0.515]
       r = np.r_[1.,1.,1.]
       z = np.r_[1.,1.,1.]
       p = np.r_[6.,0.1,1.]
       start=np.r_[r,z,p]
+      # Get the prior samples
+      pr_r0 = np.vstack((self.ext_dat_lat.get('A','r0'),
+                    self.ext_dat_lat.get('B','r0'),
+                    self.ext_dat_lat.get('D','r0')))
+
+      pr_zp = np.vstack((self.ext_dat_lat.get('A','zp'), 
+                    self.ext_dat_lat.get('B','zp'),
+                    self.ext_dat_lat.get('D','zp')))
+      print("0th zp-sample %r:" %(pr_zp[0]))
+      print("0th r0-sample %r:" %(pr_r0[0]))
+      print("shape zp-sample:")
+      print(pr_zp.shape)
       #start = np.r_[p]
       # Constraints on known fit parameters first half of entries for r0, second
       # for zp
@@ -787,7 +798,7 @@ class ChirAna(object):
       print(start)
       print("shapes of measurements")
       x = np.r_[x0,x1,x2]
-      y = np.r_[y0,y1,y2]
+      y = np.r_[y0,y1,y2,pr_r0,pr_zp]
       print(x)
       print(y.shape)
       # invoke a chiral fit, yielding a fitresult
@@ -808,7 +819,8 @@ class ChirAna(object):
       #print(fvec)
       #print(chisq)
       mk_phys = ChiralFit("ms_phys",errfunc)
-      self.fitres = mk_phys.chiral_fit(x,y,start,parlim=parerror,debug=debug)
+      #self.fitres = mk_phys.chiral_fit(x,y,start,parlim=parerror,debug=debug)
+      self.fitres = mk_phys.chiral_fit(x,y,start,parlim=None,debug=debug)
       #check the solution by computing relative deviation from measurement
       # get arguments
       args = self.fitres.data[0]
@@ -817,7 +829,7 @@ class ChirAna(object):
                         fitfunc(args[0,1,0],args[0,4,0],args[0,6:10,0],x[19:28]),
                         fitfunc(args[0,2,0],args[0,5,0],args[0,6:10,0],x[28:34])]
       err = np.divide(1.,np.std(y,axis=1))
-      err = np.append(err,np.divide(1.,parerror))
+      #err = np.append(err,np.divide(1.,parerror))
       chisq = np.sum(errfunc(args[0,:,0],x[...,0],y[...,0],err)**2)
       print("calculated values:")
       print(checkfunc[:,0])
@@ -1440,7 +1452,7 @@ class ChirAna(object):
     return _r0ms
     #return compute_error(_r0ms)
 
-  def bare_mu_s(self, space, ens, cont_data, mul):
+  def bare_mu_s(self, space, ens, cont_data, mul, disc_eff=False, debug = 0):
     """ Fill a dictionary at self.eval_at with amus values computed from
     a fit
 
@@ -1455,6 +1467,35 @@ class ChirAna(object):
       _r0 = cont_data.get('r0')
       _ml = cont_data.get('m_l')
       _mk = cont_data.get('mk')
+
+      #### Look at modeled correlation between data ###
+      ##print("Calculating amu_s with full anticorrelation between r0 and (mk and ml)")
+      ##_corr = np.array((1,-1,-1,-1,1,1,-1,1,1)).reshape(3,3)
+      #print("Calculating amu_s with full correlation between r0,mk and ml")
+      #_corr = np.array((1,1,1,1,1,1,1,1,1)).reshape(3,3)
+      #_data = np.array((0.474,494.2,3.7))
+      #_err = np.array((0.014,0.4,0.17))
+      #_samp = draw_gaussian_correlated(_data,_err,_corr)
+      #_r0 = _samp[:,0]
+      #_mk = _samp[:,1]
+      #_ml = _samp[:,2]
+      if debug > 0:
+          _corrcoef = np.corrcoef(_r0,_mk)
+          print("Correlation between r0 and mk: %.3f" % _corrcoef[0,1])
+          _corrcoef = np.corrcoef(_r0,_ml)
+          print("Correlation between r0 and ml: %.3f" % _corrcoef[0,1])
+          _corrcoef = np.corrcoef(_mk,_ml)
+          print("Correlation between mk and ml: %.3f" % _corrcoef[0,1])
+          # Print relative error of (r0mk)^2 and (r0ml)
+          _r0mk_sq = np.square(_r0*_mk/197.37)
+          _r0ml = _r0*_ml/197.37
+          _m_r0mk,_d_r0mk = compute_error(_r0mk_sq)
+          _m_r0ml,_d_r0ml = compute_error(_r0ml)
+          print("(r0mk)^2: %.3f +- %.3f, rel.err. = %.2f %%"
+              %(_m_r0mk, _d_r0mk, _d_r0mk/_m_r0mk*100))
+          print("r0ml: %.2e +- %.2e, rel.err. = %.2f %%"
+              %(_m_r0ml, _d_r0ml, _d_r0ml/_m_r0ml*100))
+
       # Check input of physical observables
       # Select the correct Arguments from fitres for each lattice spacing it is
       # pr,pz,p0,p1,p2
@@ -1467,10 +1508,19 @@ class ChirAna(object):
         # For loop over each ensemble
         for j,e in enumerate(ens[a]):
           _mul = mul[a][j]
-          _mus = chut.compute_bare_mu_s(_r0,_ml,_mk,_mul,_args[i])
-          #print(e,_mus)
-          _mus_m, _mus_err = compute_error(_mus)
-          print("mus on Ensemble %s is : %.4f +- %.4f" %(e,_mus_m,_mus_err))
+          _mus = chut.compute_bare_mu_s(_r0,_ml,_mk,_mul,_args[i],disc_eff=disc_eff)
+          if debug > 0:
+            _mus_m, _mus_err = compute_error(_mus)
+            # If discretisation effects are taken into account, amu_s formula
+            # not valid for continuum value, calculate anew
+            if disc_eff is True:
+                _tmp_mus = chut.compute_bare_mu_s(_r0,_ml,_mk,_mul,_args[i])
+                _ms = _args[i][:,0]/_r0*_tmp_mus/_args[i][:,1]*197.37 
+            else:
+                _ms = _args[i][:,0]/_r0*_mus/_args[i][:,1]*197.37
+            m_s, m_s_err = compute_error(_ms)
+            print("mus on Ensemble %s is : %.4f +- %.4f" %(e,_mus_m,_mus_err))
+            print(" --> ms_phys = %.3f +- %.3f MeV" %(m_s,m_s_err))
           self.eval_at[e] = _mus
       #compute_bare_mu_s
     else:

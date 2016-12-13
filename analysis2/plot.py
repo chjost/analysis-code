@@ -760,7 +760,9 @@ class LatticePlot(object):
                   #if len(beta)==1:
                   #    plotargs = np.hstack((args,s,r))
                   #else:
-                  plotargs = np.hstack((args[i],s))
+                  # adapt shape for errorbands in plot_function
+                  _mus = np.full((args.shape[1],1),s) 
+                  plotargs = np.hstack((args[i],_mus))
                   print("Arguments to plotting function")
                   print(plotargs)
                   plot_function(func,xlim,plotargs,label=None,ploterror=True)

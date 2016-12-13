@@ -315,5 +315,42 @@ def draw_gauss_distributed(mean, std, shape, origin=False, seed=None):
     if origin is True:
       res[0] = mean
     return np.asarray(res)
+
+def draw_gaussian_correlated(data, err, corr, size=1500, seed=None, orig=True):
+    """ Draw multivariate gaussian variable with given correlation
+
+    The function draws data from the given data and errors with a given
+    correlation from a multivariate gaussian distribution the data are returned
+    as a 2d-array
+
+    Parameters
+    ----------
+    data: 1darray, the data values for input
+    err: 1darray, the data errors on the values
+    corr: 2darray with dimensions (data.shape,data.shape), the assumed
+          correlation of the data
+    size: int, the upiquitious samplesize, defaults to 1500 samples
+    orig: bool, if true original data is placed in 0th sample
+    seed: int, an optional seed to the random generator
+
+    Returns
+    -------
+    2darray of sampled values with shape (size,len(data)) 
+    """
+    if seed is None:
+      np.random.seed(1227)
+    else:
+      np.random.seed(seed)
+
+    # Construct the covariance matrix from variable errors and the correlation
+    # matrix Cov = diag(err)*Corr*diag(err)
+    _diag = np.diag(err)
+    _cov = np.dot(_diag,np.dot(corr,_diag))
+    #print(_cov)
+    # Draw multivariate
+    _samp = np.random.multivariate_normal(data,_cov,size)
+    if orig is True:
+        _samp[0]=data
+    return _samp
 if __name__ == "main":
     pass

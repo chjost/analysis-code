@@ -661,7 +661,7 @@ def calc_r0ms(para, r0_phys, mk_phys, ml_phys):
   print("samples of _r0ms: %r" % _r0ms)
   return _r0ms
 
-def compute_bare_mu_s(r0,ml,mk,mul,args):
+def compute_bare_mu_s(r0,ml,mk,mul,args,disc_eff=False):
   """ Compute the bare strange quark mass from the fitparameters, the continuum
   values of ml,r0 and mk
 
@@ -690,14 +690,21 @@ def compute_bare_mu_s(r0,ml,mk,mul,args):
   _hbarc = 197.37
   _mul = args[:,1]/args[:,0]*(r0*ml)/_hbarc
   _nom = args[:,1] * (r0*mk/_hbarc)**2
-  #_par = 1 + args[:,3] * (r0 * ml)/_hbarc + args[:,4]/args[:,0]**2
-  _par = 1 + args[:,3] * (r0 * ml)/_hbarc 
+  _par = 1 + args[:,3] * (r0 * ml)/_hbarc
+
+  # Take discretisation effects into account 
+  if disc_eff is True:
+      _par += args[:,4]/args[:,0]**2
+
   _denom = (args[:,0] * args[:,2]) * _par
-  print("Parts to construct bare mus:")
-  print(_nom[0],_par[0],_denom[0])
+  #print("Parts to construct bare mus:")
+  #print(_nom[0],_par[0],_denom[0])
   _frac = np.divide(_nom,_denom)
   #_mus = np.subtract(_frac,mul)
   _mus = np.subtract(_frac,_mul)
   return _mus
 
+################################################################################
+################# Scratch region for trying out functions ######################
+################################################################################
 

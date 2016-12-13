@@ -486,10 +486,10 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
     #cov = np.diag(np.diagonal(np.cov(y)))
         #print cov
     #else:
-    #    cov = np.cov(Y.T)
-    #    cov_inv = np.linalg.inv(cov)
-    #    #print("Covariance matrix multiplied its inverse")
-    #    #print(cov.dot(cov_inv))
+    #cov = np.cov(y.T)
+    #cov_inv = np.linalg.inv(cov)
+        #print("Covariance matrix multiplied its inverse")
+        #print(cov.dot(cov_inv))
     #    if mute is not None:
     #      #print("Mutilating Covariance Matrix")
     #      cov = mute(cov)
@@ -502,7 +502,7 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
     #cov = tmp
     #print("Covariance matrix:")
     #print(cov.shape)
-    #print(np.diag(cov))
+    #print(cov)
     #self.fitres = ms.chiral_fit(args,corrid='fit_ms')
     #self.fitres = ms.chiral_fit(args,corrid='fit_ms')
     err = np.divide(1,np.std(y,axis=1))
@@ -514,16 +514,17 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
     print("vector of inverse errors: %r" % err)
     print("vector of x-values: %r" % x[...,0])
     print("vector of y-values: %r" % y[...,0])
+    print("shape of y-values:")
+    print(y[...,0].shape)
+    print("shape of x-values:")
+    print(x[...,0].shape)
+    print("shape of err-values:")
+    print(err.shape)
     #TODO: Get samplesize from elsewhere
     samples=1500
     chisquare=np.zeros((samples,))
     res = np.zeros((samples,len(start)))
-    # degrees of freedom
-    #dof = float(y.shape[0]-len(start)) 
-    # for one lattice spacing adapt number of dof
-    #dof = float(y.shape[0]+2.-len(start))
-    # for three lattice spacing adapt number of dof
-    dof = float(y.shape[0]+6.-len(start))
+    dof = float(y.shape[0]-len(start))
     diag = np.ones(len(start))
     for b in range(samples):
         #print("data for fit %d" %b)
