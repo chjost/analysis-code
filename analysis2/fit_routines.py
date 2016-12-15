@@ -482,11 +482,24 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
     ndarray
         The p-values of the fit
     """
-    #if not correlated:
-    #cov = np.diag(np.diagonal(np.cov(y)))
+    if not correlated:
+      cov = np.diag(np.diagonal(np.cov(y)))
         #print cov
-    #else:
-    #cov = np.cov(y.T)
+    else:
+      cov = np.zeros((y.shape[0],y.shape[0]))
+      for i in range(11):
+        _tmp = np.cov(y[3*i:3*i+3])
+        #print("\nCovariance submatrix %d" %i)
+        #print(_tmp)
+        cov[3*i:3*i+3,3*i:3*i+3]=_tmp
+      for k in range(33,39):
+        cov[k,k] = np.cov(y[k])
+        # Leads to singular matrix
+        #if k+3 < 39:
+        #  cov[k,k+3] = (np.cov(y))[k,k+3]
+        #  cov[k+3,k] = cov[k,k+3]
+        #print(cov[k,k])
+
     #cov_inv = np.linalg.inv(cov)
         #print("Covariance matrix multiplied its inverse")
         #print(cov.dot(cov_inv))
@@ -495,23 +508,23 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
     #      cov = mute(cov)
     #      #print("Covariance Matrix:")
     #      #print(cov)
-    #cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
+    #print("Covariance matrix:")
+    #print(cov.shape)
+    #print(cov)
+    cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
     # add errors on prior to covariance matrix
     #tmp = np.eye(cov.shape[0]+6)
     #tmp[0:cov.shape[0],0:cov.shape[1]] = cov
     #cov = tmp
-    #print("Covariance matrix:")
-    #print(cov.shape)
-    #print(cov)
     #self.fitres = ms.chiral_fit(args,corrid='fit_ms')
     #self.fitres = ms.chiral_fit(args,corrid='fit_ms')
-    err = np.divide(1,np.std(y,axis=1))
+    #err = np.divide(1,np.std(y,axis=1))
     #inverse of fitparameter errors
     #TODO: This also has to come from outside
-    if parlim is not None:
-      prior_err = np.divide(1.,np.asarray(parlim))
-      err = np.append(err,prior_err)
-    print("vector of inverse errors: %r" % err)
+    #if parlim is not None:
+    #  prior_err = np.divide(1.,np.asarray(parlim))
+    #  err = np.append(err,prior_err)
+    print("vector of inverse errors: %r" % cov)
     print("vector of x-values: %r" % x[...,0])
     print("vector of y-values: %r" % y[...,0])
     print("shape of y-values:")
@@ -519,7 +532,7 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
     print("shape of x-values:")
     print(x[...,0].shape)
     print("shape of err-values:")
-    print(err.shape)
+    print(cov.shape)
     #TODO: Get samplesize from elsewhere
     samples=1500
     chisquare=np.zeros((samples,))
@@ -530,7 +543,7 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
         #print("data for fit %d" %b)
         #print(err,x[...,b],y[...,b]) 
         p,cov1,infodict,mesg,ier = leastsq(errfunc, start,
-            args=(x[...,b],y[...,b],err),ftol=1e-10,xtol=1e-10, full_output=1,diag=diag, factor=.1)
+            args=(x[...,b],y[...,b],cov),ftol=1e-10,xtol=1e-10, full_output=1,diag=diag, factor=.1)
         # fix known parameters
         #add = 5.31,5.77,7.6,0.529,0.509,0.516
         #p,cov1,infodict,mesg,ier = leastsq(errfunc, start,

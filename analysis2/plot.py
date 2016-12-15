@@ -605,6 +605,19 @@ class LatticePlot(object):
         plt.colorbar()
         self.save()
         plt.clf()
+
+    def plot_heatmap(self,data,label):
+        """ plot a general heatmap of symmetric data"""
+
+        if data.shape[0] != data.shape[1]:
+          raise ValueError("data not symmetric")
+        self.set_title(label[0],label[1])
+        self.set_env(xlim=[0,data.shape[0]],ylim = [0,data.shape[0]])
+        plt.pcolor(data, cmap=matplotlib.cm.bwr, vmin=np.amin(data),
+            vmax=np.amax(data))
+        plt.colorbar()
+        self.save()
+        plt.clf()
         
     def plot_covariance(self, data, label, cut=False, inverse=False, norm=True):
         """Plots the covariance matrix of given data
@@ -686,7 +699,7 @@ class LatticePlot(object):
           'd',color=col,label=label)
       plt.legend()
     
-    def plot_comparison(self,chirana,beta,label,xlim,dep=None,debug=0):
+    def plot_comparison(self,chirana,beta,label,xlim,ylim=None,dep=None,debug=0):
         # Plot the data for the given lattice spacings
         # Initialize symbols and colors for lattice spacings
         col = ['r','b','g']
@@ -718,6 +731,8 @@ class LatticePlot(object):
             plt.xlabel(label[0])
             plt.ylabel(label[1])
         plt.xlim(xlim[0],xlim[1])
+        if ylim is not None:
+            plt.ylim(ylim[0],ylim[1])
         plt.xlabel(label[0])
         plt.ylabel(label[1])
         if len(label) > 2:

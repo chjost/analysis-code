@@ -89,6 +89,32 @@ class ChirAna(object):
     # This is the function for continuum plotting
     self.plot_cont_func = None
 
+  def wipe_data(self, dim):
+
+    if dim is 'y':
+      lyt_y=self.y_shape
+      self.y_data = []
+      for a in range(lyt_y[0]):
+        if len(lyt_y) == 5:
+          tp_y = (lyt_y[1][a],lyt_y[2],lyt_y[3],lyt_y[4])
+        elif len(lyt_y) == 4:
+          tp_y = (lyt_y[1][a],lyt_y[2],lyt_y[3])
+        else:
+          tp_y = (lyt_y[1][a],lyt_y[2])
+        self.y_data.append(np.zeros(tp_y))
+
+    if dim is 'x':
+      lyt_x=self.x_shape 
+      self.x_data=[]
+      for a in range(lyt_x[0]):
+        if len(lyt_x) == 5:
+          tp_x = (lyt_x[1][a],lyt_x[2],lyt_x[3],lyt_x[4])
+        elif len(lyt_x) == 4:
+          tp_x = (lyt_x[1][a],lyt_x[2],lyt_x[3])
+        else:
+          tp_x = (lyt_x[1][a],lyt_x[2])
+        self.x_data.append(np.zeros(tp_x))
+
   def create_empty(self, lyt_x, lyt_y, match=None, lat_dict=None, cont_ext=None,
       plot_cont_ext= None, cont_func=None, plot_cont_func=None):
     """Initialize a chiral analysis with some start parameters
@@ -735,28 +761,31 @@ class ChirAna(object):
       print(checkfunc[:,0])
  ################################################################################ 
  ################################################################################ 
- ################################################################################ 
+ ################################################################################
+
+  def global_ms_func(self,r,z,p,x):
+      return p[0]/(r*z) * (x[:,0]+x[:,1]) * (1+p[1]*(r/z)*x[:,0]+p[2]/(r**2))
+
+  def global_ms_errfunc(self,p,x,y,cov):
+
+      # define the fitfunction for a single beta
+      _func = lambda r, z, p, x,: p[0]/(r*z) * (x[:,0]+x[:,1]) * (1+p[1]*(r/z)*x[:,0]+p[2]/(r**2))
+
+      # Get the residuals of all beta values
+      _res_a = _func(p[0],p[3],p[6:9],x[0:18])-y[0:18]
+      _res_b = _func(p[1],p[4],p[6:9],x[18:27])-y[18:27]
+      _res_d = _func(p[2],p[5],p[6:9],x[27:33])-y[27:33]
+      # residuals of r0 and zp are stored separately at the moment
+      _res_r0 = np.r_[(y[33]-p[0]),(y[34]-p[1]), (y[35]-p[2])]
+      _res_zp = np.r_[(y[36]-p[3]),(y[37]-p[4]),(y[38]-p[5])]
+      # collect residuals as one array
+      _residuals = np.r_[_res_a,_res_b,_res_d,_res_r0,_res_zp ]
+
+      # calculate the chi values weighted with inverse covariance matrix
+      _chi = np.dot(cov,_residuals)
+      return _chi
 
   def fit_strange_mass(self,debug=4):
-      # Define the error function
-      # the fitfunction is defined per lattice spacing
-      fitfunc = lambda r, z, p, x,: p[0]/(r*z) * (x[:,0]+x[:,1]) * (1+p[1]*(r/z)*x[:,0]+p[2]/(r**2))
-
-      #Vector of the residuals
-      #errfunc = lambda p, x, y, err: np.multiply(err,
-      #    np.r_[fitfunc(p[0],p[3],p[6:9],x[0:18])-y[0:18],
-      #          fitfunc(p[1],p[4],p[6:9],x[18:27])-y[18:27],
-      #          fitfunc(p[2],p[5],p[6:9],x[27:33])-y[27:33],
-      #          (5.31-p[0]),(5.77-p[1]), (7.60-p[2]),
-      #          (0.529-p[3]),(0.509-p[4]),(0.516-p[5])])
-      errfunc = lambda p, x, y, err: np.multiply(err,
-          np.r_[fitfunc(p[0],p[3],p[6:9],x[0:18])-y[0:18],
-                fitfunc(p[1],p[4],p[6:9],x[18:27])-y[18:27],
-                fitfunc(p[2],p[5],p[6:9],x[27:33])-y[27:33],
-                (y[33]-p[0]),(y[34]-p[1]), (y[35]-p[2]),
-                (y[36]-p[3]),(y[37]-p[4]),(y[38]-p[5])])
-          #TODO: Take the priors from extern
-      #    #TODO: Take the priors from extern
       r = np.r_[1.,1.,1.]
       z = np.r_[1.,1.,1.]
       p = np.r_[6.,0.1,1.]
@@ -801,36 +830,42 @@ class ChirAna(object):
       y = np.r_[y0,y1,y2,pr_r0,pr_zp]
       print(x)
       print(y.shape)
+      cov = np.zeros((y.shape[0],y.shape[0]))
+      corr = np.zeros_like(cov)
+      for i in range(11):
+        _tmp = np.cov(y[3*i:3*i+3])
+        #print("\nCovariance submatrix %d" %i)
+        #print(_tmp)
+        cov[3*i:3*i+3,3*i:3*i+3]=_tmp
+      for k in range(33,39):
+        cov[k,k] = np.cov(y[k])
+        #if k+3 < 39:
+        #  cov[k,k+3] = (np.cov(y))[k,k+3]
+        #  cov[k+3,k] = cov[k,k+3]
+      for l in range(cov.shape[0]):
+        for m in range(cov.shape[0]):
+          corr[l,m] = cov[l,m]/np.sqrt(cov[l,l]*cov[m,m])
+      corr_heat = plot.LatticePlot('/hiskp2/helmes/analysis/scattering/analysis_vault/k_charged_wo_outliers/plots/global_fit_corr_matrix.pdf',join=True)
+      corr_heat.plot_heatmap(corr,label=['correlation from modified covariance','yy'])
+      corr_heat.plot_correlation(y,label=['correlation from data','yy'])
+      del corr_heat
+      # Plot the correlation matrix
+      #corr_heat = plot.LatticePlot('/hiskp2/helmes/analysis/scattering/analysis_vault/k_charged_wo_outliers/plots/global_fit_corr_matrix.pdf')
+      #corr_heat.plot_correlation(y,label=['Correlation Matrix of Global Fit data','yy'])
+      #del corr_heat
       # invoke a chiral fit, yielding a fitresult
-      #glob_r = np.r_[5.2177797,5.8396635,7.5680187]
-      #glob_z = np.r_[0.5245885,0.5117499,0.5156841]
-      #glob_p = np.r_[5.5208619,0.1503539,5.3351859]
-      #glob_p = np.r_[glob_r,glob_z,glob_p]
-      #checkfunc = np.r_[fitfunc(glob_p[0],glob_p[3],glob_p[6:10],x[0:19,:,0]),
-      #    fitfunc(glob_p[1],glob_p[4],glob_p[6:10],x[19:28,:,0]),
-      #    fitfunc(glob_p[2],glob_p[5],glob_p[6:10],x[28:34,:,0])]
-      #print(checkfunc)
-      #print(y[:,0])
-      #err = np.divide(1.,np.std(y,axis=1))
-      #err = np.append(err,np.divide(1.,parerror))
-      #fvec = errfunc(glob_p,x[...,0],y[...,0],err)**2
-      #chisq = np.sum(fvec)
-      #print("Chi^2:")
-      #print(fvec)
-      #print(chisq)
-      mk_phys = ChiralFit("ms_phys",errfunc)
-      #self.fitres = mk_phys.chiral_fit(x,y,start,parlim=parerror,debug=debug)
-      self.fitres = mk_phys.chiral_fit(x,y,start,parlim=None,debug=debug)
+      mk_phys = ChiralFit("ms_phys",self.global_ms_errfunc)
+      self.fitres = mk_phys.chiral_fit(x,y,start,parlim=None,correlated=False,debug=debug)
       #check the solution by computing relative deviation from measurement
       # get arguments
       args = self.fitres.data[0]
       print(args[0])
-      checkfunc = np.r_[fitfunc(args[0,0,0],args[0,3,0],args[0,6:10,0],x[0:19]),
-                        fitfunc(args[0,1,0],args[0,4,0],args[0,6:10,0],x[19:28]),
-                        fitfunc(args[0,2,0],args[0,5,0],args[0,6:10,0],x[28:34])]
+      checkfunc = np.r_[self.global_ms_func(args[0,0,0],args[0,3,0],args[0,6:10,0],x[0:19]),
+                        self.global_ms_func(args[0,1,0],args[0,4,0],args[0,6:10,0],x[19:28]),
+                        self.global_ms_func(args[0,2,0],args[0,5,0],args[0,6:10,0],x[28:34])]
       err = np.divide(1.,np.std(y,axis=1))
       #err = np.append(err,np.divide(1.,parerror))
-      chisq = np.sum(errfunc(args[0,:,0],x[...,0],y[...,0],err)**2)
+      chisq = np.sum(self.global_ms_errfunc(args[0,:,0],x[...,0],y[...,0],err)**2)
       print("calculated values:")
       print(checkfunc[:,0])
       print("measured values:")
@@ -868,13 +903,6 @@ class ChirAna(object):
       x_data, y_data, mu_data = self.reduction(x_shape_new = (self.x_shape[3],self.x_shape[4]),
                                     y_shape_new = (self.y_shape[4],))
 
-      #print("data used for fit")
-      #print("x:shape,data")
-      #print(x_data.shape)
-      #print(x_data[...,0])
-      #print("y:shape,data")
-      #print(y_data.shape)
-      #print(y_data[...,0])
       if read:
         if xcut:
           self.fitres = FitResult.read(datadir+self.proc_id+'_xcut_%d.npz'%xcut)
