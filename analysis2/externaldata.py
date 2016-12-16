@@ -20,12 +20,21 @@ class ExtDat(object):
     """Class to hold external data that only differs by the lattice spacing
        Each sampled value needs its own seed. 
     """
-    def __init__(self,seeds,space,nboot=1500):
-        self.nsamp=nboot
+    def __init__(self, seeds, space, zp_meth, nboot=1500):
+        self.nsamp = nboot
         # These are the calculated values from arxiv.org/1403.4504v3
-        obs_a = {'r0':(5.31,0.08),'zp':(0.529,0.007)}
-        obs_b = {'r0':(5.77,0.06),'zp':(0.509,0.004)}
-        obs_d = {'r0':(7.60,0.08),'zp':(0.516,0.002)}
+        if zp_meth == 1:
+            obs_a = {'r0':(5.31,0.08),'zp':(0.529,0.007)}
+            obs_b = {'r0':(5.77,0.06),'zp':(0.509,0.004)}
+            obs_d = {'r0':(7.60,0.08),'zp':(0.516,0.002)}
+
+        elif zp_meth == 2:
+            obs_a = {'r0':(5.31,0.08),'zp':(0.574,0.004)}
+            obs_b = {'r0':(5.77,0.06),'zp':(0.546,0.002)}
+            obs_d = {'r0':(7.60,0.08),'zp':(0.545,0.002)}
+
+        else:
+          raise ValueError("Method for Z_P needs to be 1 or 2! (is: %r)" % zp_meth)
         self.table={'A':obs_a,'B':obs_b,'D':obs_d}
 
         # Start with an empty dictionary
@@ -59,12 +68,48 @@ class ExtDat(object):
 
     #def show
 class ContDat(object):
-    """Class to hold external data from continuum values"""
-    def __init__(self,seeds,nboot=1500):
+    """Class to hold external data from continuum values
+    
+    The class maintains a dictionary with the independent seeds and
+    bootstrapsamples for every continuum observable relevant for the analysis 
+    """
+
+    def __init__(self,seeds,zp_meth=None,nboot=1500):
+        """ Initialize the class with the seeds, the method for zp and the
+        number of samples for each observable.
+
+        An empty dictionary is filled with the observable id, its random seed
+        and the samples drawn from the according normal distribution. The
+        original value is taken as the 0th sample
+
+        Parameters
+        ----------
+        seeds: iterable of int, random seeds to generate the samples for the
+               observables, should be independent 
+        zp_meth: int, the method that was used in arxiv.org/1403.4504v3 to
+                 determine zp, important for continuum sommer parameter. If other than 1
+                 or 2 defaults to median over the 2 methods.
+        nboot: int, number of samples to draw for each observable
+
+        Returns
+        -------
+        Nothing
+        """
         self.nsamp=nboot
         # These are the calculated values from arxiv.org/1403.4504v3
-        obs = {'r0':(0.474,0.014),'mk':(494.2,0.4),'mpi_0':(134.9766,0.0006),
-              'm_l':(3.7,0.17)}
+        # Only changes are in r0
+        if zp_meth == 1:
+            obs = {'r0':(0.470,0.012),'mk':(494.2,0.4),'mpi_0':(134.9766,0.0006),
+                  'm_l':(3.7,0.17)}
+
+        elif zp_meth == 2:
+            obs = {'r0':(0.471,0.011),'mk':(494.2,0.4),'mpi_0':(134.9766,0.0006),
+                  'm_l':(3.7,0.17)}
+
+        else:
+            obs = {'r0':(0.474,0.014),'mk':(494.2,0.4),'mpi_0':(134.9766,0.0006),
+                  'm_l':(3.7,0.17)}
+
         self.table = obs
 
         # Start with an empty dictionary
@@ -78,6 +123,18 @@ class ContDat(object):
             self.set_obs(a[0])
         
     def set_obs(self, obs):
+        """ Set the samples of the specified observables, given the seeds are
+        set
+
+        Parameters
+        ----------
+        obs: string, the observable to sample.
+
+        Returns
+        -------
+        Nothing
+        
+        """
         # From the initialized table take the desired observable of the correct
         # lattice spacing with its error
         lit = self.table[obs]
@@ -88,6 +145,8 @@ class ContDat(object):
     #def save
     #def save_txt
     def get(self,obs):
+        """ Return the samples of obs"""
+
         return self.data[obs]['boot']
 
     #def show

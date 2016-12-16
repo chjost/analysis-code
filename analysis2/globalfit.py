@@ -29,7 +29,7 @@ class ChiralFit(fit.LatticeFit):
         self.errfunc = errfunc
 
     def chiral_fit(self, X, Y, start=None, xcut=None, ncorr=1,
-        parlim=None,correlated=False, debug=3):
+        parlim=None,correlated=False,cov=None, debug=3):
         """Fit function to data.
         
         Parameters
@@ -72,7 +72,7 @@ class ChiralFit(fit.LatticeFit):
         dof = X.shape[0] - len(_start)
          #fit every bootstrap sample
         tmpres, tmpchi2, tmppval = globalfitting(self.errfunc, X, Y, _start,
-            parlim=parlim, debug=debug,correlated=correlated)
+            parlim=parlim, debug=debug,correlated=correlated,cov=cov)
         fitres.add_data((0,0), tmpres, tmpchi2, tmppval)
         #timing = []
         #for i in range(ncorr): 

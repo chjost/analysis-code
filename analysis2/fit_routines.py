@@ -449,7 +449,7 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, mute=None, debug=0)
 
 # At the moment this is only useful for KK
 def globalfitting(errfunc,x,y, start, add=None, correlated=False,
-    mute=None, parlim=None, debug=0):
+    cov=None, parlim=None, debug=0):
     """A function that fits Lattice fitresults.
 
     This function fits the given function fitfunc to the data given in
@@ -468,7 +468,7 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
         The additional parameters for the fit.
     correlated : bool
         Flag to use a correlated or uncorrelated fit.
-    mute : callable, function to act on the covariance matrix
+    cov : a custommade covariacne matrix
     parlim: arraylike, vector of errors on the fitparameters
     debug : int
         The amount of info printed.
@@ -483,35 +483,22 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
         The p-values of the fit
     """
     if not correlated:
-      cov = np.diag(np.diagonal(np.cov(y)))
+      _cov = np.diag(np.diagonal(np.cov(y)))
         #print cov
     else:
-      cov = np.zeros((y.shape[0],y.shape[0]))
-      for i in range(11):
-        _tmp = np.cov(y[3*i:3*i+3])
-        #print("\nCovariance submatrix %d" %i)
-        #print(_tmp)
-        cov[3*i:3*i+3,3*i:3*i+3]=_tmp
-      for k in range(30,36):
-        cov[k,k] = np.cov(y[k])
-        # Leads to singular matrix
-        #if k+3 < 39:
-        #  cov[k,k+3] = (np.cov(y))[k,k+3]
-        #  cov[k+3,k] = cov[k,k+3]
-        #print(cov[k,k])
-
-    #cov_inv = np.linalg.inv(cov)
-        #print("Covariance matrix multiplied its inverse")
-        #print(cov.dot(cov_inv))
-    #    if mute is not None:
-    #      #print("Mutilating Covariance Matrix")
-    #      cov = mute(cov)
-    #      #print("Covariance Matrix:")
-    #      #print(cov)
-    #print("Covariance matrix:")
-    #print(cov.shape)
-    #print(cov)
-    cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
+      if cov is not None:
+          _cov = cov
+      else:
+          _cov = np.zeros((y.shape[0],y.shape[0]))
+          for i in range(11):
+              _tmp = np.cov(y[3*i:3*i+3])
+              #print("\nCovariance submatrix %d" %i)
+              #print(_tmp)
+              _cov[3*i:3*i+3,3*i:3*i+3]=_tmp
+          for k in range(33,39):
+              _cov[k,k] = np.cov(y[k])
+      
+    _cov = (np.linalg.cholesky(np.linalg.inv(_cov))).T
     # add errors on prior to covariance matrix
     #tmp = np.eye(cov.shape[0]+6)
     #tmp[0:cov.shape[0],0:cov.shape[1]] = cov
@@ -524,7 +511,7 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
     #if parlim is not None:
     #  prior_err = np.divide(1.,np.asarray(parlim))
     #  err = np.append(err,prior_err)
-    print("vector of inverse errors: %r" % cov)
+    print("vector of inverse errors: %r" % _cov)
     print("vector of x-values: %r" % x[...,0])
     print("vector of y-values: %r" % y[...,0])
     print("shape of y-values:")
@@ -532,18 +519,18 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
     print("shape of x-values:")
     print(x[...,0].shape)
     print("shape of err-values:")
-    print(cov.shape)
+    print(_cov.shape)
     #TODO: Get samplesize from elsewhere
     samples=1500
     chisquare=np.zeros((samples,))
     res = np.zeros((samples,len(start)))
     dof = float(y.shape[0]-len(start))
-    diag = np.ones(len(start))
+    #diag = np.ones(len(start))
     for b in range(samples):
         #print("data for fit %d" %b)
         #print(err,x[...,b],y[...,b]) 
         p,cov1,infodict,mesg,ier = leastsq(errfunc, start,
-            args=(x[...,b],y[...,b],cov),ftol=1e-10,xtol=1e-10, full_output=1,diag=diag, factor=.1)
+            args=(x[...,b],y[...,b],_cov), full_output=1, factor=.1)
         # fix known parameters
         #add = 5.31,5.77,7.6,0.529,0.509,0.516
         #p,cov1,infodict,mesg,ier = leastsq(errfunc, start,

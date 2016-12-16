@@ -771,20 +771,20 @@ class ChirAna(object):
       # define the fitfunction for a single beta
       _func = lambda r, z, p, x,: p[0]/(r*z) * (x[:,0]+x[:,1]) * (1+p[1]*(r/z)*x[:,0]+p[2]/(r**2))
 
-      ## Get the residuals of all beta values
-      #_res_a = _func(p[0],p[3],p[6:9],x[0:18])-y[0:18]
-      #_res_b = _func(p[1],p[4],p[6:9],x[18:27])-y[18:27]
-      #_res_d = _func(p[2],p[5],p[6:9],x[27:33])-y[27:33]
-      ## residuals of r0 and zp are stored separately at the moment
-      #_res_r0 = np.r_[(y[33]-p[0]),(y[34]-p[1]), (y[35]-p[2])]
-      #_res_zp = np.r_[(y[36]-p[3]),(y[37]-p[4]),(y[38]-p[5])]
       # Get the residuals of all beta values
-      _res_a = _func(p[0],p[3],p[6:9],x[0:15])-y[0:15]
-      _res_b = _func(p[1],p[4],p[6:9],x[15:24])-y[15:24]
-      _res_d = _func(p[2],p[5],p[6:9],x[24:30])-y[24:30]
+      _res_a = _func(p[0],p[3],p[6:9],x[0:18])-y[0:18]
+      _res_b = _func(p[1],p[4],p[6:9],x[18:27])-y[18:27]
+      _res_d = _func(p[2],p[5],p[6:9],x[27:33])-y[27:33]
       # residuals of r0 and zp are stored separately at the moment
-      _res_r0 = np.r_[(y[30]-p[0]),(y[31]-p[1]), (y[32]-p[2])]
-      _res_zp = np.r_[(y[33]-p[3]),(y[34]-p[4]),(y[35]-p[5])]
+      _res_r0 = np.r_[(y[33]-p[0]),(y[34]-p[1]), (y[35]-p[2])]
+      _res_zp = np.r_[(y[36]-p[3]),(y[37]-p[4]),(y[38]-p[5])]
+      ## Get the residuals of all beta values
+      #_res_a = _func(p[0],p[3],p[6:9],x[0:15])-y[0:15]
+      #_res_b = _func(p[1],p[4],p[6:9],x[15:24])-y[15:24]
+      #_res_d = _func(p[2],p[5],p[6:9],x[24:30])-y[24:30]
+      ## residuals of r0 and zp are stored separately at the moment
+      #_res_r0 = np.r_[(y[30]-p[0]),(y[31]-p[1]), (y[32]-p[2])]
+      #_res_zp = np.r_[(y[33]-p[3]),(y[34]-p[4]),(y[35]-p[5])]
       # collect residuals as one array
       _residuals = np.r_[_res_a,_res_b,_res_d,_res_r0,_res_zp ]
 
@@ -844,11 +844,8 @@ class ChirAna(object):
         #print("\nCovariance submatrix %d" %i)
         #print(_tmp)
         cov[3*i:3*i+3,3*i:3*i+3]=_tmp
-      for k in range(30,36):
+      for k in range(33,39):
         cov[k,k] = np.cov(y[k])
-        #if k+3 < 39:
-        #  cov[k,k+3] = (np.cov(y))[k,k+3]
-        #  cov[k+3,k] = cov[k,k+3]
       for l in range(cov.shape[0]):
         for m in range(cov.shape[0]):
           corr[l,m] = cov[l,m]/np.sqrt(cov[l,l]*cov[m,m])
@@ -856,13 +853,9 @@ class ChirAna(object):
       corr_heat.plot_heatmap(corr,label=['correlation from modified covariance','yy'])
       corr_heat.plot_correlation(y,label=['correlation from data','yy'])
       del corr_heat
-      # Plot the correlation matrix
-      #corr_heat = plot.LatticePlot('/hiskp2/helmes/analysis/scattering/analysis_vault/k_charged_wo_outliers/plots/global_fit_corr_matrix.pdf')
-      #corr_heat.plot_correlation(y,label=['Correlation Matrix of Global Fit data','yy'])
-      #del corr_heat
       # invoke a chiral fit, yielding a fitresult
       mk_phys = ChiralFit("ms_phys",self.global_ms_errfunc)
-      self.fitres = mk_phys.chiral_fit(x,y,start,parlim=None,correlated=True,debug=debug)
+      self.fitres = mk_phys.chiral_fit(x,y,start,parlim=None,correlated=False,debug=debug)
       #check the solution by computing relative deviation from measurement
       # get arguments
       args = self.fitres.data[0]
@@ -879,6 +872,33 @@ class ChirAna(object):
       print(y[:,0])
       print("chisquared is: %.2f" %chisq)
 
+  def mka0_func(self,p,x):
+      return p[0]*x[:,0]+p[1]*x[:,1]+p[2]
+
+  def mka0_errfunc(self,p,x,y,cov):
+      print(y-self.mka0_func(p,x))
+      return np.dot(cov,y-self.mka0_func(p,x))
+      
+  def fit_mka0(self,debug=4):
+      """ Fit the mka0 data """
+      # Get data for fit (several fit dimensions for x, only one for y)
+      x, y, mu_data = self.reduction(x_shape_new = (self.x_shape[3],self.x_shape[4]),
+                                    y_shape_new = (self.y_shape[4],))
+      # Control shape of x and y
+      # build the covariance matrix
+      corr_heat = plot.LatticePlot('/hiskp2/helmes/analysis/scattering/analysis_vault/k_charged_wo_outliers/plots/mka0_fit_corr_matrix.pdf',join=False)
+      #corr_heat.plot_heatmap(corr,label=['correlation from modified covariance','yy'])
+      corr_heat.plot_correlation(y,label=['correlation from data','yy'])
+      del corr_heat
+
+      # invoke a chiral fit, yielding a fitresult
+      start=[1.,1.,1.]
+      mk_phys = ChiralFit("mka0_ms_phys",self.mka0_errfunc)
+      cov = np.cov(y)
+      self.fitres = mk_phys.chiral_fit(x,y,start,parlim=None,correlated=True,cov=cov,debug=debug)
+      #check the solution by computing relative deviation from measurement
+      # get arguments
+      args = self.fitres.data[0]
 
   def fit(self,index=0, start=[1.,],dim=None, x_phys=None,xcut=False,
           plot=True,ploterr=True,label=None,datadir=None,read=False,
@@ -931,7 +951,7 @@ class ChirAna(object):
         self.fitres.save(datadir+self.proc_id+'.npz')
       args = self.fitres.data[0]
       # save samples of physical point result as fitresult along with p-values
-      self.phys_point_fitres = self.fitres.calc_mk_a0_phys(x_phys,self.cont_ext)
+      self.phys_point_fitres = self.fitres.calc_mk_a0_phys(x_phys,self.cont_func)
       print ("physical point from fitresult")
       #print(self.phys_point_fitres.data[0],self.phys_point_fitres.pval[0])
       self.phys_point_fitres.calc_error()
@@ -939,7 +959,7 @@ class ChirAna(object):
       self.phys_point_fitres.save(datadir+self.proc_id+'phys_pt.npz')
 
       self.phys_point = np.zeros((2,2))
-      self.phys_point[0] = x_phys[0:2]
+      self.phys_point[0] = np.asarray(compute_error(x_phys))
       r,rstd,rsys,nfits = self.phys_point_fitres.error[0] 
       self.phys_point[1] = np.asarray((r[0][0],rstd[0])) 
       print("Calculated physical point to be:")
@@ -1053,8 +1073,9 @@ class ChirAna(object):
       print("Phsyical point result:")
       if xcut is None:
         xcut = 2.
-      print("%10s & $%.1f$ & $%.4f(%1.0f)$ & $%.2f/%d$ & $%.2e $" %
-          (self.proc_id, xcut, self.phys_point[1,0], self.phys_point[1,1]*1e4,
+      print("%10s & $%.1f$ & %.2e %.2e & $%.4f(%1.0f)$ & $%.2f/%d$ & $%.2e $" %
+          (self.proc_id, xcut, self.phys_point[0,0],self.phys_point[0,1],
+           self.phys_point[1,0], self.phys_point[1,1]*1e4,
            self.fitres.chi2[0][0], dof, self.fitres.pval[0][0]))
 
   def reduction(self,x_shape_new=None,y_shape_new=None):
@@ -1429,10 +1450,14 @@ class ChirAna(object):
     try:
       for a in self.phys_point:
         print("%f +/- %f" %(a[1,0],a[1,1]))
-      plt.errorbar(self.phys_point[:,0,0],self.phys_point[:,1,0],self.phys_point[:,1,1], fmt='d', color='darkorange', label='Physical Point')
+      plt.errorbar(self.phys_point[:,0,0],self.phys_point[:,1,0],
+                   self.phys_point[:,1,1],xerr=self.phys_point[:,0,1],
+                   fmt='d', color='darkorange', label='Physical Point')
     except:
       print("%f +/- %f" %(self.phys_point[1,0],self.phys_point[1,1]))
-      plt.errorbar(self.phys_point[0,0],self.phys_point[1,0],self.phys_point[1,1], fmt='d', color='darkorange', label='Physical Point')
+      plt.errorbar(self.phys_point[0,0],self.phys_point[1,0],
+                   self.phys_point[1,1],xerr=self.phys_point[0,1],
+                   fmt='d', color='darkorange', label='Physical Point')
       pass
     plt.grid(False)
     #plt.vlines(self.phys_point[0,0],y_lim[0],y_lim[1],color="k",label=label[3])

@@ -79,7 +79,7 @@ def evaluate_phys(x, args, args_w ,func, isdependend):
   # loop over samples
   print x.shape
   for b in range(nsam):
-    y = func(args[b],x)
+    y = func(args[b],x[b])
     if y.shape[0] == 2:
       y = y[0]
     result[b] = y
