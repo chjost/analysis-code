@@ -771,13 +771,20 @@ class ChirAna(object):
       # define the fitfunction for a single beta
       _func = lambda r, z, p, x,: p[0]/(r*z) * (x[:,0]+x[:,1]) * (1+p[1]*(r/z)*x[:,0]+p[2]/(r**2))
 
+      ## Get the residuals of all beta values
+      #_res_a = _func(p[0],p[3],p[6:9],x[0:18])-y[0:18]
+      #_res_b = _func(p[1],p[4],p[6:9],x[18:27])-y[18:27]
+      #_res_d = _func(p[2],p[5],p[6:9],x[27:33])-y[27:33]
+      ## residuals of r0 and zp are stored separately at the moment
+      #_res_r0 = np.r_[(y[33]-p[0]),(y[34]-p[1]), (y[35]-p[2])]
+      #_res_zp = np.r_[(y[36]-p[3]),(y[37]-p[4]),(y[38]-p[5])]
       # Get the residuals of all beta values
-      _res_a = _func(p[0],p[3],p[6:9],x[0:18])-y[0:18]
-      _res_b = _func(p[1],p[4],p[6:9],x[18:27])-y[18:27]
-      _res_d = _func(p[2],p[5],p[6:9],x[27:33])-y[27:33]
+      _res_a = _func(p[0],p[3],p[6:9],x[0:15])-y[0:15]
+      _res_b = _func(p[1],p[4],p[6:9],x[15:24])-y[15:24]
+      _res_d = _func(p[2],p[5],p[6:9],x[24:30])-y[24:30]
       # residuals of r0 and zp are stored separately at the moment
-      _res_r0 = np.r_[(y[33]-p[0]),(y[34]-p[1]), (y[35]-p[2])]
-      _res_zp = np.r_[(y[36]-p[3]),(y[37]-p[4]),(y[38]-p[5])]
+      _res_r0 = np.r_[(y[30]-p[0]),(y[31]-p[1]), (y[32]-p[2])]
+      _res_zp = np.r_[(y[33]-p[3]),(y[34]-p[4]),(y[35]-p[5])]
       # collect residuals as one array
       _residuals = np.r_[_res_a,_res_b,_res_d,_res_r0,_res_zp ]
 
@@ -837,7 +844,7 @@ class ChirAna(object):
         #print("\nCovariance submatrix %d" %i)
         #print(_tmp)
         cov[3*i:3*i+3,3*i:3*i+3]=_tmp
-      for k in range(33,39):
+      for k in range(30,36):
         cov[k,k] = np.cov(y[k])
         #if k+3 < 39:
         #  cov[k,k+3] = (np.cov(y))[k,k+3]
@@ -855,7 +862,7 @@ class ChirAna(object):
       #del corr_heat
       # invoke a chiral fit, yielding a fitresult
       mk_phys = ChiralFit("ms_phys",self.global_ms_errfunc)
-      self.fitres = mk_phys.chiral_fit(x,y,start,parlim=None,correlated=False,debug=debug)
+      self.fitres = mk_phys.chiral_fit(x,y,start,parlim=None,correlated=True,debug=debug)
       #check the solution by computing relative deviation from measurement
       # get arguments
       args = self.fitres.data[0]

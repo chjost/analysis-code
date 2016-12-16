@@ -492,7 +492,7 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
         #print("\nCovariance submatrix %d" %i)
         #print(_tmp)
         cov[3*i:3*i+3,3*i:3*i+3]=_tmp
-      for k in range(33,39):
+      for k in range(30,36):
         cov[k,k] = np.cov(y[k])
         # Leads to singular matrix
         #if k+3 < 39:

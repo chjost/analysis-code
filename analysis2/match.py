@@ -466,7 +466,8 @@ class MatchResult(object):
       if plot:
         self.plot_match(obs_to_match,plotdir,ens,meth=meth,proc='match',label=label)
 
-    def eval_at(self, amu_match, amu_x=None, meth = None, ens=None,plot = True,plotdir=None,label=None):
+    def eval_at(self, amu_match, amu_x=None, meth = None, ens=None,plot = True,
+                plotdir=None,label=None):
       """Evaluates a given observable at a matched strange quark mass
 
       Parameters

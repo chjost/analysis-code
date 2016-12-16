@@ -17,7 +17,9 @@ from plot_functions import plot_function
 and standard deviation with a pseudobootstrap. """
 
 class ExtDat(object):
-    """Class to hold external data that only differs by the lattice spacing"""
+    """Class to hold external data that only differs by the lattice spacing
+       Each sampled value needs its own seed. 
+    """
     def __init__(self,seeds,space,nboot=1500):
         self.nsamp=nboot
         # These are the calculated values from arxiv.org/1403.4504v3
@@ -29,30 +31,33 @@ class ExtDat(object):
         # Start with an empty dictionary
         self.data={}
         # test length of tuples
-        if len(seeds) != len(space):
+        if len(seeds) != len(space)*len(obs_a):
             raise ValueError("Seeds and Space tuples have incompatible lengths")
-        # initialize the dictionary with the seeds and the values for r0/a and
-        # zp
-        for a in zip(space,seeds):
-            self.data[a[0]]={'seed':a[1]}
-            self.set_obs(a[0],'r0')
-            self.set_obs(a[0],'zp')
+        # each observable should get its own seed so the desired layout would be
+        # something like 
+        # {'A':{'r0':{'seed':int,'boot':samples},'zp':{'seed':int,'boot':samples}}
+        # for each observable and lattice spacing
+        for i,beta in enumerate(space):
+            self.data[beta]={}
+            for j,obs in enumerate(self.table[beta]):
+              self.data[beta][obs]={}
+              self.data[beta][obs]['seed']=seeds[2*i+j]
+              self.set_obs(beta,obs)
         
     def set_obs(self, a, obs):
         # From the initialized table take the desired observable of the correct
         # lattice spacing with its error
         lit = self.table[a][obs]
-        seed = self.data[a]['seed']
-        self.data[a][obs] = draw_gauss_distributed(lit[0],lit[1],
+        seed = self.data[a][obs]['seed']
+        self.data[a][obs]['boot'] = draw_gauss_distributed(lit[0],lit[1],
                                 (self.nsamp,),origin=True,seed=seed)
   
     #def save
     #def save_txt
     def get(self,a,obs):
-        return self.data[a][obs]
+        return self.data[a][obs]['boot']
 
     #def show
-
 class ContDat(object):
     """Class to hold external data from continuum values"""
     def __init__(self,seeds,nboot=1500):
