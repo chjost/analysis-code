@@ -18,7 +18,7 @@ def main():
     # read settings
     plotsingle = True
     plotratio = True
-    plothist = False
+    plothist = True
 
 
     # get data from input file
@@ -64,7 +64,7 @@ def main():
             plotter = ana.LatticePlot("%s/corr_k_%s.pdf" % (plotdir, lat))
         plotter.set_env(ylog=True)
         label = ["single particle", "t", "C(t)", "kaon"]
-        plotter.plot(picorr, label, add=addT, debug=debug)
+        #plotter.plot(picorr, label, add=addT, debug=debug)
         #label = ["single particle", "t", r"$\Delta(C(t))/C(t)$", "kaon"]
         #plotter.plot(picorr, label, add=addT, rel=True, join=False, debug=debug)
         if plothist:
@@ -75,8 +75,8 @@ def main():
 
     # two particle correlator
     kkcorr = ana.Correlators.read("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
-    #ratio = kkcorr.ratio(picorr, ratio=2 )
-    ratio = kkcorr.diff()
+    ratio = kkcorr.ratio(picorr, ratio=2 )
+    #ratio = kkcorr.diff()
     if plothist:
         fit_ratio = ana.LatticeFit(1, True)
         start_ratio = [3., 1.]
@@ -99,7 +99,7 @@ def main():
         label = ["Ratio", "t", "R(t)", "data"]
         print "plotter set up"
         plotter.plot(ratio, label, add=addT,
-            oldfitpar=1, xshift=None,  debug=debug)
+            oldfitpar=1, xshift=0.,  debug=debug)
         #label = ["Ratio", "t", r"$\Delta(R(t))/R(t)$", "data"]
         #plotter.plot(ratio, label, add=addT,
         #    oldfitpar=1, xshift=0.5,rel=True, join=False, debug=debug)

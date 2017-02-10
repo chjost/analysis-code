@@ -77,7 +77,7 @@ def main():
       mult_obs = a0.mult_obs(collapsed, "m_a0", isdependend=True)
       mult_obs.save("%s/mk_akk_%s.npz" % (datadir,lat))
     else:
-      mult_obs = ana.FitResult.read("%s/mk_akk_%s.npx" % (datadir.lat))
+      mult_obs = ana.FitResult.read("%s/mk_akk_%s.npz" % (datadir,lat))
     mult_obs.print_data()
 
     if plot_hist:
@@ -91,8 +91,8 @@ def main():
             nbins = nbins1
           else:
             nbins = mult_obs.data[0].shape[-1]
-        label = ["Scattering length", "M$_\k$ a$_\k\k$", "M$_\k$ a$_\k\k$"]
-        plotter.histogram(mult_obs, label, nb_bins=nbins)
+      label = ["Scattering length", "M$_\k$ a$_\k\k$", "M$_\k$ a$_\k\k$"]
+      plotter.histogram(mult_obs, label, nb_bins=nbins1)
       plotter.new_file("%s/qq_mk_a0_%s.pdf" % (plotdir, lat))
       label = [r'QQ-Plot $M_Ka_0$ %s' % lat, r'Bootstrap samples $M_K a_0$']
       plotter.qq_plot(mult_obs,label,par=0)

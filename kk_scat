@@ -1,4 +1,4 @@
-1#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
 ################################################################################
 #
 # Author: Christian Jost (jost@hiskp.uni-bonn.de)
@@ -36,6 +36,12 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 import analysis2 as ana
 
+def draw_a(lat):
+  seed=1936
+  a_vals = {'A':[0.0885,0.0036],'B':[0.0815,0.0030],'D':[0.0619,0.0018]}
+  a_ps = ana.draw_gauss_distributed(a_vals[lat][0],a_vals[lat][1],(1500,),origin=True,seed=seed)
+  return a_ps
+
 def main():
 
     # parse the input file
@@ -57,7 +63,10 @@ def main():
 
     print(datadir)
     print(plotdir)
-
+    ## MKrf
+    # TODO: Bad Style path is set in script
+    #globpath = '/hiskp2/helmes/analysis/scattering/analysis_vault/k_charged_wo_outliers/data/'
+    #mkrf = ana.FitResult.read("%s/mk_rf.npz" % globpath)
     ## single particle correlator
     print("read single particle corrs")
     #kcorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat))
@@ -78,14 +87,15 @@ def main():
     ratiofit.print_data(0)
     ratiofit.print_data(1)
     print(ratiofit.weight[0][0].shape)
-
+    print(collapsed.data[0][:,1,0])
     calca = True
     if calca:
         print("calculate scattering length")
         a_kk = ratiofit.calc_scattering_length(collapsed, 1, 1, L=ens.L(),
-              isratio=True, isdependend=False)
+              isratio=True, isdependend=False, rf_est=None)
         a_kk.save("%s/scat_len_TP%d_%s.npz" % (datadir, d2, lat))
     else:
+        print("%s/scat_len_TP%d_%s.npz" % (datadir, d2, lat))
         a_kk = ana.FitResult.read("%s/scat_len_TP%d_%s.npz" % (datadir, d2, lat))
     a_kk.print_data()
     print a_kk.weight

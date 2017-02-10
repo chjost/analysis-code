@@ -24,7 +24,7 @@ class MatchResult(object):
 
     The data has a similar layout to FitResult
     """
-    def __init__(self, obs_id=None):
+    def __init__(self, obs_id=None, save=None):
 
       """Allocate objects for initiated instance
       Parameters
@@ -56,6 +56,8 @@ class MatchResult(object):
       self.label = None
       # observable for with matching is done
       self.obs_id = obs_id
+      # Save results to
+      self.savedir = save
     
     @classmethod
     def read(cls, filename, debug=0):
@@ -272,7 +274,7 @@ class MatchResult(object):
 
 
     def add_extern_data(self,filename,ens,idx=None,amu=None,square=True,
-                        read=None,physical=False,op=False,fse=False,r0=True):
+                        read=None,physical=False,op=False,fse=False,r0=True,fac=None):
       """ This function adds data from an extern textfile to the analysis object
       
       The data is classified by names, the filename is given and the read in and
@@ -311,21 +313,61 @@ class MatchResult(object):
           data=np.square(_data)
         else:
           plot=_plot
-          data=_data
+          data=_data 
+
+      if read is 'fit_mpi':
+        if len(filename) > 1: 
+        # Instead of pseudosamples provide real fit results
+          _mpi = fit.FitResult.read(filename[0])
+          _mpi_data = _mpi.singularize().data[0][:,1,0] 
+          ext_help = extboot.read_extern(filename[1],(1,2))
+          # Data gets squared afterwards
+          _fse_plot,_fse_data = extboot.prepare_fse(ext_help,ens,self.obs.shape[-1],
+                                        square=False,had='pi')
+          print("mpi and error:")
+          print(compute_error(_mpi_data))
+          data = _mpi_data/_fse_data
+          
+        else:
+          _mpi = fit.FitResult.read(filename)
+          data = _mpi.singularize().data[0][:,1,0]
+          print("mpi data has shape:")
+          print(data.shape)
+          print("mpi and error:")
+          print(compute_error(data))
+        if square is True:
+          data = data**2
+        if isinstance(fac,float):
+          data *= fac
+        plot = compute_error(data)
+        print("M_pi**2")
+        print(plot)
 
       if read is 'mpi':
         #print("indexto insert extern data:")
         #print(dim,idx)
-        ext_help = extboot.read_extern(filename,(1,2))
+        #ext_help = extboot.read_extern(filename,(1,2))
         # take any y data dimension, since bootstrap samplesize shold not differ
         # build r0M_pi
-        plot,data = extboot.prepare_mpi(ext_help,ens,self.obs.shape[-1],
-                                        square=square,r0=r0)
+        #plot,data = extboot.prepare_mpi(ext_help,ens,self.obs.shape[-1],
+        #                                square=square,r0=r0)
+        # Instead of pseudosamples provide real fit results
+        _mpi = ana.FitResult.read(filename)
+        data = _mpi.singularize().data[0][1]
+        if isinstance(fac,float):
+          data *= fac
+        plot = compute_error(data)
+
+
       if read is 'fse_mk':
         ext_help = extboot.read_extern(filename,(1,2))
         plot,data = extboot.prepare_fse(ext_help,ens,self.obs.shape[-1],
                                         square=square,had='k')
 
+      if read is 'fse_mpi':
+        ext_help = extboot.read_extern(filename,(1,2))
+        plot,data = extboot.prepare_fse(ext_help,ens,self.obs.shape[-1],
+                                        square=square,had='pi')
       if read is 'halfmpi':
         #print("indexto insert extern data:")
         #print(dim,idx)
@@ -347,8 +389,10 @@ class MatchResult(object):
             ext_help2 = extboot.read_extern(filename[1],(1,2))
             _plot, _data = extboot.prepare_mpi_fse(ext_help1,ext_help2,ens,
                           self.obs.shape[-1], square=square,physical=physical)
-        plot= 0.5*_plot
         data = 0.5*_data
+        plot = compute_error(data)
+        print("0.5*M_pi^FSE**2")
+        print(plot)
 
       if read is 'fse_pi':
         if len(filename) != 2:
@@ -627,24 +671,27 @@ class MatchResult(object):
         else:
           plot_single_line(self.amu_match[meth],self.eval_obs[meth],label[0:2],col='g')
       elif meth == 2:
-        plot_data(x_plot[:,0],y_plot[:,0],y_plot[:,1],label='data',dX=x_plot[:,1],col='k')
+        plot_data(x_plot[:,0],y_plot[:,0],y_plot[:,1],label='data',dX=x_plot[:,1],col='b')
         #plot_function(line,x_plot[:,0],self.coeffs[meth],'lin. fit',
         #    ploterror = True, fmt='b--', col='blue')
         plot_function(line,(x_plot[0,0],x_plot[-1,0]),self.coeffs[meth],'lin. fit',
             ploterror = True, fmt='b--', col='blue',debug =3 )
         if proc == 'match':
-          plot_single_line(self.amu_match[meth],obs,label[0:2],col='g')
+          plot_single_line(self.amu_match[meth],obs,label[2],col='r')
         else:
-          plot_single_line(self.amu_match[meth],self.eval_obs[meth],label[0:2],col='g')
+          plot_single_line(self.amu_match[meth],self.eval_obs[meth],label[2],col='r')
       else:
         raise ValueError("Method not known")
       #plt.autoscale_view(enable=True,axis='both',tight=False)
       #TODO: Automate that, since autoscale is not working
       #plt.xlim(0.015,0.022)
-      #plt.xlim(0.17,0.25)
-      #plt.title(ens)
-      plt.xlabel(label[0])
-      plt.ylabel(label[1])
+      xlo = np.amin(self.amu)-0.05*np.amin(self.amu)
+      xhi = np.amax(self.amu)+0.05*np.amax(self.amu)
+      plt.xlim(xlo,xhi)
+      plt.locator_params(axis='y',nbins=4, min_n_ticks=2)
+      plt.locator_params(axis='x',nbins=5, min_n_ticks=2)
+      plt.xlabel(label[0],fontsize=24)
+      plt.ylabel(label[1],fontsize=24)
       plt.legend(loc='best',numpoints=1,ncol=1)
       pmatch.savefig()
       pmatch.close()

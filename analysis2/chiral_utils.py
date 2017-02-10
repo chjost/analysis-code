@@ -343,6 +343,8 @@ def chiral_fit(X, Y,fitfunc,corrid="",start=None, xcut=None,
     dof = _X.shape[-1] - len(_start)
     # fit every bootstrap sample
     timing = []
+    print("_X used in chiral fit has shape:")
+    print(_X.shape)
     print("_Y used in chiral fit has shape:")
     print(_Y.shape)
     for i, x in enumerate(_X):
@@ -525,67 +527,26 @@ def r0_mk_sq_phys(nboot):
   #print(compute_error(res))
   return _res
 
-def mk_mpi_diff_phys(a, nboot, lat=True):
-
-  _r0 = ana.draw_gauss_distributed(0.474,0.014,(nboot,),origin=True)
-  _dummy,_r0_lat = ana.prepare_r0_lat(a, nboot)
-  _r0_lat = 0.06*np.random.randn(1500)+5.77 
-  _mk = ana.draw_gauss_distributed(493.677,0.016,(nboot,),origin=True)
-  _mpi = ana.draw_gauss_distributed(134.9766,0.0006,(nboot,),origin=True)
-  _diff = np.divide(_r0,_r0_lat)**2*(_mk**2-0.5*_mpi**2)/(197.37**2)
-  tmp = np.divide(np.asarray(_r0),np.asarray(_r0_lat))**2/(197.37**2)
-  print(tmp[0],np.std(tmp))
-  print(len(_r0))
-  print(len(_r0_lat))
-  # verbose section
-  #x = np.linspace(0,nboot-1,nboot)
-  #idx = np.zeros((1,nboot))
-  #idx[0] = x
-
-  #_to_save = np.concatenate((idx,np.atleast_2d(_r0))).T
-  #np.savetxt("/hiskp2/helmes/analysis/scattering/analysis_vault/k_charged_wo_outliers/plots/B55.32/r_0_phys.txt",
-  #    _to_save,header="Sample r_0 [fm]",fmt = '%d %.4f')
-  #_to_save = np.concatenate((idx,np.atleast_2d(_r0_lat))).T
-  #np.savetxt("/hiskp2/helmes/analysis/scattering/analysis_vault/k_charged_wo_outliers/plots/B55.32/r_0_lat.txt",
-  #    _to_save,header="Sample r_0/a ",fmt = '%d %.4f')
-  #_to_save = np.concatenate((idx,np.atleast_2d(_mk))).T
-  #np.savetxt("/hiskp2/helmes/analysis/scattering/analysis_vault/k_charged_wo_outliers/plots/B55.32/mk_phys.txt",
-  #    _to_save,header="Sample mk [MeV]",fmt = '%d %.4f')
-  #_to_save = np.concatenate((idx,np.atleast_2d(_mpi))).T
-  #np.savetxt("/hiskp2/helmes/analysis/scattering/analysis_vault/k_charged_wo_outliers/plots/B55.32/mpi_phys.txt",
-  #    _to_save,header="Sample mpi [MeV]",fmt = '%d %.4f')
-  #_to_save = np.concatenate((idx,np.atleast_2d(tmp))).T
-  #np.savetxt("/hiskp2/helmes/analysis/scattering/analysis_vault/k_charged_wo_outliers/plots/B55.32/r0vr0lat.txt",
-  #    _to_save,header="Sample r_0/r_0lat",fmt = '%d %.4e')
-  #d, _check_r0 = ana.compute_error(_r0)
-  #d, _check_r0_lat = ana.compute_error(_r0_lat)
-  #d, _check_mk = ana.compute_error(_mk)
-  #d, _check_mpi = ana.compute_error(_mpi)
-  #print("r0: %.4f +- %.4f" % (_r0[0], _check_r0))
-  #print("r0_lat: %.4f +- %.4f" %(_r0_lat[0],_check_r0_lat))
-  #print("mk: %.4f +- %.4f" %(_mk[0],_check_mk))
-  #print("mpi: %.4f +- %.4f" %(_mpi[0],_check_mpi))
-  return _diff
-
-def mk_mpi_diff(nboot):
-  _r0 = ana.draw_gauss_distributed(0.474,0.014,(nboot,),origin=True)
-  # Save r_0
-  #x = np.linspace(0,nboot-1,nboot)
-  #idx = np.zeros((1,nboot))
-  #idx[0] = x
-  #_to_save = np.concatenate((idx,np.atleast_2d(_r0))).T
-  #np.savetxt("/hiskp2/helmes/analysis/scattering/analysis_vault/k_charged_wo_outliers/plots/B55.32/r_0_phys.txt",
-  #    _to_save,header="Sample r_0 [fm]",fmt = '%d %.4f')
-  _mk = ana.draw_gauss_distributed(493.677,0.016,(nboot,),origin=True)
-  _mpi = ana.draw_gauss_distributed(134.9766,0.0006,(nboot,),origin=True)
-  # Save Meson mass difference
-  #_fac = (_mk**2-0.5*_mpi**2)
-  #_to_save = np.concatenate((idx,np.atleast_2d(_fac))).T
-  #np.savetxt("/hiskp2/helmes/analysis/scattering/analysis_vault/k_charged_wo_outliers/plots/B55.32/M_diff_phys.txt",
-  #    _to_save,header="Sample M_K^2 - 0.5 M_pi^2 [MeV^2]",fmt = '%d %.4f')
+# Idea: Move that to cont_data class
+def mk_mpi_diff_phys(a, nboot, cont, ext):
+  """ Function to calculate a^2(M_K^2-0.5M_pi^2) from continuum data"""
   
-  _diff = _r0**2*(_mk**2-0.5*_mpi**2)/(197.37**2)
-  return _diff
+  _r0 = cont.get('r0')
+  _r0a = ext.get(a,'r0')
+  _mk = cont.get('mk')
+  _mpi = cont.get('mpi_0')
+  
+  return _r0**2*(_mk**2-0.5*_mpi**2)/(197.37**2*_r0a**2)
+
+# Idea: Move that to cont_data class
+def r0mk_mpi_diff_phys(cont):
+  """ Function to calculate r_0^2(M_K^2-0.5M_pi^2) from continuum data"""
+  
+  _r0 = cont.get('r0')
+  _mk = cont.get('mk')
+  _mpi = cont.get('mpi_0')
+  
+  return _r0**2*(_mk**2-0.5*_mpi**2)/(197.37**2)
 
 def beta_mk_mpi_diff(nboot,beta):
   

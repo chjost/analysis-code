@@ -31,13 +31,16 @@ class LatticePlot(object):
         self.ylog=False
         self.xlim=None
         self.ylim=None
-        self.grid=True
+        self.grid=False
         self.legend=True
         self.join=join
+        self.title=None
         if join:
             self.cycol = itertools.cycle('bgrcmk').next
+            self.cyfmt = itertools.cycle('^vsd>o').next
         else:
             self.cycol = itertools.cycle('b').next
+            self.cyfmt = itertools.cycle('x').next
 
     def __del__(self):
         self.plotfile.close()
@@ -72,6 +75,9 @@ class LatticePlot(object):
     def _est_env_hist(self):
         plt.grid(self.grid)
 
+    def _set_limits(self,marks):
+        plt.locator_params(nbins=marks)
+
     def set_title(self, title, axis):
         """Set the title and axis labels of the plot.
 
@@ -82,9 +88,10 @@ class LatticePlot(object):
         axis : list of strs
             The labels of the axis.
         """
-        plt.title(title)
-        plt.xlabel(axis[0])
-        plt.ylabel(axis[1])
+        if self.title is True:
+            plt.title(title)
+        plt.xlabel(axis[0],fontsize=24)
+        plt.ylabel(axis[1],fontsize=24)
 
     def _print_label(self, keys, vals, xpos=0.7, ypos=0.8):
         """Print a label in the plot.
@@ -128,7 +135,8 @@ class LatticePlot(object):
 
 
     def _genplot_single(self, corr, label, fitresult=None, fitfunc=None,
-            add=None, xshift=0., ploterror=False, rel=False, debug=0, join=False):
+            add=None, xshift=0., ploterror=False, rel=False, debug=0,
+            join=False):
         """Plot the data of a Correlators object and a FitResult object
         together.
 
@@ -165,6 +173,7 @@ class LatticePlot(object):
         label_save = label[0]
 
         # iterate over correlation functions
+        print("Number of correlators is: %d" %ncorr)
         for n in range(ncorr):
             if debug > 1:
                 print("plotting correlators %d" % (n))
@@ -180,10 +189,10 @@ class LatticePlot(object):
                 if rel is True:
                     plot_data(X, np.d(ddata,corr.data[0,:,n]),
                         np.zeros_like(ddata), label=label[3],
-                        plotrange=[0,T],col=self.cycol())
+                        plotrange=[0,T],col=self.cycol(),fmt=self.cyfmt())
                 else:
                     plot_data(X, corr.data[0,:,n], ddata, label[3],
-                        plotrange=[0,T],col=self.cycol())
+                        plotrange=[0,T],col=self.cycol(),fmt=self.cyfmt())
                 plt.legend()
                 if self.join is False:
                   self.save()
@@ -205,7 +214,9 @@ class LatticePlot(object):
                     self._set_env_normal()
                     plot_data(X, corr.data[0,:,n], ddata, label[3],
                             plotrange=[1,T],col=self.cycol())
-                    plot_function(fitfunc.fitfunc, X, mpar, label[4],
+                    # The argument X has changed
+                    #_X = [X[0],X[-1]]
+                    plot_function(fitfunc.fitfunc, fi, mpar, label[4],
                             add, fi, ploterror,col=self.cycol())
                     plt.legend()
                     if self.join is False:
@@ -299,7 +310,7 @@ class LatticePlot(object):
                 self._set_env_normal()
                 plot_data(X, corr.data[0,:, n], ddata, label[3],
                         plotrange=[1,T])
-                plot_function(fitfunc.fitfunc, X, _par, label[4], 
+                plot_function(fitfunc.fitfunc, fi, _par, label[4], 
                         add_data, fi, ploterror)
                 plt.legend()
                 self.save()
@@ -401,7 +412,8 @@ class LatticePlot(object):
         print(_std.shape)
         plt.stem(_mean)
         plt.xlim(-0.2,correlator.data.shape[1])
-        plt.title(label[0])
+        if self.title is True:
+            plt.title(label[0])
         plt.xlabel(r'Lag $k$ from $t_{i}=$%s' %start)
         plt.ylabel(r'acf($k$)')
         self.save()
@@ -436,21 +448,24 @@ class LatticePlot(object):
             bisec = lambda p,x : x
             plot_data(np.sort(q_theo),np.sort(q_meas),None,label[1],
                 fmt='o',markerfill ='none')
-            plot_function(bisec,np.sort(q_theo),None,'',fmt='r')
+            _range = (np.amin(np.sort(q_theo)),np.amax(np.sort(q_theo)))
+            plot_function(bisec,_range,None,'',fmt='r')
             plt.legend(loc='best')
             plt.locator_params(axis='x',nbins=4)
             plt.locator_params(axis='y',nbins=4)
-            plt.title(label[0])
-            plt.xlabel(r'theoretical quantiles $N_{\bar{\mu},\Delta\mu}$')
-            plt.ylabel(r'measured quantiles')
-            plt.axes().set_aspect('equal')
+            if self.title is True:
+                plt.title(label[0])
+            plt.xlabel(r'theoretical quantiles $N_{\bar{\mu},\Delta\mu}$',fontsize=24)
+            plt.ylabel(r'measured quantiles',fontsize=24)
+            #plt.axes().set_aspect('equal')
             self.save()
             plt.clf()
 
         else:
             
             # set up plot
-            plt.title(label[0])
+            if self.title is True:
+                plt.title(label[0])
             plt.xlabel(r'theoretical quantiles $N_{\bar{\mu},\Delta\mu}$')
             plt.ylabel(r'measured quantiles')
             print("QQ-plot for multiple fitranges")
@@ -477,7 +492,7 @@ class LatticePlot(object):
                 plt.legend(loc='lower right')
                 plt.locator_params(axis='x',nbins=4)
                 plt.locator_params(axis='y',nbins=4)
-                plt.axes().set_aspect('equal')
+                #plt.axes().set_aspect('equal')
                 self.save()
             #
             #self.save()
@@ -537,7 +552,8 @@ class LatticePlot(object):
 
         self.save()
 
-    def set_env(self, xlog=False, ylog=False, xlim=None, ylim=None, grid=True):
+    def set_env(self, xlog=False, ylog=False, xlim=None, ylim=None,
+        grid=True,title=False):
         """Set different environment variables for the plot.
         
         Parameters
@@ -554,6 +570,7 @@ class LatticePlot(object):
         self.xlim=xlim
         self.ylim=ylim
         self.grid=grid
+        self.title=title
 
     def cov_plot(self, data, label, cut=False, inverse=False, norm=True,corr=0):
         """ This function is used as a wrapper to plot_covariance
@@ -598,7 +615,12 @@ class LatticePlot(object):
         if inverse is True:
           cov = np.linalg.inv(cov)
         print cov
-        self.set_title(label[0],label[1])
+        if self.title is True:
+            plt.title(label[0])
+        plt.xlabel(label[1])
+        plt.ylabel(label[1])
+        plt.xticks(np.arange(3),(0.0185,0.0225,0.02464))
+        plt.yticks(np.arange(3),(0.0185,0.0225,0.02464))
         self.set_env(xlim=[0,cov.shape[0]],ylim = [0,cov.shape[0]])
         plt.pcolor(cov, cmap=matplotlib.cm.bwr, vmin=np.amin(cov),
             vmax=np.amax(cov))
@@ -692,8 +714,8 @@ class LatticePlot(object):
          y_val[1] = 0
       #print(x_val)
       #print(y_val)
-      l = plt.axhline(y=y_val[0],ls='solid',color=col)
-      l = plt.axvline(x=x_val[0],ls='solid',color=col)
+      #l = plt.axhline(y=y_val[0],ls='solid',color=col)
+      #l = plt.axvline(x=x_val[0],ls='solid',color=col)
       plt.errorbar(x_val[0],y_val[0],y_val[1],x_val[1],fmt =
           #'d',color=col,label=r'%2.4e,%2.4e' % (x_val[0],y_val[0]) )
           'd',color=col,label=label)
@@ -736,7 +758,7 @@ class LatticePlot(object):
         plt.xlabel(label[0])
         plt.ylabel(label[1])
         if len(label) > 2:
-            plt.title(label[2])
+                plt.title(label[2])
         plt.legend(loc='best',ncol=1,fontsize=14)
         if self.join is False:
           self.save()
@@ -765,7 +787,7 @@ class LatticePlot(object):
             print(_dy.shape)
             _mean, _dy = compute_error(_dy,axis=1)
             print(_dy.shape)
-            plot_data(_X,_Y,_dy,label=a,col=col[i],fmt=fmt_pts[i],alpha=0.4)
+            plot_data(_X,_Y,_dy,label=a,col=col[i],fmt=fmt_pts[i])
             # Check if we want to plot a function in addition to the data
             if func is not None:
                 print("Arguments for plotting function")
@@ -781,12 +803,15 @@ class LatticePlot(object):
                   print("Arguments to plotting function")
                   print(plotargs)
                   plot_function(func,xlim,plotargs,label=None,ploterror=True)
-            plt.xlabel(label[0])
-            plt.ylabel(label[1])
+            plt.xlim(xlim[0],xlim[1])
+            plt.locator_params(nbins=4)
+            plt.xlabel(label[0],fontsize=24)
+            plt.ylabel(label[1],fontsize=24)
             self.save()
         plt.xlim(xlim[0],xlim[1])
-        plt.xlabel(label[0])
-        plt.ylabel(label[1])
+        plt.locator_params(nbins=4)
+        plt.xlabel(label[0],fontsize=24)
+        plt.ylabel(label[1],fontsize=24)
         if len(label) > 2:
             plt.title(label[2])
         plt.legend(loc='best',ncol=1,fontsize=14)
@@ -794,6 +819,69 @@ class LatticePlot(object):
           self.save()
           plt.clf()
 
+    def plot_chiral_ext(self,chirana,beta,label,xlim,ylim=None,func=None,
+                        args=None,ploterror=True):
+        """ Function to plot a chiral extrapolation fit.
+        
+        This function sets up a plotter object, puts in the data in the right
+        shape and plots the data itself as well as the function
+        
+        """
+        # Plot the data for the given lattice spacings
+        # Initialize symbols and colors for lattice spacings
+        col = ['r','b','g']
+        fmt_pts = ['^','v','o']
+        fmt_ls = ['--',':','-.']
+        dat_label = [r'$a=0.0885$fm',r'$a=0.0815$fm',r'$a=0.0619$fm']
+
+        for i,a in enumerate(beta):
+            # get data for beta, the data passed should be 3 arrays (X,Y,dy)
+            # the light quark mass values
+            print("argument shape:")
+            print(args[i].shape)
+            _X = chirana.x_data[i][:,:,0,0].flatten()*args[i,0,0]/args[i,0,1]
+            print("x-data:")
+            print(_X)
+            _Y = chirana.y_data[i][:,:,0,0].flatten()
+            _dy = chirana.y_data[i][:,:,0,:].reshape((chirana.y_data[i].shape[0]*chirana.y_data[i].shape[1],chirana.y_data[i].shape[-1]))
+            print("yerror shape is:")
+            print(_dy.shape)
+            _mean, _dy = compute_error(_dy,axis=1)
+            print(_dy.shape)
+            plot_data(_X,_Y,_dy,label=a,col=col[i],fmt=fmt_pts[i])
+            # Check if we want to plot a function in addition to the data
+            if func is not None:
+                print("Arguments for plotting function")
+                print(args[i])
+                plot_function(func,xlim,args[i],label=dat_label[i],
+                              ploterror=ploterror,fmt=col[i]+fmt_ls[i],col=col[i])
+            plt.xlabel(label[0],fontsize=24)
+            plt.ylabel(label[1],fontsize=24)
+            #self.save()
+        # Plot the physical point as well as the continuum function
+        plt.xlim(xlim[0],xlim[1])
+        if ylim is not None:
+          plt.ylim(ylim[0],ylim[1])
+        plt.xlabel(label[0])
+        plt.ylabel(label[1])
+        if len(label) > 2:
+            plt.title(label[2])
+        plt.legend(loc='best',ncol=2,numpoints=1,fontsize=16)
+        #if self.join is False:
+        #  self.save()
+        #  plt.clf()
+
+    def plot_cont(self,chirana,func,phys_x,xlim,args):
+      """ Plot the continuum curve of a chiral analysis and the physical point
+      result
+      """
+      # Plot the continuum curve
+      plot_function(func, xlim, args, 'cont.', fmt='k--', ploterror=True)
+      plt.errorbar(chirana.phys_point[0,0],chirana.phys_point[1,0],
+                   chirana.phys_point[1,1],xerr=chirana.phys_point[0,1],
+                   fmt='d', color='darkorange', label='phys.')
+      plt.legend(loc='best',ncol=2,numpoints=1,fontsize=16)
+    
         
 def plot_single_line(x,y,label,col):
   """plot horizontal and vertical lines at the specific points, labeled with
@@ -824,7 +912,7 @@ def plot_single_line(x,y,label,col):
   #l = plt.axvline(x=x_val[0],ls='dashed',color=col)
   # Public use
   plt.errorbar(x_val[0],y_val[0],y_val[1],x_val[1],fmt =
-      'd',color=col,label=r'fixed data')
+      'd',color=col,label=label)
   # Plot for internal use
   #plt.errorbar(x_val[0],y_val[0],y_val[1],x_val[1],fmt =
   #    'd',color=col,label=r'%2.4e,%2.4e' % (x_val[0],y_val[0]) )

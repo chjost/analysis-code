@@ -26,11 +26,13 @@ def main():
     plotdir = ens.get_data("plotdir")
     #gmax = ens.get_data("gmax")
     #d2 = ens.get_data("d2")
-    strange = ens.get_data("strangeb")
+    strange = ens.get_data("strangea")
     try:
         debug = ens.get_data("debug")
     except KeyError:
         debug = 0
+    # should pion be regarded as well?
+    pi = True
 ################################################################################
 # Read in correlation functions and remove outliers based on 0th timeslice
 ################################################################################
@@ -67,6 +69,26 @@ def main():
         else:
           _tmp_omit = np.logical_and(left_out_four,left_out_two)
           omit_all = np.logical_and(omit_all,_tmp_omit)
+    # Repeat procedure for pion
+    if pi:
+        
+        # for index determination reading real part column is enough
+        files = "%s/pi/pi_charged_p0_outlier.dat" % (datadir)
+        two_pt_corr = ana.Correlators(files, column=(1,), matrix=False,conf_col=3)
+
+        # plot history before omission
+        ts=3
+        plotter = ana.LatticePlot("%s/pi/outlier_corr_hist_ts%d.pdf" % (plotdir,ts))
+        print("Plotting to file %s/pi/outlier_corr_hist_ts%d.pdf" % (plotdir,ts))
+        label=['2pt Configuration History', 'cnfg', r'$C(%d)$' % ts,r'$C_2$']
+        plotter.history(two_pt_corr,label,ts,boot=False)
+        del plotter
+
+        two_pt_cut, left_out_two = two_pt_corr.omit_iqr(ts=ts)
+        # update omission list
+        
+        _tmp_omit = np.logical_and(left_out_four,left_out_two)
+        omit_all = np.logical_and(omit_all,_tmp_omit)
 
     ########################### Clean Up ######################################
     for s in strange:
@@ -96,6 +118,28 @@ def main():
         two_pt_corr.save(filesave,asascii=True)
         filesave = "%s/%s/kk_charged_A1_TP0_00.dat" % (datadir,s) 
         four_pt_corr.save(filesave,asascii=True)
+        del plotter
+
+    if pi:
+        # be sure to omit from both columns, otherwise array shapes are not
+        # equal for saving
+        files = "%s/pi/pi_charged_p0_outlier.dat" % (datadir)
+        two_pt_corr = ana.Correlators(files,column=(1,2), matrix=False,conf_col=3)
+        two_pt_corr.omit_iqr(omit_all)
+        print(two_pt_corr.data.shape)
+        plotter = ana.LatticePlot("%s/pi/clean_corr_hist_ts%d.pdf" % (plotdir,ts)) 
+        label=['2pt Configuration History', 'cnfg', r'$C(%d)$' % ts,r'$C_2$']
+        plotter.history(two_pt_corr,label,ts,boot=False)
+
+        # plot history after omission
+        ts=0
+        label=['2pt Configuration History', 'cnfg', r'$C(%d)$' % ts,r'$C_2$']
+        plotter.history(two_pt_corr,label,ts,boot=False)
+
+        # Save clean correlators (OVERWRITES OLD DATA)
+        print(two_pt_corr.data.shape)
+        filesave = "%s/pi/pi_charged_p0.dat" % (datadir)
+        two_pt_corr.save(filesave,asascii=True)
         del plotter
 
 if __name__ == '__main__':

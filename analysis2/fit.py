@@ -621,6 +621,10 @@ class FitResult(object):
         else:
             res, res_std, res_sys, n_fits = self.error[0]
             singular.data[0][:,0,0] = res[0]
+        print("Original values:")
+        print(self.error)
+        print("Singular values:")
+        print(singular.data[0][0,0,0])
             
         # set weights accordingly
         singular.weight = [[np.array([1.])] for d in range(2)]
@@ -951,7 +955,7 @@ class FitResult(object):
         return dE
 
     def calc_scattering_length(self, mass, parself=0, parmass=0, L=24,
-            isratio=False, isdependend=True):
+            isratio=False, isdependend=True,rf_est=None):
         """Calculate the scattering length.
         This only makes sense for correlation functions with no momentum.
 
@@ -998,7 +1002,7 @@ class FitResult(object):
         print("_energy has shape:")
         print _energy.shape
         for res in calculate_scat_len(_mass, _massweight, _energy, _energyweight,
-                L, isdependend, isratio):
+                L, isdependend, isratio, rf_est):
             scat.add_data(*res)
         return scat
 

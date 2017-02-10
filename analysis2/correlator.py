@@ -115,11 +115,12 @@ class Correlators(object):
         except:
             # set the data directly
             tmp.data = data
-            print("data shape read in:")
-            print(tmp.data[:][1])
+            #print("data shape read in:")
+            #print(tmp.data[:][1])
             tmp.shape = data.shape
-            if data.shape[1] > 2:
-                tmp.shape = data.shape[:-1]
+            # WTF does this stand here?!
+            #if data.shape[1] > 2:
+            #    tmp.shape = data.shape[:-1]
             if data.shape[-2] != data.shape[-1]:
                 tmp.matrix = False
             else:

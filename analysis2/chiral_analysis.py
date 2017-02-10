@@ -110,7 +110,7 @@ class ChirAna(object):
         if len(lyt_x) == 5:
           tp_x = (lyt_x[1][a],lyt_x[2],lyt_x[3],lyt_x[4])
         elif len(lyt_x) == 4:
-          tp_x = (lyt_x[1][a],lyt_x[2],lyt_x[3])
+          tp_x =g (lyt_x[1][a],lyt_x[2],lyt_x[3])
         else:
           tp_x = (lyt_x[1][a],lyt_x[2])
         self.x_data.append(np.zeros(tp_x))
@@ -163,7 +163,7 @@ class ChirAna(object):
       elif len(lyt_x) == 4:
         tp_x = (lyt_x[1][a],lyt_x[2],lyt_x[3])
       else:
-        tp_x = (lyt_x[1][a],lyt_x[2])
+        tp_x = g(lyt_x[1][a],lyt_x[2])
       self.x_data.append(np.zeros(tp_x))
       print("x_data tuple for allocation")
       print(tp_x)
@@ -535,234 +535,6 @@ class ChirAna(object):
       print(_x_plot,_y_plot)
     return _x_plot, _y_plot
 
- ################################################################################ 
- ######################## Code doubling for tests ############################### 
- ################################################################################ 
-  # A test function for fitting only one lattice spacing to easier follow the
-  # flow of data
-
-  def fit_strange_mass_A(self,debug=4):
-      # Define the error function
-      # the fitfunction is defined per lattice spacing
-      fitfunc = lambda r, z, p, x,: p[0]/(r*z) * (x[:,0]+x[:,1]) * (1+p[1]*r/z*x[:,0]+p[2]/r**2)
-
-      #Vector of the residuals
-      errfunc = lambda p, x, y, err: np.multiply(err,np.r_[fitfunc(p[0],p[1],p[2:5],x[0:19])-y[0:19],
-          #TODO: Take the priors from extern
-          (5.31-p[0]), (0.529-p[1])])
-      # Initial guesses for the parameters
-      #p = np.r_[0.,0.,1.]
-      #r = np.r_[5.3,5.75,7.6]
-      #z = np.r_[0.52,0.51,0.515]
-      p = np.r_[1.,1.,1.]
-      r = np.r_[1.]
-      z = np.r_[1.]
-      start=np.r_[r,z,p]
-      # errors on the parameters r0/a and zp
-      parerr=(0.08,0.007)
-      # handle the data
-      # x,y values for beta = 1.9
-      # each array should be (n_ensembles(beta),n_ind,samples)
-      x_shape_new = (self.x_shape[1][0]*self.x_shape[2],self.x_shape[3],self.x_shape[4])
-      y_shape_new = (self.y_shape[1][0]*self.y_shape[2],self.y_shape[4])
-      x0 = self.x_data[0].reshape(x_shape_new)
-      y0 = self.y_data[0].reshape(y_shape_new)
-      print("shape of start")
-      print(start)
-      print("shapes of measurements")
-      #print(x0.shape)
-      #print(x1.shape)
-      #print(x2.shape)
-      x = np.r_[x0]
-      y = np.r_[y0]
-      print(x)
-      print(y.shape)
-      # invoke a chiral fit, yielding a fitresult
-      mk_phys = ChiralFit("ms_phys",errfunc)
-      self.fitres = mk_phys.chiral_fit(x,y,start,parlim=parerr,debug=debug)
-      #check the solution by computing relative deviation from measurement
-      # get arguments
-      args = self.fitres.data[0]
-      checkfunc = fitfunc(args[0,0,0],args[0,1,0],args[0,2:5,0],x[0:19])
-      err = np.divide(1.,np.std(y,axis=1))
-      err = np.append(err,np.divide(1.,parerr))
-      chisq = np.sum(errfunc(args[0,:,0],x[...,0],y[...,0],err)**2)
-      print("calculated values:")
-      print(checkfunc[:,0])
-      print("measured values:")
-      print(y[0:19,0])
-      print("chisquared is: %.2f" %chisq)
-
-  def fit_strange_mass_B(self,debug=4):
-      # Define the error function
-      # the fitfunction is defined per lattice spacing
-      #fitfunc = lambda r, z, p, x,: p[0]/(r*z) * (x[:,0]+x[:,1]) * (1+p[1]*r/z*x[:,0]+p[2]*x[:,2])
-      fitfunc = lambda r, z, p, x: p[0]/(r*z) * (x[:,0]+x[:,1]) * (1+p[1]*r/z*x[:,0]+p[2]/r**2)
-
-      #Vector of the residuals
-      errfunc = lambda p, x, y, err: np.multiply(err,np.r_[fitfunc(p[0],p[1],p[2:5],x[0:10])-y[0:10],
-          #TODO: Take the priors from extern
-          (5.77-p[0]), (0.509-p[1])])
-      # Initial guesses for the parameters 
-      #p = np.r_[0.,0.,1.]
-      #r = np.r_[5.3,5.75,7.6]
-      #z = np.r_[0.52,0.51,0.515]
-      p = np.r_[1.,1.,1.]
-      r = np.r_[1.]
-      z = np.r_[1.]
-      start=np.r_[r,z,p]
-      # errors on the parameters r0/a and zp
-      parerr=(0.06,0.004)
-      # handle the data
-      # x,y values for beta = 1.95
-      # each array should be (n_ensembles(beta),n_ind,samples)
-      x_shape_new = (self.x_shape[1][0]*self.x_shape[2],self.x_shape[3],self.x_shape[4])
-      y_shape_new = (self.y_shape[1][0]*self.y_shape[2],self.y_shape[4])
-      x0 = self.x_data[0].reshape(x_shape_new)
-      y0 = self.y_data[0].reshape(y_shape_new)
-      print("shape of start")
-      print(start)
-      print("shapes of measurements")
-      #print(x0.shape)
-      #print(x1.shape)
-      #print(x2.shape)
-      x = np.r_[x0]
-      y = np.r_[y0]
-      print(x)
-      print(y.shape)
-      # invoke a chiral fit, yielding a fitresult
-      mk_phys = ChiralFit("ms_phys",errfunc)
-      self.fitres = mk_phys.chiral_fit(x,y,start,parlim=parerr,debug=debug)
-      #check the solution by computing relative deviation from measurement
-      # get arguments
-      args = self.fitres.data[0]
-      checkfunc = fitfunc(args[0,0,0],args[0,1,0],args[0,2:5,0],x[0:10])
-      err = np.divide(1.,np.std(y,axis=1))
-      err = np.append(err,np.divide(1.,parerr))
-      chisq = np.sum(errfunc(args[0,:,0],x[...,0],y[...,0],err)**2)
-      print("calculated values:")
-      print(checkfunc[:,0])
-      print("measured values:")
-      print(y[0:10,0])
-      print("chisquared is: %.2f" %chisq)
-  
-  
-  def fit_strange_mass_D(self,debug=4):
-      # Define the error function
-      # the fitfunction is defined per lattice spacing
-      fitfunc = lambda r, z, p, x: p[0]/(r*z) * (x[:,0]+x[:,1]) * (1+p[1]*r/z*x[:,0]+p[2]/r**2)
-      #Vector of the residuals
-      errfunc = lambda p,x,y,err: np.multiply(err,np.r_[fitfunc(p[0],p[1],p[2:5],x[0:7])-y[0:7],
-        #TODO: Take the priors from extern
-        (7.6-p[0]), (0.516-p[1])])
-      # Initial guesses for the parameters
-      p = np.r_[6.,0.1,1.]
-      r = np.r_[1.]
-      z = np.r_[1.]
-      start=np.r_[r,z,p]
-      # errors on the parameters r0/a and zp
-      parerr=(0.08,0.002)
-      # handle the data
-      # x,y values for beta = 2.1
-      # each array should be (n_ensembles(beta),n_ind,samples)
-      x_shape_new = (self.x_shape[1][0]*self.x_shape[2],self.x_shape[3],self.x_shape[4])
-      y_shape_new = (self.y_shape[1][0]*self.y_shape[2],self.y_shape[4])
-      x0 = self.x_data[0].reshape(x_shape_new)
-      y0 = self.y_data[0].reshape(y_shape_new)
-      print("start")
-      print(start)
-      x = np.r_[x0]
-      y = np.r_[y0]
-      print("measurement shapes for errorfunction")
-      print(x.shape)
-      print(y.shape)
-      # invoke a chiral fit, yielding a fitresult
-      mk_phys = ChiralFit("ms_phys",errfunc)
-      self.fitres = mk_phys.chiral_fit(x,y,start,parlim=parerr,debug=debug)
-      #check the solution by computing relative deviation from measurement
-      # get arguments
-      args = self.fitres.data[0]
-      print(args[0])
-      checkfunc = np.zeros((1500,6))
-      for b in range(1500):
-        checkfunc[b] = fitfunc(args[b,0,0],args[b,1,0],args[b,2:5,0],x[0:7,:,b])
-      # Error on calculated values
-      func_mean,func_err=compute_error(checkfunc)
-      err = np.divide(1.,np.std(y,axis=1))
-      err = np.append(err,np.divide(1.,parerr))
-      chisq = np.sum(errfunc(args[0,:,0],x[...,0],y[...,0],err)**2)
-      print("calculated values:")
-      print(checkfunc[0])
-      print("error on them:")
-      print(func_err)
-      print("measured values:")
-      print(y[0:7,0])
-      print("relative deviation from measurement (%%): %r" 
-          %(np.abs(checkfunc[0]-y[:,0])*100./y[:,0]))
-      print("chisquared is: %.2f" %chisq)
-
-  def fit_strange_mass_AB(self,debug=4):
-      # Define the error function
-      # the fitfunction is defined per lattice spacing
-      #fitfunc = lambda r, z, p, x,: p[0]/(r*z) * (x[:,0]+x[:,1]) * (1+p[1]*r/z*x[:,0]+p[2]*x[:,2])
-      fitfunc = lambda r, z, p, x,: p[0]/(r*z) * (x[:,0]+x[:,1]) * (1+p[1]*(r/z)*x[:,0]+p[2]/(r**2))
-
-      #errfunc = lambda p, x, y, cov: np.dot(cov,np.r_[fitfunc(p[0],p[3],p[6:9],x[0:19])-y[0:19],
-      #    fitfunc(p[1],p[4],p[6:9],x[19:28])-y[19:28],
-      #    fitfunc(p[2],p[5],p[6:9],x[28:34])-y[28:34],
-      #    #TODO: Take the priors from extern
-      #    (5.31-p[0])/(0.08),(5.77-p[1])/(0.06), (7.60-p[2])/(0.06),
-      #    (0.529-p[3])/(0.007),(0.509-p[4])/(0.004),(0.516-p[5])/(0.002)].T)
-      #Vector of the residuals
-      errfunc = lambda p, x, y, err: np.multiply(err,np.r_[fitfunc(p[0],p[2],p[4:7],x[0:19])-y[0:19],
-          fitfunc(p[1],p[3],p[4:7],x[19:28])-y[19:28],
-          #TODO: Take the priors from extern
-          (5.31-p[0]),(5.77-p[1]), 
-          (0.529-p[2]),(0.509-p[3])].T)
-      # Initial guesses for the parameters
-      #p = np.r_[0.,0.,1.]
-      #r = np.r_[5.3,5.75,7.6]
-      #z = np.r_[0.52,0.51,0.515]
-      p = np.r_[1.,1.,1.]
-      r = np.r_[5.3,5.7]
-      z = np.r_[0.53,0.5]
-      start=np.r_[r,z,p]
-      # errors on fit parameters
-      parerr = [0.08,0.06,0.007,0.004]
-      # handle the data
-      # x,y values for beta = 1.9
-      # each array should be (n_ensembles(beta),n_ind,samples)
-      x_shape_new = (self.x_shape[1][0]*self.x_shape[2],self.x_shape[3],self.x_shape[4])
-      y_shape_new = (self.y_shape[1][0]*self.y_shape[2],self.y_shape[4])
-      x0 = self.x_data[0].reshape(x_shape_new)
-      y0 = self.y_data[0].reshape(y_shape_new)
-      # x,y values for beta = 1.95
-      x_shape_new = (self.x_shape[1][1]*self.x_shape[2],self.x_shape[3],self.x_shape[4])
-      y_shape_new = (self.y_shape[1][1]*self.y_shape[2],self.y_shape[4])
-      x1 = self.x_data[1].reshape(x_shape_new)
-      y1 = self.y_data[1].reshape(y_shape_new)
-      print("shape of start")
-      print(start)
-      print("shapes of measurements")
-      #print(x0.shape)
-      #print(x1.shape)
-      #print(x2.shape)
-      x = np.r_[x0,x1]
-      y = np.r_[y0,y1]
-      print(x)
-      print(y.shape)
-      # invoke a chiral fit, yielding a fitresult
-      mk_phys = ChiralFit("ms_phys",errfunc)
-      self.fitres = mk_phys.chiral_fit(x,y,start,parlim=parerr,debug=debug)
-      #print("Fit Result has shape %r: " %self.fitres.data[0].shape)
-      #check the solution by computing relative deviation from measurement
-      checkfunc = np.r_[(fitfunc(start[0],start[2],start[4:7],x[0:19])-y[0:19])/y[0:19],
-          (fitfunc(start[1],start[3],start[4:7],x[19:28])-y[19:28])/y[19:28]]
-      print(checkfunc[:,0])
- ################################################################################ 
- ################################################################################ 
- ################################################################################
-
   def global_ms_func(self,r,z,p,x):
       return p[0]/(r*z) * (x[:,0]+x[:,1]) * (1+p[1]*(r/z)*x[:,0]+p[2]/(r**2))
 
@@ -771,20 +543,24 @@ class ChirAna(object):
       # define the fitfunction for a single beta
       _func = lambda r, z, p, x,: p[0]/(r*z) * (x[:,0]+x[:,1]) * (1+p[1]*(r/z)*x[:,0]+p[2]/(r**2))
 
+      # TODO: Automate the array shapes, otherwise very errorprone
+      # With A40.24
       # Get the residuals of all beta values
-      _res_a = _func(p[0],p[3],p[6:9],x[0:18])-y[0:18]
-      _res_b = _func(p[1],p[4],p[6:9],x[18:27])-y[18:27]
-      _res_d = _func(p[2],p[5],p[6:9],x[27:33])-y[27:33]
-      # residuals of r0 and zp are stored separately at the moment
-      _res_r0 = np.r_[(y[33]-p[0]),(y[34]-p[1]), (y[35]-p[2])]
-      _res_zp = np.r_[(y[36]-p[3]),(y[37]-p[4]),(y[38]-p[5])]
-      ## Get the residuals of all beta values
-      #_res_a = _func(p[0],p[3],p[6:9],x[0:15])-y[0:15]
-      #_res_b = _func(p[1],p[4],p[6:9],x[15:24])-y[15:24]
-      #_res_d = _func(p[2],p[5],p[6:9],x[24:30])-y[24:30]
+      #_res_a = _func(p[0],p[3],p[6:9],x[0:18])-y[0:18]
+      #_res_b = _func(p[1],p[4],p[6:9],x[18:27])-y[18:27]
+      #_res_d = _func(p[2],p[5],p[6:9],x[27:33])-y[27:33]
       ## residuals of r0 and zp are stored separately at the moment
-      #_res_r0 = np.r_[(y[30]-p[0]),(y[31]-p[1]), (y[32]-p[2])]
-      #_res_zp = np.r_[(y[33]-p[3]),(y[34]-p[4]),(y[35]-p[5])]
+      #_res_r0 = np.r_[(y[33]-p[0]),(y[34]-p[1]), (y[35]-p[2])]
+      #_res_zp = np.r_[(y[36]-p[3]),(y[37]-p[4]),(y[38]-p[5])]
+      # Get the residuals of all beta values
+      # Without A40.24
+      # TODO: Automate the array shapes, otherwise very errorprone
+      _res_a = _func(p[0],p[3],p[6:9],x[0:15])-y[0:15]
+      _res_b = _func(p[1],p[4],p[6:9],x[15:24])-y[15:24]
+      _res_d = _func(p[2],p[5],p[6:9],x[24:30])-y[24:30]
+      # residuals of r0 and zp are stored separately at the moment
+      _res_r0 = np.r_[(y[30]-p[0]),(y[31]-p[1]), (y[32]-p[2])]
+      _res_zp = np.r_[(y[33]-p[3]),(y[34]-p[4]),(y[35]-p[5])]
       # collect residuals as one array
       _residuals = np.r_[_res_a,_res_b,_res_d,_res_r0,_res_zp ]
 
@@ -792,7 +568,7 @@ class ChirAna(object):
       _chi = np.dot(cov,_residuals)
       return _chi
 
-  def fit_strange_mass(self,debug=4):
+  def fit_strange_mass(self, datadir='./', debug=4):
       r = np.r_[1.,1.,1.]
       z = np.r_[1.,1.,1.]
       p = np.r_[6.,0.1,1.]
@@ -810,9 +586,6 @@ class ChirAna(object):
       print("shape zp-sample:")
       print(pr_zp.shape)
       #start = np.r_[p]
-      # Constraints on known fit parameters first half of entries for r0, second
-      # for zp
-      parerror = (0.08,0.06,0.08,0.007,0.004,0.002)
       # handle the data
       # x,y values for beta = 1.9
       # each array should be (n_ensembles(beta),n_ind,samples)
@@ -844,7 +617,7 @@ class ChirAna(object):
         #print("\nCovariance submatrix %d" %i)
         #print(_tmp)
         cov[3*i:3*i+3,3*i:3*i+3]=_tmp
-      for k in range(33,39):
+      for k in range(30,36):
         cov[k,k] = np.cov(y[k])
       for l in range(cov.shape[0]):
         for m in range(cov.shape[0]):
@@ -855,156 +628,241 @@ class ChirAna(object):
       del corr_heat
       # invoke a chiral fit, yielding a fitresult
       mk_phys = ChiralFit("ms_phys",self.global_ms_errfunc)
-      self.fitres = mk_phys.chiral_fit(x,y,start,parlim=None,correlated=False,debug=debug)
+      self.fitres = mk_phys.chiral_fit(x,y,start,parlim=None,correlated=True,cov=cov,debug=debug)
+      # Save the fitresult data
+      self.fitres.save(datadir+self.proc_id+'.npz')
       #check the solution by computing relative deviation from measurement
       # get arguments
       args = self.fitres.data[0]
       print(args[0])
-      checkfunc = np.r_[self.global_ms_func(args[0,0,0],args[0,3,0],args[0,6:10,0],x[0:19]),
-                        self.global_ms_func(args[0,1,0],args[0,4,0],args[0,6:10,0],x[19:28]),
-                        self.global_ms_func(args[0,2,0],args[0,5,0],args[0,6:10,0],x[28:34])]
-      err = np.divide(1.,np.std(y,axis=1))
-      #err = np.append(err,np.divide(1.,parerror))
-      chisq = np.sum(self.global_ms_errfunc(args[0,:,0],x[...,0],y[...,0],err)**2)
-      print("calculated values:")
-      print(checkfunc[:,0])
-      print("measured values:")
-      print(y[:,0])
-      print("chisquared is: %.2f" %chisq)
+      #checkfunc = np.r_[self.global_ms_func(args[0,0,0],args[0,3,0],args[0,6:10,0],x[0:19]),
+      #                  self.global_ms_func(args[0,1,0],args[0,4,0],args[0,6:10,0],x[19:28]),
+      #                  self.global_ms_func(args[0,2,0],args[0,5,0],args[0,6:10,0],x[28:34])]
+      #err = np.divide(1.,np.std(y,axis=1))
+      #chisq = np.sum(self.global_ms_errfunc(args[0,:,0],x[...,0],y[...,0],err)**2)
+      #print("calculated values:")
+      #print(checkfunc[:,0])
+      #print("measured values:")
+      #print(y[:,0])
+      #print("chisquared is: %.2f" %chisq)
 
-  def mka0_func(self,p,x):
-      return p[0]*x[:,0]+p[1]*x[:,1]+p[2]
+  def mka0_func(self,r,z,p,x):
+
+      # define the fitfunction for a single beta
+      #_func = lambda r, z, p, x,: p[0]*r*x[:,0]/z + p[1]/r**2 + p[2]
+      return p[0]*r*x[:,0]/z + p[3]*(r*x[:,0]/z)**2 + p[1]/r**2 + p[2] 
 
   def mka0_errfunc(self,p,x,y,cov):
-      print(y-self.mka0_func(p,x))
-      return np.dot(cov,y-self.mka0_func(p,x))
-      
-  def fit_mka0(self,debug=4):
-      """ Fit the mka0 data """
-      # Get data for fit (several fit dimensions for x, only one for y)
-      x, y, mu_data = self.reduction(x_shape_new = (self.x_shape[3],self.x_shape[4]),
-                                    y_shape_new = (self.y_shape[4],))
-      # Control shape of x and y
-      # build the covariance matrix
-      corr_heat = plot.LatticePlot('/hiskp2/helmes/analysis/scattering/analysis_vault/k_charged_wo_outliers/plots/mka0_fit_corr_matrix.pdf',join=False)
-      #corr_heat.plot_heatmap(corr,label=['correlation from modified covariance','yy'])
-      corr_heat.plot_correlation(y,label=['correlation from data','yy'])
-      del corr_heat
 
-      # invoke a chiral fit, yielding a fitresult
-      start=[1.,1.,1.]
-      mk_phys = ChiralFit("mka0_ms_phys",self.mka0_errfunc)
-      cov = np.cov(y)
-      self.fitres = mk_phys.chiral_fit(x,y,start,parlim=None,correlated=True,cov=cov,debug=debug)
-      #check the solution by computing relative deviation from measurement
-      # get arguments
-      args = self.fitres.data[0]
+      # define the fitfunction for a single beta
+      _func = lambda r, z, p, x,: p[0]*r*x[:,0]/z + p[1]/r**2 + p[2]
+      #_func = lambda r, z, p, x,: p[0]*r*x[:,0]/z*(1 + p[3]*(r*x[:,0]/z)) + p[1]/r**2 + p[2]
+      # residuals for
+      # With A40.24
+      # Try out an additional term mu_ell^2
+      # TODO: Automate the array shapes, otherwise very errorprone
+      #_res_a = _func(p[0],p[3],p[6:10],x[0:6])-y[0:6]
+      #_res_b = _func(p[1],p[4],p[6:10],x[6:9])-y[6:9]
+      #_res_d = _func(p[2],p[5],p[6:10],x[9:11])-y[9:11]
+      ## TODO: Automate the array shapes, otherwise very errorprone
+      #_res_a = _func(p[0],p[3],p[6:9],x[0:6])-y[0:6]
+      #_res_b = _func(p[1],p[4],p[6:9],x[6:9])-y[6:9]
+      #_res_d = _func(p[2],p[5],p[6:9],x[9:11])-y[9:11]
+      # residuals of r0 and zp are stored separately at the moment
+      #_res_r0 = np.r_[(y[11]-p[0]),(y[12]-p[1]),(y[13]-p[2])]
+      #_res_zp = np.r_[(y[14]-p[3]),(y[15]-p[4]),(y[16]-p[5])]
+      # Without A40.24
+      # TODO: Automate the array shapes, otherwise very errorprone
+      _res_a = _func(p[0],p[3],p[6:9],x[0:5])-y[0:5]
+      _res_b = _func(p[1],p[4],p[6:9],x[5:8])-y[5:8]
+      _res_d = _func(p[2],p[5],p[6:9],x[8:10])-y[8:10]
+      # residuals of r0 and zp are stored separately at the moment
+      _res_r0 = np.r_[(y[10]-p[0]),(y[11]-p[1]),(y[12]-p[2])]
+      _res_zp = np.r_[(y[13]-p[3]),(y[14]-p[4]),(y[15]-p[5])]
+      # collect residuals as one array
+      _residuals = np.r_[_res_a,_res_b,_res_d,_res_r0,_res_zp ]
 
-  def fit(self,index=0, start=[1.,],dim=None, x_phys=None,xcut=False,
-          plot=True,ploterr=True,label=None,datadir=None,read=False,
-          ens=None,debug=0,loc=None,xlim=None,ylim=None):
-    """fit a chiral analysis instance to a given fitfunction
+      # calculate the chi values weighted with inverse covariance matrix
+      _chi = np.dot(cov,_residuals)
+      return _chi
 
-    This function uses the data of the ChirAna instance to fit the data to the
-    fitfunction specified in ChirAna. Different degrees of freedom are appliccable, an optional plot
-    can be made 
+  def fit_mka0(self,pr_1,pr_2,dat=None,debug=4):
+    """ Global fit of evaluated data of M_K a_0 adapting Parameters for r_0/a
+    and Z_P for each lattice spacing
 
     Parameters
     ----------
-
-    dim : string, which dof to fix (a,mu_l,mu_s,nsamp)
-    index : int, index to fix dim
-    x_phys : x-value for physical point
-    xcut: float, optional cut on x-axis
-    plot: bool, should the fitresults be plotted?
-    label: tuple, x-,y-label for plot
-    datadir : string, directory for saving data
-    read : bool, read in previous fits
+    pr1,2: arrays of prior values getting added to the y-values 
     """
+    # The data for the fit should be just two arrays containing the
+    # bootstrapsamples
+    r = np.r_[1.,1.,1.]
+    z = np.r_[1.,1.,1.]
+    # Fit an additional quadratic dependency
+    #p = np.r_[1.,1.,1.,1.]
+    p = np.r_[1.,1.,1.]
+    start=np.r_[r,z,p]
+    # handle the data
+    # x,y values for beta = 1.9
+    # each array should be (n_ensembles(beta),n_ind,samples)
+    x_shape_new = (self.x_shape[1][0]*self.x_shape[2],self.x_shape[3],self.x_shape[4])
+    y_shape_new = (self.y_shape[1][0]*self.y_shape[2],self.y_shape[4])
+    x0 = self.x_data[0].reshape(x_shape_new)
+    y0 = self.y_data[0].reshape(y_shape_new)
+    # x,y values for beta = 1.95
+    x_shape_new = (self.x_shape[1][1]*self.x_shape[2],self.x_shape[3],self.x_shape[4])
+    y_shape_new = (self.y_shape[1][1]*self.y_shape[2],self.y_shape[4])
+    x1 = self.x_data[1].reshape(x_shape_new)
+    y1 = self.y_data[1].reshape(y_shape_new)
+    # x,y values for beta = 2.1
+    x_shape_new = (self.x_shape[1][2]*self.x_shape[2],self.x_shape[3],self.x_shape[4])
+    y_shape_new = (self.y_shape[1][2]*self.y_shape[2],self.y_shape[4])
+    x2 = self.x_data[2].reshape(x_shape_new)
+    y2 = self.y_data[2].reshape(y_shape_new)
+    x = np.r_[x0,x1,x2]
+    # Add the priors to the y-values
+    y = np.r_[y0,y1,y2,pr_1,pr_2]
+    if debug > 3:
+      print("shape of x-data (n_ens,n_ind,n_boot):")
+      print(x0.shape,x1.shape,x2.shape)
+      print(x0[...,0],x1[...,0],x2[...,0])
+      print("shape of y-data (n_ens,n_ind,n_boot):")
+      print(y0.shape,y1.shape,y2.shape)
+      print(y0[...,0],y1[...,0],y2[...,0])
+    # Fit the data
+    # invoke a chiral fit, yielding a fitresult
+    mk_phys = ChiralFit("ms_phys",self.mka0_errfunc)
+    cov=np.cov(y)
+    self.fitres = mk_phys.chiral_fit(x,y,start,parlim=None,correlated=False,cov=None,debug=debug)
+    # Save the fitresult data
+    if dat is not None:
+      self.fitres.save(dat+self.proc_id+'.npz')
+    # Calculate check of the data for original data
+    args = self.fitres.data[0]
 
-    # Choose the fit data the dimensions of the data are: (a,mu_l,mu_s,nboot)
-    # with lattice spacing a, light and strange quark masses mu_l and mu_s and
-    # bootstrapsaFalses
-    if dim is None:
-      # Get data for fit (several fit dimensions for x, only one for y)
-      x_data, y_data, mu_data = self.reduction(x_shape_new = (self.x_shape[3],self.x_shape[4]),
-                                    y_shape_new = (self.y_shape[4],))
-
-      if read:
-        if xcut:
-          self.fitres = FitResult.read(datadir+self.proc_id+'_xcut_%d.npz'%xcut)
-        else:
-          self.fitres = FitResult.read(datadir+self.proc_id+'.npz')
-      else:
-        if self.combined is True:
-          self.fitres = chut.chiral_fit(x_data,y_data,self.cont_ext,corrid=self.proc_id,
-                                    start=start,xcut=xcut,correlated=self.correlated,
-                                    mute=chut.mutilate_cov,debug=debug)
-        else:
-          self.fitres = chut.chiral_fit(x_data,y_data,self.cont_ext,corrid=self.proc_id,
-                                    start=start,xcut=xcut,correlated=self.correlated,
-                                    debug=debug)
-
-      if xcut:
-        self.fitres.save(datadir+self.proc_id+'_xcut_%d.npz'%xcut)
-      else:
-        self.fitres.save(datadir+self.proc_id+'.npz')
-      args = self.fitres.data[0]
+  def mka0_phys(self,func,x_phys,path=None):
       # save samples of physical point result as fitresult along with p-values
-      self.phys_point_fitres = self.fitres.calc_mk_a0_phys(x_phys,self.cont_func)
+      self.phys_point_fitres = self.fitres.calc_mk_a0_phys(x_phys,func)
       print ("physical point from fitresult")
       #print(self.phys_point_fitres.data[0],self.phys_point_fitres.pval[0])
       self.phys_point_fitres.calc_error()
       self.phys_point_fitres.print_data()
-      self.phys_point_fitres.save(datadir+self.proc_id+'phys_pt.npz')
-
       self.phys_point = np.zeros((2,2))
       self.phys_point[0] = np.asarray(compute_error(x_phys))
       r,rstd,rsys,nfits = self.phys_point_fitres.error[0] 
       self.phys_point[1] = np.asarray((r[0][0],rstd[0])) 
       print("Calculated physical point to be:")
       print(self.phys_point)
-    # if a dimension is given set up a list of fitresults
-    else:
-      self.fitres = []
-      if dim == 'a':
-        #for a in range(self.x_shape[0]):
-        # At the moment D has only one Ensemble
-        for a in range(2):
-          _x_lat = self.get_data_fit('a',a,'x')
-          _y_lat = self.get_data_fit('a',a,'y')
-          x_data = _x_lat.reshape(_x_lat.shape[0]*_x_lat.shape[1],_x_lat.shape[2],_x_lat.shape[3])
-          # Usually y data is 1d in 3rd dimension
-          y_data = _y_lat.reshape(_y_lat.shape[0]*_y_lat.shape[1]*_y_lat.shape[2],_y_lat.shape[3])
-          self.fitres.append(chut.chiral_fit(x_data,y_data,self.cont_ext,corrid=self.proc_id+'_lat_spc_%d'%a,
-                                    start=start,xcut=xcut,debug=debug))
-        self.phys_point = np.zeros((len(self.fitres),2,2))
-        for a in range(2):
-          args = self.fitres[a].data[0]
-          self.phys_point[a,0] = x_phys[0:2]
-          self.phys_point[a,1] = chut.err_phys_pt(args,x_phys,self.cont_ext)
-          print("Calculated physical point to be:")
-          print(self.phys_point)
-    if plot is True:
-      label=label
-      print(x_data.shape)
-      print(y_data.shape)
-      #if self.glob is True:
-      #  self.plot_plain(x_data,y_data,self.cont_ext,xcut=xcut,ens=ens)
-      #  self.plot_glob_func(x_data,y_data,self.cont_ext,xcut=xcut,ens=ens)
-      #else:
-      if self.combined:
-        #self.plot(x_data,y_data,label,xcut=xcut,ens=ens,plotfunc=self.plot_cont_ext,
-        self.plot(label,xcut=xcut,ens=ens,plotfunc=self.plot_cont_ext,
-                    savedir=datadir,loc=loc,xlim=xlim,ylim=ylim,ploterr=ploterr)
-        #label[2]=(r'Continuum extrapolation B')
-        #self.plot(x_data,y_data,label,xcut=xcut,ens=ens,plotfunc=self.plot_cont_ext,
-        self.plot(label,xcut=xcut,ens=ens,plotfunc=self.plot_cont_ext,
-                  savedir=datadir,loc=loc,dim=1,suffix='2',xlim=xlim,ylim=ylim,ploterr=ploterr)
-      else:
-          #self.plot(x_data,y_data,label,xcut=xcut,ens=ens,plotfunc=self.plot_cont_ext,
-          self.plot(label,xcut=xcut,ens=ens,plotfunc=self.plot_cont_ext,
-                    savedir=datadir,loc=loc,xlim=xlim,ylim=ylim,ploterr=ploterr)
+      if path is not None:
+        self.phys_point_fitres.save(path+self.proc_id+'phys_pt.npz')
+
+
+#  def fit(self,index=0, start=[1.,],dim=None, x_phys=None,xcut=False,
+#          plot=True,ploterr=True,label=None,datadir=None,read=False,
+#          ens=None,debug=0,loc=None,xlim=None,ylim=None):
+#    """fit a chiral analysis instance to a given fitfunction
+#
+#    This function uses the data of the ChirAna instance to fit the data to the
+#    fitfunction specified in ChirAna. Different degrees of freedom are appliccable, an optional plot
+#    can be made 
+#
+#    Parameters
+#    ----------
+#
+#    dim : string, which dof to fix (a,mu_l,mu_s,nsamp)
+#    index : int, index to fix dim
+#    x_phys : x-value for physical point
+#    xcut: float, optional cut on x-axis
+#    plot: bool, should the fitresults be plotted?
+#    label: tuple, x-,y-label for plot
+#    datadir : string, directory for saving data
+#    read : bool, read in previous fits
+#    """
+#
+#    # Choose the fit data the dimensions of the data are: (a,mu_l,mu_s,nboot)
+#    # with lattice spacing a, light and strange quark masses mu_l and mu_s and
+#    # bootstrapsaFalses
+#    if dim is None:
+#      # Get data for fit (several fit dimensions for x, only one for y)
+#      x_data, y_data, mu_data = self.reduction(x_shape_new = (self.x_shape[3],self.x_shape[4]),
+#                                    y_shape_new = (self.y_shape[4],))
+#
+#      if read:
+#        if xcut:
+#          self.fitres = FitResult.read(datadir+self.proc_id+'_xcut_%d.npz'%xcut)
+#        else:
+#          self.fitres = FitResult.read(datadir+self.proc_id+'.npz')
+#      else:
+#        if self.combined is True:
+#          self.fitres = chut.chiral_fit(x_data,y_data,self.cont_ext,corrid=self.proc_id,
+#                                    start=start,xcut=xcut,correlated=self.correlated,
+#                                    mute=chut.mutilate_cov,debug=debug)
+#        else:
+#          self.fitres = chut.chiral_fit(x_data,y_data,self.cont_ext,corrid=self.proc_id,
+#                                    start=start,xcut=xcut,correlated=self.correlated,
+#                                    debug=debug)
+#
+#      if xcut:
+#        self.fitres.save(datadir+self.proc_id+'_xcut_%d.npz'%xcut)
+#      else:
+#        self.fitres.save(datadir+self.proc_id+'.npz')
+#      args = self.fitres.data[0]
+#      # save samples of physical point result as fitresult along with p-values
+#      self.phys_point_fitres = self.fitres.calc_mk_a0_phys(x_phys,self.cont_func)
+#      print ("physical point from fitresult")
+#      #print(self.phys_point_fitres.data[0],self.phys_point_fitres.pval[0])
+#      self.phys_point_fitres.calc_error()
+#      self.phys_point_fitres.print_data()
+#      self.phys_point_fitres.save(datadir+self.proc_id+'phys_pt.npz')
+#
+#      self.phys_point = np.zeros((2,2))
+#      self.phys_point[0] = np.asarray(compute_error(x_phys))
+#      r,rstd,rsys,nfits = self.phys_point_fitres.error[0] 
+#      self.phys_point[1] = np.asarray((r[0][0],rstd[0])) 
+#      print("Calculated physical point to be:")
+#      print(self.phys_point)
+#    # if a dimension is given set up a list of fitresults
+#    else:
+#      self.fitres = []
+#      if dim == 'a':
+#        #for a in range(self.x_shape[0]):
+#        # At the moment D has only one Ensemble
+#        for a in range(2):
+#          _x_lat = self.get_data_fit('a',a,'x')
+#          _y_lat = self.get_data_fit('a',a,'y')
+#          x_data = _x_lat.reshape(_x_lat.shape[0]*_x_lat.shape[1],_x_lat.shape[2],_x_lat.shape[3])
+#          # Usually y data is 1d in 3rd dimension
+#          y_data = _y_lat.reshape(_y_lat.shape[0]*_y_lat.shape[1]*_y_lat.shape[2],_y_lat.shape[3])
+#          self.fitres.append(chut.chiral_fit(x_data,y_data,self.cont_ext,correlated
+#            = self.correlated,corrid=self.proc_id+'_lat_spc_%d'%a,
+#                                    start=start,xcut=xcut,debug=debug))
+#        self.phys_point = np.zeros((len(self.fitres),2,2))
+#        for a in range(2):
+#          args = self.fitres[a].data[0]
+#          self.phys_point[a,0] = x_phys[0:2]
+#          self.phys_point[a,1] = chut.err_phys_pt(args,x_phys,self.cont_ext)
+#          print("Calculated physical point to be:")
+#          print(self.phys_point)
+#    if plot is True:
+#      label=label
+#      print(x_data.shape)
+#      print(y_data.shape)
+#      #if self.glob is True:
+#      #  self.plot_plain(x_data,y_data,self.cont_ext,xcut=xcut,ens=ens)
+#      #  self.plot_glob_func(x_data,y_data,self.cont_ext,xcut=xcut,ens=ens)
+#      #else:
+#      if self.combined:
+#        #self.plot(x_data,y_data,label,xcut=xcut,ens=ens,plotfunc=self.plot_cont_ext,
+#        self.plot(label,xcut=xcut,ens=ens,plotfunc=self.plot_cont_ext,
+#                    savedir=datadir,loc=loc,xlim=xlim,ylim=ylim,ploterr=ploterr)
+#        #label[2]=(r'Continuum extrapolation B')
+#        #self.plot(x_data,y_data,label,xcut=xcut,ens=ens,plotfunc=self.plot_cont_ext,
+#        self.plot(label,xcut=xcut,ens=ens,plotfunc=self.plot_cont_ext,
+#                  savedir=datadir,loc=loc,dim=1,suffix='2',xlim=xlim,ylim=ylim,ploterr=ploterr)
+#      else:
+#          #self.plot(x_data,y_data,label,xcut=xcut,ens=ens,plotfunc=self.plot_cont_ext,
+#          self.plot(label,xcut=xcut,ens=ens,plotfunc=self.plot_cont_ext,
+#                    savedir=datadir,loc=loc,xlim=xlim,ylim=ylim,ploterr=ploterr)
 
   def print_summary(self,dim,index,lat_space,ens_dict,
                     mu_s_dict=None,xcut=2,head=None):
@@ -1585,3 +1443,9 @@ class ChirAna(object):
       #compute_bare_mu_s
     else:
       print("Prevented data override, nothing happened.")
+
+################################################################################
+################# Scratch region for trying out functions ######################
+################################################################################
+
+

@@ -76,6 +76,7 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
     # check dimensions of args, if more than one,
     # iterate over first dimension
     _args = np.asarray(args)
+    print("the arguments have shape:")
     print(_args.shape)
     if add is not None:
         _add = np.asarray(add)
@@ -85,22 +86,25 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
         y1, ymin, ymax = [], [], []
         # check for dimensions of add
         if add is not None:
-            ## need to check size of first axis
-            #args0 = _args.shape[0]
-            #add0 = _add.shape[0]
-            #if args0 % add0 == 0:
-            #    # size of add is a divisor of size of args
-            #    _add = itertools.repeat(_add, args0/add0)
-            #elif add0 %  args0 == 0:
-            #    # size of args is a divisor of size of add
-            #    _args = itertools.repeat(_args, add0/args0)
-            #else:
-            #    raise RuntimeError("args and add are both given, but size does not match.")
-            # iterate over the x range
+            # need to check size of first axis
+            args0 = _args.shape[0]
+            add0 = _add.shape[0]
+            if args0 % add0 == 0:
+                # size of add is a divisor of size of args
+                #_add = itertools.repeat(_add, args0/add0)
+                _add = np.tile(_add, args0/add0)
+            elif add0 %  args0 == 0:
+                # size of args is a divisor of size of add
+                #_args = itertools.repeat(_args, add0/args0)
+                _args = np.tile(_args, add0/args0)
+            else:
+                raise RuntimeError("args and add are both given, but size does not match.")
+             #iterate over the x range
             #for x in x1x_plot:
             for x in x1:
                 # the actual value is given by the first sample
-                y1.append(func(np.atleast_2d(_args[0]), x, _add[0]))
+                #y1.append(func(np.atleast_2d(_args[0]), x, _add[0]))
+                y1.append(func(_args[0], x, _add[0]))
                 # if plotting the error bar, iterate over arguments
                 if ploterror:
                     tmp = func(_args, x, _add)
@@ -472,10 +476,10 @@ def plot_histogram(data, data_weight, label, nb_bins=20, debug=0):
     #print(center)
 
     # plot both histograms in same plot
-    plt.title(label[0])
-    plt.xlabel(label[1])
-    plt.ylabel("".join(("distribution of ", label[2])))
-    plt.grid(True)
+    #plt.title(label[0])
+    plt.xlabel(label[1],fontsize=24)
+    plt.ylabel("".join(("distribution of ", label[2])),fontsize=24)
+    #plt.grid(True)
     # plot
     plt.bar(center, hist, align='center', width=width, color='r', alpha=0.5,
             label='weighted data')

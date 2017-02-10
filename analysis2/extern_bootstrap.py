@@ -205,12 +205,14 @@ def physical_mpi(x_help,ens,nboot,square=True):
 def prepare_mpi_fse(x_help1,x_help2,ens,nboot,square=False,physical=False):
     _mpi_fse_plot=np.zeros((4))
     _mpi = ana.draw_gauss_distributed(x_help1[ens][0], x_help1[ens][1], 
-                                     (nboot,),origin = True)
+                                     (nboot,),origin = True,seed = 3452)
 
     _kfse = ana.draw_gauss_distributed(x_help2[ens][0],x_help2[ens][1],
-                                     (nboot,), origin = True)
+                                     (nboot,), origin = True, seed = 2847)
 
     _mpi_fse = _mpi/_kfse
+    print("read in pion mass is:")
+    print(ana.compute_error(_mpi))
     print("_Mpi/_Kfse = %.04f/%0.4f" % (_mpi[0],_kfse[0]))
     if physical:
       _a_plot,_a = prepare_a(ens[0],nboot)
@@ -233,7 +235,7 @@ def prepare_fse(x_help,ens,nboot,square=False,had='pi'):
   """
   _fse_plot = np.zeros(4)
   _fse = ana.draw_gauss_distributed(x_help[ens][0], x_help[ens][1],
-                                   (nboot,),origin = True)
+                                   (nboot,),origin = True, seed=2874)
   if had is 'pi':
       if square:
         _fse = np.square(_fse)

@@ -22,7 +22,7 @@ def miss_confs(path,rng):
 
 def main():
     c2_pi = True 
-    c2_ss = True
+    c2_ss = False
     # parse the input file
     if len(sys.argv) < 2:
         ens = ana.LatticeEnsemble.parse("charged.ini")
@@ -35,14 +35,14 @@ def main():
     raw_pi = ens.get_data("rawdir_pi")
     raw_ss = ens.get_data("rawdir_ss")
     datadir = ens.get_data("datadir") 
-    rawstrange = ens.get_data("raw_b")
-    strange = ens.get_data("strangeb")
+    rawstrange = ens.get_data("raw_a")
+    strange = ens.get_data("strangea")
     # TODO: Place that in the ensemble class
     if len(sys.argv) < 2:
       Corrs = ana.inputnames('charged.ini',['C20', 'C40C', 'C40D'])
     else:
-      #Corrs = ana.inputnames(sys.argv[1],['c0', 'c1', 'c3'])
-      Corrs = ana.inputnames(sys.argv[1],['c0'])
+      Corrs = ana.inputnames(sys.argv[1],['c0', 'c1', 'c3'])
+      #Corrs = ana.inputnames(sys.argv[1],['c0'])
       Corrs_pi = ana.inputnames(sys.argv[1],['c5'])
       Corrs_ss = ana.inputnames(sys.argv[1],['c6'])
     # os.path.join treats preceding slashes as new paths
@@ -51,6 +51,7 @@ def main():
     print(Corrs_ss)
     corrpaths = [os.path.join(rawdir,mu_s,'data/') for mu_s in rawstrange]
     corrpaths_pi = [os.path.join(raw_pi,'data/'),]
+    #corrpaths_pi = [raw_pi]
     corrpaths_ss = [os.path.join(raw_ss,mu_s,'data/') for mu_s in rawstrange]
     datapaths = [os.path.join(datadir,mu_s,'') for mu_s in strange]
     # get all available correlators in three lists
@@ -76,7 +77,7 @@ def main():
           set(configs_coll[0]).intersection(set(configs_coll[1]),set(configs_coll[2]),
                                 set(configs_coll_pi[0]),set(configs_coll_ss[0]))],
                                 key = lambda fold: int(fold[4:-1]))
-    # read on ly pi    
+    # read only pi    
     elif c2_pi:
         conf_feed = sorted([i +'/' for i in
           set(configs_coll[0]).intersection(set(configs_coll[1]),set(configs_coll[2]),
@@ -108,32 +109,41 @@ def main():
       print("C2")
       C2 = ana.read_confs(s[0],Corrs[0],conf_feed,T)
       print("C4")
-      #C4D = ana.read_confs(s[0],Corrs[1],conf_feed,T)
-      #C4C = ana.read_confs(s[0],Corrs[2],conf_feed,T)
+      C4D = ana.read_confs(s[0],Corrs[1],conf_feed,T)
+      C4C = ana.read_confs(s[0],Corrs[2],conf_feed,T)
       print("Read in done")
       # subtract crossed from direct diagram
-      #C4_tot = ana.confs_subtr(C4D,C4C)
-      #C4_tot = ana.confs_mult(C4_tot,2)
+      C4_tot = ana.confs_subtr(C4D,C4C)
+      C4_tot = ana.confs_mult(C4_tot,2)
       print("Writing to: %s..." % s[1])
       #ana.write_data_ascii(C2,s[1]+'pi_charged_p0.dat')
       ana.write_data_ascii(C2,s[1]+'k_charged_p0_outlier.dat',conf=conf_feed)
       #ana.write_data_ascii(C2,s[1]+'pi_charged_p0_outlier.dat',conf=conf_feed)
-      #ana.write_data_ascii(C4_tot,s[1]+'kk_charged_A1_TP0_00_outlier.dat',conf=conf_feed)
-      #ana.write_data_ascii(C4D,s[1]+'C4D.dat',conf=conf_feed)
-      #ana.write_data_ascii(C4C,s[1]+'C4C.dat',conf=conf_feed)
+      ana.write_data_ascii(C4_tot,s[1]+'kk_charged_A1_TP0_00_outlier.dat',conf=conf_feed)
+      ana.write_data_ascii(C4D,s[1]+'C4D.dat',conf=conf_feed)
+      ana.write_data_ascii(C4C,s[1]+'C4C.dat',conf=conf_feed)
      
     # Read in pion data
     if c2_pi:
-        for s in datapaths:
-          print(s)
-          # copy common subset of configurations to appropriate target directory:
-          # Read in correlators
-          print("Reading Correlation functions from %s..." % corrpaths_pi)
-          print("C2")
-          C2 = ana.read_confs(corrpaths_pi[0],Corrs_pi[0],conf_feed,T)
-          print("Read in done")
-          print("Writing to: %s..." % s)
-          ana.write_data_ascii(C2,s+'pi_charged_p0_outlier.dat')
+        p = raw_pi 
+        print(p)
+        # copy common subset of configurations to appropriate target directory:
+        # Read in correlators
+        print("Reading Correlation functions from %s..." % corrpaths_pi)
+        print("C2")
+        # Correlators for pion are in ASCII format
+        #C2 = np.array(len(conf_feed,T,3)) 
+        #for i,c in enumerate(conf_feed):
+        #  inname = corrpaths_pi[0]+'/pi_corr_p0.conf%04d.dat'%c 
+        #  _C2 = ana.read_data_ascii(inname,column=(1,2),noheader=True,skip=1)
+        #  _numconf = np.tile(c,T)
+        #  _Cfull = np.vstack(_C2,_numconf)
+        #  C2[i] = _Cfull
+        C2 = ana.read_confs(corrpaths_pi[0],Corrs_pi[0],conf_feed,T)
+        print("Read in done")
+        save_pi = datadir+'pi/'
+        print("Writing to: %s..." % save_pi)
+        ana.write_data_ascii(C2,save_pi +'pi_charged_p0_outlier.dat',conf=conf_feed)
     
     # read ss data
     if c2_ss:
