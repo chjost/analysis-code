@@ -6,7 +6,7 @@ import os
 import math
 import numpy as np
 
-def bootstrap(source, nbsamples):
+def bootstrap(source, nbsamples,blocking = False, bl=None):
     """Bootstraping of data.
 
     Creates nbsamples bootstrap samples of source.
@@ -17,12 +17,19 @@ def bootstrap(source, nbsamples):
         Data on which the bootstrap samples are created.
     nbsamples : int
         Number of bootstrap samples created.
+    block: boolean
+        if true data will be blocked
+    bl: int 
+        length of one block
 
     Returns
     -------
     boot : ndarray
-        The bootstrap samples.
+        The (blocked) bootstrap samples.
     """
+    # check for blocking
+    if blocking:
+        source = block(source,bl)
     # seed the random number generator
     # the seed is hardcoded to be able to recreate the samples
     # original seed
@@ -45,7 +52,34 @@ def bootstrap(source, nbsamples):
         boot[_i] = _sum / float(number)
     return boot
 
-def sym_and_boot(source, nbsamples = 1000):
+def block(source, l = 2):
+    """ Divide data into blocks and take their mean.
+    
+    Can be done
+    before bootstrapping to check for autocorrelation
+    
+    Parameters
+    ----------
+    source: the data array with correlation functions
+    l: int, length of the block, defaults to 2
+
+    Returns
+    -------
+    _blocked: a numpy array that consists of means over each block
+  
+    """
+    # Determine number of blocks
+    _rshape = list(source.shape)
+    print("Blocklength is: %d " % l)
+    _nb = int(np.floor(_rshape[0]/l))
+    print("Number of blocks is: %d" % _nb)
+    _rshape[0] = _nb
+    _blocked = np.zeros(_rshape, dtype = source.dtype)
+    for i in range(_nb):
+        _blocked[i] = np.mean(source[i*l:(i+1)*l],dtype = source.dtype, axis = 0)
+    return _blocked
+
+def sym_and_boot(source, nbsamples = 1000, blocking = False, bl = 1):
     """Symmetrizes and boostraps correlation functions.
 
     Symmetrizes the correlation functions given in source and creates
@@ -74,14 +108,15 @@ def sym_and_boot(source, nbsamples = 1000):
     # initialize the bootstrap samples to 0.
     boot = np.zeros(_rshape, dtype=float)
     # the first timeslice is not symmetrized
-    boot[:,0] = bootstrap(source[:,0], nbsamples)
+    boot[:,0] = bootstrap(source[:,0], nbsamples, blocking = blocking, bl = bl)
     for _t in range(1, int(_T/2)):
         # symmetrize the correlation function
         _symm = (source[:,_t] + source[:,(_T - _t)]) / 2.
         # bootstrap the timeslice
-        boot[:,_t] = bootstrap(_symm, nbsamples)
+        boot[:,_t] = bootstrap(_symm, nbsamples,blocking = blocking, bl=bl)
     # the timeslice at t = T/2 is not symmetrized
-    boot[:,-1] = bootstrap(source[:,int(_T/2)], nbsamples)
+    boot[:,-1] = bootstrap(source[:,int(_T/2)], nbsamples,
+                           blocking = blocking, bl = bl)
     return boot
 
 

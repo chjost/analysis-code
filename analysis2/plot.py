@@ -8,7 +8,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-matplotlib.rcParams['axes.labelsize']='large'
+#matplotlib.rcParams['axes.labelsize']='large'
 from fit import LatticeFit, FitResult
 from correlator import Correlators
 from statistics import compute_error, draw_gauss_distributed, acf
@@ -187,7 +187,7 @@ class LatticePlot(object):
                 self._set_env_normal()
                 # plot the relative error instead of data and error
                 if rel is True:
-                    plot_data(X, np.d(ddata,corr.data[0,:,n]),
+                    plot_data(X, np.divide(ddata,corr.data[0,:,n]),
                         np.zeros_like(ddata), label=label[3],
                         plotrange=[0,T],col=self.cycol(),fmt=self.cyfmt())
                 else:
@@ -316,7 +316,7 @@ class LatticePlot(object):
                 self.save()
 
     def plot(self, corr, label, fitresult=None, fitfunc=None, oldfit=None,
-            add=None, oldfitpar=None, ploterror=False, xshift=0., debug=0):
+            add=None, oldfitpar=None, ploterror=False, rel=False, xshift=0., debug=0):
         """Plot the data of a Correlators object and a FitResult object
         together.
 
@@ -346,7 +346,7 @@ class LatticePlot(object):
         """
         if oldfit is None:
             self._genplot_single(corr, label, fitresult, fitfunc, add=add,
-                    ploterror=ploterror, xshift=xshift, debug=debug)
+                    ploterror=ploterror, xshift=xshift, rel=rel, debug=debug)
         else:
             self._genplot_comb(corr, label, fitresult, fitfunc, oldfit, add,
                     oldfitpar, ploterror, xshift, debug)

@@ -477,8 +477,10 @@ def plot_histogram(data, data_weight, label, nb_bins=20, debug=0):
 
     # plot both histograms in same plot
     #plt.title(label[0])
-    plt.xlabel(label[1],fontsize=24)
-    plt.ylabel("".join(("distribution of ", label[2])),fontsize=24)
+    #plt.xlabel(label[1],fontsize=24)
+    plt.xlabel(label[1])
+    #plt.ylabel("".join(("distribution of ", label[2])),fontsize=24)
+    plt.ylabel("".join(("distribution of ", label[2])))
     #plt.grid(True)
     # plot
     plt.bar(center, hist, align='center', width=width, color='r', alpha=0.5,

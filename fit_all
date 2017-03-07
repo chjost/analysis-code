@@ -14,12 +14,12 @@ def main():
         ens = ana.LatticeEnsemble.parse(sys.argv[1])
 
     # read settings
-    readsingledata = False
-    readsinglefit = False
-    plotsingle = True 
-    readtwodata = False
+    readsingledata = True
+    readsinglefit = True
+    plotsingle = False 
+    readtwodata = True
     readtwofit = False
-    plottwo = True
+    plottwo = False
 
     # get data from input file
     prefix = ens.get_data("path")
@@ -70,7 +70,6 @@ def main():
         print("fitting")
         start_single = [1.,0.3]
         pifit = fit_single.fit(start_single, picorr, [t_mass], corrid="epi", add=addT)
-        #pifit.save("%s/fit_pi_%s.npz" % (datadir, lat))
         pifit.save("%s/fit_k_%s.npz" % (datadir, lat))
     else:
         pifit = ana.FitResult.read("%s/fit_k_%s.npz" % (datadir, lat))
@@ -109,8 +108,6 @@ def main():
 
     # two particle correlator
     print("read two particle corrs")
-    #files = ["%s/kk_charged_A1_TP%d_%d%d.dat" % (datadir, d2, i, j) for i in\
-    #    range(gmax+1) for j in range(gmax+1)]
     files = ["%s/kk_charged_A1_TP%d_%d%d.dat" % (datadir, d2, i, j) for i in\
         range(gmax+1) for j in range(gmax+1)]
     print files

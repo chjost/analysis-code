@@ -127,6 +127,33 @@ class Correlators(object):
                 tmp.matrix = True
         return tmp
 
+    @classmethod
+    def create(cls, data, conf=None, debug=0):
+        """Create correlator class from preexisting data.
+
+        Parameters
+        ----------
+        data : ndarray data has shape [BS,T,r] with r labeling the correlator
+            The correlation function data.
+        debug : int, optional
+            The amount of debug information printed.
+        """
+        tmp = cls(debug=debug)
+        tmp.data = np.atleast_3d(data)
+        print("data has dimension:")
+        print(tmp.data.shape)
+        tmp.shape = tmp.data.shape
+        if conf is not None:
+            tmp.conf=conf
+        if data.shape[-2] != data.shape[-1]:
+            tmp.matrix = False
+        tmp.ncorr = data.shape[-1]
+        if tmp.data.ndim < 3:
+            tmp.ncorr = 1
+        else:
+            tmp.ncorr = tmp.data.shape[0]
+        return tmp
+
     def save(self, filename, asascii=False):
         """Saves the data to disk.
         
@@ -159,7 +186,7 @@ class Correlators(object):
         self.data = boot.sym(self.data)
         self.shape = self.data.shape
 
-    def bootstrap(self, nsamples):
+    def bootstrap(self, nsamples, blocking= False, bl = None):
         """Creates bootstrap samples of the data.
 
         Parameters
@@ -167,7 +194,7 @@ class Correlators(object):
         nsamples : int
             The number of bootstrap samples to be calculated.
         """
-        self.data = boot.bootstrap(self.data, nsamples)
+        self.data = boot.bootstrap(self.data, nsamples, blocking, bl)
         self.shape = self.data.shape 
         
     def reflect(self, kind="axis"):
@@ -194,7 +221,7 @@ class Correlators(object):
             print("Reflection type not known")
         self.shape = self.data.shape
 
-    def sym_and_boot(self, nsamples):
+    def sym_and_boot(self, nsamples,blocking=False, bl=None ):
         """Symmetrizes the data around the second axis and then
         create bootstrap samples of the data
 
@@ -203,7 +230,7 @@ class Correlators(object):
         nsamples : int
             The number of bootstrap samples to be calculated.
         """
-        self.data = boot.sym_and_boot(self.data, nsamples)
+        self.data = boot.sym_and_boot(self.data, nsamples,blocking=blocking,bl=bl)
         self.shape = self.data.shape
 
     def shift(self, dt, mass=None, shift=1, d2=0, L=24, irrep="A1",
