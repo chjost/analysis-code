@@ -175,6 +175,11 @@ class LatticePlot(object):
         # iterate over correlation functions
         print("Number of correlators is: %d" %ncorr)
         for n in range(ncorr):
+            # Check if there are ncorr datalabels
+            if len(label[3]) == ncorr:
+                _datlabel = label[3][n]
+            else:
+                _datlabel = label[3]
             if debug > 1:
                 print("plotting correlators %d" % (n))
             mdata, ddata = compute_error(corr.data[:,:,n])
@@ -188,10 +193,10 @@ class LatticePlot(object):
                 # plot the relative error instead of data and error
                 if rel is True:
                     plot_data(X, np.divide(ddata,corr.data[0,:,n]),
-                        np.zeros_like(ddata), label=label[3],
+                        np.zeros_like(ddata), label=_datlabel,
                         plotrange=[0,T],col=self.cycol(),fmt=self.cyfmt())
                 else:
-                    plot_data(X, corr.data[0,:,n], ddata, label[3],
+                    plot_data(X, corr.data[0,:,n], ddata, _datlabel,
                         plotrange=[0,T],col=self.cycol(),fmt=self.cyfmt())
                 plt.legend()
                 if self.join is False:
@@ -212,7 +217,7 @@ class LatticePlot(object):
 
                     # plot
                     self._set_env_normal()
-                    plot_data(X, corr.data[0,:,n], ddata, label[3],
+                    plot_data(X, corr.data[0,:,n], ddata, _datlabel,
                             plotrange=[1,T],col=self.cycol())
                     # The argument X has changed
                     #_X = [X[0],X[-1]]

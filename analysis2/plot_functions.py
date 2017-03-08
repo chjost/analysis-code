@@ -152,200 +152,53 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
     if ymax and ymin:
         plt.fill_between(x1, ymin, ymax, facecolor=col, edgecolor=col,
             alpha=0.2)
-#def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=False,
-#        fmt="k", col="black",debug=0):
-#    """A function that plots a function.
+# Old function 
+#def plot_data(X, Y, dY, label, dX=None,plotrange=None,
+#    fmt="x",col='b',markerfill=None,alpha=1.):
+#    """A function that plots data.
 #
 #    Parameters
 #    ----------
-#    func : callable
-#        The function to plot.
+#    X : ndarray
+#        The data for the x axis.
 #    Y : ndarray
 #        The data for the y axis.
-#    args : ndarray
-#        The arguments to the function.
+#    dX : ndarray (optional)
+#        The error on the x axis data 
+#    dY : ndarray
+#        The error on the y axis data.
 #    label : list of str
 #        A list with labels for data and fit.
-#    add : ndarray, optional
-#        Additional arguments to the fit function.
 #    plotrange : list of ints, optional
-#       The lower and upper range of the plot.
-#
-#    ploterror : bool, optional
-#        Plot the error of the fit function.
+#        The lower and upper range of the plot.
 #    """
-#    # check for plotting range
+#    # check boundaries for the plot
 #    if isinstance(plotrange, (np.ndarray, list, tuple)):
-#        _plotrange = np.asarray(plotrange).flatten()
-#        if _plotrange.size < 2:
-#            raise IndexError("fitrange has not enough indices")
+#        plotrange = np.asarray(plotrange).flatten()
+#        if plotrange.size < 2:
+#            raise IndexError("plotrange is too small")
 #        else:
-#            lfunc = _plotrange[0]
-#            ufunc = _plotrange[1]
-#            # handle data with more than two dimensions
-#            if len(X.shape) > 1:
-#                x1 = np.zeros((1000,X.shape[1]))
-#                for i in range(x1.shape[1]):
-#                    print("bounds at index %d are:" %i)
-#                    print(X[lfunc,i],X[ufunc,i])
-#                    x1[:,i] = np.linspace(X[lfunc,i],X[ufunc,i], 1000)
-#            else:
-#                x1 = np.linspace(X[lfunc], X[ufunc], 1000)
+#            l = int(plotrange[0])
+#            u = int(plotrange[1])
+#        # plot the data
+#        if dX is not None:
+#          plt.errorbar(X[l:u], Y[l:u], dY[l:u], dX[l:u], fmt=fmt, label=label,
+#                c=col,markerfacecolor=markerfill,alpha=alpha)
+#        else:
+#            plt.errorbar(X[l:u], Y[l:u], dY[l:u], fmt=fmt, label=label,
+#                c=col,markerfacecolor=markerfill,alpha=alpha)
 #    else:
-#        # handle data with more than two dimensions
-#        if len(X.shape) > 1:
-#            print(X.shape)
-#            x1 = np.zeros((1000,X.shape[1]))
-#            #x1 = np.linspace(X[0,0],X[-1,0], 1000)
-#            #try:
-#            #x1[:,0] = np.linspace(X[0,0],X[-1,0], 1000) 
-#            for i in range(x1.shape[1]):
-#                print("bounds at index %d are:" %i)
-#                print(X[0,i],X[-1,i])
-#                x1[:,i] = np.linspace(X[0,i],X[-1,i], 1000)
-#                #if X.shape[0] == 1:
-#                x1[:,0] = np.linspace(0,50,1000)
-#
-#            #except:
-#            #  print RuntimeWarning("Data not truly two dimensional")
-#            #  x1 = np.asarray((_x1,))
-#            #  pass
+#        # plot the data
+#        if dX is not None:
+#            plt.errorbar(X, Y, dY, dX,fmt=fmt, label=label,
+#                c=col, markerfacecolor=markerfill,alpha=alpha)
 #        else:
-#            x1 = np.linspace(X[0], X[-1], 1000)
-#    if debug > 2:
-#      print("option summary:")
-#      print("function name is %s" % func)
-#      print("shape of arguments (nb_samples, nb_parameters):")
-#      print(args.shape)
-#      print("Plot an errorband: %s" % ploterror)
-#    # check dimensions of args, if more than one,
-#    # iterate over first dimension
-#    print(args)
-#    _args = np.asarray(args)
-#    if add is not None:
-#        _add = np.asarray(add)
-#    if _args.ndim > 1:
-#        # the first sample contains original data,
-#        # also save min and max at each x
-#        y1, ymin, ymax = [], [], []
-#        # check for dimensions of add
-#        if add is not None:
-#            # need to check size of first axis
-#            args0 = _args.shape[0]
-#            add0 = _add.shape[0]
-#            if args0 == add0:
-#                # first axis has same size for both
-#                # iterate over the x range
-#                for i, x in enumerate(x1):
-#                    # the actual value is given by the first sample
-#                    y1.append(func(_args[0], x, _add[0]))
-#                    #if i % 100 == 0:
-#                    #    print(x)
-#                    #    print(_args[0])
-#                    #    print(_add[0])
-#                    #    print(y1[-1])
-#                    if ploterror:
-#                        tmp = [y1[-1]]
-#                        # iterate over the rest of the arguments
-#                        for i in range(1,args0):
-#                            tmp.append(func(_args[i], x, _add[i]))
-#                        mean, stdev = compute_error(np.asarray(tmp))
-#                        ymin.append(float(mean-stdev))
-#                        ymax.append(float(mean+stdev))
-#                        #ymin.append(np.min(tmp))
-#                        #ymax.append(np.max(tmp))
-#            elif (args0 % add0) == 0:
-#                # size of add is a divisor of size of args
-#                # iterate over x
-#                for x in x1:
-#                    # the actual value is given by the first sample
-#                    y1.append(func(_args[0], x, _add[0]))
-#                    if ploterror:
-#                        tmp = [y1[-1]]
-#                        # iterate over the rest of the arguments
-#                        for i in range(1,args0):
-#                            tmp.append(func(_args[i], x, _add[i%add0]))
-#                        mean, stdev = compute_error(np.asarray(tmp))
-#                        ymin.append(float(mean-stdev))
-#                        ymax.append(float(mean+stdev))
-#                        #ymin.append(np.min(tmp))
-#                        #ymax.append(np.max(tmp))
-#            elif (add0 % args0) == 0:
-#                # size of args is a divisor of size of add
-#                # iterate over x
-#                for x in x1:
-#                    # the actual value is given by the first sample
-#                    y1.append(func(_args[0], x, _add[0]))
-#                    if ploterror:
-#                        tmp = [y1[-1]]
-#                        # iterate over the rest of the arguments
-#                        for i in range(1,add0):
-#                            tmp.append(func(_args[i%args0], x, _add[i]))
-#                        mean, stdev = compute_error(np.asarray(tmp))
-#                        ymin.append(float(mean-stdev))
-#                        ymax.append(float(mean+stdev))
-#                        #ymin.append(np.min(tmp))
-#                        #ymax.append(np.max(tmp))
-#        else:
-#            # no additional arguments, iterate over args
-#            #iterate over x
-#            print("using function")
-#            for j,x in enumerate(x1):
-#                y1.append(func(_args[0], x))
-#                if ploterror:
-#                    tmp = [y1[-1]]
-#                    for i in range(1, _args.shape[0]):
-#                        tmp.append(func(_args[i], x))
-#                    mean, stdev = compute_error(np.asarray(tmp))
-#                    ymin.append(float(mean-stdev))
-#                    ymax.append(float(mean+stdev))
-#                    #ymin.append(np.min(tmp))
-#                    #ymax.append(np.max(tmp))
-#    else:
-#        # the first sample contains original data
-#        y1 = []
-#        # calculate minimal and maximal y1 for
-#        # error checking
-#        ymax = []
-#        ymin = []
-#        # iterate over x values
-#        for x in x1:
-#            # check for additional arguments
-#            if add is not None:
-#                tmp = func(_args, x, _add)
-#                if np.asarray(tmp).size > 1:
-#                    y1.append(tmp[0])
-#                    if ploterror:
-#                        mean, stdev = compute_error(np.asarray(tmp))
-#                        ymin.append(float(mean-stdev))
-#                        ymax.append(float(mean+stdev))
-#                        #ymax.append(np.max(tmp))
-#                        #ymin.append(np.min(tmp))
-#                else:
-#                    y1.append(tmp)
-#            else:
-#                # calculate on original data
-#                y1.append(func(_args, x))
-#    #print(len(x1),len(y1))
-#    if len(X.shape) > 1:
-#      plt.plot(x1[:,0], y1, fmt, label=label)
-#    else:
-#      plt.plot(x1, y1, fmt, label=label)
-#    if ymax and ymin:
-#        #print(ymax[0])
-#        #print(x1[0])
-#        if len(X.shape) > 1:
-#          #print("fill shape:")
-#          #print(x1.shape)
-#          plt.fill_between(x1[:,0], ymin, ymax, facecolor=col,
-#              edgecolor=col, alpha=0.2)
-#        else:
-#          plt.fill_between(x1, ymin, ymax, facecolor=col,
-#              edgecolor=col, alpha=0.2)
+#            plt.errorbar(X, Y, dY, fmt=fmt, label=label,
+#                c=col, markerfacecolor=markerfill,alpha=alpha)
 #    plt.legend()
 
-def plot_data(X, Y, dY, label, dX=None,plotrange=None,
-    fmt="x",col='b',markerfill=None,alpha=1.):
+# Tryout from devel_branch
+def plot_data(X, Y, dY, label, plotrange=None, dX=None, fmt="x", col='b'):
     """A function that plots data.
 
     Parameters
@@ -354,14 +207,18 @@ def plot_data(X, Y, dY, label, dX=None,plotrange=None,
         The data for the x axis.
     Y : ndarray
         The data for the y axis.
-    dX : ndarray (optional)
-        The error on the x axis data 
     dY : ndarray
         The error on the y axis data.
     label : list of str
         A list with labels for data and fit.
     plotrange : list of ints, optional
         The lower and upper range of the plot.
+    dX : ndarray, optional
+        The error on the x axis data.
+    fmt : string, optional
+        The format of the points.
+    col : string, optional
+        The color of the points and errors.
     """
     # check boundaries for the plot
     if isinstance(plotrange, (np.ndarray, list, tuple)):
@@ -372,21 +229,14 @@ def plot_data(X, Y, dY, label, dX=None,plotrange=None,
             l = int(plotrange[0])
             u = int(plotrange[1])
         # plot the data
-        if dX is not None:
-          plt.errorbar(X[l:u], Y[l:u], dY[l:u], dX[l:u], fmt=fmt, label=label,
-                c=col,markerfacecolor=markerfill,alpha=alpha)
+        if dX is None:
+            _dX = None
         else:
-            plt.errorbar(X[l:u], Y[l:u], dY[l:u], fmt=fmt, label=label,
-                c=col,markerfacecolor=markerfill,alpha=alpha)
+            _dX = dX[l:u]
+        plt.errorbar(X[l:u], Y[l:u], dY[l:u], xerr=_dX, fmt=fmt, label=label, c=col)
     else:
         # plot the data
-        if dX is not None:
-            plt.errorbar(X, Y, dY, dX,fmt=fmt, label=label,
-                c=col, markerfacecolor=markerfill,alpha=alpha)
-        else:
-            plt.errorbar(X, Y, dY, fmt=fmt, label=label,
-                c=col, markerfacecolor=markerfill,alpha=alpha)
-    plt.legend()
+        plt.errorbar(X, Y, dY, xerr=_dX, fmt=fmt, label=label,c=col)
 
 def plot_data_with_fit(X, Y, dY, fitfunc, args, label, plotrange=None,
                    fitrange=None, addpars=None, pval=None,col='b'):

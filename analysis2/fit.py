@@ -110,13 +110,13 @@ class LatticeFit(object):
             A class that holds all results.
         """
         # sanity check
-        if isinstance(ranges[0], (tuple, list, np.ndarray)):
-            for r in ranges:
-                if r[0] > r[1]:
-                    raise ValueError("final t is smaller than initial t")
-        else:
-            if ranges[0] > ranges[1]:
-                raise ValueError("final t is smaller than initial t")
+        #if isinstance(ranges[0], (tuple, list, np.ndarray)):
+        #    for r in ranges:
+        #        if r[0] > r[1]:
+        #            raise ValueError("final t is smaller than initial t")
+        #else:
+        #    if ranges[0] > ranges[1]:
+        #        raise ValueError("final t is smaller than initial t")
 
         # check if it is a combined fit or not
         if oldfit is None:
@@ -157,7 +157,7 @@ class LatticeFit(object):
             shapes_data = []
             shapes_other = []
             # iterate over the correlation functions
-            print(fshape)
+            #print(fshape)
             ncorr = [len(s) for s in fshape]
             if not useall:
                 print(ncorr)
@@ -609,29 +609,53 @@ class FitResult(object):
           print("is self derived?")
           print(self.derived)
         shape2 = (nboot,1)
-        singular.create_empty(shape1,shape2,1)
-        singular.set_ranges(np.array([[[10,15]]]),[[1,]])
-        # usually only one correlator is taken into account
-        # copy data to singular
-        if self.derived is False:
-            res, res_std, res_sys, n_fits = self.error[0]
-            singular.data[0][:,0,0] = res[0]
-            res, res_std, res_sys, n_fits = self.error[1]
-            singular.data[0][:,1,0] = res[0]
+        # Get number of correlators self.data is a list of fitresults
+        ncorr = len(self.data)
+        # One correlator
+        if ncorr == 1:
+            singular.create_empty(shape1,shape2,1)
+            singular.set_ranges(np.array([[[10,15]]]),[[1,]])
+            # usually only one correlator is taken into account
+            # copy data to singular
+            if self.derived is False:
+                res, res_std, res_sys, n_fits = self.error[0]
+                singular.data[0][:,0,0] = res[0]
+                res, res_std, res_sys, n_fits = self.error[1]
+                singular.data[0][:,1,0] = res[0]
+            else:
+                res, res_std, res_sys, n_fits = self.error[0]
+                singular.data[0][:,0,0] = res[0]
+            print("Original values:")
+            print(self.error)
+            print("Singular values:")
+            print(singular.data[0][0,0,0])
+                
+            # set weights accordingly
+            singular.weight = [[np.array([1.])] for d in range(2)]
+            singular.error = []
+        # several correlators
         else:
-            res, res_std, res_sys, n_fits = self.error[0]
-            singular.data[0][:,0,0] = res[0]
-        print("Original values:")
-        print(self.error)
-        print("Singular values:")
-        print(singular.data[0][0,0,0])
-            
-        # set weights accordingly
-        singular.weight = [[np.array([1.])] for d in range(2)]
-        singular.error = []
-        #singular.weight = np.ones(shape2)
-        #print singular.weight[0]
-        #singular.pval[0]=np.full(nboot,singular.weight)
+            singular.create_empty(shape1,shape2,ncorr)
+            singular.set_ranges(np.array([[[10,15]]]),[[1,]])
+            for n in range(ncorr):
+                # usually only one correlator is taken into account
+                # copy data to singular
+                if self.derived is False:
+                    res, res_std, res_sys, n_fits = self.error[0]
+                    singular.data[n][:,0,0] = res[n]
+                    res, res_std, res_sys, n_fits = self.error[1]
+                    singular.data[n][:,1,0] = res[n]
+                else:
+                    res, res_std, res_sys, n_fits = self.error[0]
+                    singular.data[n][:,0,0] = res[n]
+                print("Original values:")
+                print(self.error)
+                print("Singular values:")
+                print(singular.data[n][0,0,0])
+                    
+                # set weights accordingly
+                singular.weight = [[np.array([1.])] for d in range(2)]
+                singular.error = None
         return singular
 
     def create_empty(self, shape1, shape2, corr_num):

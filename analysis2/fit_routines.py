@@ -372,7 +372,7 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, mute=None, debug=0)
         print correlated
     if not correlated:
         cov = np.diag(np.diagonal(np.cov(Y.T)))
-        print(np.diag(cov))
+        #print(np.diag(cov))
     else:
         cov = np.cov(Y.T)
         cov_inv = np.linalg.inv(cov)
@@ -400,40 +400,40 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, mute=None, debug=0)
         print("fitting the data")
     if add is None:
         # Enable multiple bootstrapsamples for x-values pair samplewise
-        print("x-shape in fitting is:")
-        print(X.shape)
-        print(Y.shape)
+        #print("x-shape in fitting is:")
+        #print(X.shape)
+        #print(Y.shape)
         # This is a nasty hack to enable fitting for several bootstrapsamples in
         # the xdata
         #TODO: Solve this another way, if possible, unify array layouts
         if len(X.shape) == 2 and X.shape[-1]==Y.shape[0]: 
             for b in range(samples):
-                if b == 0:
-                  print("Overview over the data used:")
-                  print("x-data for fit")
-                  print(X[:,b])
-                  print("y-data for fit")
-                  print(Y[b])
-                if b == (samples-1):
-                  print("arguments:")
-                  print(res[b-1])
+                #if b == 0:
+                #  print("Overview over the data used:")
+                #  print("x-data for fit")
+                #  print(X[:,b])
+                #  print("y-data for fit")
+                #  print(Y[b])
+                #if b == (samples-1):
+                #  print("arguments:")
+                #  print(res[b-1])
                 p,cov1,infodict,mesg,ier = leastsq(errfunc, start, args=(X[:,b], Y[b],
                     cov), full_output=1, factor=.1)
                 chisquare[b] = float(sum(infodict['fvec']**2.))
                 res[b] = np.array(p)
         else:
             for b in range(samples):
-                if b == 0:
-                  print("Overview over the data used:")
-                  print("x-data for fit")
-                  print(X)
-                  print("y-data for fit")
-                  print(Y[b])
-                  print("inverse covariance matrix:")
-                  print(cov)
-                if b == (samples-1):
-                  print("arguments:")
-                  print(res[b-1])
+                #if b == 0:
+                #  print("Overview over the data used:")
+                #  print("x-data for fit")
+                #  print(X)
+                #  print("y-data for fit")
+                #  print(Y[b])
+                #  print("inverse covariance matrix:")
+                #  print(cov)
+                #if b == (samples-1):
+                #  print("arguments:")
+                #  print(res[b-1])
                 p,cov1,infodict,mesg,ier = leastsq(errfunc, start, args=(X, Y[b],
                     cov), full_output=1, factor=.1)
                 chisquare[b] = float(sum(infodict['fvec']**2.))
@@ -446,17 +446,17 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, mute=None, debug=0)
             print(np.sum(np.square(chi)))
     else:
         for b in range(samples):
-            if b == 0:
-              print("Overview over the data used:")
-              print("x-data for fit")
-              print(X)
-              print("y-data for fit")
-              print(Y[b])
-              print("inverse covariance matrix:")
-              print(cov)
-            if b == (samples-1):
-              print("arguments:")
-              print(res[b-1])
+            #if b == 0:
+            #  print("Overview over the data used:")
+            #  print("x-data for fit")
+            #  print(X)
+            #  print("y-data for fit")
+            #  print(Y[b])
+            #  print("inverse covariance matrix:")
+            #  print(cov)
+            #if b == (samples-1):
+            #  print("arguments:")
+            #  print(res[b-1])
             p,cov1,infodict,mesg,ier = leastsq(errfunc, start, args=(X, Y[b],
                 add[b], cov), full_output=1, factor=.1)
             chisquare[b] = float(sum(infodict['fvec']**2.))
