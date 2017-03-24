@@ -1,0 +1,321 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+
+################################################################################
+#
+# Author: Christopher Helmes (helmes@hiskp.uni-bonn.de)
+# Date:   Februar 2016
+#
+# Copyright (C) 2016 Christopher Helmes
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# 3 dimensional Fit to lattice data of (r_0 M_K)^2 to fix the strange quark mass
+# to its physical value.
+# 
+# The function used in the fit is:
+# (r_0 M_K)^2 = P_0*( (r_0 m_l) + (r_0 m_s) )*( 1 + P_1* (r_0 m_l) + P_2*
+# (a/r_0)^2)
+# 
+# r_0 M_K := (r_0/a)*(aM_K)
+# r_0 m_l := (r_0/a)*(amu_l/Z_P)
+# r_0 m_s := (r_0/a)*(amu_s/Z_P)
+# r_0/a := r_0^{ext}/a
+#
+# For informations on input parameters see the description of the function.
+#
+################################################################################
+# system imports
+import sys
+from scipy import stats
+from scipy import interpolate as ip
+import numpy as np
+from numpy.polynomial import polynomial as P
+import math
+import matplotlib
+matplotlib.use('Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+from matplotlib.backends.backend_pdf import PdfPages
+
+# Christian's packages
+sys.path.append('/hiskp2/helmes/projects/analysis-code/')
+import analysis2 as ana
+
+def main():
+    # Get parameters from initfile
+    if len(sys.argv) < 2:
+        ens = ana.LatticeEnsemble.parse("A40.24.ini")
+    else:
+        ens = ana.LatticeEnsemble.parse(sys.argv[1])
+
+    # get data from input file
+    lat = ens.name()
+    latA = ens.get_data("namea")
+    latB = ens.get_data("nameb")
+    latD = ens.get_data("named")
+    strangeA = ens.get_data("strangea")
+    strangeB = ens.get_data("strangeb")
+    strangeD = ens.get_data("stranged")
+    space=['A','B','D']
+    seeds1 = [6368, 9456, 3805, 2355, 7727, 8525]
+    seeds2 = [3353, 8106, 1519, 5522]
+    lat_dict = {'A':latA,'B':latB,'D':latD}
+    #print("\nDicitonary for ensemble names:")
+    #print(lat_dict)
+    #dicitionary of light quark masses
+    amulA = ens.get_data("amu_l_a")
+    amulB = ens.get_data("amu_l_b")
+    amulD = ens.get_data("amu_l_d")
+    amu_l_dict = {'A': amulA,'B': amulB, 'D': amulD}
+
+    #dictionary of strange quark masses
+    mu_s_dict = {'A': strangeA,'B': strangeB, 'D': strangeD}
+    amusA = ens.get_data("amu_s_a")
+    amusB = ens.get_data("amu_s_b")
+    amusD = ens.get_data("amu_s_d")
+    amu_s_dict = {'A': amusA,'B': amusB, 'D': amusD}
+    print(amu_s_dict)
+    #quark = ens.get_data("quark")
+    datadir = ens.get_data("datadir") 
+    plotdir = ens.get_data("plotdir") 
+    resdir = ens.get_data("resultdir") 
+    nboot = ens.get_data("nboot")
+    zp_meth = 1
+    # Function to fit data to:
+    # The lattice spacing term should always get the index 1
+    cont_ext = lambda p,x : p[0]*x[0]+p[1]*x[1]+p[2]  
+    cont_func = lambda p,x : p[0]*x+p[2] 
+    plot_cont_ext = lambda p,x : p[:,0]*x+p[:,1]+p[:,2] 
+    plot_cont_func = lambda p,x : p[:,0]*x+p[:,2]
+    # Prepare inputs
+     
+    # Gather all variables in a chiral analysis object
+    #------------------------- Setup objects -----------------------------------
+
+    fix_ms = ana.ChirAna("r0MK_sq_search_ms_zp1",match=True,
+                         correlated=False,fit_ms=True)
+    # layouts for x and y data
+    # The x data are 2 variables living at 3 lattice spacings, 3 strange quark
+  # Number of ensembles for each lattice spacing
+    nb_a = len(latA)
+    nb_b = len(latB)
+    nb_d = len(latD)
+    # masses, and 1500 bootstrapsamples each
+    lyt_xvals = (3,(nb_a,nb_b,nb_d),3,2,1500)
+    # The y data is 1 variable living at 3 lattice spacings, 3 strange quark
+    # masses and 1500 bootstrapsamples
+    lyt_yvals = (3,(nb_a,nb_b,nb_d),3,1,1500)
+    fix_ms.create_empty(lyt_xvals,lyt_yvals,cont_ext = cont_ext,
+        cont_func=cont_func, plot_cont_ext = plot_cont_ext,
+        plot_cont_func=plot_cont_func,lat_dict=lat_dict)
+    print("Ensemble dictionary:")
+    print(lat_dict['A'])
+    ext_data = ana.ExtDat(seeds1,space,zp_meth)
+    fix_ms.ext_dat_lat = ext_data
+    cont_data = ana.ContDat(seeds2,zp_meth)
+    fix_ms.cont_dat = cont_data
+    print("\nSetup complete, begin chiral analysis")
+    #------------------------- Get x-values --------------------------------
+    for i,a in enumerate(space):
+        print("\nWorking at lattice spacing %s" %a)
+        for j,e in enumerate(lat_dict[a]):
+        # if using D30.48 modify lowest amus to 0.0115
+            if e == 'D30.48':
+                print("modifying lowest mu_s values")
+                mu_s_dict[a][0] ='amu_s_115' 
+                amu_s_dict[a][0]=0.0115
+            elif e == 'D45.32':
+                print("modifying lowest mu_s values")
+                mu_s_dict[a][0] ='amu_s_13' 
+                amu_s_dict[a][0]=0.013
+            for k,s in enumerate(amu_s_dict[a]):
+
+                # ------------------- add r_0 m_l values ---------------------------------
+                mq_tmp = np.full((nboot,),amu_l_dict[a][j])
+                fix_ms.add_data(mq_tmp,(i,j,k,0),dim='x')
+
+                # ------------------- add r_0 m_s values ---------------------------------
+                mq_tmp = np.full((nboot,),s)
+                fix_ms.add_data(mq_tmp,(i,j,k,1),dim='x')
+
+            # ------------------------ Get y-values ----------------------------------
+            # ------------------- add r_0 M_K values ---------------------------------
+            # initialize a match result object for storing (aM_K)^2/K_FSE^2
+            mk_sq = ana.MatchResult("mk_sq_ms_ren_pdg")
+            #ana.MatchResult.create_empty(mk_sq,1500,3,"mk_sq_ms_ren_zp1")
+            ana.MatchResult.create_empty(mk_sq,1500,3,"mk_sq_ms_ren_zp1_old_chisq")
+
+            # get M_K^2 for all strange quark masses at once
+            dat_names = [datadir+'%s/' % (e) +s+'/fit_k_%s.npz' % (e) for s in mu_s_dict[a]]
+            mk_sq_meas = ana.init_fitreslst(dat_names)
+            mk_sq.load_data(mk_sq_meas,1,amu_s_dict[a],square=True)
+            fse_k = '../plots2/data/k_fse_mk.dat'
+            # Apply finite size corrections
+            mk_sq.add_extern_data(fse_k,e,idx=None,square=True,read='fse_mk',op='mult')
+
+            # Add data to chirana object
+            for k,s in enumerate(amu_s_dict[a]):
+                fix_ms.add_data(mk_sq.obs[k],(i,j,k,0),'y')
+    # TODO: Print data summary
+    # Fit the given function
+    label=[r'$r_0m_l$',r'$(r_0 M_K)^2$',r'Physical $m_s$ from physical $M_K^2$',
+           r'$(r_0M_{\pi})_{phys}^{2}$']
+     
+    fix_ms.fit_strange_mass(datadir=datadir)
+    label = [r'$a\mu_l$',r'$(aM_K)^2$']
+    #pick the correct arguments
+    args = fix_ms.fitres.data[0] 
+    plot_args = np.asarray([np.hstack((args[:,0+i],args[:,3+i],args[:,6:,0]))
+      for i in range(3)])
+    #add = (5.31,5.77,7.6,0.529,0.509,0.516)
+    #plot_args = np.asarray([np.hstack((add[0+i],add[3+i],args[0,:,0])) for i in
+    #range(3)])
+    print("Arguments given to plotfunction have shape:")
+    print(plot_args.shape)
+    # The plotfunction varies in amu_l, amu_s and a/r0 are fixed
+    plotfunc = lambda p,x: p[:,2]/(p[:,0]*p[:,1]) * (x+p[:,5]) * (1+p[:,3]*p[:,0]/p[:,1]*x+p[:,4]/p[:,0]**2)
+    filename = plotdir+'/'+ fix_ms.proc_id+'.pdf'
+    chiral_plot = ana.LatticePlot(filename, join = True)
+    chiral_plot.plot_chiral_fit(fix_ms,space,label,xlim=[0.0,0.011],func=plotfunc,args=plot_args)
+    chiral_plot._set_limits(marks=4)
+    chiral_plot.save()
+    del chiral_plot
+    # for every ensemble calculate the amus values
+    # Store them inside chirana object
+    fix_ms.bare_mu_s(space, lat_dict, cont_data, amu_l_dict, disc_eff=True, debug=1)
+
+    mka0 = ana.ChirAna("mka0_ms_phys_zp1",match=True,
+                         correlated=True,fit_ms=False)
+    # layouts for x and y data
+    # The x data are 3 variables living at 3 lattice spacings, 3 strange quark
+    # masses, and 1500 bootstrapsamples each
+    lyt_xvals = (3,(nb_a,nb_b,nb_d),1,2,1500)
+    # The y data is 1 variable living at 3 lattice spacings, 3 strange quark
+    # masses and 1500 bootstrapsamples
+    lyt_yvals = (3,(nb_a,nb_b,nb_d),1,1,1500)
+    mka0.create_empty(lyt_xvals,lyt_yvals,cont_ext = cont_ext,
+        cont_func=cont_func, plot_cont_ext = plot_cont_ext,
+        plot_cont_func=plot_cont_func)
+    for i,a in enumerate(space):
+        print("\nWorking at lattice spacing %s" %a)
+        for j,e in enumerate(lat_dict[a]):
+        # if using D30.48 modify lowest amus to 0.0115
+            if e == 'D30.48':
+                print("modifying lowest mu_s values")
+                mu_s_dict[a][0] ='amu_s_115' 
+                amu_s_dict[a][0]=0.0115
+            elif e == 'D45.32':
+                print("modifying lowest mu_s values")
+                mu_s_dict[a][0] ='amu_s_13' 
+                amu_s_dict[a][0]=0.013
+            # initialize a match result object for storing M_Ka_0/K^FSE
+            mk_akk = ana.MatchResult("mk_a0_M1B_%s"%e,save=datadir+'%s/'%e)
+            ana.MatchResult.create_empty(mk_akk,1500,3,"mk_a0_M1B")
+
+            # get mk_akk for all strange quark masses at once
+            dat_names = [datadir+'%s/' % (e) +s+'/mk_akk_%s.npz' % (e) for s in mu_s_dict[a]]
+            mk_akk_meas = ana.init_fitreslst(dat_names)
+            mk_akk.load_data(mk_akk_meas,0,amu_s_dict[a],square=False)
+            fse_k = '../plots2/data/k_fse_mk.dat'
+            # Apply finite size corrections
+            label = [r'$a\mu_s$',r'$M_K a_0$',r'$a\mu_s = a\mu_s^{\mathrm{ref}}$']
+            mk_akk.add_extern_data(fse_k,e,idx=None,square=False,read='fse_mk',op='mult')
+            mk_akk.eval_at(fix_ms.eval_at[e],plotdir=plotdir,ens=e,plot=True,label=label,meth=2)
+
+            # Add data to chirana object
+            mka0.add_data(fix_ms.eval_at[e],(i,j,0,0),'mu')
+            mka0.add_data(mk_akk.eval_obs[2],(i,j,0,0),'y')
+            # ------------------- add r_0 m_l values ---------------------------------
+            mq_tmp = np.full((nboot,),amu_l_dict[a][j])
+            mka0.add_data(mq_tmp,(i,j,0,0),dim='x')
+            #mka0.add_extern_data(('../plots2/data/mpi.dat','../plots2/data/k_fse_mpi.dat'),
+            #                    (i,j,0,0),e,'x', read='fse_pi', square=True, physical=False)
+            # Multiply mu_l with r0 and divide by zp (take those from fitres?
+            # try that!)
+            #mka0.x_data[i][j,0,0] *= ext_data.get(a,'r0')
+            #mka0.x_data[i][j,0,0] *= (args[:,0+i,0])
+            #mka0.x_data[i][j,0,0] /= ext_data.get(a,'zp')
+            #mka0.x_data[i][j,0,0] /= (args[:,3+i,0])
+
+            #mka0.x_data[i][j,0,1] = 1./(ext_data.get(a,'r0')**2)
+            mka0.x_data[i][j,0,1] = 1./(args[:,0+i,0]**2)
+    # Plot the data
+    label=[r'$r_0m_{l}$',r'$m_Ka_0$',r' ',
+           r'$(r_0M_{l})_{phys}$']
+    filename = plotdir+'/compare_mka0.pdf'
+    chiral_plot = ana.LatticePlot(filename, join = False)
+    #chiral_plot.plot_comparison(fix_ms,space,label,[0.,0.13],dep=1)
+    chiral_plot.plot_comparison(fix_ms,space,label,[0.,0.13],ylim=[-0.44,-0.28],dep=None)
+    del chiral_plot
+
+    # Do a chiral fit
+    # fit straight line with ca^2 term
+    #_r0ml = cont_data.get('r0')*cont_data.get('m_l')/197.37
+    # Stack already adapted  data for all betas to use as prior samples:
+    pr_r0 = np.vstack((args[:,0].T,args[:,1].T, args[:,2].T))
+    print("Priors for r0 have shape:")
+    print(pr_r0.shape)
+    # print first bootstrapsample
+    print(pr_r0[...,0])
+    pr_zp = np.vstack((args[:,3].T, args[:,4].T, args[:,5].T))
+    print("Priors for zp have shape:")
+    print(pr_zp.shape)
+    # print first bootstrapsample
+    print(pr_zp[...,0])
+    mka0.fit_mka0(pr_r0,pr_zp,dat=datadir)
+
+    # Calculate physical point
+    phys_x = cont_data.get('r0')*cont_data.get('m_l')/197.37
+    contfunc = lambda p,x: p[:,2]*x + p[:,4]
+    evalfunc = lambda p,x: p[6]*x + p[8]
+    mka0.mka0_phys(evalfunc,phys_x,resdir)
+
+    # Plot chiral fit and continuum function
+    filename = resdir+'/'+mka0.proc_id+'.pdf'
+    chiral_plot = ana.LatticePlot(filename, join=False)
+    label=[r'$r_0m_l$',r'$M_K a_0$']
+    plotargs = mka0.fitres.data[0]
+    args = np.asarray([np.hstack((plotargs[:,0+i],plotargs[:,3+i],plotargs[:,6:,0]))
+        for i in range(3)])
+    plotfunc = lambda p,x: p[:,2]*x + p[:,3]/p[:,0]**2 + p[:,4]
+    print("error for physical r0ml")
+    print(ana.compute_error(phys_x))
+    chiral_plot.plot_chiral_ext(mka0,space,label,xlim=[0,0.13],ylim=[-0.45,-0.28],args=args,
+                                func=plotfunc,ploterror=False)
+    cont_func = lambda p,x: p[:,2]*x + p[:,4]
+    chiral_plot.plot_cont(mka0,cont_func,phys_x,xlim=[0,0.13], args=args[0])
+    chiral_plot._set_limits(marks=4)
+    chiral_plot.save()
+    del chiral_plot
+    #mka0.fit(dim=None,index=0,datadir=resdir,plot=True,x_phys=_r0ml,
+    #    xcut=None,start=[0.,0.,0.], label=label,
+    #    ens=lat_dict,read=False,debug=4,xlim=[0,0.13],ylim=[-0.45,-0.28])
+    mka0.print_summary(None,0,space,lat_dict,amu_s_dict,xcut=15)
+   
+    #_r0ml =cont_data.get('r0')*cont_data.get('m_l')/197.37
+    #print("error for physical r0ml")
+    #print(ana.compute_error(_r0ml))
+    #mka0.fit(dim=None,index=0,datadir=resdir,plot=True,ploterr=True,x_phys=_r0ml,
+    #           xcut = None, start=[0.,0.,0], label=label,
+    #           ens=lat_dict,read=False,debug=4,xlim=[0.,0.13],ylim=[-0.44,-0.28])
+    ## That should take over in the future, it is much easier to read
+    ##mka0.fit_mka0(debug=4)
+    #mka0.print_summary(0,0,space,lat_dict)    
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Keyboard Interrupt")

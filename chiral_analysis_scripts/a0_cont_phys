@@ -1,0 +1,201 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+################################################################################
+#
+# Author: Christian Jost (jost@hiskp.uni-bonn.de)
+# Date:   Februar 2015
+#
+# Copyright (C) 2015 Christian Jost
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Script comining several physical point evaluations defined in inputfile to one
+# final result as weighted median
+#
+#
+# For informations on input parameters see the description of the function.
+#
+################################################################################
+
+import sys
+import numpy as np
+import matplotlib
+matplotlib.use('Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+sys.path.append('/hiskp2/helmes/projects/analysis-code/')
+import analysis2 as ana
+
+
+def main():
+
+    # parse inputfile
+      if len(sys.argv) < 2:
+          ens = ana.LatticeEnsemble.parse("A40.24.ini")
+      else:
+          ens = ana.LatticeEnsemble.parse(sys.argv[1])
+    
+      # get data from input file
+      datadir = ens.get_data("datadir") 
+      plotdir = ens.get_data("plotdir") 
+      resdir = ens.get_data("resultdir")
+      reslst_all = ens.get_data("resultlist")
+      reslst_A1A2 = ens.get_data("resultlist_a1a2")
+      reslst_B1B2 = ens.get_data("resultlist_b1b2")
+      reslst_A1B1 = ens.get_data("resultlist_a1b1")
+      reslst_A2B2 = ens.get_data("resultlist_a2b2")
+
+      # Parametrised Pseudobootstrap of physical Kaon mass
+      seeds_A1 = [6930, 2766, 3724, 6136]
+      cont_A1 = ana.ContDat(seeds_A1,zp_meth=1,nboot=1500)
+      seeds_A2 = [8365, 4477, 2692, 6001]
+      cont_A2 = ana.ContDat(seeds_A2,zp_meth=2,nboot=1500)
+      seeds_B1 = [3353, 8106, 1519, 5522]
+      cont_B1 = ana.ContDat(seeds_B1,zp_meth=1,nboot=1500)
+      seeds_B2 = [6145, 1137, 6395, 3079]
+      cont_B2 = ana.ContDat(seeds_B2,zp_meth=2,nboot=1500)
+      # Build lists of the kaon mass
+      contlist_all = [cont_A2.get("mk")/197.33,cont_B2.get("mk")/197.33,cont_A1.get("mk")/197.33,cont_B1.get("mk")/197.33,]
+      contlist_a1a2 = [cont_A1.get("mk")/197.33,cont_A2.get("mk")/197.33] 
+      contlist_b1b2 = [cont_B1.get("mk")/197.33,cont_B2.get("mk")/197.33] 
+      contlist_a1b1 = [cont_A1.get("mk")/197.33,cont_B1.get("mk")/197.33] 
+      contlist_a2b2 = [cont_A2.get("mk")/197.33,cont_B2.get("mk")/197.33]
+       
+      #seeds = [25141, 93350, 85563, 74079]
+      #phys_cont = ana.ContDat(seeds,zp_meth="phys",nboot=1500)
+      #print(phys_cont.get('mk')[0],np.std(phys_cont.get('mk')))
+      #print(cont_A1.get('mk')[0],np.std(cont_A1.get('mk')))
+      #mult = phys_cont.get("mk")/197.33
+      # Combine all results for central value and statistical error
+      # initialize fitresult object with fitranges serving as counter for results
+      comb_all = ana.FitResult('combined_extrapolation',derived=True)
+      fr = len(reslst_all)
+      comb_all.create_empty((1500,fr),(1500,fr),1)
+      # add fitresults to fitresult object (includes physical point evaluations and
+      # p-values)
+      for i,n in enumerate(reslst_all):
+        tmp_fit = ana.FitResult.read(resdir+n)
+        # convert to physical units
+        tmp_fit.data[0][:,0] = np.divide(tmp_fit.data[0][:,0],contlist_all[i])
+        #tmp_fit.data[0][:,0] = np.divide(tmp_fit.data[0][:,0],mult)
+        tmp_fit.calc_error()
+        print("extrapolation %d:" % i)
+        tmp_fit.print_data()
+        comb_all.add_data((0,i),tmp_fit.data[0][:,0],tmp_fit.chi2[0][:,0],tmp_fit.pval[0][:,0])
+        print(tmp_fit.pval[0])
+      # calculate the error
+      comb_all.calc_error()
+    
+      # combine A1 and A2
+      # initialize fitresult object with fitranges serving as counter for results
+      comb_a1a2 = ana.FitResult('comb_allined_extrapolation',derived=True)
+      fr = len(reslst_A1A2)
+      comb_a1a2.create_empty((1500,fr),(1500,fr),1)
+    
+      # add fitresults to fitresult object (includes physical point evaluations and
+      # p-values)
+      for i,n in enumerate(reslst_A1A2):
+        tmp_fit = ana.FitResult.read(resdir+n)
+        # convert to physical units
+        tmp_fit.data[0][:,0] = np.divide(tmp_fit.data[0][:,0],contlist_a1a2[i])
+        tmp_fit.calc_error()
+        print("extrapolation %d:" % i)
+        tmp_fit.print_data()
+        comb_a1a2.add_data((0,i),tmp_fit.data[0][:,0],tmp_fit.chi2[0][:,0],tmp_fit.pval[0][:,0])
+        print(tmp_fit.pval[0])
+      # calculate the error
+      comb_a1a2.calc_error()
+
+      # combine B1 and B2
+      # initialize fitresult object with fitranges serving as counter for results
+      comb_b1b2 = ana.FitResult('comb_allined_extrapolation',derived=True)
+      fr = len(reslst_B1B2)
+      comb_b1b2.create_empty((1500,fr),(1500,fr),1)
+    
+      # add fitresults to fitresult object (includes physical point evaluations and
+      # p-values)
+      for i,n in enumerate(reslst_B1B2):
+        tmp_fit = ana.FitResult.read(resdir+n)
+        # convert to physical units
+        tmp_fit.data[0][:,0] = np.divide(tmp_fit.data[0][:,0],contlist_b1b2[i])
+        tmp_fit.calc_error()
+        print("extrapolation %d:" % i)
+        tmp_fit.print_data()
+        comb_b1b2.add_data((0,i),tmp_fit.data[0][:,0],tmp_fit.chi2[0][:,0],tmp_fit.pval[0][:,0])
+        print(tmp_fit.pval[0])
+      # calculate the error
+      comb_b1b2.calc_error()
+
+      # combine A1 and B1
+      # initialize fitresult object with fitranges serving as counter for results
+      comb_a1b1 = ana.FitResult('comb_allined_extrapolation',derived=True)
+      fr = len(reslst_A1B1)
+      comb_a1b1.create_empty((1500,fr),(1500,fr),1)
+    
+      # add fitresults to fitresult object (includes physical point evaluations and
+      # p-values)
+      for i,n in enumerate(reslst_A1B1):
+        tmp_fit = ana.FitResult.read(resdir+n)
+        # convert to physical units
+        tmp_fit.data[0][:,0] = np.divide(tmp_fit.data[0][:,0],contlist_a1b1[i])
+        tmp_fit.calc_error()
+        print("extrapolation %d:" % i)
+        tmp_fit.print_data()
+        comb_a1b1.add_data((0,i),tmp_fit.data[0][:,0],tmp_fit.chi2[0][:,0],tmp_fit.pval[0][:,0])
+        print(tmp_fit.pval[0])
+      # calculate the error
+      comb_a1b1.calc_error()
+
+      # combine A2 and B2
+      # initialize fitresult object with fitranges serving as counter for results
+      comb_a2b2 = ana.FitResult('comb_allined_extrapolation',derived=True)
+      fr = len(reslst_A2B2)
+      comb_a2b2.create_empty((1500,fr),(1500,fr),1)
+    
+      # add fitresults to fitresult object (includes physical point evaluations and
+      # p-values)
+      for i,n in enumerate(reslst_A2B2):
+        tmp_fit = ana.FitResult.read(resdir+n)
+        # convert to physical units
+        tmp_fit.data[0][:,0] = np.divide(tmp_fit.data[0][:,0],contlist_a2b2[i])
+        tmp_fit.calc_error()
+        print("extrapolation %d:" % i)
+        tmp_fit.print_data()
+        comb_a2b2.add_data((0,i),tmp_fit.data[0][:,0],tmp_fit.chi2[0][:,0],tmp_fit.pval[0][:,0])
+        print(tmp_fit.pval[0])
+      # calculate the error
+      comb_a2b2.calc_error()
+
+      # print the data
+      print("\np-value median of A1,A2,B1 and B2:")
+      comb_all.print_data(par=0)
+      # print the data
+      print("\np-value median of A1 and A2:")
+      comb_a1a2.print_data(par=0)
+      # print the data
+      print("\np-value median of B1 and B2:")
+      comb_b1b2.print_data(par=0)
+      # print the data
+      print("\np-value median of A1 and B1:")
+      comb_a1b1.print_data(par=0)
+      # print the data
+      print("\np-value median of A2 and B2:")
+      comb_a2b2.print_data(par=0)
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass
