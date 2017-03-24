@@ -13,7 +13,7 @@ def main():
         ens = ana.LatticeEnsemble.parse(sys.argv[1])
 
     # read settings
-    readsingledata = False 
+    readsingledata = True 
     readsinglefit = False
     plotsingle = True
 
@@ -51,9 +51,9 @@ def main():
         print(picorr.shape)
         picorr.save("%s/corr_pi_%s.npy" % (datadir, lat))
     else:
-        picorr = ana.Correlators.read("%s/corr_pi_%s.npy" % (datadir, lat))
-
-    fit_single = ana.LatticeFit(0,dt_f=-1, dt=min_size_mass, correlated=False)
+        picorr = ana.Correlators.read("%s/%s/corr_pi_%s.npz" % (datadir, lat, lat))
+    print(picorr.data.shape)
+    fit_single = ana.LatticeFit(0,dt_f=-1, dt=min_size_mass, correlated=True)
     start_single = [1., 0.3]
     if readsinglefit == False:
         print("fitting")
