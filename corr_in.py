@@ -20,7 +20,8 @@ def miss_confs(path,rng):
   return misslist
 
 def main():
-
+    
+    read_c4=True
     # parse the input file
     if len(sys.argv) < 2:
         ens = ana.LatticeEnsemble.parse("charged.ini")
@@ -36,12 +37,14 @@ def main():
     if len(sys.argv) < 2:
       Corrs = ana.inputnames('charged.ini',['C2+', 'C4+C', 'C4+D'])
     else:
-      Corrs = ana.inputnames(sys.argv[1],['C20', 'C40C', 'C40D'])
+      Corrs = ana.inputnames(sys.argv[1],['c0','c1','c2','c3'])
+      #Corrs = ana.inputnames(sys.argv[1],['c0','c1','c2','c3','c4','c5','c6','c7'])
+      #Corrs = ana.inputnames(sys.argv[1],['c5'])
 
     print(rawdir)
     print(datadir)
     inputlist = []
-    cfg_rng = [714,1114,4]
+    cfg_rng = [714,910,4]
     #omit = [20, 164, 416, 540, 568, 596, 668, 1000]
     omit=[]
     print(omit)
@@ -58,21 +61,36 @@ def main():
     # Read in correlators
     print("Reading Correlation functions from %s..." % rawdir)
     print("C2")
-    print(Corrs[0])
-    C2 = ana.read_confs(rawdir,Corrs[0],inputlist,T)
-    print("C4")
-    C4D = ana.read_confs(rawdir,Corrs[1],inputlist,T)
-    C4C = ana.read_confs(rawdir,Corrs[2],inputlist,T)
-    print("Read in done")
-    # subtract crossed from direct diagram
-    C4_tot = ana.confs_subtr(C4D,C4C)
-    C4_tot = ana.confs_mult(C4_tot,2)
-    print("Writing to: %s..." % datadir)
-    #ana.write_data_ascii(C2,datadir+'pi_charged_p0.dat')
-    ana.write_data_ascii(C2,datadir+'k_charged_p0.dat',inputlist)
-    ana.write_data_ascii(C4_tot,datadir+'kk_charged_A1_TP0_00.dat',inputlist)
-    ana.write_data_ascii(C4D,datadir+'C4D.dat')
-    ana.write_data_ascii(C4C,datadir+'C4C.dat')
+    print(Corrs)
+    C2_k = ana.read_confs(rawdir,Corrs[0],inputlist,T)
+    C2_pi = ana.read_confs(rawdir,Corrs[1],inputlist,T) 
+    C2_k = ana.confs_mult(C2_k,-1)
+    C2_pi = ana.confs_mult(C2_pi,-1)
+    ana.write_data_ascii(C2_k,datadir+'k_os.dat',conf=inputlist)
+    ana.write_data_ascii(C2_pi,datadir+'pi_os.dat',conf=inputlist)
+    #C2_tot = ana.confs_mult(C2,-1)
+    C57 = np.zeros((len(inputlist),T,2))
+    #ana.write_data_ascii(C2_tot,datadir+'pi_os_opposite_p0.dat',conf=inputlist)
+    if read_c4:
+        print("C55")
+        C4D = ana.read_confs(rawdir,Corrs[2],inputlist,T)
+        C4C = ana.read_confs(rawdir,Corrs[3],inputlist,T)
+        C55 = ana.confs_subtr(C4D,C4C)
+        ana.write_data_ascii(C55,datadir+'C55.dat',conf=inputlist)
+        # loop over all contributions for gamma_j
+        #for i in range(3):
+        #    print("C57")
+        #    C4D = ana.read_confs(rawdir,Corrs[i*2+2],inputlist,T)
+        #    C4C = ana.read_confs(rawdir,Corrs[i*2+3],inputlist,T)
+        #    print("Read in done")
+        #    # subtract crossed from direct diagram
+        #    C57 = ana.confs_add(C57,ana.confs_subtr(C4D,C4C))
+        #    print("Writing to: %s..." % datadir)
+        #    #ana.write_data_ascii(C2,datadir+'pi_charged_p0.dat')
+        #    # write out the sum over j of C^j_{57}D-C^j_{57}C 
+        #ana.write_data_ascii(C57,datadir+'C57.dat',conf=inputlist)
+    #    ana.write_data_ascii(C4D,datadir+'C4D.dat')
+    #    ana.write_data_ascii(C4C,datadir+'C4C.dat')
     print("Finished")
 
 

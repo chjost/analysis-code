@@ -139,7 +139,8 @@ class Correlators(object):
             The amount of debug information printed.
         """
         tmp = cls(debug=debug)
-        tmp.data = np.atleast_3d(data)
+        # Make a copy instead of a view
+        tmp.data = np.copy(np.atleast_3d(data))
         print("data has dimension:")
         print(tmp.data.shape)
         tmp.shape = tmp.data.shape

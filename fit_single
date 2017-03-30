@@ -13,7 +13,7 @@ def main():
         ens = ana.LatticeEnsemble.parse(sys.argv[1])
 
     # read settings
-    readsingledata = True 
+    readsingledata = False 
     readsinglefit = False
     plotsingle = True
 
@@ -41,7 +41,7 @@ def main():
 
     # single particle correlator
     print("read single particle corrs")
-    files = ["%s/pi_charged_p%d.dat" % (datadir, d) for d in range(1)]
+    files = ["%s/pi_os_p%d.dat" % (datadir, d) for d in range(1)]
     #files = ["%s/eta_charged_p0_old.dat" % datadir] 
     #files = ["%s/pi_corr_p0.dat" % datadir] 
     if readsingledata == False:
@@ -76,8 +76,13 @@ def main():
         label = ["single particle", "t", "C(t)", "pion"]
         plotter.plot(picorr, label, pifit, fit_single, add=addT, debug=4)
         plotter.new_file("%s/hist_fit_pi_%s.pdf" % (plotdir, lat))
-        label = ["K energy", "E$_K$/a", "E$_K$"]
+        label = ["Pi energy", r'$E_\pi/a$', r'$E_\pi$']
         plotter.histogram(pifit, label, 1)
+        plotter.set_env(ylog=False)
+        plotter.new_file("%s/m_eff_pi_%s.pdf" % (plotdir, lat))
+        label = [r'$\Pi$ Effective Mass', r'$t/a$', r'$M_{eff}$',r'$cosh(C)$']
+        picorr.mass()
+        plotter.plot(picorr,label)
         del plotter
 
 

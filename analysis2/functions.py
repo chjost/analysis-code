@@ -4,6 +4,7 @@ Different functions with no other place to go.
 
 import os
 import numpy as np
+from scipy.optimize import fsolve
 
 def compute_derivative(data):
     """Computes the derivative of a correlation function.
@@ -64,13 +65,14 @@ def compute_eff_mass(data, usecosh=True):
                 mass[b,t-1] = (row[t-1] + row[t+1])/(2.*row[t])
         mass = np.arccosh(mass)
     elif usecosh == False:
-        # creating mass array from data array
-        mass = np.zeros_like(data[:,:-2])
-        for b, row in enumerate(data):
-            for t in range(1, len(row)-1):
-                mass[b,t-1] = (row[t-1] + row[t+1])/(2.*row[t])
-        mass = np.arccosh(mass)
-        
+       # Write a numerical solve for the effective mass per timeslice
+       # args are (t,T2)
+       T2=data.shape[1]-1
+       mass = np.zeros_like(data[:,:-1])
+       print(mass.shape)
+       for b, row in enumerate(data):
+           for t in range(len(row)-1):
+                mass[b, t] = fsolve(corr_shift_ratio,0.5,args=(row[t],row[t+1],t,T2))
         
     else:
         # creating mass array from data array
@@ -79,6 +81,17 @@ def compute_eff_mass(data, usecosh=True):
             for t in range(len(row)-1):
                mass[b, t] = np.log(row[t]/row[t+1])
     return mass
+
+def corr_shift_ratio(m,r0,r1,t,T2):
+    """
+    Parameters
+    ----------
+    p: tuple
+    """
+    _den = np.exp(m*(t-T2)) + np.exp(-m*(t-T2))
+    _num = np.exp(m*(t+1-T2)) + np.exp(-m*(t+1-T2)) 
+    _diff = r0/r1 - _den/_num 
+    return _diff
 
 def func_single_corr(p, t, T2):
     """A function that describes two point correlation functions.

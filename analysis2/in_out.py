@@ -773,6 +773,23 @@ def confs_subtr(Corr1, Corr2):
     Cdiff[i] = np.column_stack((_re,_im))
   return Cdiff
 
+def confs_add(Corr1, Corr2):
+  """ function to add two diagrams columnwise 
+  
+  Subtracts two correlation functions like Corr1 - Corr2
+
+  Args:
+      Corr1, Corr2: Numpy arrays of one or more correlation functions
+
+  Returns:
+      A list of three tuples containing the difference C_1(t) - C_2(t)
+  """
+  Cdiff = np.zeros_like(Corr1)
+  for i in range(Corr1.shape[0]):
+    _re = np.add(Corr1[i,:,0],Corr2[i,:,0])
+    _im = np.add(Corr1[i,:,1],Corr2[i,:,1])
+    Cdiff[i] = np.column_stack((_re,_im))
+  return Cdiff
 
 def conf_abs(Corr):
   """ Compute absolute value of Correlation function
