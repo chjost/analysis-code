@@ -921,6 +921,42 @@ class FitResult(object):
             delta.add_data(*res)
         return delta
 
+    def calc_cot_delta_twopart(self, mass, parmass=0, L=24, isdependend=False,
+            d2=0, irrep="A1"):
+        """Calculate the cotangent of the scattering phase if two different
+        particles are involved.
+
+        Parameters
+        ----------
+        mass : tuple of FitResult
+            The masses of the particle.
+        parmass : 
+            The parameter of the mass fit to tuse.
+        L : int, optional
+            The spatial extend of the lattice.
+        """
+        if not self.derived or self.corr_id != "Ecm":
+            raise RuntimeError("change to center of mass frame first")
+        # we need the weight
+        self.calc_error()
+        mass[0].calc_error()
+        mass[1].calc_error()
+        _ma0 = mass[0].data[0][:,parmass]
+        _ma_w0 = mass[0].weight[parmass]
+        _ma1 = mass[0].data[0][:,parmass]
+        _ma_w1 = mass[1].weight[parmass]
+        nsam = _ma.shape[0]
+        if isdependend:
+            newshape = [d.shape for d in self.data]
+        else:
+            newshape = [(nsam,_ma.shape[-1],d.shape[-1]) for d in self.data]
+        delta = FitResult("delta", True)
+        delta.create_empty(newshape, newshape, [1, len(self.data)])
+        for res in compute_phaseshift(self.data, self.weight, _ma, _ma_w, L,
+                isdependend, d2, irrep):
+            delta.add_data(*res)
+        return delta
+
     def calc_mk_a0_phys(self, val_phys, func, parself=0, parmass=0, isdependend=True):
         """Calculate the physical point result from fitresult parameters 
 
