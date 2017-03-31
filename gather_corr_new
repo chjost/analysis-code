@@ -1,0 +1,147 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+##!/usr/bin/python2
+################################################################################
+#
+# Author: Christian Jost (jost@hiskp.uni-bonn.de)
+# Date:   Februar 2015
+#
+# Copyright (C) 2015 Christian Jost
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Function: At the moment this is a test program, this file will change a lot
+#
+# For informations on input parameters see the description of the function.
+#
+################################################################################
+
+import os
+import numpy as np
+import ConfigParser
+
+import analysis2 as ana
+
+def parse_input():
+    """Parse the input file."""
+    config = ConfigParser.SafeConfigParser()
+    opts = {}
+    opts["debug"] = config.getint("main", "debug")
+    opts["inputpath"] = config.get("main", "inputpath")
+    opts["outputpath"] = config.get("main", "outputpath")
+    opts["pimax"] = config.getint("main", "pimax")
+    opts["cmfmax"] = config.getint("main", "cmfmax")
+    opts["mfmax"] = config.getint("main", "mfmax")
+    opts["confmax"] = config.getint("main", "confmax")
+    opts["confmin"] = config.getint("main", "confmin")
+    opts["confstep"] = config.getint("main", "confstep")
+
+def main():
+    # check for input file
+    if len(os.sys.argv) < 2:
+        # no input file, generate sample
+        print("no input file specified, creating example")
+        config = ConfigParser.SafeConfigParser()
+        config.add_section("main")
+        config.set("main", "debug", "0")
+        config.set("main", "inputpath", "./")
+        config.set("main", "outputpath", "./")
+        config.set("main", "pimax", "4")
+        config.set("main", "cmfmax", "3")
+        config.set("main", "mfmax", "2")
+        config.set("main", "confmax", "385")
+        config.set("main", "confmin", "300")
+        config.set("main", "confstep", "4")
+        config.set("main", "missing", "384")
+        fi = open("example.cfg", "w")
+        config.write(fi)
+        os.sys.exit(-1)
+
+    # parse the input file for variables
+    config = ConfigParser.SafeConfigParser()
+    config.read(os.sys.argv[1])
+    debug = config.getint("main", "debug")
+    inputpath = config.get("main", "inputpath")
+    outputpath = config.get("main", "outputpath")
+    pimax = config.getint("main", "pimax")
+    cmfmax = config.getint("main", "cmfmax")
+    mfmax = config.getint("main", "mfmax")
+    confmax = config.getint("main", "confmax")
+    confmin = config.getint("main", "confmin")
+    confstep = config.getint("main", "confstep")
+    # workaround: missing needs ints, config reads strings
+    miss = config.get("main", "missing").split(",")
+    missing = []
+    for m in miss:
+        missing.append(int(m))
+    #debug = 1
+    #inputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D30/sum/"
+    #outputpath="/hiskp2/jost/correlationfunctions/liuming_pion/D30/"
+    #pimax = 4
+    #cmfmax = 3
+    #mfmax = 2
+    #missing = [384, 388, 392, 396, 412, 416, 420, 424, 428]
+    #confmin = 300
+    #confmax = 445
+    #confstep = 4
+
+    filelist = ["pi_corr_p%d" % (x) for x in xrange(pimax)]
+    filelist += ["pipi_pipi_A1_corr_TP0_%1d%1d" % (i, j) for i in range(cmfmax)
+        for j in range(cmfmax)]
+    filelist += ["pipi_pipi_A1_corr_TP1_%1d%1d" % (i, j) for i in range(mfmax)
+        for j in range(mfmax)]
+    filelist += ["pipi_pipi_A1_corr_TP2_%1d%1d" % (i, j) for i in range(mfmax)
+        for j in range(mfmax)]
+    filelist += ["pipi_pipi_A1_corr_TP3_%1d%1d" % (i, j) for i in range(mfmax)
+        for j in range(mfmax)]
+    suffix=".dat"
+    inputlist = []
+    for i in range(confmin, confmax, confstep):
+        if i in missing:
+            continue
+        inputlist.append(".conf%04d" % i)
+    if debug > 0:
+        print("number of files: %d" % len(filelist))
+        print("number of configs: %d" % len(inputlist))
+    if debug > 1:
+        print(inputpath)
+        print(outputpath)
+    if debug > 2:
+        print(filelist)
+        print(inputlist)
+        print(missing)
+
+    for d in filelist:
+        fnames = []
+        for i in inputlist:
+            fnames.append("".join((inputpath, d, i, suffix)))
+        if debug > 2:
+            print(fnames)
+        # read in data
+        corrs = ana.Correlators(fnames, matrix=False)
+        corrs.data = np.rollaxis(corrs.data, 1, 0)
+        corrs.data = np.rollaxis(corrs.data, 2, 0)
+
+        # print to file
+        outname = "".join((outputpath, d, suffix))
+        if debug > 1:
+            print("save data to %s" % outname)
+        corrs.save(outname, asascii=True)
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nKeyboard Interrupt, exiting...")

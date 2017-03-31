@@ -304,9 +304,12 @@ def func_sinh(p, t, o):
     float
         The result.
     """
-    if len(o) > 1:
-        _o = o[1]
-    else:
+    try:
+        if len(o) > 1:
+            _o = o[1]
+        else:
+            _o = o
+    except TypeError:
         _o = o
     return p[0]*np.sinh(p[1]/2.) * np.sinh(p[1]*(t-_o/2.))
 

@@ -14,8 +14,8 @@ def main():
         ens = ana.LatticeEnsemble.parse(sys.argv[1])
 
     # read settings
-    readdata = True
-    preparedata = False
+    readdata = False
+    preparedata = True
     readfit = False
     plotdata = True
 
@@ -65,10 +65,10 @@ def main():
         corr = ana.Correlators.read("%s/corr_pipi_TP%d.npy" % (datadir, d2))
 
     print("fitting")
-    fitter = ana.LatticeFit(5, dt_i=dti, dt_f=dtf, dt=dt, correlated=True, xshift=0.5)
+    fitter = ana.LatticeFit(5, dt_i=dti, dt_f=dtf, dt=dt, correlated=True)
     if readfit == False:
         if L < 25:
-            fitranges = [[11,17,17,22],] + [[11,15,18,20],]*(gmax-1)
+            fitranges = [[11,17,17,22],] + [[8,12,15,17],]*(gmax-1)
         elif L < 33:
             fitranges = [[11,17,20,30],] + [[11,15,18,20],]*(gmax-1)
         else:
@@ -94,9 +94,9 @@ def main():
         label = ["two pion energy", "t", "C(t)", "E$_{\pi\pi}$"]
         if d2 != 0:
             plotter.plot(corr, label, fitres, fitter, oldfit=pifit, oldfitpar=1,
-                add=addT, xshift=-0.5)
+                add=addT)
         else:
-            plotter.plot(corr, label, fitres, fitter, add=addT, xshift=-0.5)
+            plotter.plot(corr, label, fitres, fitter, add=addT)
         plotter.new_file("%s/hist_fit_pipi_TP%d.pdf" % (plotdir, d2))
         label = ["two pion energy", "E$_{\pi\pi}$/a", "E$_{\pi\pi}$"]
         plotter.histogram(fitres, label, par=1)

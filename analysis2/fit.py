@@ -7,7 +7,7 @@ import itertools
 import numpy as np
 
 from fit_routines import (fit_comb, fit_single, calculate_ranges, compute_dE,
-    compute_phaseshift, get_start_values, get_start_values_comb, fitting)
+    get_start_values, get_start_values_comb, fitting)
 from in_out import read_fitresults, write_fitresults
 from interpol import match_lin, match_quad, evaluate_lin
 from functions import (func_single_corr, func_ratio, func_const, func_two_corr,
@@ -19,6 +19,7 @@ from energies import calc_q2, calc_Ecm
 from zeta_wrapper import Z
 from scattering_length import calculate_scat_len
 from chiral_utils import evaluate_phys
+from phaseshift_functions import compute_phaseshift
 
 class LatticeFit(object):
     def __init__(self, fitfunc, dt_i=2, dt_f=2, dt=4, xshift=0.,
@@ -889,7 +890,7 @@ class FitResult(object):
                 rsys[i][1]))
         return res
 
-    def calc_cot_delta(self, mass, parmass=0, L=24, isdependend=False,
+    def calc_cot_delta(self, Ecm, L=24, isdependend=True,
             d2=0, irrep="A1"):
         """Calculate the cotangent of the scattering phase.
 
@@ -902,24 +903,22 @@ class FitResult(object):
         L : int, optional
             The spatial extend of the lattice.
         """
-        if not self.derived or self.corr_id != "Ecm":
-            raise RuntimeError("change to center of mass frame first")
         # we need the weight
         self.calc_error()
-        mass.calc_error()
-        _ma = mass.data[0][:,parmass]
-        _ma_w = mass.weight[parmass]
-        nsam = _ma.shape[0]
-        if isdependend:
-            newshape = [d.shape for d in self.data]
-        else:
-            newshape = [(nsam,_ma.shape[-1],d.shape[-1]) for d in self.data]
+        Ecm.calc_error()
+
+        # the shape is the same as self
+        newshape = [d.shape for d in self.data]
         delta = FitResult("delta", True)
-        delta.create_empty(newshape, newshape, [1, len(self.data)])
-        for res in compute_phaseshift(self.data, self.weight, _ma, _ma_w, L,
-                isdependend, d2, irrep):
-            delta.add_data(*res)
-        return delta
+        delta.create_empty(newshape, newshape, self.corr_num)
+        cotdelta = FitResult("cotdelta", True)
+        cotdelta.create_empty(newshape, newshape, self.corr_num)
+        # the Lorentz boost is saved in Ecm.chi2
+        for res, res1 in compute_phaseshift(self.data, self.weight[0], Ecm.chi2,
+                Ecm.weight[0], L, isdependend, d2, irrep):
+            cotdelta.add_data(*res)
+            delta.add_data(*res1)
+        return delta, cotdelta
 
     def calc_cot_delta_twopart(self, mass, parmass=0, L=24, isdependend=False,
             d2=0, irrep="A1"):
@@ -1093,7 +1092,12 @@ class FitResult(object):
                 select = (slice(None), par) + item
                 gamma, res = calc_Ecm(data[select], d=d, L=L, lattice=uselattice)
                 weight = np.ones(nsamples) * self.weight[par][i][item]
-                if not isinstance(self.label[i], tuple):
+                if isinstance(self.label[i], np.ndarray):
+                    if self.label[i].ndim == 0:
+                        tmp = (self.label[i].item(),)
+                    else:
+                        tmp = tuple(self.label[i])
+                elif not isinstance(self.label[i]):
                     tmp = tuple(self.label[i])
                 else:
                     tmp = self.label[i]
@@ -1102,17 +1106,13 @@ class FitResult(object):
                 Ecm.add_data(tmp + item, res, gamma, weight)
         return Ecm
 
-    def calc_momentum(self, mass, parmass, L=24, uselattice=True):
-        """Transform data to center of mass frame.
+    def calc_momentum(self, mass, parmass, L=24, uselattice=True, isdependend=False):
+        """Calculate the lattice momentum of the system.
 
         Parameters
         ----------
-        par : int
-            Which of the fit parameters to transform.
         L : int, optional
             The lattice size.
-        d : ndarray, optional
-            The total momentum vector of the system.
         uselattice : bool, optional
             Use the lattice formulas or the continuum formulas.
         """
@@ -1120,19 +1120,31 @@ class FitResult(object):
 
         _ma = mass.data[0][:,parmass]
         _ma_w = mass.weight[parmass][0]
-        newshapes = [p.shape for p in self.pval]
         q2 = FitResult("q2", True)
-        q2.create_empty(newshapes, newshapes, self.corr_num)
+        if isdependend:
+            newshapes = [p.shape for p in self.pval]
+            q2.create_empty(newshapes, newshapes, self.corr_num)
+        else:
+            newshapes = [(d.shape[0],_ma.shape[-1])+tuple(d.shape[1:]) for d in self.data]
+            q2.create_empty(newshapes, newshapes, [1, self.corr_num])
         nsamples = self.data[0].shape[0]
         needed = np.zeros((nsamples,))
-        for i, data in enumerate(self.data):
-            weight = (_ma_w * self.weight[0][i].T).T
-            for n in range(data.shape[-1]):
-                res = calc_q2(data[...,n], _ma, L=L, lattice=uselattice)
-                #print(res.shape)
-                for m in range(data.shape[-2]):
-                    tmp = weight[m,n] * np.ones((nsamples,))
-                    q2.add_data((0, i, m, n), res[:,m], needed, tmp)
+        if isdependend:
+            for i, data in enumerate(self.data):
+                weight = (_ma_w * self.weight[0][i].T).T
+                for n in range(data.shape[-1]):
+                    res = calc_q2(data[...,n], _ma, L=L, lattice=uselattice)
+                    #print(res.shape)
+                    for m in range(data.shape[-2]):
+                        tmp = weight[m,n] * np.ones((nsamples,))
+                        q2.add_data((0, i, m, n), res[:,m], needed, tmp)
+        else:
+            for i, data in enumerate(self.data):
+                for n in range(data.shape[-1]):
+                    for m in range(_ma.shape[-1]):
+                        res = calc_q2(data[...,n], _ma[...,m], L=L, lattice=uselattice)
+                        weight = np.ones((nsamples,))*_ma_w[...,m]*self.weight[0][i][n]
+                        q2.add_data((0, i, m, n), res, needed, weight)
         return q2
 
     def evaluate_quark_mass(self, amu_s, obs_eval, obs1, obs2=None, obs3=None,

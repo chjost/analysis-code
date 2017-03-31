@@ -14,8 +14,8 @@ def main():
         ens = ana.LatticeEnsemble.parse(sys.argv[1])
 
     # read settings
-    readdata = True
-    readfit = True
+    readdata = False
+    readfit = False
     plotdata = True
 
     # get data from input file

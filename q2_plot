@@ -1,0 +1,164 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+##!/usr/bin/python
+
+import numpy as np
+import matplotlib
+matplotlib.use('Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+
+import analysis2 as ana
+
+def print_summary(datafolder, plotfolder, lattices, d2=0):
+    """Print a summary of the lattices given.
+
+    Args:
+        datafolder: where the raw data is stored
+        plotfolder: where to store the plots
+        lattices: list of lattices to work on
+    """
+    verbose=False
+    ## other variables
+
+    # read data
+    readnewdata = True
+    fname = "%s/summary/collected_delta.npz" % datafolder
+    if readnewdata:
+        summ_q2, summ_del = [], []
+        for p2 in d2:
+            fileq2 = "q2_TP%d.npz" % p2
+            filedelta = "delta_TP%d.npz" % 22
+            summ_q2.append([])
+            summ_del.append([])
+            for l, latt in enumerate(lattices):
+                summ_q2[-1].append([])
+                summ_del[-1].append([])
+                for lat in latt:
+                    print("read data for %s" % lat)
+                    # read data
+                    q2 = ana.FitResult.read("%s/%s/%s" % (datafolder, lat, fileq2))
+                    delta = ana.FitResult.read("%s/%s/%s" % (datafolder, lat, filedelta))
+
+                    # calc mean
+                    q2.calc_error()
+                    delta.calc_error()
+
+                    # get values
+                    summ_q2[-1][-1].append([q2.error[0][0][0],
+                                            q2.error[0][1][0],
+                                            q2.error[0][2][0][0],
+                                            q2.error[0][2][0][1]])
+                    summ_del[-1][-1].append([delta.error[0][0][0],
+                                             delta.error[0][1][0],
+                                             delta.error[0][2][0][0],
+                                             delta.error[0][2][0][1]])
+        summ_q2 = np.asarray(summ_q2)
+        summ_del = np.asarray(summ_del)
+        np.savez(fname, q2=summ_q2, delta=summ_del)
+    else:
+        print("read collected data")
+        tmpfile = np.load(fname)
+        summ_q2 = tmpfile["q2"]
+        summ_del = tmpfile["delta"]
+        del tmpfile
+    # regroup data for fit
+    #all_data_x, all_data_y = [], []
+    #for q in summ_q2:
+    #    for d in q:
+    #        all_data_x.append(d[0])
+    #for de in summ_del:
+    #    for d in de:
+    #        all_data_y.append(d[0])
+    #all_data_x = np.asarray(all_data_x)
+    #all_data_y = np.asarray(all_data_y)
+
+    # fit
+    #readfit = True
+    #if not readfit:
+    #    print("NLO fit")
+    #    fit_chi = ana.LatticeFit(fchiptNLO)
+    #    fitres = fit_chi.chiral_fit(all_data_x, all_data_y, xcut=xcut)
+    #    #if xcut:
+    #    #    fitres.save("%s/summary/chiral_fit_xcut%.1f.npz" % (datafolder, xcut))
+    #    #else:
+    #    #    fitres.save("%s/summary/chiral_fit.npz" % (datafolder))
+    #else:
+    #    if xcut:
+    #        fitres = ana.FitResult.read("%s/summary/chiral_fit_xcut%.1f.npz" % (datafolder, xcut))
+    #    else:
+    #        fitres = ana.FitResult.read("%s/summary/chiral_fit.npz" % (datafolder))
+    #fitres.print_data()
+    #if xcut:
+    #    dof = np.count_nonzero(all_data_x[:,0] < xcut)
+    #    print("xcut = %.1f" % xcut)
+    #else:
+    #    dof = all_data_x.shape[0]
+    #print("chi2 / dof = %.3f / %d" % (fitres.chi2[0][0][0], dof - 1))
+    #print("pval = %.3e" % (1. - scipy.stats.chi2.cdf(fitres.chi2[0][0][0], dof - 1)))
+    #retval = fitres.error[0]
+    #rval = ana.mean_std(retval[0][0])
+
+    # plot everything
+    if xcut:
+        plotter = ana.LatticePlot("%s/delta_q2_xcut%.1f_TP%d.pdf" % (plotfolder, xcut, 0))
+    else:
+        plotter = ana.LatticePlot("%s/delta_q2_TP%d.pdf" % (plotfolder, 0))
+    # set title etc.
+    plotter.set_title("", ["q$^2$", "$\delta$ ($^\circ$)"])
+
+    # plot the data
+    fmt = ["or", "sb", "Dg"]
+    labels = ["A ensembles", "B ensembles", "D ensembles"]
+    for i, q in enumerate(summ_q2):
+        x = [d[0][0] for d in q]
+        y = [d[0][0] for d in summ_del[i]]
+        dx = np.asarray([d[1] for d in q])
+        dx1 = np.asarray([d[2] for d in q])
+        dx2 = np.asarray([d[3] for d in q])
+        dxtot = [np.sqrt(dx**2 + dx1**2), np.sqrt(dx**2 + dx2**2)]
+        dy = np.asarray([d[1] for d in summ_del[i]])
+        dy1 = np.asarray([d[2] for d in summ_del[i]])
+        dy2 = np.asarray([d[3] for d in summ_del[i]])
+        dytot = [np.sqrt(dy**2 + dy1**2), np.sqrt(dy**2 + dy2**2)]
+        plt.errorbar(x, y, yerr=dytot, xerr=dxtot, fmt=fmt[i], label="")
+        plt.errorbar(x, y, yerr=dy, xerr=dx, fmt=fmt[i], label=labels[i])
+
+    # plot ChiPT formula
+    #plotter.plot_func(fchiptLO, None, [1., 3.], "LO ChiPT", fmt="--k")
+    #plotter.plot_func(fchiptNLO, retval[0][0][0], [1., 3.], "NLO ChiPT")
+    #if xcut:
+    #    y = fchiptNLO(retval[0][0][0], xcut)
+    #    plt.vlines(xcut, 0.8*y, 1.2*y, colors="k", label="")
+    #    plt.hlines(0.8*y, xcut*0.98, xcut, colors="k", label="")
+    #    plt.hlines(1.2*y, xcut*0.98, xcut, colors="k", label="")
+
+    plt.legend(numpoints=1)
+    plt.grid(True)
+    #plt.ylim([-0.35, 0.])
+    plotter.save()
+    del plotter
+    return
+
+def main():
+    d2 = [0, 1]
+    Aens = ["A40.24"]
+    Bens, Dens = [], []
+    #Aens = ["A30.32", "A40.20", A40.24", "A40.32", "A60.24",
+    #        "A80.24", "A100.24"]
+    #Bens = ["B25.32", "B35.32", "B35.48", "B55.32", "B85.24"]
+    #Dens = ["D15.48", "D30.48", "D45.32"]
+    #Aens = ["A30.32", "A40.32", "A60.24",
+    #        "A80.24", "A100.24"]
+    #Bens = ["B35.32", "B55.32", "B85.24"]
+    #Dens = ["D45.32"]
+    datafolder = "./data/I2/"
+    plotfolder = "./plots/I2/summary/"
+    print_summary(datafolder, plotfolder, [Aens, Bens, Dens], d2)
+    return
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass

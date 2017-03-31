@@ -4,6 +4,66 @@ Functions to calculate the phaseshift.
 
 import numpy as np
 from zeta_wrapper import omega
+from utils import loop_iterator
+
+def compute_phaseshift(q2, q2_w, gamma, gamma_w, L=24, isdependend=True,
+        d2=0, irrep="A1"):
+    # setup variables
+    if np.any(gamma < 1.):
+        print(gamma)
+    nsamples = gamma[0].shape[0]
+    needed = np.zeros((nsamples,))
+    for i, q in enumerate(q2):
+        res = np.zeros_like(needed)
+        tmpweight = q2_w[i]*gamma_w[i]
+        if np.any(gamma[i] < 1.):
+            print("skipping gamma < 1 in correlator %d" % i)
+            print(gamma[i])
+            continue
+        if isdependend:
+            tmp, tmp1 = get_solution(q, gamma[i], d2, irrep)
+            # iterate over fit ranges
+            for item in loop_iterator(q.shape[1:]):
+                res = tmp[(slice(None),)+tuple(item)]
+                res1 = tmp1[(slice(None),)+tuple(item)]
+                weight = np.ones_like(needed) * tmpweight[item]
+                yield (((0,i)+tuple(item), res, needed, weight),
+                       ((0,i)+tuple(item), res1, needed, weight))
+        else:
+            # iterate over fit ranges
+            for item in loop_iterator(q.shape[1:]):
+                tmp, tmp1 = get_solution(q[:,item[0]], gamma[i], d2, irrep)
+                res = tmp[(slice(None),)+tuple(item[1:])]
+                res1 = tmp1[(slice(None),)+tuple(item[1:])]
+                weight = np.ones_like(needed) * tmpweight[item]
+                yield (((0,i)+tuple(item), res, needed, weight),
+                       ((0,i)+tuple(item), res1, needed, weight))
+        if i == 1:
+            raise StopIteration
+
+def get_solution(q2, gamma, d2, irrep="A1"):
+    if np.any(gamma < 1.):
+        print("error: gamma < 1.")
+        raise ValueError("blub")
+    w_00 = omega(q2, gamma).real
+    if d2 == 0:
+        res = w_00
+        res1 = np.arctan2(1., w_00) * 180. / np.pi
+    elif d2 == 1:
+        w_20 = np.square(omega(q2, gamma, l=2).real)
+        res = 5. * w_20 + w_00
+        res1 = np.arctan2(1., res) * 180. / np.pi
+    elif d2 == 2:
+        w_00 = omega(q2, gamma).real
+        w_20 = np.square(omega(q2, gamma, l=2).real)
+        w_22 = np.square(omega(q2, gamma, l=2, m=2).imag)
+        w_42 = np.square(omega(q2, gamma, l=4, m=2).real)
+        tmp1 = 5. * w_20 + 10. * w_22
+        tmp2 = 1. - 200./49.*w_22 - 270./49. * w_42
+        res = - (tmp1) / (tmp2) + w_00
+        res1 = np.arctan2(-tmp2, tmp2 * w_00 + tmp1) * 180. / np.pi
+    return res, res1
+        
 
 def calculate_phaseshift(q2, gamma=None, d2=0, irrep="A1", prec=1e-5, debug=0):
     """Calculates the phase shift using Luescher's Zeta function.
