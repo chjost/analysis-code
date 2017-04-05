@@ -194,7 +194,7 @@ def q2fromE_mass(E, m, L=24):
     Parameters
     ----------
     E : float or ndarray
-        The energy of the particle.
+        The energy of the particle(s).
     m : float or ndarray
         The particle mass.
     L : int, optional
@@ -205,6 +205,12 @@ def q2fromE_mass(E, m, L=24):
     float or ndarray
         The CM momentum squared.
     """
+    # the relation changes if two different particles are involved (Lang et
+    # al. Phys. Rev. D 86, 054508 (2012))
+    #if len(m.shape) == 2:
+    #  return (E*E-(m[:,0]*m[:,0] + m[:,1]*m[:,1]))*(E*E-(m[:,0]*m[:,0] -
+    #    m[:,1]*m[:,1]))/(4.*E*E)
+    #else
     return (0.25*E*E - m*m) * (float(L) / (2. * np.pi))**2
 
 def q2fromE_mass_latt(E, m, L=24):

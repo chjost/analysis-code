@@ -66,17 +66,17 @@ def main():
     C2_pi = ana.read_confs(rawdir,Corrs[1],inputlist,T) 
     C2_k = ana.confs_mult(C2_k,-1)
     C2_pi = ana.confs_mult(C2_pi,-1)
-    ana.write_data_ascii(C2_k,datadir+'k_os.dat',conf=inputlist)
-    ana.write_data_ascii(C2_pi,datadir+'pi_os.dat',conf=inputlist)
+    ana.write_data_ascii(C2_k,datadir+'k_unit.dat',conf=inputlist)
+    ana.write_data_ascii(C2_pi,datadir+'pi_unit.dat',conf=inputlist)
     #C2_tot = ana.confs_mult(C2,-1)
     C57 = np.zeros((len(inputlist),T,2))
-    #ana.write_data_ascii(C2_tot,datadir+'pi_os_opposite_p0.dat',conf=inputlist)
+    #ana.write_data_ascii(C2_tot,datadir+'pi_unit_opposite_p0.dat',conf=inputlist)
     if read_c4:
         print("C55")
         C4D = ana.read_confs(rawdir,Corrs[2],inputlist,T)
         C4C = ana.read_confs(rawdir,Corrs[3],inputlist,T)
         C55 = ana.confs_subtr(C4D,C4C)
-        ana.write_data_ascii(C55,datadir+'C55.dat',conf=inputlist)
+        ana.write_data_ascii(C55,datadir+'C55_unit.dat',conf=inputlist)
         # loop over all contributions for gamma_j
         #for i in range(3):
         #    print("C57")

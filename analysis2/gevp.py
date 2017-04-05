@@ -116,8 +116,12 @@ def gevp_shift_2(data, dt, dE, debug=0):
 
     # fill the new array
     for i in range(dshape[1]):
-        sdata[:,i] = data[:,i] - data[:,i+dt] * (np.cosh(dE*(T-i)) /
-            np.cosh(dE*(T-i+dt)))
+        _den = np.cosh(dE*(T-i+dt)) 
+        _num = np.cosh(dE*(T-i))
+        _frac = _num/_den
+        # expand_dims needed for correct broadcasting
+        _fac = np.multiply(data[:,i+dt],np.expand_dims(_frac,1))
+        sdata[:,i] = data[:,i] - _fac 
 
     # return shifted matrix
     return sdata

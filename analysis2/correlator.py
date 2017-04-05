@@ -230,6 +230,10 @@ class Correlators(object):
         ----------
         nsamples : int
             The number of bootstrap samples to be calculated.
+        blocking : bool
+            Should data be divided into blocks
+        bl : int
+            If blocking enabled states length of each block
         """
         self.data = boot.sym_and_boot(self.data, nsamples,blocking=blocking,bl=bl)
         self.shape = self.data.shape
@@ -272,7 +276,10 @@ class Correlators(object):
             dE=None
         else:
             # TODO: differentiate the different d2 and irreps
-            dE = np.asarray(0.5*WfromMass_lat(mass, d2, L) - mass)
+            # for piK without momenta this is enough for a try
+            # TODO: Automate that with get_dE function
+            dE = mass
+            #dE = np.asarray(0.5*WfromMass_lat(mass, d2, L) - mass)
 
         # calculate the shift
         if shift == 1:

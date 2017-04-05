@@ -23,7 +23,7 @@ from phaseshift_functions import compute_phaseshift
 
 class LatticeFit(object):
     def __init__(self, fitfunc, dt_i=2, dt_f=2, dt=4, xshift=0.,
-            correlated=True, debug=0):
+            correlated=True, npar=2, debug=0):
         """Create a class for fitting fitfunc.
 
         Parameters
@@ -63,6 +63,7 @@ class LatticeFit(object):
                 6: func_two_corr_shifted, 7: func_two_corr_therm}
             self.fitfunc = functions.get(fitfunc)
         else:
+            self.npar = npar
             self.fitfunc = fitfunc
         self.xshift = xshift
         self.dt = dt
@@ -1111,10 +1112,14 @@ class FitResult(object):
 
         Parameters
         ----------
+        mass : FitResult, the particle mass, possibly several masses stacked
+               along the last axis of the data array
+        parmass: int, parameter of fitresult for mass data
         L : int, optional
             The lattice size.
         uselattice : bool, optional
-            Use the lattice formulas or the continuum formulas.
+            Use the lattice formulas or the continuum formulas (two particle
+            case only implemented for non-lattice versions).
         """
         self.calc_error()
 
@@ -1527,6 +1532,60 @@ class FitResult(object):
         if self.error is not None:
             self.error = None
             self.calc_error()
+    # new function interface with class        
+    def comb_fitres(fitres,par):
+        """Combine parameters of a fitresult in a new fitresult
+    
+        The data of several fitresults are placed in a new FitResult object
+        combining all fitranges with each other. The p-value of every combination is
+        determined as the product of the individual p-values. The fit parameter axis
+        of the combined FitResult hosts the different parameters of the old
+        FitResulut objects.
+    
+        Parameter
+        ---------
+        fitres : list of FitResult, several fitresults with the same parameter
+                  number and (possibly) different fit ranges. For energies sort
+                  after lowest first.
+        par : parameter to use
+    
+        Returns
+        -------
+        _fitres : a combined FitResult, with the parameters on the parameter axis
+                  and combined fit ranges
+        """
+        # Gather necessary data from list of fitresults
+        # data have to have the same number of bootstrapsamples
+        nboot = fitres[0].data[0].shape[0]
+        npars = len(fitres)
+        # calculate the number of fitranges
+        nbranges = 1
+        for f in fitres:
+          nbranges *=f.data[0].shape[2]
+        print("number of fitranges is %d" % nbranges)
+        shape1 = (nboot,npars,nbranges)
+        shape2 = (nboot,nbranges)
+        ncorr=1
+        # Initialize an empty fitresult
+        _comb = ana.FitResult("combined",False)
+        _comb.create_empty(shape1,shape2,ncorr)
+        _comb.set_ranges([[[10,15] for r in range(nbranges)]],[[nbranges,]])
+        # Fill the fitresult
+        # Loop o'er fitresult list
+        # With itertools get product of all fitrange index combinations
+        # a list of 
+        friter = [[r for r in range(f.data[0].shape[-1])] for f in fitres]
+        for i,item in enumerate(itertools.product(*friter)):
+            pval = np.ones_like(_comb.pval[0][:,0])
+            # loop over fitrange combination j is fitres entry, r is
+            # fitrange index
+            for j,r in enumerate(item):
+                _comb.data[0][:,j,i] = fitres[j].data[0][:,par,r]
+                pval *= fitres[j].pval[0][:,r]
+            _comb.pval[0][:,i] = pval
+        _comb.calc_error()
+    
+        return _comb
 
 def init_fitreslst(fnames):
   """Read fitresults from a list of filenames and return the list

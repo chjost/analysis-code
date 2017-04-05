@@ -73,7 +73,7 @@ def compute_eff_mass(data, usecosh=True):
        for b, row in enumerate(data):
            for t in range(len(row)-1):
                 mass[b, t] = fsolve(corr_shift_ratio,0.5,args=(row[t],row[t+1],t,T2))
-        
+       print(mass[0])
     else:
         # creating mass array from data array
         mass = np.zeros_like(data[:,:-1])
@@ -88,8 +88,10 @@ def corr_shift_ratio(m,r0,r1,t,T2):
     ----------
     p: tuple
     """
-    _den = np.exp(m*(t-T2)) + np.exp(-m*(t-T2))
-    _num = np.exp(m*(t+1-T2)) + np.exp(-m*(t+1-T2)) 
+    _den = np.exp(-m*t) + np.exp(-m*(T2-t))
+    _num = np.exp(-m*(t+1)) + np.exp(-m*(T2-t-1)) 
+    #_den = np.cosh(m*(t-T2))
+    #_num = np.cosh(m*(t+1-T2)) 
     _diff = r0/r1 - _den/_num 
     return _diff
 
@@ -257,7 +259,7 @@ def func_ratio(p, t, o):
     return p[0]*(np.cosh(p[1]*(t-(o[1]/2.)))+np.sinh(p[1]*(t-(o[1]/2.)))/
             (np.tanh(2.*o[0]*(t-(o[1]/2.)))))
 
-def func_const(p, t):
+def func_const(p, t, e):
     """A constant function.
 
     The function is given by p.
@@ -269,6 +271,8 @@ def func_const(p, t):
     p : float
         The parameter of the function
     t : float
+        Not used, but needed.
+    e : float
         Not used, but needed.
 
     Returns

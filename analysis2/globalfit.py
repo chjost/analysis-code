@@ -8,7 +8,7 @@ import numpy as np
 
 import fit
 from fit_routines import (fit_comb, fit_single, calculate_ranges, compute_dE,
-    compute_phaseshift, get_start_values, get_start_values_comb, globalfitting)
+     get_start_values, get_start_values_comb, globalfitting)
 from in_out import read_fitresults, write_fitresults
 from interpol import match_lin, match_quad, evaluate_lin
 from functions import (func_single_corr, func_ratio, func_const, func_two_corr,
