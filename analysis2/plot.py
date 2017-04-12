@@ -391,7 +391,8 @@ class LatticePlot(object):
     def plot_func(self, func, args, interval, label, fmt="k", col="black", ploterror=True):
         plot_function(func, interval, args, label, ploterror=ploterror, fmt=fmt, col=col)
 
-    def history(self, data, label, ts=0, boot=False, par=None, fr=None, subplot=True):
+    def history(self, data, label, ts=0, boot=False, par=None, fr=None, subplot=True,
+                plotiqr=False):
         """Plots the history of the input data either with bootstrapsamples or
         configuration number
 
@@ -405,39 +406,49 @@ class LatticePlot(object):
         par : int, parameter from a fitresult
         fr : int, fit range index
         """
-        def plot_iqrange(d):
+        def plot_iqrange(d, x):
             q1, q2, q3 = np.percentile(d, [25, 50, 75])
             iqr = 1.5*(q3 - q1)
             xmin, xmax = plt.gca().get_xlim()
             plt.hlines(q1-iqr, xmin, xmax, colors="r")
             plt.hlines(q3+iqr, xmin, xmax, colors="r")
-            print("outlier configs")
-            tmp = np.concatenate((xvals[d>q3+iqr],xvals[d<q1-iqr]))
-            print(np.sort(tmp, kind="mergesort"))
+            tmp = np.concatenate((x[d>q3+iqr],x[d<q1-iqr]))
+            tmp = np.sort(tmp, kind="mergesort")
+            if tmp.size > 0:
+                print("outlier configs t=%d: %s" % (ts, tmp.__str__()))
+        # reset environment and set labels
         self._set_env_normal()
         self.set_title(label[0],label[1:3])
-        #print(data.data[0].shape)
+
         if boot is False:
-            _data = data.data[:,ts,0]
+            if data.data.size > 2:
+                _data = data.data[:,ts,0]
+            else:
+                _data = data.data[:,ts]
+            #print(_data.shape)
             if data.conf is not None:
                 _x = np.unique(data.conf)
             else:
-                _x = np.arange(_data.shape[0])
+                _x = np.arange(len(_data))
+            #print(_x.shape)
             plot_data(_x,_data,np.zeros_like(_data),label[-1])
             if plotiqr is True:
-                plot_iqrange(_data)
+                plot_iqrange(_data, _x)
         else:
+            # prepare data
+            if data.data.size > 3:
+                _data = data.data[0][:,par,0]
+            else:
+                _data = data.data[0][:,par]
+            #print(_data.shape)
+            # prepare x data
             if data.conf is not None:
                 _x = np.unique(data.conf)
             else:
                 _x = np.arange(_data.shape[0])
-            # take all bootstrapsamples
-            if len(data.data[0].shape)>3:
-                _data = data.data[0][:,par,0]
-                #print(_data.shape)
-            else:
-                _data = data.data[0][:,par]
-                #print(_data.shape)
+            #print(_x.shape)
+
+            # if to be printed in subplots
             if subplot:
                 plt.subplot(2,1,1)
                 _lbl = 'fitrange %d' % (fr)
@@ -448,13 +459,14 @@ class LatticePlot(object):
                 _lbl = 'fitrange %d' % (fr+1)
                 plot_data(_x,_data[:,fr],np.zeros_like(_data[:,fr]),_lbl)
                 if plotiqr is True:
-                    plot_iqrange(_data[:,fr])
+                    plot_iqrange(_data[:,fr], _x)
+            # plot on one page
             else:
                 _data = data.data[0][:,fr]
                 #print(_data.shape)
                 plot_data(_x,_data,np.zeros_like(_data),label[-1])
                 if plotiqr is True:
-                    plot_iqrange(_data)
+                    plot_iqrange(_data, _x)
         self.save()
 
     def set_env(self, xlog=False, ylog=False, xlim=None, ylim=None, grid=True):

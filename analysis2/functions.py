@@ -238,7 +238,8 @@ def func_sinh(p, t, o):
             _o = o
     except TypeError:
         _o = o
-    return p[0] *np.sinh(p[1]/2.)* np.sinh(p[1]*(_o/2. - t - 1.))
+    return p[0] *np.sinh(p[1]/2.)* np.sinh(p[1]*(t - _o/2. + 0.5))
+    #return p[0] *np.sinh(p[1]/2.)* np.sinh(p[1]*(_o/2. - t - 1.))
     #return p[0]*np.sinh(p[1]/2.) * np.sinh(p[1]*(t-_o/2.))
 
 def simple_difference(d1, d2=None):

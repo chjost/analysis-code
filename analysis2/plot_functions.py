@@ -89,10 +89,10 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
             add0 = _add.shape[0]
             if args0 % add0 == 0:
                 # size of add is a divisor of size of args
-                _add = itertools.repeat(_add, args0/add0)
+                _add = np.tile(_add, args0/add0)
             elif add0 %  args0 == 0:
                 # size of args is a divisor of size of add
-                _args = itertools.repeat(_args, add0/args0)
+                _args = np.tile(_args, add0/args0)
             else:
                 raise RuntimeError("args and add are both given, but size does not match.")
             # iterate over the x range
@@ -180,7 +180,12 @@ def plot_data(X, Y, dY, label, plotrange=None, dX=None, fmt="x", col='b'):
         plt.errorbar(X[l:u], Y[l:u], dY[l:u], xerr=_dX, fmt=fmt, label=label, c=col)
     else:
         # plot the data
-        plt.errorbar(X, Y, dY, xerr=_dX, fmt=fmt, label=label,c=col)
+        #print("plot_data: data to be plotted")
+        #print(X)
+        #print(Y)
+        #print(dX)
+        #print(dY)
+        plt.errorbar(X, Y, dY, xerr=dX, fmt=fmt, label=label,c=col)
 
 def plot_data_with_fit(X, Y, dY, fitfunc, args, label, plotrange=None,
                    fitrange=None, addpars=None, pval=None, col='b'):

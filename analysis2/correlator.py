@@ -57,7 +57,7 @@ class Correlators(object):
             self.skip = skip
         self.debug = debug
         self.data = None
-        self.matrix = None
+        self.matrix = matrix
         self.conf = None
         self.ncorr = None
         if filename is not None:
@@ -146,12 +146,14 @@ class Correlators(object):
             The amount of debug information printed.
         """
         tmp = cls(debug=debug)
-        tmp.data = np.atleast_3d(data)
+        tmp.data = np.atleast_3d(data.copy())
         tmp.shape = tmp.data.shape
         if conf is not None:
             tmp.conf=conf
         if data.shape[-2] != data.shape[-1]:
             tmp.matrix = False
+        else:
+            tmp.matrix = True
         tmp.ncorr = data.shape[-1]
         if tmp.data.ndim < 3:
             tmp.ncorr = 1
@@ -290,7 +292,11 @@ class Correlators(object):
         if not self.matrix:
             return
 
-        self.data = gevp.calculate_gevp(self.data, t0)
+        tmp = gevp.calculate_gevp(self.data, t0)
+        self.data = tmp
+        if not self.data is tmp:
+            raise RuntimeError("data not assinged correctly")
+        #self.data = gevp.calculate_gevp(self.data, t0)
         self.shape = self.data.shape
         self.matrix = False
 

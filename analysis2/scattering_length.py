@@ -15,6 +15,12 @@ def calculate_scat_len(mass, massweight, energy, energyweight, L=24,
     # prefactor of the equation
     pre = -4.*np.pi / (mass * float(L*L*L))
     needed = np.zeros((nsam,))
+    # debugging
+    print("calculate_scat_len:")
+    print(mass.shape)
+    print(massweight.shape)
+    print(energy.shape)
+    print(energyweight.shape)
     # loop over fitranges of self
     for i in range(energy.shape[-1]):
         # loop over fitranges of mass
@@ -24,9 +30,9 @@ def calculate_scat_len(mass, massweight, energy, energyweight, L=24,
             # check if the weight is smaller than cut-off, if so
             # don't calculate
             if isratio or isdependend:
-                weight = np.full(nsam, massweight[j] * energyweight[j,i])
+                weight = np.full(nsam, massweight[...,j] * energyweight[...,j,i])
             else:
-                weight = np.full(nsam, massweight[j] * energyweight[i])
+                weight = np.full(nsam, massweight[...,j] * energyweight[...,i])
                 #weight = massweight[j] * energyweight[i]
             if False:
             #if weight[0] < cut or weight[0] > (1. - cut):

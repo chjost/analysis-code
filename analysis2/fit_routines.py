@@ -67,6 +67,11 @@ def fit_single(fitfunc, start, corr, franges, add=None, debug=0,
             else:
                 raise RuntimeError("number of start values and fit ranges does not match")
 
+            if debug > 2:
+                print("data to be fitted")
+                print(corr.data[i1][0])
+                print("starting values")
+                print(_start)
             # iterate over fit ranges
             for i, (r, s) in enumerate(zip(franges[n], _start)):
                 if debug > 1:
@@ -80,6 +85,11 @@ def fit_single(fitfunc, start, corr, franges, add=None, debug=0,
         i1 = [slice(None)] * corr.data.ndim
         for n in range(ncorr):
             i1[-1] = n
+            if debug > 2:
+                print("data to be fitted")
+                print(corr.data[i1][0])
+                print("starting values")
+                print(start)
             # iterate over fit ranges
             for i, r in enumerate(franges[n]):
                 if debug > 1:
@@ -388,8 +398,11 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, debug=0):
         cov = np.diag(np.diagonal(np.cov(Y.T)))
     else:
         cov = np.cov(Y.T)
+    #print("Covariance matrix:")
+    #print(cov)
     cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
     #print("Correlation matrix:")
+    #print(cov)
     #print(np.corrcoef(Y.T))
 
     # degrees of freedom

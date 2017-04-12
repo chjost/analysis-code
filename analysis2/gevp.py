@@ -260,6 +260,7 @@ def solve_gevp_gen(data, t0):
             yield eigenvalues, eigenvectors, j
 
         except (spla.LinAlgError, TypeError) as e:
+            #print(e)
             return
 
 def calculate_gevp(data, t0=1):

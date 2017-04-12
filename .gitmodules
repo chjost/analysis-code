@@ -1,0 +1,3 @@
+[submodule "analysis2/zeta_c"]
+	path = analysis2/zeta_c
+	url = https://github.com/ZhanlinWang/zetaFuncCal.git

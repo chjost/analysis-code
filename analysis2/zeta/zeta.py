@@ -105,12 +105,11 @@ def zeta_n(function):
 def Z(q2, gamma = 1.0, l = 0, m = 0, d = np.array([0., 0., 0.]), \
       m_split = 1, precision = 10e-6, verbose = 0, n=None):
   # some small checks
-  if gamma < 1.0:
-    print( 'Gamma must be larger or equal to 1.0')
-    exit(0)
+  if np.any(gamma < 1.0):
+    raise RuntimeError("Gamma values must be larger or equal to 1.0")
   if n==None:
       # reading the three momenta for summation from file
-      print("loading n zeta")
+      #print("loading n zeta")
       _n = np.load("./momenta.npy")
   else:
       _n = n
