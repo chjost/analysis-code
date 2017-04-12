@@ -13,6 +13,9 @@ def main():
     else:
         ens = ana.LatticeEnsemble.parse(sys.argv[1])
 
+    useratio = True
+    usenewformat = False
+
     # get data from input file
     lat = ens.name()
     L = ens.L()
@@ -22,10 +25,15 @@ def main():
     #plotdir = ens.get_data("plotdir")
     d2 = ens.get_data("d2")
     d = ens.get_data("d")
+    try:
+        irrep = ens.get_data("irrep")
+    except:
+        irrep = "A1g"
 
     # single particle correlator
     print("read single particle corrs")
-    picorr = ana.Correlators.read("%s/corr_pi.npy" % (datadir))
+    picorr = ana.Correlators.read("%s/corr_pi.npz" % (datadir))
+    #picorr = ana.Correlators.read("%s/corr_pi.npy" % (datadir))
     pifit = ana.FitResult.read("%s/fit_pi.npz" % (datadir))
     pifit.print_data(1)
     #pifit.print_details()
@@ -33,16 +41,23 @@ def main():
     # two particle correlator
     #print("\n\nread four point function")
     #print(datadir)
-    pipifit = ana.FitResult.read("%s/fit_pipi_TP%d.npz" % (datadir, d2))
+    if usenewformat:
+        pipifit = ana.FitResult.read("%s/C4_fit_m0_%s_TP%d_data.npz" % (datadir, irrep, d2))
+    else:
+        pipifit = ana.FitResult.read("%s/fit_pipi_TP%d.npz" % (datadir, d2))
     pipifit.print_data(1)
     #pipifit.print_details()
 
-    print("\n\nread ratio")
-    #print(datadir)
-    ratiofit = ana.FitResult.read("%s/fit_pipi_ratio_TP%d.npz" % (datadir, d2))
-    #ratiofit.print_data(0)
-    ratiofit.print_data(1)
-    #ratiofit.print_details()
+    if useratio:
+        print("\n\nread ratio")
+        print(datadir)
+        #if usenewformat:
+        ratiofit = ana.FitResult.read("%s/ratio_fit_m0_%s_TP%d_data.npz" % (datadir, irrep, d2))
+        #else:
+        #ratiofit = ana.FitResult.read("%s/fit_pipi_ratio_TP%d.npz" % (datadir, d2))
+        #ratiofit.print_data(0)
+        ratiofit.print_data(1)
+        #ratiofit.print_details()
 
     #calcEcm = True
     #if calcEcm:
@@ -73,36 +88,41 @@ def main():
     #plotter.histogram(dE, label)
     #del plotter
 
-    calca = False
+    calca = True
     if calca:
         print("calculate scattering length")
         a_pipi = pipifit.calc_scattering_length(pifit, 1, 1, L=ens.L(), isdependend=False)
         a_pipi.save("%s/scat_len_TP%d.npz" % (datadir, d2))
-        r_a_pipi = ratiofit.calc_scattering_length(pifit, 1, 1, L=ens.L(), isratio=True)
-        r_a_pipi.save("%s/scat_len_ratio_TP%d.npz" % (datadir, d2))
+        if useratio:
+            r_a_pipi = ratiofit.calc_scattering_length(pifit, 1, 1, L=ens.L(), isratio=True)
+            r_a_pipi.save("%s/scat_len_ratio_TP%d.npz" % (datadir, d2))
     else:
         a_pipi = ana.FitResult.read("%s/scat_len_TP%d.npz" % (datadir, d2))
-        r_a_pipi = ana.FitResult.read("%s/scat_len_ratio_TP%d.npz" % (datadir, d2))
+        if useratio:
+            r_a_pipi = ana.FitResult.read("%s/scat_len_ratio_TP%d.npz" % (datadir, d2))
     a_pipi.print_data()
-    r_a_pipi.print_data()
+    if useratio:
+        r_a_pipi.print_data()
     #a_pipi.print_details()
     #r_a_pipi.print_details()
     plotter = ana.LatticePlot("%s/scat_len_TP%d.pdf" % (plotdir, d2))
     label = ["scattering length", "a$_{\pi\pi}$", "a$_{\pi\pi}$"]
     plotter.histogram(a_pipi, label)
     #plotter = ana.LatticePlot("%s/scat_len_ratio_TP%d.pdf" % (plotdir, d2))
-    plotter.new_file("%s/scat_len_ratio_TP%d.pdf" % (plotdir, d2))
-    label = ["scattering length from ratio", "a$_{\pi\pi}$", "a$_{\pi\pi}$"]
-    plotter.histogram(r_a_pipi, label)
+    if useratio:
+        plotter.new_file("%s/scat_len_ratio_TP%d.pdf" % (plotdir, d2))
+        label = ["scattering length from ratio", "a$_{\pi\pi}$", "a$_{\pi\pi}$"]
+        plotter.histogram(r_a_pipi, label)
     del plotter
 
     # multiply a*m_pi
     am_pi = a_pipi.mult_obs(pifit, isdependend=True)
     am_pi.save("%s/am_pi_TP%d.npz" % (datadir, d2))
     am_pi.print_data()
-    r_am_pi = r_a_pipi.mult_obs(pifit, isdependend=True)
-    r_am_pi.save("%s/am_pi_ratio_TP%d.npz" % (datadir, d2))
-    r_am_pi.print_data()
+    if useratio:
+        r_am_pi = r_a_pipi.mult_obs(pifit, isdependend=True)
+        r_am_pi.save("%s/am_pi_ratio_TP%d.npz" % (datadir, d2))
+        r_am_pi.print_data()
 
 
 if __name__ == '__main__':

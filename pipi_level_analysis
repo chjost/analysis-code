@@ -1,0 +1,199 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+
+import sys
+import scipy
+import numpy as np
+
+import analysis2 as ana
+
+def read_data(datafolder, lattices, irreps, cut=10.):
+    """Read in the data for all the given lattices and irreps.
+
+    Parameters
+    ----------
+    datafolder : str
+        The path to the data folders.
+    lattices : list of str
+        The list of lattices to read in.
+    irreps : list of list of str
+        A list of the irreps to read in, combined with the
+        total momentum squared.
+    cut : float or array of float
+        A maximum value that is allowed as energy, everything
+        above the cut will not be returned.
+    """
+    debug = 0
+    # the final data
+    mpi = []
+    Epipi = []
+    pcm = []
+    # all information on the energy levels are in levels
+    levels = []
+    count_lat = []
+    last = 0
+    for l, lat in enumerate(lattices):
+        if debug > 0:
+            print(lat)
+        L = int(lat[-2:])
+        count_lat.append(0)
+
+        # read pion data
+        fname = "/".join((datafolder, lat, "fit_pi.npz"))
+        datampi = ana.FitResult.read(fname)
+        datampi.calc_error()
+        mpi.append(datampi.error[1][0][0])
+        mpicut = 2 * np.sqrt(1. + cut)* mpi[-1][0]
+
+        # read E_cm and p_cm
+        for p2, mf in enumerate(irreps):
+            if debug > 0:
+                print(p2)
+            for irr in mf:
+                if debug > 0:
+                    print(irr)
+                count = 0
+                # build file name
+                if irr == "A1":
+                    suffix = "fit_pipi_TP%d.npz" % p2
+                    suffix1 = "Ecm_TP%d.npz" % p2
+                    suffix2 = "q2_TP%d.npz" % p2
+                else:
+                    suffix = "fit_pipi_TP%d_%s.npz" % (p2, irr)
+                    suffix1 = "Ecm_TP%d_%s.npz" % (p2, irr)
+                    suffix2 = "q2_TP%d_%s.npz" % (p2, irr)
+                # read data and get weighted mean
+                fname = "/".join((datafolder, lat, suffix))
+                data = ana.FitResult.read(fname)
+                data.calc_error()
+                # need the center of mass energy for the cut
+                fname = "/".join((datafolder, lat, suffix1))
+                try:
+                    Ecm = ana.FitResult.read(fname)
+                except IOError:
+                    if p2 == 0:
+                        d = np.asarray([0., 0., 0.])
+                    elif p2 == 1:
+                        d = np.asarray([0., 0., 1.])
+                    elif p2 == 2:
+                        d = np.asarray([1., 1., 0.])
+                    elif p2 == 3:
+                        d = np.asarray([1., 1., 1.])
+                    Ecm = data.to_CM(1, L=L, d=d)
+                    Ecm.save(fname)
+                Ecm.calc_error()
+                fname = "/".join((datafolder, lat, suffix2))
+                #try:
+                #    q2 = ana.FitResult.read(fname)
+                #except IOError:
+                #    if p2 == 0:
+                #        isdep = False
+                #    else:
+                #        isdep = True
+                #    q2 = Ecm.calc_momentum(datampi, parmass=1, L=L,
+                #        uselattice=False, isdependend=isdep)
+                #    q2.save(fname)
+                #q2.calc_error()
+                for tmp, tmp1 in zip(data.error[1][0], Ecm.error[0][0]):
+                #for tmp, tmp1, tmp2 in zip(data.error[1][0], Ecm.error[0][0], q2.error[0][0]):
+                    # check whether over threshold
+                    if tmp1[0] > mpicut:
+                        if debug > 1:
+                            print("over threshold")
+                        # since the levels are sorted we can abort here
+                        break
+                    count += 1
+                    count_lat[-1] += 1
+                    Epipi.append(tmp)
+                    #pcm.append(tmp2)
+                if count == 0:
+                    continue
+                ind = [s+last for s in range(count)]
+                last += count
+                levels.append((L, l, irr, p2, ind))
+                #levels.append((L, l, irr, p2, count))
+    Epipi = np.asarray(Epipi)
+    if debug > 1:
+        print(Epipi.shape)
+    #pcm = np.asarray(pcm)
+    #if debug > 1:
+    #    print(pcm.shape)
+    levels = np.asarray(levels, dtype=object)
+    if debug > 1:
+        print(levels)
+    # calculate covariance matrices
+    tmpcov = []
+    s = 0
+    for l in count_lat:
+        e = s + l
+        tmpcov.append(np.cov(Epipi[s:e]))
+        s = e
+    cov = scipy.linalg.block_diag(*tmpcov)
+    corE = np.linalg.cholesky(np.linalg.inv(cov))
+    #tmpcov = []
+    #s = 0
+    #for l in count_lat:
+    #    e = s + l
+    #    tmpcov.append(np.cov(pcm[s:e]))
+    #    s = e
+    #cov = scipy.linalg.block_diag(*tmpcov)
+    #corP = np.linalg.cholesky(np.linalg.inv(cov))
+    return Epipi, corE, levels
+    #return Epipi, corE, pcm, corP, levels
+
+def analysis(datafolder, plotfolder, lattices, irreps):
+    cut = 5.
+    # get data
+    readdata=True
+    fname = "/".join((datafolder, "level_analysis.npz"))
+    if readdata:
+        Epipi, corE, levels = read_data(datafolder, lattices, irreps, cut)
+        #Epipi, corE, pcm, corP, levels = read_data(datafolder, lattices, irreps, cut)
+        np.savez(fname, Epipi=Epipi, corE=corE, levels=levels)
+        #np.savez(fname, Epipi=Epipi, corE=corE, corP=corP, pcm=pcm, levels=levels)
+    else:
+        f = np.load(fname)
+        Epipi=f['Epipi']
+        corE=f['corE']
+        #corP=f['corP']
+        #pcm=f['pcm']
+        levels=f['levels']
+        
+    #print(Epipi.shape)
+    #print(pcm.shape)
+    print(levels)
+    print("-----------data-----------")
+
+    # search for close levels
+    # levels contains (L, l, irr, p2, indices)
+    for l, lev in enumerate(levels):
+        for lev1 in levels[l:]:
+            if (lev[1] != lev1[1]) or (lev[2] == lev1[2]):
+                #print("continue")
+                continue
+            print("new pair")
+            print(lev)
+            print(lev1)
+            print(Epipi[lev[-1],0])
+            print(Epipi[lev1[-1],0])
+            #print(pcm[lev[-1],0])
+            #print(pcm[lev1[-1],0])
+            
+
+def main():
+    # the lattices to work on
+    lattices = ["A40.32", "A40.24", "A40.20"]
+    # the irreps and momentum squared to work on
+    irreps  = [["A1", "E", "T2"], ["A1"], ["A1"], ["A1"]]
+    #irreps  = [["A1", "E", "T2"], ["A1"], ["A1"]]
+    # the path to the data folders
+    datafolder = "./data/I2/"
+    # the folder for plots
+    plotfolder = "./plots/I2/globalfit/"
+    analysis(datafolder, plotfolder, lattices, irreps)
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass

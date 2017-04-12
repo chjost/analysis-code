@@ -18,10 +18,10 @@ def main():
         ens = ana.LatticeEnsemble.parse(sys.argv[1])
 
     # read settings
-    readdata = False
-    preparedata = True
-    readfit = False
-    plotdata = True
+    readdata = True
+    preparedata = False
+    readfit = True
+    plotdata = False
 
     # get data from input file
     prefix = ens.get_data("path")
@@ -72,13 +72,20 @@ def main():
         else:
             ratio = corr.ratio(pi, 1, useall=False, L=L)
         ratio.save("%s/ratio_pipi_TP%d.npy" % (datadir, d2))
+        orig = ana.Correlators.read("%s/corr_pipi_raw_TP%d.npy" % (datadir, d2))
     else:
+        orig = ana.Correlators.read("%s/corr_pipi_raw_TP%d.npy" % (datadir, d2))
         corr = ana.Correlators.read("%s/corr_pipi_TP%d.npy" % (datadir, d2))
         ratio = ana.Correlators.read("%s/ratio_pipi_TP%d.npy" % (datadir, d2))
+    orig.shift(1)
+    for t in range(ratio.data.shape[1]):
+        print("%d %.5e %.5e %.5e %.5e %.5e" % (t, pi.data[0,t,0], orig.data[0,t,0,0], corr.data[0,t,0], ratio.data[0,t,0], corr.data[0,t,0]/orig.data[0,t,0,0]))
     plotter = ana.LatticePlot("%s/corrs_TP%d.pdf" % (plotdir, d2))
     plotter.set_env(ylog=True)
     label = ["two pion energy", "t", "C(t)", "E$_{\pi\pi}$"]
     plotter.plot(corr, label)
+    label = ["orig. two pion energy", "t", "C(t)", "E$_{\pi\pi}$"]
+    plotter.plot(orig, label)
     plotter.set_env(ylog=False)
     #label = ["rel. error of two pion energy", "t", "$\delta$ C(t)/C(t)", "rel. error"]
     #plotter._genplot_single(corr, label, rel=True)
@@ -113,7 +120,7 @@ def main():
         fitres = ana.FitResult.read("%s/fit_pipi_ratio_TP%d.npz" % (datadir, d2))
     fitres.print_data(0)
     fitres.print_data(1)
-    fitres.print_details()
+    #fitres.print_details()
 
     # plot the result
     if plotdata:

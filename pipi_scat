@@ -179,7 +179,7 @@ def analyse(ensemble, datafolder, plotfolder):
 def main():
     lattices=["A30.32", "A40.20", "A40.24", "A40.32", "A60.24",
               "A80.24", "A100.24", "B25.32", "B35.32", "B35.48",
-              "B55.32", "B85.24", "D15.48", "D30.48", "D45.32", "cA2.48"]
+              "B55.32", "B85.24", "D15.48", "D30.48", "D45.32", "cA2.09.48", "cA2.60.32"]
     if len(sys.argv) < 2:
         ens = 2
     elif int(sys.argv[1]) >= len(lattices):

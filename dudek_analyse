@@ -280,51 +280,52 @@ def main():
     else:
         suffix = "TP%d_%s.npz" % (d2, irrep)
 
-    # single particle correlator
-    print("read single particle corrs")
-    print(datadir)
-    picorr = ana.Correlators.read("%s/corr_pi.npy" % (datadir))
-    #picorr = ana.Correlators.read("%s/corr_pi.npz" % (datadir))
-    pifit = ana.FitResult.read("%s/fit_pi.npz" % (datadir))
-    pifit.print_data(1)
+    ## single particle correlator
+    #print("read single particle corrs")
+    #print(datadir)
+    #picorr = ana.Correlators.read("%s/corr_pi.npy" % (datadir))
+    ##picorr = ana.Correlators.read("%s/corr_pi.npz" % (datadir))
+    #pifit = ana.FitResult.read("%s/fit_pi.npz" % (datadir))
+    #pifit.print_data(1)
 
-    # two particle correlator
-    print("\n\nread four point function")
-    pipifit = ana.FitResult.read("%s/fit_pipi_%s" % (datadir, suffix))
-    pipifit.print_data(1)
+    ## two particle correlator
+    #print("\n\nread four point function")
+    #pipifit = ana.FitResult.read("%s/fit_pipi_%s" % (datadir, suffix))
+    #pipifit.print_data(1)
 
-    calcEcm = True
-    calcq2 = True
+    #calcEcm = True
+    #calcq2 = True
 
-    if calcEcm:
-        Ecm = pipifit.to_CM(1, L=L, d=d)
-        Ecm.save("%s/Ecm_%s" % (datadir, suffix))
-    else:
-        Ecm = ana.FitResult.read("%s/Ecm_%s" % (datadir, suffix))
-    Ecm.print_data()
-    #Ecm.print_details()
-    # get Lorentz boost
-    g_all = ana.sys_error_der(Ecm.chi2, Ecm.pval)
-    gamma = g_all[0][0]
-    #print(gamma)
+    #if calcEcm:
+    #    Ecm = pipifit.to_CM(1, L=L, d=d)
+    #    Ecm.save("%s/Ecm_%s" % (datadir, suffix))
+    #else:
+    #    Ecm = ana.FitResult.read("%s/Ecm_%s" % (datadir, suffix))
+    #Ecm.print_data()
+    ##Ecm.print_details()
+    ## get Lorentz boost
+    #g_all = ana.sys_error_der(Ecm.chi2, Ecm.pval)
+    #gamma = g_all[0][0]
+    ##print(gamma)
 
-    if calcq2:
-        if d2 != 0:
-            q2 = Ecm.calc_momentum(pifit, parmass=1, L=L,
-                uselattice=False, isdependend=True)
-        else:
-            q2 = Ecm.calc_momentum(pifit, parmass=1, L=L,
-                uselattice=False)
-        q2.save("%s/q2_%s" % (datadir, suffix))
-    else:
-        q2 = ana.FitResult.read("%s/q2_%s" % (datadir, suffix))
-    q2.print_data()
+    #if calcq2:
+    #    if d2 != 0:
+    #        q2 = Ecm.calc_momentum(pifit, parmass=1, L=L,
+    #            uselattice=False, isdependend=True)
+    #    else:
+    #        q2 = Ecm.calc_momentum(pifit, parmass=1, L=L,
+    #            uselattice=False)
+    #    q2.save("%s/q2_%s" % (datadir, suffix))
+    #else:
+    #    q2 = ana.FitResult.read("%s/q2_%s" % (datadir, suffix))
+    #q2.print_data()
     #q2.print_details()
     # get the M matrix for the problem
     mat, deltas = get_matrix(irrep, 0)
+    print(mat)
     # calculate U according to Dudek's paper
-    _q2 = q2.error[0][0][0]
-    q = np.sqrt(_q2)
+    #_q2 = q2.error[0][0][0]
+    #q = np.sqrt(_q2)
     #qmean, qstd = ana.mean_std(q)
     #U = get_U(mat, _q2, gamma)
     #shifts = get_phaseshift(U, deltas, q)
@@ -333,38 +334,38 @@ def main():
     #print("phase shift \delta_%d: %.3e +- %.3e" % (deltas[0], smean[0].real, sstd[0].real))
     #print(shifts.shape)
 
-    # analytic check for the A1 irrep with p^2=1
-    w00 = ana.omega(_q2, gamma=gamma, l=0, m=0)
-    w20 = ana.omega(_q2, gamma=gamma, l=2, m=0)
-    w40 = ana.omega(_q2, gamma=gamma, l=4, m=0)
-    sw20 = 5.*np.square(w20)
-    c = 1./((w00 -1.j)*(w00+10./7.*w20+18./7.*w40-1.j) - sw20)
-    tmp1 = c*((w00 +1.j)*(w00+10./7.*w20+18./7.*w40-1.j) - sw20)
-    tmp2 = c*((w00 -1.j)*(w00+10./7.*w20+18./7.*w40+1.j) - sw20)
-    #print(c)
-    #print(tmp1)
-    #print(tmp2)
-    #print(np.exp(2.j*phaseshift_params(0, q)))
-    #print(np.exp(2.j*phaseshift_params(2, q)))
-    res = tmp1 - 4*sw20/(np.exp(2.j*phaseshift_params(2, q))-tmp2)
-    #res = tmp1 - 4*sw20/(1.-tmp2)
-    res = np.log(res/2.j)
-    print("delta_0")
-    print(np.mean(res)*180/np.pi)
-    #print(np.std(res))
-    res = tmp2 - 4*sw20/(np.exp(2.j*phaseshift_params(0, q))-tmp1)
-    #res = tmp2 - 4*sw20/(1.-tmp1)
-    res = np.log(res/2.j)
-    print("delta_2")
-    print(np.mean(res)*180/np.pi)
-    #print(np.std(res))
+    ## analytic check for the A1 irrep with p^2=1
+    #w00 = ana.omega(_q2, gamma=gamma, l=0, m=0)
+    #w20 = ana.omega(_q2, gamma=gamma, l=2, m=0)
+    #w40 = ana.omega(_q2, gamma=gamma, l=4, m=0)
+    #sw20 = 5.*np.square(w20)
+    #c = 1./((w00 -1.j)*(w00+10./7.*w20+18./7.*w40-1.j) - sw20)
+    #tmp1 = c*((w00 +1.j)*(w00+10./7.*w20+18./7.*w40-1.j) - sw20)
+    #tmp2 = c*((w00 -1.j)*(w00+10./7.*w20+18./7.*w40+1.j) - sw20)
+    ##print(c)
+    ##print(tmp1)
+    ##print(tmp2)
+    ##print(np.exp(2.j*phaseshift_params(0, q)))
+    ##print(np.exp(2.j*phaseshift_params(2, q)))
+    #res = tmp1 - 4*sw20/(np.exp(2.j*phaseshift_params(2, q))-tmp2)
+    ##res = tmp1 - 4*sw20/(1.-tmp2)
+    #res = np.log(res/2.j)
+    #print("delta_0")
+    #print(np.mean(res)*180/np.pi)
+    ##print(np.std(res))
+    #res = tmp2 - 4*sw20/(np.exp(2.j*phaseshift_params(0, q))-tmp1)
+    ##res = tmp2 - 4*sw20/(1.-tmp1)
+    #res = np.log(res/2.j)
+    #print("delta_2")
+    #print(np.mean(res)*180/np.pi)
+    ##print(np.std(res))
     
-    if d2 == 0:
-        print("CMF")
-        tmp1 = ana.mean_std(_q2)
-        tmp2 = ana.mean_std(np.arctan2(1, w00.real)*180/np.pi-180.)
-        print("q2: %.3f +- %.3f" % (tmp1[0][0], tmp1[1]))
-        print("d0: %.3f +- %.3f" % (tmp2[0][0], tmp2[1]))
+    #if d2 == 0:
+    #    print("CMF")
+    #    tmp1 = ana.mean_std(_q2)
+    #    tmp2 = ana.mean_std(np.arctan2(1, w00.real)*180/np.pi-180.)
+    #    print("q2: %.3f +- %.3f" % (tmp1[0][0], tmp1[1]))
+    #    print("d0: %.3f +- %.3f" % (tmp2[0][0], tmp2[1]))
 
 if __name__ == '__main__':
     try:

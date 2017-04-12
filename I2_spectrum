@@ -9,7 +9,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 import analysis2 as ana
 
-def plot_spectrum(datafolder, plotfolder, lattices, irreps=[["A1"]]):
+def plot_spectrum(datafolder, plotfolder, lattices, irreps=[["A1"]], identifier="test"):
     """Print a summary of the lattices given.
 
     Parameters
@@ -35,7 +35,7 @@ def plot_spectrum(datafolder, plotfolder, lattices, irreps=[["A1"]]):
     tmppi = ana.FitResult.read("%s/%s/%s" % (datafolder, lattices[-1], filepi))
     tmppi.calc_error()
     mpi = tmppi.error[1][0][0][0]
-    yvals = [1.9*mpi, 6.*mpi]
+    yvals = [1.9*mpi, 9.*mpi]
     del tmppi
 
     if verbose:
@@ -56,16 +56,19 @@ def plot_spectrum(datafolder, plotfolder, lattices, irreps=[["A1"]]):
                 if verbose:
                     print("reading data for irrep: %s" % ir)
                 # get file names
-                if ir == "A1":
-                    #filepipi = "Ecm_TP%d.npz" % p2
-                    filepipi = "fit_pipi_TP%d.npz" % p2
-                else:
-                    #filepipi = "Ecm_TP%d_%s.npz" % (p2, ir)
-                    filepipi = "fit_pipi_TP%d_%s.npz" % (p2, ir)
+                filepipi = "C4_fit_m0_%s_TP%d_data.npz" % (ir, p2)
+                #if ir == "A1":
+                #    filepipi = "fit_pipi_TP%d.npz" % p2
+                #else:
+                #    filepipi = "fit_pipi_TP%d_%s.npz" % (p2, ir)
                 # read data
                 if verbose:
                     print("read data")
-                tmppipi = ana.FitResult.read("%s/%s/%s" % (datafolder, lat, filepipi))
+                try:
+                    tmppipi = ana.FitResult.read("%s/%s_new/%s" % (datafolder, lat, filepipi))
+                except:
+                    lpipi[-1].append("failed")
+                    continue
                 # calc mean
                 tmppipi.calc_error()
                 # get the needed data and append
@@ -82,7 +85,7 @@ def plot_spectrum(datafolder, plotfolder, lattices, irreps=[["A1"]]):
     if verbose:
         print("setting up plot")
     # plot everything
-    plotter = ana.LatticePlot("%s/spectrum.pdf" % (plotfolder))
+    plotter = ana.LatticePlot("%s/spectrum_%s.pdf" % (plotfolder, identifier))
     plotter.set_env(ylim=yvals)
 
     # symbol code the irrep
@@ -100,43 +103,48 @@ def plot_spectrum(datafolder, plotfolder, lattices, irreps=[["A1"]]):
             if verbose:
                 print("plotting irrep %s" % irr)
             plotter.set_title("total momentum %d, irrep %s" % (p2, irr), axlab)
+            plotted = 0
             for i, lat in enumerate(lattices):
                 maxn = 2
                 L = int(lat.split(".")[-1])
+                if pipi[i][p2][j] == "failed":
+                    print("continue")
+                    continue
                 tmppipi = pipi[i][p2][j]
-                if len(tmppipi[0]) > maxn:
-                    maxn = 3
-                    #maxn = len(tmppipi[0])
-                #for k in range(len(tmppipi[0])):
+                maxn = min(3, len(tmppipi[0]))
                 for k in range(maxn):
                     y = tmppipi[0][k][0]
                     dy = [[np.sqrt(tmppipi[1][k]**2 + tmppipi[2][k][0]**2)],
                           [np.sqrt(tmppipi[1][k]**2 + tmppipi[2][k][1]**2)]]
                     plt.errorbar(L, y, yerr=dy, fmt="s"+p2fmt[k], label="")
                     plt.errorbar(L, y, yerr=tmppipi[1][k], fmt="s"+p2fmt[k], label="")
-            # stretch the x axis for better overview
-            x_lim = np.asarray(plt.gca().get_xlim())
-            x_lim[1] += 0.1* x_lim[0]
-            x_lim[0] *= 0.9
-            plt.gca().set_xlim(x_lim)
-            # indicate the inelastic region
-            plt.axhline(y=4*mpi, c="grey")
-            plt.annotate(s="4m$_{\pi}$", xy=(x_lim[0]*1., 4.05*mpi))
-            # draw the expected energies
-            for n in range(maxn):
-                plot_expected(n, p2, irr, mpi)
-            #plt.legend(numpoints=1)
-            plt.grid(True)
-            plotter._set_env_normal()
-            plotter.save()
+                plotted += 1
+            if plotted > 0:
+                # stretch the x axis for better overview
+                x_lim = np.asarray(plt.gca().get_xlim())
+                x_lim[1] += 0.1* x_lim[0]
+                x_lim[0] *= 0.9
+                #x_lim[0] = 44.
+                #x_lim[1] = 65.
+                plt.gca().set_xlim(x_lim)
+                # indicate the inelastic region
+                plt.axhline(y=4*mpi, c="grey")
+                plt.annotate(s="4m$_{\pi}$", xy=(x_lim[0]*1., 4.05*mpi))
+                # draw the expected energies
+                for n in range(maxn):
+                    plot_expected(n, p2, irr, mpi)
+                #plt.legend(numpoints=1)
+                plt.grid(True)
+                plotter._set_env_normal()
+                plotter.save()
     if verbose:
         print("finishing plot")
     del plotter
     return
 
-def plot_expected(n, p2, irrep, mpi=0.14):
+def plot_expected_old(n, p2, irrep, mpi=0.14):
     """Plot the expected energy of two non-interacting pions."""
-    if irrep == "A1":
+    if irrep in ["A1", "A1+", "A1g", "A1u"]:
         if p2 == 0:
             k1 = [0, 1, 2, 3, 4]
             k2 = k1
@@ -153,21 +161,128 @@ def plot_expected(n, p2, irrep, mpi=0.14):
         elif p2 == 3:
             k1 = [0, 1, 4, 2, 1]
             k2 = [3, 2, 3, 5, 6]
-    elif irrep == "E":
+    elif irrep in ["E+", "E2", "Ep1g"]:
         if p2 == 0:
             k1 = [1, 2, 4]
             k2 = [1, 2, 2]
-    elif irrep == "T2":
+        elif p2 == 1:
+            k1 = [1, 2, 2, 4, 3]
+            k2 = [2, 3, 5, 5, 6]
+    elif irrep in ["T2+", "T2g", "T2u", "T1g"]:
         if p2 == 0:
             k1 = [2, 3]
             k2 = [2, 3]
+    elif irrep in ["T1u"]:
+        if p2 == 0:
+            k1 = [1, 2, 3, 4]
+            k2 = [1, 2, 3, 4]
+    elif irrep in ["A2", "A2g", "A2u"]:
+        if p2 == 1:
+            k1 = [0, 1, 2]
+            k2 = [1, 2, 3]
+        elif p2 == 2:
+            k1 = [2, 3, 2]
+            k2 = [2, 5, 6]
+        elif p2 == 3:
+            k1 = [2]
+            k2 = [5]
+    elif irrep in "B1":
+        if p2 == 1:
+            k1 = [1, 2, 4]
+            k2 = [2, 5, 5]
+        elif p2 == 2:
+            k1 = [2, 1, 3, 2]
+            k2 = [4, 5, 5, 6]
+    elif irrep in "B2":
+        if p2 == 1:
+            k1 = [2, 3]
+            k2 = [3, 6]
+        elif p2 == 2:
+            k1 = [1, 3, 2]
+            k2 = [3, 5, 6]
     else:
-        raise RuntimeError("not implemented yet")
+        raise RuntimeError("%s not implemented yet" % irrep)
     xlim = plt.gca().get_xlim()
     if np.abs(xlim[1] - xlim[0]) < 1e-6:
         xlim[0] *= 0.9
         xlim[1] *= 1.1
-    x = np.linspace(xlim[0], xlim[1], 1000)
+    x = np.linspace(xlim[0], xlim[1], 500)
+    #y = np.sqrt(mpi**2 + k1[n]*4.*(np.pi/x)**2) + np.sqrt(mpi**2 + k2[n]*4*(np.pi/x)**2)
+    y = (np.arccosh(np.cosh(mpi) + 2.*np.sin(np.sqrt(k1[n])*np.pi/x)**2) +
+         np.arccosh(np.cosh(mpi) + 2.*np.sin(np.sqrt(k2[n])*np.pi/x)**2))
+    plt.plot(x, y, "-m")
+
+def plot_expected(n, p2, irrep, mpi=0.14):
+    """Plot the expected energy of two non-interacting pions."""
+    if irrep in ["A1g"]:
+        if p2 == 0:
+            k1 = [0,1,2,3,4]
+            k2 = k1
+        elif p2 == 1:
+            k1 = [1,2]
+            k2 = [2,3]
+        elif p2 == 2:
+            k1 = [0,1,1,2]
+            k2 = [2,1,3,2]
+        elif p2 == 3:
+            k1 = [0,1]
+            k2 = [3,2]
+    elif irrep in ["A1u"]:
+        if p2 == 0:
+            k1 = [3]
+            k2 = k1
+        elif p2 == 1:
+            k1 = [0,1,2,2]
+            k2 = [1,2,3,2]
+        elif p2 == 2:
+            k1 = [0,1,1]
+            k2 = [2,1,3]
+        elif p2 == 3:
+            k1 = [1]
+            k2 = [2]
+    elif irrep in ["A2g"]:
+        if p2 == 1:
+            k1 = [0,1,2]
+            k2 = [1,2,3]
+        elif p2 == 2:
+            k1 = [0,1,1,2]
+            k2 = [2,1,3,2]
+    elif irrep in ["A2u"]:
+        if p2 == 1:
+            k1 = [1,2]
+            k2 = [2,3]
+        elif p2 == 2:
+            k1 = [0,1,1,2]
+            k2 = [2,1,3,2]
+    elif irrep in ["Ep1g"]:
+        if p2 == 0:
+            k1 = [1,2]
+            k2 = k1
+        elif p2 == 1:
+            k1 = [0,1,2]
+            k2 = [1,2,3]
+        elif p2 == 3:
+            k1 = [0,1]
+            k2 = [3,2]
+    elif irrep in ["T1u"]:
+        if p2 == 0:
+            k1 = [1,2,3]
+            k2 = k1
+    elif irrep in ["T2g"]:
+        if p2 == 0:
+            k1 = [2,3]
+            k2 = k1
+    elif irrep in ["T2u"]:
+        if p2 == 0:
+            k1 = [2]
+            k2 = k1
+    else:
+        raise RuntimeError("%s not implemented yet" % irrep)
+    xlim = plt.gca().get_xlim()
+    if np.abs(xlim[1] - xlim[0]) < 1e-6:
+        xlim[0] *= 0.9
+        xlim[1] *= 1.1
+    x = np.linspace(xlim[0], xlim[1], 500)
     #y = np.sqrt(mpi**2 + k1[n]*4.*(np.pi/x)**2) + np.sqrt(mpi**2 + k2[n]*4*(np.pi/x)**2)
     y = (np.arccosh(np.cosh(mpi) + 2.*np.sin(np.sqrt(k1[n])*np.pi/x)**2) +
          np.arccosh(np.cosh(mpi) + 2.*np.sin(np.sqrt(k2[n])*np.pi/x)**2))
@@ -175,13 +290,20 @@ def plot_expected(n, p2, irrep, mpi=0.14):
 
 
 def main():
-    #Aens = ["A40.24"]
-    Aens = ["A40.20", "A40.24", "A40.32"]
+    Aens = ["cA2.09.48"]
+    #Aens = ["A40.20", "A40.24", "A40.32"]
+    identifier = Aens[-1] + "_new_coeffs_4"
     datafolder = "./data/I2/"
     plotfolder = "./plots/I2/summary/"
     # construct list with irreps, giving also total momentum
-    irreps = [["A1", "E", "T2"], ["A1"], ["A1"], ["A1"]]
-    plot_spectrum(datafolder, plotfolder, Aens, irreps)
+    #irreps = [["A1", "E", "T2"], ["A1"], ["A1"], ["A1"]]
+    #irreps = [["A1+", "E+", "T2+"], ["A1", "E2", "B1", "B2"], \
+    #          ["A1", "A2", "B1", "B2"], ["A1", "A2", "E2"]]
+    irreps = [["A1g", "A2u", "T1u", "T2g", "T2u", "Ep1g"],
+              ["A1g", "A1u", "A2g", "A2u", "Ep1g"],
+              ["A1g", "A1u", "A2g", "A2u"],
+              ["A1g", "A1u", "A2g", "A2u", "Ep1g"]]
+    plot_spectrum(datafolder, plotfolder, Aens, irreps, identifier)
     return
 
 # make this script importable, according to the Google Python Style Guide

@@ -1,0 +1,170 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+
+import os
+import sys
+import numpy as np
+import ConfigParser
+import glob
+
+import analysis2 as ana
+
+def main():
+    if len(sys.argv) < 2:
+        ens = ana.LatticeEnsemble.parse("A40.24.ini")
+    else:
+        ens = ana.LatticeEnsemble.parse(sys.argv[1])
+
+    # read settings
+    prebootstrapped = False
+    newformat = False
+    preparedata = True
+    readfit = False
+    plotdata = True
+
+    # get data from input file
+    lat = ens.name()
+    nboot = int(ens.get_data("nboot"))
+    prefix = ens.get_data("path")
+    ddir = "/".join((ens.get_data("datadir"), lat))
+    #ddir = "/".join((ens.get_data("datadir"), lat + "_new"))
+    pdir = "/".join((ens.get_data("plotdir"), lat))
+    print(ddir)
+    L = ens.L()
+    Ti = ens.get_data("ti")
+    Tf = ens.get_data("tf")
+    dti = ens.get_data("dti")
+    dtf = ens.get_data("dtf")
+    dt = ens.get_data("dt")
+    addT = np.ones((nboot,)) * ens.T()
+    d2 = ens.get_data("d2")
+    gmax = int(ens.get_data("gmax"))
+    try:
+        debug = ens.get_data("debug")
+    except KeyError:
+        debug = 0
+    try:
+        irrep = ens.get_data("irrep")
+    except KeyError:
+        irrep = "A1g"
+    suffix = "%s_TP%d_data.npz" % (irrep, d2)
+    print("irrep %s, P^2 %d" % (irrep, d2))
+
+    # read pion data
+    pi = ana.Correlators.read("%s/corr_pi.npz" % (ddir))
+    pifit = ana.FitResult.read("%s/fit_pi.npz" % (ddir))
+
+    if newformat:
+        fnameall = os.path.join(ddir, "C4_%s_TP%d*_data.npy" % (irrep, d2))
+        fnames = sorted(glob.glob(fnameall))
+    else:
+        files = [os.path.join(prefix, "pipi_pipi_A1_corr_TP%d_%d%d.dat" % (d2, i, j))
+                  for i in range(gmax) for j in range(gmax)]
+        fnames = [files]
+    #print(fnames)
+    for mult, dataname in enumerate(fnames):
+        # read data
+        if prebootstrapped:
+            print("read bootstrapped data")
+            fname = os.path.join(ddir, "ratio_bootstrapped_m%d_%s" % (mult, suffix))
+            corr = ana.Correlators.read(fname)
+        else:
+            print("read data")
+            if newformat:
+                print("loading file %s" % dataname)
+                _d = np.load(dataname)
+                # average over rows
+                _d = np.mean(_d, axis=2)
+                _d = np.mean(_d.real, axis=2)
+                corr = ana.Correlators.create(_d)
+            else:
+                corr = ana.Correlators(dataname, matrix=True)
+            corr.sym_and_boot(nboot)
+            fname = os.path.join(ddir, "ratio_bootstrapped_m%d_%s" % (mult, suffix))
+            corr.save(fname)
+
+        # do a shift if necessary and the GEVP
+        fname = os.path.join(ddir, "ratio_corr_m%d_%s" % (mult, suffix))
+        if preparedata:
+            print("prepare data")
+            #print(corr.data.shape)
+            if corr.data.shape[-1] == 0:
+                print("0-dim data array!")
+                continue
+                #raise RuntimeError("0-dim data array!")
+            if d2 != 0:
+                mpi = pifit.data[0][:,1]
+                corr.shift(1, mass=mpi, d2=d2, L=L)
+            else:
+                corr.shift(1)
+            corr.gevp(1)
+            print(corr.data.shape)
+            print(pi.data.shape)
+            if d2 != 0:
+                corr.ratio(pi, 1, mass=mpi, d2=d2, L=L, useall=False)
+            else:
+                corr.ratio(pi, 1, L=L, useall=False)
+            print(corr.matrix)
+            corr.save(fname)
+            #print(ratio.data.shape)
+        else:
+            print("read prepared data")
+            corr = ana.Correlators.read(fname)
+
+        # fit the data
+        xs = 0.0
+        fitter = ana.LatticeFit(1, dt_i=dti, dt_f=dtf, dt=dt, correlated=True, xshift=xs)
+        fname = os.path.join(ddir, "ratio_fit_m%d_%s" % (mult, suffix))
+        if readfit == False:
+            print("fit data")
+            fitranges = [Ti, Tf]
+            try:
+                fitres = fitter.fit(None, corr, fitranges, corrid="E",
+                                    add=addT, lint=False, oldfit=pifit,
+                                    oldfitpar=1)
+                fitres.save(fname)
+            except np.linalg.linalg.LinAlgError:
+                print("covariance singular")
+                continue
+        else:
+            print("read fitted data")
+            fitres = ana.FitResult.read(fname)
+        fitres.print_data(0)
+        fitres.print_data(1)
+        #fitres.print_details()
+
+        # plot the result
+        if plotdata:
+            print("plotting")
+            fname = os.path.join(pdir, "ratio_fit_m%d_%s" % (mult,
+                suffix.replace(".npz", ".pdf")))
+            plotter = ana.LatticePlot(fname)
+            plotter.set_env(ylog=True)
+            label = ["ratio energy", "t", "R(t)", "$\delta$E"]
+            plotter.plot(corr, label, fitres, fitter, add=addT,
+                         oldfit=pifit, oldfitpar=1, xshift=xs)
+            #if d2 == 0:
+            #    fname = os.path.join(pdir, "ratio_effmass_m%d_%s" % (mult,
+            #        suffix.replace(".npz", ".pdf")))
+            #    plotter.new_file(fname)
+            #    label[0] = "ratio correlators"
+            #    plotter.set_env(ylog=False)
+            #    plotter.plot(corr, label)
+            #    plotter.set_env(ylog=True)
+            #    plotter.plot(corr, label)
+            #    plotter.set_env(ylog=False, ylim=[0., 1.])
+            #    corr.mass()
+            #    label = ["ratio effective mass", "t", "m$_{eff}$(t)", "m$_{\delta E}$"]
+            #    plotter.plot(corr, label)
+            fname = os.path.join(pdir, "ratio_hist_fit_m%d_%s" % (mult,
+                suffix.replace(".npz", ".pdf")))
+            plotter.new_file(fname)
+            label = ["ratio energy", "$\delta$E$_{\pi\pi}$/a", "$\delta$E$_{\pi\pi}$"]
+            plotter.histogram(fitres, label, par=1)
+            del plotter
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass

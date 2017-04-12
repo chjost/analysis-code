@@ -14,7 +14,8 @@ def main():
         ens = ana.LatticeEnsemble.parse(sys.argv[1])
 
     # read settings
-    readdata = True
+    readdata = False
+    newformat = True
     preparedata = True
     readfit = False
     plotdata = True
@@ -58,6 +59,12 @@ def main():
         corr = ana.Correlators(files)
         corr.sym_and_boot(nboot)
         corr.save("%s/corr_pipi_raw_%s" % (datadir, suffix))
+    elif newformat:
+        tmp = np.load("%s/C4_%s_TP0_m0_data.npy" % (datadir, irrep))
+        corr = ana.Correlators.create(tmp.real)
+        corr.sym_and_boot(nboot)
+        print(corr.data.shape)
+        corr.save("%s/corr_pi.npz" % (datadir))
     else:
         corr = ana.Correlators.read("%s/corr_pipi_raw_%s" % (datadir, suffix))
 
@@ -77,7 +84,7 @@ def main():
     #print(corr.data[0][:,0])
 
     print("fitting")
-    fitter = ana.LatticeFit(5, dt_i=dti, dt_f=dtf, dt=dt, correlated=True, xshift=0.5)
+    fitter = ana.LatticeFit(5, dt_i=dti, dt_f=dtf, dt=dt, correlated=True)
     if readfit == False:
         #if L < 25:
         #    fitranges = [[11,17,17,22],] + [[8,12,15,17],]*(gmax-1)
@@ -86,19 +93,21 @@ def main():
         #else:
         #    fitranges = [[10,20,28,35],] + [[10,12,19,20],]*(gmax-1)
         #    #fitranges = [[10,27,35,47],] + [[10,15,18,20],]*(gmax-1)
-        fitranges = [[Ti, Ti+5, Tf-5, Tf],] + [[Ti-2, Ti+3, Tf-8, Tf-3],] * (gmax-1)
-        print(fitranges)
+        #fitranges = [[Ti, Ti+5, Tf-5, Tf],] + [[Ti-2, Ti+3, Tf-8, Tf-3],] * (gmax-1)
+        fitranges = [Ti, Tf]
+        #print(fitranges)
         if d2 != 0:
             fitres = fitter.fit(None, corr, fitranges, corrid="E", oldfit=pifit,
-                oldfitpar=1, add=addT, lint=True)
+                oldfitpar=1, add=addT, lint=False)
         else:
-            fitres = fitter.fit([1e-4, 0.3], corr, fitranges, corrid="E", add=addT, lint=True)
+            fitres = fitter.fit(None, corr, fitranges, corrid="E", 
+                add=addT, lint=False)
         fitres.save("%s/fit_pipi_%s" % (datadir, suffix.replace(".npy", ".npz")))
     else:
         fitres = ana.FitResult.read("%s/fit_pipi_%s" % (datadir, suffix.replace(".npy", ".npz")))
     #fitres.print_data(0)
     fitres.print_data(1)
-    fitres.print_details()
+    #fitres.print_details()
 
     # plot the result
     if plotdata:
@@ -110,7 +119,7 @@ def main():
             plotter.plot(corr, label, fitres, fitter, oldfit=pifit, oldfitpar=1,
                 add=addT, xshift=0.5)
         else:
-            plotter.plot(corr, label, fitres, fitter, add=addT, xshift=0.5)
+            plotter.plot(corr, label, fitres, fitter, add=addT)
         label = ["two pion effective mass", "t", "m$_{eff}$(t)", "m$_{\pi\pi}$"]
         plotter.set_env(ylog=False)
         if d2 == 0:
