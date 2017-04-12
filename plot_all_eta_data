@@ -161,9 +161,93 @@ def main():
                 effm.append(("", ""))
         plot1(fn, corrs, effm, plotter, markers, folders)
 
-    # check for data after GEVP
+    # check for excited state removed data
     path = os.path.join(finaldir, lat)
     dirs = glob.glob(os.path.join(path, "strange_*"))
+    if dirs:
+        filestmp = [glob.glob(os.path.join(d, "eta_conn_rm_TP?.npz")) for d in dirs]
+        files = []
+        for ft in filestmp:
+            if len(ft) > 0:
+                files.append(ft)
+        if len(files) > 0:
+            # get all the folder names
+            folders = [os.path.basename(x) for x in dirs]
+            # get all the file names
+            filenames = [os.path.basename(x) for x in files[0]]
+            for f in files[1:]:
+                for d in f:
+                    dprime = os.path.basename(d)
+                    if dprime not in filenames:
+                        filenames.append(dprime)
+            filenames = sorted(filenames)
+            # get data
+            corrs1, corrs2 = [], []
+            effm1, effm2 = [], []
+            for fn in filenames:
+                for k, f in enumerate(files):
+                    for d in f:
+                        if d.endswith(fn):
+                            print("printing %s" % d)
+                            corr = ana.Correlators.read(d)
+                            mean, std = ana.mean_std(corr.data)
+                            corrs1.append((mean[:,0], std[:,0]))
+                            corrs2.append((mean[:,1], std[:,1]))
+                            corr.mass()
+                            mean, std = ana.mean_std(corr.data)
+                            effm1.append((mean[:,0], std[:,0]))
+                            effm2.append((mean[:,1], std[:,1]))
+                            break
+                    else:
+                        corrs1.append(("", ""))
+                        corrs2.append(("", ""))
+                        effm1.append(("", ""))
+                        effm2.append(("", ""))
+                plot2(corrs1, corrs2, effm1, effm2, plotter, markers, folders)
+
+    # correlators on the diagonal before GEVP
+    if dirs:
+        filestmp = [glob.glob(os.path.join(d, "eta_gevp_rm_TP?.npz")) for d in dirs]
+        files = []
+        for ft in filestmp:
+            if len(ft) > 0:
+                files.append(ft)
+        if len(files) > 0:
+            # get all the folder names
+            folders = [os.path.basename(x) for x in dirs]
+            # get all the file names
+            filenames = [os.path.basename(x) for x in files[0]]
+            for f in files[1:]:
+                for d in f:
+                    dprime = os.path.basename(d)
+                    if dprime not in filenames:
+                        filenames.append(dprime)
+            filenames = sorted(filenames)
+            # get data
+            corrs1, corrs2 = [], []
+            effm1, effm2 = [], []
+            for fn in filenames:
+                for k, f in enumerate(files):
+                    for d in f:
+                        if d.endswith(fn):
+                            print("printing %s" % d)
+                            corr = ana.Correlators.read(d)
+                            mean, std = ana.mean_std(corr.data)
+                            corrs1.append((mean[:,0,0], std[:,0,0]))
+                            corrs2.append((mean[:,1,1], std[:,1,1]))
+                            corr.mass()
+                            mean, std = ana.mean_std(corr.data)
+                            effm1.append((mean[:,0,0], std[:,0,0]))
+                            effm2.append((mean[:,1,1], std[:,1,1]))
+                            break
+                    else:
+                        corrs1.append(("", ""))
+                        corrs2.append(("", ""))
+                        effm1.append(("", ""))
+                        effm2.append(("", ""))
+                plot2(corrs1, corrs2, effm1, effm2, plotter, markers, folders)
+
+    # check for data after GEVP
     if dirs:
         filestmp = [glob.glob(os.path.join(d, "corr_eta_TP?.npz")) for d in dirs]
         files = []

@@ -48,7 +48,7 @@ def main():
     else:
         suffix = "TP%d_%s.npz" % (d2, irrep)
     masses = ens.get_data("strange_masses")
-    smassdirs = ["strange_%s" % (m.ljust(4, "0")) for m in masses]
+    smassdirs = ["strange_%s" % (m.strip().ljust(4, "0")) for m in masses]
 
     files = [["%s/%s/conn_%s%s_p000.d000.g4_p000.d000.g4.dat" % (prefix, s, i, i) for i in quarks] for s in smassdirs ]
     filesdisc = [["%s/%s/disc_%s%s_p000.d000.g4.dat" % (prefix, s, i, j) for i in quarks for j in quarks] for s in smassdirs ]
@@ -74,6 +74,18 @@ def main():
             corr = ana.Correlators.read("%s/conn_eta_%s" % (d, suffix))
             disc = ana.Correlators.read("%s/disc_eta_%s" % (d, suffix))
         corrrm = ana.Correlators.read("%s/conn_eta_%s" % (d, suffix))
+        disc_worm = ana.Correlators.read("%s/disc_eta_%s" % (d, suffix))
+
+        # create eta/eta' GEVP
+        # include excited states
+        disc_worm.data[...,0,0] *= 2.
+        disc_worm.data[...,0,1] *= np.sqrt(2.)
+        disc_worm.data[...,1,0] *= np.sqrt(2.)
+        # add connected on disconnected
+        disc_worm.data[...,0,0] += corr.data[...,0]
+        disc_worm.data[...,1,1] += corr.data[...,1]
+        #print(disc.data[0,:,0,0])
+        disc_worm.save("%s/eta_gevp_%s" % (d, suffix))
 
         # fit the data
         fitter = ana.LatticeFit(0, dt_i=dti, dt_f=dtf, dt=dt, correlated=True)
@@ -109,6 +121,7 @@ def main():
 
         # create eta/eta' GEVP
         # factors are all done by hand
+        # removed excited states
         disc.data[...,0,0] *= 2.
         disc.data[...,0,1] *= np.sqrt(2.)
         disc.data[...,1,0] *= np.sqrt(2.)

@@ -18,7 +18,7 @@ def main():
     preparedata = False
     readfit = False
     plotdata = True
-    exrm = True
+    exrm = False
     d2 = 0
 
     # get data from input file
@@ -72,22 +72,12 @@ def main():
                 corr = ana.Correlators.read("%s/corr_eta_rm_%s" % (d, suffix))
         else:
             if readdata == False:
-                print("read new data")
-                corr = ana.Correlators(fil)
-                #print(files)
-                corr.sym_and_boot(nboot)
-                corr.save("%s/corr_eta_raw_%s" % (d, suffix))
-            else:
-                print("read data from file")
-                corr = ana.Correlators.read("%s/corr_eta_raw_%s" % (d, suffix))
-
-            if preparedata:
-                print("prepare data")
+                corr = ana.Correlators.read("%s/eta_gevp_%s" % (d, suffix))
+                # data is already bootstrapped
                 corr.shift(1)
                 corr.gevp(2)
                 corr.save("%s/corr_eta_%s" % (d, suffix))
             else:
-                print("read prepared data")
                 corr = ana.Correlators.read("%s/corr_eta_%s" % (d, suffix))
 
         # fit the data
