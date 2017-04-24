@@ -44,7 +44,7 @@ def main():
     print(rawdir)
     print(datadir)
     inputlist = []
-    cfg_rng = [714,910,4]
+    cfg_rng = [714,2330,4]
     #omit = [20, 164, 416, 540, 568, 596, 668, 1000]
     omit=[]
     print(omit)
@@ -63,9 +63,10 @@ def main():
     print("C2")
     print(Corrs)
     C2_k = ana.read_confs(rawdir,Corrs[0],inputlist,T)
-    C2_pi = ana.read_confs(rawdir,Corrs[1],inputlist,T) 
-    C2_k = ana.confs_mult(C2_k,-1)
-    C2_pi = ana.confs_mult(C2_pi,-1)
+    C2_pi = ana.read_confs(rawdir,Corrs[1],inputlist,T)
+    # Multiplication only needed for neutral function
+    #C2_k = ana.confs_mult(C2_k,-1)
+    #C2_pi = ana.confs_mult(C2_pi,-1)
     ana.write_data_ascii(C2_k,datadir+'k_unit.dat',conf=inputlist)
     ana.write_data_ascii(C2_pi,datadir+'pi_unit.dat',conf=inputlist)
     #C2_tot = ana.confs_mult(C2,-1)
@@ -76,6 +77,8 @@ def main():
         C4D = ana.read_confs(rawdir,Corrs[2],inputlist,T)
         C4C = ana.read_confs(rawdir,Corrs[3],inputlist,T)
         C55 = ana.confs_subtr(C4D,C4C)
+        ana.write_data_ascii(C4D,datadir+'C4D.dat',conf=inputlist)
+        ana.write_data_ascii(C4C,datadir+'C4C.dat',conf=inputlist)
         ana.write_data_ascii(C55,datadir+'C55_unit.dat',conf=inputlist)
         # loop over all contributions for gamma_j
         #for i in range(3):

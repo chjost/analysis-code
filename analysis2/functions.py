@@ -37,7 +37,7 @@ def compute_derivative(data):
             derv[b,t] = row[t+1] - row[t]
     return derv
 
-def compute_eff_mass(data, usecosh=True):
+def compute_eff_mass(data, usecosh=True , weight=None, shift=None):
     """Computes the effective mass of a correlation function.
 
     The effective mass is calculated along the second axis. The extend
@@ -57,30 +57,47 @@ def compute_eff_mass(data, usecosh=True):
     ndarray
         The effective mass of the data.
     """
-    if usecosh:
+    if (usecosh == True and weight is None):
         # creating mass array from data array
         mass = np.zeros_like(data[:,:-2])
         for b, row in enumerate(data):
             for t in range(1, len(row)-1):
                 mass[b,t-1] = (row[t-1] + row[t+1])/(2.*row[t])
         mass = np.arccosh(mass)
-    elif usecosh == False:
+    elif (usecosh == False and weight is None):
        # Write a numerical solve for the effective mass per timeslice
        # args are (t,T2)
-       T2=data.shape[1]-1
+       T2=data.shape[1]
        mass = np.zeros_like(data[:,:-1])
        print(mass.shape)
        for b, row in enumerate(data):
            for t in range(len(row)-1):
+                #print(fsolve(corr_shift_ratio,0.5,args=(row[t],row[t+1],t,T2)))
                 mass[b, t] = fsolve(corr_shift_ratio,0.5,args=(row[t],row[t+1],t,T2))
-       print(mass[0])
+    
+    elif(weight is not None and shift is not None):
+       print("Using shifted weighted")
+       T2=data.shape[1]
+       mass = np.zeros_like(data[:,:-1])
+       print(mass.shape)
+       for b, row in enumerate(data):
+            for t in range(len(row)-1):
+                 mass[b, t] = fsolve(corr_shift_weight,0.5,
+                                     args=(row[t],row[t+1],t,T2,weight[b],
+                                     shift),maxfev=1000)
     else:
         # creating mass array from data array
         mass = np.zeros_like(data[:,:-1])
         for b, row in enumerate(data):
-            for t in range(len(row)-1):
+            for t in range(len(row)-2):
                mass[b, t] = np.log(row[t]/row[t+1])
     return mass
+
+def corr_shift_weight(m,r0,r1,t,T2,weight,shift=1.):
+    _num = np.exp(-m*t) + np.exp(-m*(2*T2-t))-np.exp(weight*shift) * ( np.exp(-m*(t+shift)) + np.exp(-m*(2*T2-t-shift)) )
+    _den = np.exp(-m*(t+1)) + np.exp(-m*(2*T2-t-1))-np.exp(weight*shift) * ( np.exp(-m*(t+1+shift)) + np.exp(-m*(2*T2-t-1-shift)) )
+    _diff = r0/r1 - _num/_den
+    return _diff
 
 def corr_shift_ratio(m,r0,r1,t,T2):
     """
@@ -88,10 +105,10 @@ def corr_shift_ratio(m,r0,r1,t,T2):
     ----------
     p: tuple
     """
-    _den = np.exp(-m*t) + np.exp(-m*(T2-t))
-    _num = np.exp(-m*(t+1)) + np.exp(-m*(T2-t-1)) 
-    #_den = np.cosh(m*(t-T2))
-    #_num = np.cosh(m*(t+1-T2)) 
+    #_den = np.exp(-m*t) - np.exp(-m*(2*T2-t))
+    #_num = np.exp(-m*(t+1)) - np.exp(-m*(2*T2-(t+1))) 
+    _den = np.sinh(m*(T2-t-0.5))
+    _num = np.sinh(m*(T2-t-1.-0.5)) 
     _diff = r0/r1 - _den/_num 
     return _diff
 

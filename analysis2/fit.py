@@ -429,7 +429,7 @@ class FitResult(object):
         """
         if self.data is None:
             raise RuntimeError("No place to store data, call create_empty first")
-        print(data.shape)
+        #print(data.shape)
         if isinstance(self.corr_num, int):
             if len(index) != 2:
                 raise ValueError("Index has wrong length")
@@ -479,7 +479,7 @@ class FitResult(object):
         """
         if self.data is None:
             raise RuntimeError("No place to store data, call create_empty first")
-        print(data.shape)
+        #print(data.shape)
         if isinstance(self.corr_num, int):
             if len(index) != 2:
                 raise ValueError("Index has wrong length")
@@ -587,7 +587,7 @@ class FitResult(object):
         #select.pval[0]=np.full(nboot,singular.weight)
         return select
 
-    def singularize(self, debug=0 ):
+    def singularize(self, par=0,debug=0 ):
         """ Set data of self to weighted medians over fit ranges and weights to
         1. This makes combined fits faster
 
@@ -603,8 +603,11 @@ class FitResult(object):
         singular = FitResult("singular", False)
         nboot = self.data[0].shape[0]
         npars = self.data[0].shape[1]
+        print("parameters of fitresult: %d" %npars)
+        print("fitresult is derived: %s" % self.derived)
         if self.derived:
-          shape1 = (nboot,1,1)
+          shape1 = (nboot,npars,1)
+          #shape1 = (nboot,1,1)
         else:
           shape1 = (nboot,npars,1)
         if debug > 0:
@@ -620,17 +623,29 @@ class FitResult(object):
             # usually only one correlator is taken into account
             # copy data to singular
             if self.derived is False:
-                res, res_std, res_sys, n_fits = self.error[0]
-                singular.data[0][:,0,0] = res[0]
-                res, res_std, res_sys, n_fits = self.error[1]
-                singular.data[0][:,1,0] = res[0]
+                
+                for n in range(npars):
+                    print("FitRes parameter is %d." % n)
+                    res, res_std, res_sys, n_fits = self.error[n]
+                    singular.data[0][:,n,0] = res[0]
+                #res, res_std, res_sys, n_fits = self.error[0]
+                #singular.data[0][:,0,0] = res[0]
+                #res, res_std, res_sys, n_fits = self.error[1]
+                #singular.data[0][:,1,0] = res[0]
+                #if npars > 2:
+                #      res, res_std, res_sys, n_fits = self.error[2]
+                #      singular.data[0][:,2,0] = res[0]
             else:
-                res, res_std, res_sys, n_fits = self.error[0]
-                singular.data[0][:,0,0] = res[0]
-            print("Original values:")
-            print(self.error)
-            print("Singular values:")
-            print(singular.data[0][0,0,0])
+                for n in range(npars):
+                    res, res_std, res_sys, n_fits = self.error[n]
+                    singular.data[0][:,n,0] = res[0]
+                #res, res_std, res_sys, n_fits = self.error[par]
+                #singular.data[0][:,0,0] = res[0]
+            if debug > 2:
+                print("Original values:")
+                print(self.error)
+                print("Singular values:")
+                print(singular.data[0][0,0,0])
                 
             # set weights accordingly
             singular.weight = [[np.array([1.])] for d in range(2)]
@@ -647,13 +662,17 @@ class FitResult(object):
                     singular.data[n][:,0,0] = res[n]
                     res, res_std, res_sys, n_fits = self.error[1]
                     singular.data[n][:,1,0] = res[n]
+                    if npars > 2:
+                        res, res_std, res_sys, n_fits = self.error[2]
+                        singular.data[n][:,2,0] = res[n]
                 else:
-                    res, res_std, res_sys, n_fits = self.error[0]
+                    res, res_std, res_sys, n_fits = self.error[par]
                     singular.data[n][:,0,0] = res[n]
-                print("Original values:")
-                print(self.error)
-                print("Singular values:")
-                print(singular.data[n][0,0,0])
+                if debug > 2:
+                    print("Original values:")
+                    print(self.error)
+                    print("Singular values:")
+                    print(singular.data[n][0,0,0])
                     
                 # set weights accordingly
                 singular.weight = [[np.array([1.])] for d in range(2)]
@@ -764,6 +783,7 @@ class FitResult(object):
                 nfits = [d[0].size for d in self.data]
                 r, r_std, r_syst, w = sys_error_der(self.data, self.pval)
                 self.error.append((r, r_std, r_syst, nfits))
+                print(w[0].shape)
                 self.weight.append(w)
             else:
                 #print(self.data)
@@ -775,7 +795,8 @@ class FitResult(object):
                     self.error.append((r, r_std, r_syst, nfits))
                     self.weight.append(w)
 
-    def print_data(self, par=0):
+    def print_data(self, par=0,tex=False):
+        #TODO: Latex output not working properly
         """Prints the errors etc of the data."""
         self.calc_error()
 
@@ -790,10 +811,19 @@ class FitResult(object):
         for i, lab in enumerate(self.label):
             print("correlator %s, %d fits" %(str(lab), nfits[i]))
             if np.fabs(r[i][0]) < 1e-4:
-                print("%.4e +- %.4e -%.4e +%.4e" % (r[i][0], rstd[i], rsys[i][0],
-                    rsys[i][1]))
+                if tex:
+                    prec=1e4
+                    print("%.4f(%1.0f)(_{-%1.0f}^{+%1.0f})" % (r[i][0],
+                      rstd[i], rsys[i][0], rsys[i][1]))
+                else:
+                    print("%.4e +- %.4e -%.4e +%.4e" % (r[i][0], rstd[i], rsys[i][0], rsys[i][1]))
             else:
-                print("%.5f +- %.5f -%.5f +%.5f" % (r[i][0], rstd[i], rsys[i][0],
+                if tex:
+                    prec=1e4
+                    print("%.4f(%1.0f)(_{-%1.0f}^{+%1.0f})" % (r[i][0],
+                      rstd[i], rsys[i][0], rsys[i][1]))
+                else:
+                    print("%.5f +- %.5f -%.5f +%.5f" % (r[i][0], rstd[i], rsys[i][0],
                     rsys[i][1]))
         print("------------------------------\n\n")
 
@@ -985,7 +1015,7 @@ class FitResult(object):
             mka0_phys.add_data(*res)
         return mka0_phys
 
-    def calc_dE(self, mass, parself=0, parmass=0, isdependend=True):
+    def calc_dE(self, mass, parself=0, parmass=0, flv_diff=False, isdependend=True):
         """Calculate dE from own data and the mass of the particles.
 
         Parameters
@@ -993,24 +1023,39 @@ class FitResult(object):
         mass : FitResult
             The masses of the single particles.
         parself, parmass : int, optional
-            The parameters for which to do this.
+            The parameters for which to do this. Only relevant if fitresults are
+            not derived
         isdependend : bool
             If mass and self are dependend on each other.
+        flv_diff : bool
+            If particles are different, then mass is the sum of the particle
+            masses
         """
         # we need the weight of both mass and self
         self.calc_error()
         mass.calc_error()
         # get the mass of the single particles, assuming the
         # first entry of the mass FitResults contains them.
-        _ma = mass.data[0][:,parmass]
-        _ma_w = mass.weight[parmass][0]
-        _energy = self.data[0][:,parself]
-        _energy_w = self.weight[parself][0]
+        if mass.derived is False:
+            _ma = mass.data[0][:,parmass]
+            _ma_w = mass.weight[parmass][0]
+        else:
+            _ma = mass.data[0]
+            _ma_w = mass.weight[0][0]
+        if self.derived is False:
+            _energy = self.data[0][:,parself]
+            _energy_w = self.weight[parself][0]
+        else:
+            _energy = self.data[0]
+            _energy_w = self.weight[0][0]
+
         nsam = self.data[0].shape[0]
         newshape = (nsam, _ma.shape[-1], _energy.shape[-1])
+        print(newshape)
         dE = FitResult("dE", True)
         dE.create_empty(newshape, newshape, [1,1])
-        for res in compute_dE(_ma, _ma_w, _energy, _energy_w, isdependend):
+        for res in compute_dE(_ma, _ma_w, _energy, _energy_w, isdependend,
+                              flv_diff=flv_diff):
             dE.add_data(*res)
         return dE
 
@@ -1042,14 +1087,19 @@ class FitResult(object):
         self.calc_error()
         mass.calc_error()
         # get the data
-        _mass = mass.data[0][:,parmass]
-        print("mass in scattering length")
-        print(_mass.shape)
-        print(mass.weight)
-        _massweight = mass.weight[parmass][0]
+        if mass.derived:
+            _mass = mass.data[0]
+            _massweight = mass.weight[0][0]
+        else:
+            _mass = mass.data[0][:,parmass]
+            _massweight = mass.weight[parmass][0]
         print(_massweight)
-        _energy = self.data[0][:,parself]
-        _energyweight = self.weight[parself][0]
+        if self.derived:
+            _energy = self.data[0]
+            _energyweight = self.weight[0][0]
+        else:
+            _energy = self.data[0][:,parself]
+            _energyweight = self.weight[parself][0]
         print(_energyweight)
         nsam = _mass.shape[0]
         # create the new shapes
@@ -1061,6 +1111,8 @@ class FitResult(object):
         # calculate scattering length
         print("_energy has shape:")
         print _energy.shape
+        print("_mass has shape:")
+        print(_mass.shape)
         for res in calculate_scat_len(_mass, _massweight, _energy, _energyweight,
                 L, isdependend, isratio, rf_est):
             scat.add_data(*res)
@@ -1313,14 +1365,25 @@ class FitResult(object):
       if layout[0] != other.data[0].shape[0]:
         raise ValueError("Number of Bootstrapsamples not compatible!")
       if isdependend:
-          if layout[1] != other.data[0][0].shape[1]:
-            raise ValueError("Number of same parameter fit ranges not compatible!\n"
-                + "%d vs. %d" % (layout[1], other.data[0][0].shape[1]))
+          print(other.data[0][0].shape)
+          if other.derived:
+              if layout[1] != other.data[0].shape[1]:
+                raise ValueError("Number of same parameter fit ranges not compatible!\n"
+                    + "%d vs. %d" % (layout[1], other.data[0].shape[1]))
+          else:
+              if layout[1] != other.data[0][0].shape[1]:
+                raise ValueError("Number of same parameter fit ranges not compatible!\n"
+                    + "%d vs. %d" % (layout[1], other.data[0][0].shape[1]))
       # Deal with observable
       product = np.zeros_like(self.data[0])
       for b, arr0 in enumerate(other.data[0]):
-        for r_self, arr1 in enumerate(arr0[1]):
-          product[b][r_self] = np.multiply(arr1, self.data[0][b][r_self])
+          if self.derived is False:
+              for r_self, arr1 in enumerate(arr0[1]):
+                  print(r_self,arr1,arr0)
+                  product[b][r_self] = np.multiply(arr1, self.data[0][b][r_self])
+          else:
+              product[b] = np.multiply(arr0.reshape(arr0.size,1), self.data[0][b])
+              
 
       # Deal with observable weights
       # Get weights for all fit ranges (1 sample is sufficient)
@@ -1328,10 +1391,8 @@ class FitResult(object):
       # prepare new weight array
       weights_prod = np.zeros_like(weights_0)
       # multiply weights of first observable with observable of second
-      print self.weight
-      print other.weight
       if isdependend:
-        for idx, weights_1 in enumerate(other.weight[1][0]):
+        for idx, weights_1 in enumerate(other.weight[0][0]):
            weights_prod[idx] = np.multiply(weights_1, weights_0[idx])
       else:
         for idx, weights_1 in enumerate(other.weight):
@@ -1532,6 +1593,7 @@ class FitResult(object):
         if self.error is not None:
             self.error = None
             self.calc_error()
+
     # new function interface with class        
     def comb_fitres(fitres,par):
         """Combine parameters of a fitresult in a new fitresult
@@ -1586,6 +1648,175 @@ class FitResult(object):
         _comb.calc_error()
     
         return _comb
+
+    def reduced_mass(self,mass, par=1):
+        """Calculate reduced mass mu = m1*m2/(m1+m2) for different particles
+
+        The function takes one additional fitresult argument and calculates mu. It
+        takes care of several fitrange combinations and correlators
+
+        Parameters
+        ----------
+        Returns
+        ----------
+        _mu : FitRes, the reduced mass returned as a fitresult
+        """
+        # Gather necessary data from list of fitresults
+        # data have to have the same number of bootstrapsamples
+        fitres = [self,mass]
+        nboot = fitres[0].data[0].shape[0]
+        npars = 1
+        # calculate the number of fitranges
+        nbranges = 1
+        for f in fitres:
+          nbranges *=f.data[0].shape[2]
+        print("number of fitranges is %d" % nbranges)
+        shape1 = (nboot,nbranges)
+        ncorr=1
+        # Initialize an empty fitresult
+        _mu = FitResult("reduced_mass",True)
+        _mu.create_empty(shape1,shape1,ncorr)
+        _mu.weight=[[np.zeros(nbranges) for c in range(ncorr)] for p in range(npars)]
+        _mu.set_ranges([[[10,15] for r in range(nbranges)]],[[nbranges,]])
+        # Fill the fitresult
+        # Loop o'er fitresult list
+        # With itertools get product of all fitrange index combinations
+        # a list of 
+        friter = [[r for r in range(f.data[0].shape[-1])] for f in fitres]
+        # loop over combinations of fitranges, i is index of fitrange, item is
+        # array of fitrange indices from single masses
+        for i,item in enumerate(itertools.product(*friter)):
+            # loop over fitrange combination j is fitres entry, r is
+            # fitrange index
+            _mu.data[0][:,i] = fitres[0].data[0][:,par,item[0]]*fitres[1].data[0][:,par,item[1]]/(fitres[0].data[0][:,par,item[0]]+fitres[1].data[0][:,par,item[1]])
+            _mu.weight[0][0][i] = fitres[0].weight[par][0][item[0]]*fitres[1].weight[par][0][item[1]]
+        return _mu
+
+    def add_mass(self, mass, par=1):
+        """add one mass to the mass of self m += m1 for different particles
+
+        The function takes one additional fitresult argument and calculates mu. It
+        takes care of several fitrange combinations and correlators
+
+        Parameters
+        ----------
+        Returns
+        ----------
+        _mu : FitRes, the reduced mass returned as a fitresult
+        """
+
+        # Calculate errors and weights on all observables
+        self.calc_error()
+        mass.calc_error()
+        #print mass.weight[0][0]
+        # Gather necessary data from list of fitresults
+        # data have to have the same number of bootstrapsamples
+        nboot = self.data[0].shape[0] 
+        npars = 1
+        # calculate the number of fitranges
+        nbranges = 1
+        fitres = [self,mass]
+        for f in fitres:
+          nbranges *=f.data[0].shape[2]
+        print("number of fitranges is %d" % nbranges)
+        shape1 = (nboot,nbranges)
+        ncorr=1
+        # Initialize an empty fitresult
+        _sum = FitResult("mass_sum",True)
+        _sum.create_empty(shape1,shape1,ncorr)
+        # FitResult weights are a double list of (nboot,fitrange) arrays. first
+        # list index is for parameters, secon is for correlator
+        _sum.weight = [[np.zeros((nbranges)) for c in range(ncorr)]for n
+            in range(npars)]
+        _sum.set_ranges([[[10,15] for r in range(nbranges)]],[[nbranges,]])
+        # Fill the fitresult
+        # Loop o'er fitresult list
+        # With itertools get product of all fitrange index combinations
+        # a list of 
+        friter = [[r for r in range(f.data[0].shape[-1])] for f in fitres]
+        # loop over combinations of fitranges, i is index of fitrange, item is
+        # array of fitrange indices from single masses
+        for i,item in enumerate(itertools.product(*friter)):
+            print(item[0],item[1])
+            # loop over fitrange combination j is fitres entry, r is
+            # fitrange index
+            # calculate sum of masses for each fitrange combination
+            _sum.data[0][:,i] = fitres[0].data[0][:,par,item[0]]+fitres[1].data[0][:,par,item[1]]
+            _sum.weight[0][0][i] = fitres[0].weight[par][0][item[0]]*fitres[1].weight[par][0][item[1]]
+        return _sum
+
+#    def reduced_mass(self,mass, par=1):
+#        """Calculate reduced mass mu = m1*m2/(m1+m2) for different particles
+#
+#        The function takes one additional fitresult argument and calculates mu. It
+#        takes care of several fitrange combinations and correlators
+#
+#        Parameters
+#        ----------
+#        Returns
+#        ----------
+#        _mu : FitRes, the reduced mass returned as a fitresult
+#        """
+#        # Calculate errors and weights on all observables
+#        self.calc_error()
+#        mass.calc_error()
+#        # Gather necessary data from list of fitresults
+#        # data have to have the same number of bootstrapsamples
+#        nboot = self.data[0].shape[0] 
+#        npars = 1
+#        # calculate the number of fitranges
+#        _fr1 = self.data[0].shape[-1]
+#        _fr2 = mass.data[0].shape[-1]
+#        shape1 = (nboot, _fr1, _fr2)
+#        ncorr=1
+#        # Initialize an empty fitresult
+#        _sum = FitResult("mass_sum",True)
+#        _sum.create_empty(shape1,shape1,ncorr)
+#        _sum.weight = []
+#        _sum.weight.append(np.zeros((_fr1,_fr2)))
+#        # Loop over fitranges
+#        for i in range(_fr1):
+#            for j in range(_fr2):
+#                _sum.data[0][:,i,j] = self.data[0][:,par,i]*mass.data[0][:,par,j] /(self.data[0][:,par,i]+mass.data[0][:,par,j])
+#                _sum.weight[0][i,j] = self.weight[0][0][i]*self.weight[0][0][j]
+#        return _sum
+#
+#    def add_mass(self, mass, par=1):
+#        """add one mass to the mass of self m += m1 for different particles
+#
+#        The function takes one additional fitresult argument and calculates mu. It
+#        takes care of several fitrange combinations and correlators
+#
+#        Parameters
+#        ----------
+#        Returns
+#        ----------
+#        _mu : FitRes, the reduced mass returned as a fitresult
+#        """
+#
+#        # Calculate errors and weights on all observables
+#        self.calc_error()
+#        mass.calc_error()
+#        # Gather necessary data from list of fitresults
+#        # data have to have the same number of bootstrapsamples
+#        nboot = self.data[0].shape[0] 
+#        npars = 1
+#        # calculate the number of fitranges
+#        _fr1 = self.data[0].shape[-1]
+#        _fr2 = mass.data[0].shape[-1]
+#        shape1 = (nboot, _fr1, _fr2)
+#        ncorr=1
+#        # Initialize an empty fitresult
+#        _sum = FitResult("mass_sum",True)
+#        _sum.create_empty(shape1,shape1,ncorr)
+#        _sum.weight = []
+#        _sum.weight.append(np.zeros((_fr1,_fr2)))
+#        # Loop over fitranges
+#        for i in range(_fr1):
+#            for j in range(_fr2):
+#                _sum.data[0][:,i,j] = self.data[0][:,par,i]+mass.data[0][:,par,j]
+#                _sum.weight[0][i,j] = self.weight[0][0][i]*self.weight[0][0][j]
+#        return _sum
 
 def init_fitreslst(fnames):
   """Read fitresults from a list of filenames and return the list

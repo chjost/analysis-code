@@ -654,18 +654,25 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
 
     #return res, chisquare, pvals
 
-def compute_dE(mass, mass_w, energy, energy_w, isdependend=False):
+def compute_dE(mass, mass_w, energy, energy_w, isdependend=False, flv_diff=False):
+    print("Compute dE flv_diff = %s" % flv_diff)
     needed = np.zeros(mass.shape[0])
     if isdependend:
         for i in range(mass.shape[-1]):
             for j in range(energy.shape[-1]):
-                tmp = energy[:,i,j] - 2.*mass[:,i]
+                if flv_diff == False:
+                    tmp = energy[:,i,j] - 2.*mass[:,i]
+                else:
+                    tmp = energy[:,i,j] - mass[:,i]
                 tmp_w = mass_w[i] * energy_w[i,j]
                 yield (0,0,i,j), tmp, needed, tmp_w
     else:
         for i in range(mass.shape[-1]):
             for j in range(energy.shape[-1]):
-                tmp = energy[:,j] - 2.*mass[:,i]
+                if flv_diff == False:
+                    tmp = energy[:,j] - 2.*mass[:,i]
+                else:
+                    tmp = energy[:,j] - mass[:,i]
                 tmp_w = mass_w[i] * energy_w[j]
                 yield (0,0,i,j), tmp, needed, tmp_w
         

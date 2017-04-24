@@ -67,7 +67,9 @@ def calculate_scat_len(mass, massweight, energy, energyweight, L=24,
     # Constants for the Luescher Function
     c = [-2.837297, 6.375183, -8.311951]
     # prefactor of the equation
-    pre = -4.*np.pi / (mass * float(L*L*L))
+    #pre = -4.*np.pi / (mass * float(L*L*L))
+    # PACS-CS suggests 2 instead of 4
+    pre = -2.*np.pi / (mass * float(L*L*L))
     needed = np.zeros((nsam,))
     # loop over fitranges of self
     for i in range(energy.shape[-1]):
@@ -82,6 +84,7 @@ def calculate_scat_len(mass, massweight, energy, energyweight, L=24,
             else:
                 weight = np.full(nsam, massweight[j] * energyweight[i])
                 #weight = massweight[j] * energyweight[i]
+            # TODO: Seems superfluous to me (CH)
             if False:
             #if weight[0] < cut or weight[0] > (1. - cut):
                 result = np.full(nsam, np.nan)
@@ -111,12 +114,12 @@ def calculate_scat_len(mass, massweight, energy, energyweight, L=24,
                             pre[b,j]*c[0]/float(L), pre[b,j], 0.])
                         if isratio:
                             p[3] = -1. * energy[b,j,i]
-                          
                         else:
                             if isdependend:
-                                p[3] = -1. * (energy[b,j,i]-2*mass[b,j])
+                                p[3] = -1. * (energy[b,j,i]-mass[b,j])
                             else:
-                                p[3] = -1. * (energy[b,i]-2*mass[b,j])
+                                #p[3] = -1. * (energy[b,i]-2*mass[b,j])
+                                p[3] = -1. * (energy[b,i]-mass[b,j])
                     # find the roots of the polynomial
                     root = np.roots(p)
                     # sort by absolute value of imaginary part (not needed

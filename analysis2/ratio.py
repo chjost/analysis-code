@@ -5,7 +5,7 @@ Functions for the ratio calculation.
 import numpy as np
 from energies import WfromMass_lat
 
-def twopoint_ratio(d1, d2, d3):
+def twopoint_ratio(d1, d2, d3, shift=1, dE=None, useall=False, p2=0, L=24, irep="A1"):
     """Calculates a simple ratio of three data sets.
 
     Calculates d1(t)/d2(t).
@@ -24,7 +24,8 @@ def twopoint_ratio(d1, d2, d3):
     for _s in range(rshape[0]):
         for _t in range(rshape[1]):
             # calculate ratio
-            ratio[_s,_t] = d1[_s,_t]/d2[_s,_t]-1.
+            #ratio[_s,_t] = d1[_s,_t]/d2[_s,_t]-1.
+            ratio[_s,_t] = d1[_s,_t]/d2[_s,_t]
     # TODO(CJ): test if the following give the same result
     # ratio = d1/(d2*d3)
     return ratio
