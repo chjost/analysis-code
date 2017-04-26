@@ -41,16 +41,16 @@ def main():
     if len(sys.argv) < 2:
       Corrs = ana.inputnames('charged.ini',['C20', 'C40C', 'C40D'])
     else:
-      Corrs = ana.inputnames(sys.argv[1],['c0', 'c1', 'c3'])
+      Corrs = ana.inputnames(sys.argv[1],['c0','c2', 'c3'])
       #Corrs = ana.inputnames(sys.argv[1],['c0'])
-      Corrs_pi = ana.inputnames(sys.argv[1],['c5'])
+      Corrs_pi = ana.inputnames(sys.argv[1],['c1'])
       Corrs_ss = ana.inputnames(sys.argv[1],['c6'])
     # os.path.join treats preceding slashes as new paths
     print(Corrs)
     print(Corrs_pi)
     print(Corrs_ss)
     corrpaths = [os.path.join(rawdir,mu_s,'data/') for mu_s in rawstrange]
-    corrpaths_pi = [os.path.join(raw_pi,'data/'),]
+    corrpaths_pi = [os.path.join(raw_pi,mu_s,'data/') for mu_s in rawstrange]
     #corrpaths_pi = [raw_pi]
     corrpaths_ss = [os.path.join(raw_ss,mu_s,'data/') for mu_s in rawstrange]
     datapaths = [os.path.join(datadir,mu_s,'') for mu_s in strange]
@@ -114,12 +114,12 @@ def main():
       print("Read in done")
       # subtract crossed from direct diagram
       C4_tot = ana.confs_subtr(C4D,C4C)
-      C4_tot = ana.confs_mult(C4_tot,2)
+      #C4_tot = ana.confs_mult(C4_tot,2)
       print("Writing to: %s..." % s[1])
       #ana.write_data_ascii(C2,s[1]+'pi_charged_p0.dat')
       ana.write_data_ascii(C2,s[1]+'k_charged_p0_outlier.dat',conf=conf_feed)
       #ana.write_data_ascii(C2,s[1]+'pi_charged_p0_outlier.dat',conf=conf_feed)
-      ana.write_data_ascii(C4_tot,s[1]+'kk_charged_A1_TP0_00_outlier.dat',conf=conf_feed)
+      ana.write_data_ascii(C4_tot,s[1]+'pik_charged_A1_TP0_00_outlier.dat',conf=conf_feed)
       ana.write_data_ascii(C4D,s[1]+'C4D.dat',conf=conf_feed)
       ana.write_data_ascii(C4C,s[1]+'C4C.dat',conf=conf_feed)
      

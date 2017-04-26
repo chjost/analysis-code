@@ -617,6 +617,40 @@ class Correlators(object):
       cut.matrix = self.matrix
       return cut, omitted
 
+    def sub_subleading(self, fit1, fit2, T):
+        """subtract subleading thermal pollution numerically from correlator
+          
+        Function takes data from Correlator at self and two sets of fit parameters
+        It returns the difference between data and:
+        WARNING: corr gets modified!
+    
+        Parameter
+        ---------
+        fit1, fit2: FitResult, Amplitude and mass parameters of the thermal pollution
+        amp_guess: float, optional factor to tune amplitude
+    
+        Returns
+        -------
+        Correlator
+        """
+        _corr = Correlators.create(self.data) 
+        # Correlators have shape [nboot,T,real]
+        T2 = _corr.shape[1]
+        print("Half lattice time extent is %d" %T2)
+        # singularize fitresults
+        _fit1 = fit1.singularize()
+        _fit2 = fit2.singularize()
+        _fit1.calc_error()
+        _fit2.calc_error()
+        # Fitted amplitude from corrws fit
+        # CAUTION: Uses half lattice time extent! 2*T2 needed, T is 1500,1500
+        # array
+        _amp = _fit1.data[0][:,2,-1] * np.exp(-T[:,0]*_fit2.data[0][:,1,-1])*(1-np.exp(2*(_fit2.data[0][:,1,-1]-_fit2.data[0][:,0,-1])))
+        sub = np.zeros_like(self.data)
+        for t in range(0,T2):
+            sub[:,t,0] = _amp*np.exp((_fit2.data[0][:,1,-1]-_fit2.data[0][:,0,-1])*t)
+        _corr.data -= sub
+        return _corr
 
 if __name__ == "main":
     pass

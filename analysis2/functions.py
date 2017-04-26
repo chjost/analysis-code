@@ -422,3 +422,64 @@ def compute_square(data):
         The square of the data.
     """
     return np.square(data)
+
+def func_corr_shift_therm(p, t, add):
+    """A function that describes a shifted four point correlation function.
+    including time dependent thermal states.
+
+    The function is given by p0^2*(exp(-p1*t)+exp(-p1*(T2-t)) -
+    exp(-p1*(t+s))+exp(-p1*(T2-(t+s)))
+    + p[2] * np.exp(-add[1]*add[2]) * (1-np.exp(2*s*(add[1]-add[0]))) * np.exp((add[1]-add[0])*t) 
+    ,
+    where
+    * p0 is the amplitude,
+    * p1 is the energy of the correlation function,
+    * t is the time, and
+    * T2 is the time around which the correlation function is symmetric,
+    usually half the lattice time extend.
+
+    Parameters
+    ----------
+    p : sequence of float
+        The parameters of the function.
+    t : float
+        The variable of the function.
+    T2 : float
+        The time around which the function is symmetric.
+
+    Returns
+    -------
+    float
+        The result.
+    """
+    s=1.
+    gs = p[0] * p[0] * (np.exp(-p[1]*t) + np.exp(-p[1]*(add[2]-t)) - np.exp(s*(add[1]-add[0]))*(np.exp(-p[1]*(t+s)) + np.exp(-p[1]*(add[2]-(t+s)))))
+    ts = p[2] * np.exp(-add[1]*add[2]) * (1-np.exp(2*s*(add[1]-add[0]))) * np.exp((add[1]-add[0])*t) 
+    return gs+ts
+
+def func_single_corr_bare(p, t, T2):
+    """A function that describes two point correlation functions.
+
+    The function is given by p0^2*(exp(-p1*t)+exp(-p1*(T2-t))),
+    where
+    * p0 is the amplitude,
+    * p1 is the energy of the correlation function,
+    * t is the time, and
+    * T2 is the time around which the correlation function is symmetric,
+    usually half the lattice time extend.
+
+    Parameters
+    ----------
+    p : sequence of float
+        The parameters of the function.
+    t : float
+        The variable of the function.
+    T2 : float
+        The time around which the function is symmetric.
+
+    Returns
+    -------
+    float
+        The result.
+    """
+    return p[0]*p[0]*(np.exp(-p[1]*t)+np.exp(-p[1]*(T2-t)))

@@ -70,6 +70,8 @@ def calculate_scat_len(mass, massweight, energy, energyweight, L=24,
     #pre = -4.*np.pi / (mass * float(L*L*L))
     # PACS-CS suggests 2 instead of 4
     pre = -2.*np.pi / (mass * float(L*L*L))
+    print("pre has shape:")
+    print(pre.shape)
     needed = np.zeros((nsam,))
     # loop over fitranges of self
     for i in range(energy.shape[-1]):

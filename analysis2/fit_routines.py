@@ -657,6 +657,7 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
 def compute_dE(mass, mass_w, energy, energy_w, isdependend=False, flv_diff=False):
     print("Compute dE flv_diff = %s" % flv_diff)
     needed = np.zeros(mass.shape[0])
+    # check if fitranges have overlap
     if isdependend:
         for i in range(mass.shape[-1]):
             for j in range(energy.shape[-1]):

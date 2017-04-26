@@ -10,9 +10,9 @@ from fit_routines import (fit_comb, fit_single, calculate_ranges, compute_dE,
     get_start_values, get_start_values_comb, fitting)
 from in_out import read_fitresults, write_fitresults
 from interpol import match_lin, match_quad, evaluate_lin
-from functions import (func_single_corr, func_ratio, func_const, func_two_corr,
+from functions import (func_single_corr,func_single_corr_bare, func_ratio, func_const, func_two_corr,
     func_two_corr_shifted, func_single_corr2, func_sinh, compute_eff_mass,
-    func_two_corr_therm)
+    func_two_corr_therm, func_corr_shift_therm)
 from statistics import (compute_error, sys_error, sys_error_der, draw_weighted,
     freq_count, draw_gauss_distributed)
 from energies import calc_q2, calc_Ecm
@@ -28,7 +28,7 @@ class LatticeFit(object):
 
         Parameters
         ----------
-        fitfunc : {0, 1, 2, 3, 4, 5, 6, 7, callable}
+        fitfunc : {0, 1, 2, 3, 4, 5, 6, 7, 8 callable}
             Choose between three predefined functions or an own
             fit function.
         dt_i, dt_f : ints, optional
@@ -46,7 +46,7 @@ class LatticeFit(object):
         self.debug = debug
         # chose the correct function if using predefined function
         if isinstance(fitfunc, int):
-            if fitfunc > 7:
+            if fitfunc > 9:
                 raise ValueError("No fit function choosen")
             if fitfunc == 2:
                 self.npar = 1
@@ -56,11 +56,16 @@ class LatticeFit(object):
                 self.npar = 2
             elif fitfunc == 7:
                 self.npar = 3
+            elif fitfunc == 8:
+                self.npar = 3
+            elif fitfunc == 9:
+                self.npar = 2
             else:
                 self.npar = 2
             functions = {0: func_single_corr, 1: func_ratio, 2: func_const,
                 3: func_two_corr, 4: func_single_corr2, 5: func_sinh,
-                6: func_two_corr_shifted, 7: func_two_corr_therm}
+                6: func_two_corr_shifted, 7: func_two_corr_therm,
+                8: func_corr_shift_therm, 9: func_single_corr_bare}
             self.fitfunc = functions.get(fitfunc)
         else:
             self.npar = npar
@@ -1054,6 +1059,7 @@ class FitResult(object):
         print(newshape)
         dE = FitResult("dE", True)
         dE.create_empty(newshape, newshape, [1,1])
+        print(_energy[0,0],_ma[0,0])
         for res in compute_dE(_ma, _ma_w, _energy, _energy_w, isdependend,
                               flv_diff=flv_diff):
             dE.add_data(*res)
@@ -1093,14 +1099,13 @@ class FitResult(object):
         else:
             _mass = mass.data[0][:,parmass]
             _massweight = mass.weight[parmass][0]
-        print(_massweight)
         if self.derived:
             _energy = self.data[0]
             _energyweight = self.weight[0][0]
         else:
             _energy = self.data[0][:,parself]
             _energyweight = self.weight[parself][0]
-        print(_energyweight)
+        print(_energy[0,0])
         nsam = _mass.shape[0]
         # create the new shapes
         scatshape = (nsam, _mass.shape[-1], _energy.shape[-1])
@@ -1595,7 +1600,7 @@ class FitResult(object):
             self.calc_error()
 
     # new function interface with class        
-    def comb_fitres(fitres,par):
+    def comb_fitres(self,res1,par):
         """Combine parameters of a fitresult in a new fitresult
     
         The data of several fitresults are placed in a new FitResult object
@@ -1618,6 +1623,7 @@ class FitResult(object):
         """
         # Gather necessary data from list of fitresults
         # data have to have the same number of bootstrapsamples
+        fitres = [self,res1]
         nboot = fitres[0].data[0].shape[0]
         npars = len(fitres)
         # calculate the number of fitranges
@@ -1629,7 +1635,7 @@ class FitResult(object):
         shape2 = (nboot,nbranges)
         ncorr=1
         # Initialize an empty fitresult
-        _comb = ana.FitResult("combined",False)
+        _comb = FitResult("combined",False)
         _comb.create_empty(shape1,shape2,ncorr)
         _comb.set_ranges([[[10,15] for r in range(nbranges)]],[[nbranges,]])
         # Fill the fitresult

@@ -46,7 +46,7 @@ def main():
         # for index determination reading real part column is enough
         files = "%s/%s/k_charged_p0_outlier.dat" % (datadir, s)
         two_pt_corr = ana.Correlators(files, column=(1,), matrix=False,conf_col=3)
-        files = "%s/%s/kk_charged_A1_TP0_00_outlier.dat" % (datadir,s) 
+        files = "%s/%s/pik_charged_A1_TP0_00_outlier.dat" % (datadir,s) 
         four_pt_corr = ana.Correlators(files,column=(1,), matrix=False,conf_col=3)
 
         # plot history before omission
@@ -96,7 +96,7 @@ def main():
         # equal for saving
         files = "%s/%s/k_charged_p0_outlier.dat" % (datadir, s)
         two_pt_corr = ana.Correlators(files,column=(1,2), matrix=False,conf_col=3)
-        files = "%s/%s/kk_charged_A1_TP0_00_outlier.dat" % (datadir,s) 
+        files = "%s/%s/pik_charged_A1_TP0_00_outlier.dat" % (datadir,s) 
         four_pt_corr = ana.Correlators(files,column=(1,2), matrix=False,conf_col=3)
         two_pt_corr.omit_iqr(omit_all)
         four_pt_corr.omit_iqr(omit_all)
@@ -116,7 +116,7 @@ def main():
         print(two_pt_corr.data.shape)
         filesave = "%s/%s/k_charged_p0.dat" % (datadir, s)
         two_pt_corr.save(filesave,asascii=True)
-        filesave = "%s/%s/kk_charged_A1_TP0_00.dat" % (datadir,s) 
+        filesave = "%s/%s/pik_charged_A1_TP0_00.dat" % (datadir,s) 
         four_pt_corr.save(filesave,asascii=True)
         del plotter
 

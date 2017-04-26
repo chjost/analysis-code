@@ -236,6 +236,7 @@ def plot_data(X, Y, dY, label, plotrange=None, dX=None, fmt="x", col='b'):
         plt.errorbar(X[l:u], Y[l:u], dY[l:u], xerr=_dX, fmt=fmt, label=label, c=col)
     else:
         # plot the data
+        _dX=dX
         plt.errorbar(X, Y, dY, xerr=_dX, fmt=fmt, label=label,c=col)
 
 def plot_data_with_fit(X, Y, dY, fitfunc, args, label, plotrange=None,

@@ -70,7 +70,7 @@ def main():
     ana.write_data_ascii(C2_k,datadir+'k_unit.dat',conf=inputlist)
     ana.write_data_ascii(C2_pi,datadir+'pi_unit.dat',conf=inputlist)
     #C2_tot = ana.confs_mult(C2,-1)
-    C57 = np.zeros((len(inputlist),T,2))
+    #C57 = np.zeros((len(inputlist),T,2))
     #ana.write_data_ascii(C2_tot,datadir+'pi_unit_opposite_p0.dat',conf=inputlist)
     if read_c4:
         print("C55")
