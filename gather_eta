@@ -140,13 +140,14 @@ def extract_data(config, innames):
         #print(smassdirs)
         #print(outpaths)
         #print(paths)
+    print("number of configs: %d" % (len(configssorted)))
 
     # build single flavor correlator loops
     if debug > 0:
         print("single flavor loops")
     matches = [x for x in innames if x.startswith("C1")]
     for p,o in zip(paths, outpaths):
-        print(p, o)
+        #print(p, o)
         for m in matches:
             # get the correct number of random vecs
             if "_u_" in m:
@@ -246,13 +247,13 @@ def build_eta(config, innames):
                 if i.startswith("C1") and st1 in i:
                     fname = os.path.join(p, i.replace("C1/C1", "disc"))
                     fname = fname.replace(st1, st2)
-                    print(fname)
+                    #print(fname)
                     # need imaginary part of disconnected contribution
                     disc = ana.Correlators(fname, column=(2,), conf_col=-1)
                     fD = disc_fac["".join((q,q))]
                 elif i.startswith("C20") and st2 in i:
                     fname = os.path.join(p, i.replace("C20/C20", "conn"))
-                    print(fname)
+                    #print(fname)
                     conn = ana.Correlators(fname, conf_col=-1)
                     fC = conn_fac["".join((q,q))]
             print("%s: fC = %f, fD = %f" % (q, fC, fD))
@@ -301,7 +302,7 @@ def build_eta(config, innames):
             st2 = "_%s%s_" % (q[1],q[0])
             fD = disc_fac["".join(q)]
             fname = tmpname.replace("_x_", st1)
-            print(fname)
+            #print(fname)
             disc = ana.Correlators(fname, column=(2,), conf_col=-1)
             # calc correlator
             newdata = fD * disc.data
@@ -357,11 +358,11 @@ def build_pi0(config, innames):
             if i.startswith("C1") and "_u_" in i:
                 fname = os.path.join(p, i.replace("C1/C1", "disc"))
                 fname = fname.replace("_u_", "_uu_")
-                print(fname)
+                #print(fname)
                 disc = ana.Correlators(fname, conf_col=-1)
             elif i.startswith("C20") and "_uu_" in i:
                 fname = os.path.join(p, i.replace("C20/C20", "conn"))
-                print(fname)
+                #print(fname)
                 conn = ana.Correlators(fname, conf_col=-1)
 
         #print(conn.data.shape)

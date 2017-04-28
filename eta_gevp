@@ -18,7 +18,7 @@ def main():
     preparedata = False
     readfit = False
     plotdata = True
-    exrm = False
+    exrm = True
     d2 = 0
 
     # get data from input file

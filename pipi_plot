@@ -169,8 +169,8 @@ def read_data(datafolder, lattices, d2=0):
     ## other variables
     filempi = "fit_pi.npz"
     par_mpi=1
-    #fileam = "am_pi_TP%d.npz" % d2
-    fileam = "am_pi_ratio_TP%d.npz" % d2
+    fileam = "am_pi_TP%d.npz" % d2
+    #fileam = "am_pi_ratio_TP%d.npz" % d2
 
     # get reference values
     fpi = ottnad_f_pi()
@@ -371,7 +371,7 @@ def print_summary(data, datafolder, plotfolder, lattices):
 
     # open plot file
     if xcut:
-        plotter = ana.LatticePlot("%s/ampi_mfpi_xcut%.1f_TP%d.pdf" % (plotfolder, xcut, 0))
+        plotter = ana.LatticePlot("%s/ampi_mfpi_xcut%.1f_TP%d_seperate_fits.pdf" % (plotfolder, xcut, 0))
     else:
         plotter = ana.LatticePlot("%s/ampi_mfpi_TP%d.pdf" % (plotfolder, 0))
     # set title etc.

@@ -1,3 +1,4 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
 """
 Unit tests for the gevp functions.
 """
@@ -74,5 +75,6 @@ class GEVPBase_Test(unittest.TestCase):
         cdata = 4. * tmp * np.exp(-self.Epipi1*self.time[:-1])
         #print(sdata[1] - cdata)
         self.assertTrue(np.allclose(sdata[1], cdata))
+
 if __name__ == "__main__":
-    unittest.main()
+    unittest.main(verbosity=2)

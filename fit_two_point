@@ -14,7 +14,7 @@ def main():
         ens = ana.LatticeEnsemble.parse(sys.argv[1])
 
     # read settings
-    readdata = True
+    readdata = False
     newformat = False
     readfit = False
     plotdata = True
@@ -87,18 +87,23 @@ def main():
         #  print("%d: %.3e" % (t, d))
 
     print("fitting")
-    fitter = ana.LatticeFit(0, dt_i=dti, dt_f=dtf, dt=dt, correlated=True,
-        xshift=xshift, debug=debug)
+    if hasvev:
+        fitter = ana.LatticeFit(5, dt_i=dti, dt_f=dtf, dt=dt, correlated=True,
+            xshift=0., debug=debug)
+    else:
+        fitter = ana.LatticeFit(0, dt_i=dti, dt_f=dtf, dt=dt, correlated=True,
+            xshift=xshift, debug=debug)
     #fitter = ana.LatticeFit(0, dt_i=dti, dt_f=dtf, dt=dt, correlated=False)
     if readfit == False:
         if debug:
             print("fitting the data")
         #st = [100., 0.15769]
         st = None
-        franges = [[Ti, Ti+4, Tf-4, Tf] * corr.shape[0]]
+        #franges = [[Ti, Ti+4, Tf-4, Tf] * corr.shape[0]]
         #franges = [Ti, T]
-        #franges = [Ti, Tf]
-        fitres = fitter.fit(st, corr, franges, corrid="epi", add=addT, lint=True)
+        franges = [Ti, Tf]
+        fitres = fitter.fit(st, corr, franges, corrid="epi", add=addT, lint=False)
+        #fitres = fitter.fit(st, corr, franges, corrid="epi", add=addT, lint=True)
         fitres.save("%s/fit_pi.npz" % (datadir))
         #fitres.save("%s/fit_pi_liuming.npz" % (datadir))
     else:

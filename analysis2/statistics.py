@@ -269,5 +269,6 @@ def draw_gauss_distributed(mean, std, shape, origin=False):
     if origin is True:
       res[0] = mean
     return res
+
 if __name__ == "main":
     pass

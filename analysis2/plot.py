@@ -210,7 +210,7 @@ class LatticePlot(object):
                     self._set_env_normal()
                     plot_data(X, corr.data[0,:,n], ddata, label[3],
                             plotrange=[1,T],col=self.cycol())
-                    plot_function(fitfunc.fitfunc, X[fi], mpar, label[4],
+                    plot_function(fitfunc.fitfunc, X[fi]-xshift, mpar, label[4],
                             add, fi, ploterror,col=self.cycol())
                     plt.legend()
                     if self.join is False:

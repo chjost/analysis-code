@@ -1,0 +1,536 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+
+import os
+import glob
+import numpy as np
+from scipy.optimize import leastsq
+import matplotlib
+matplotlib.use('Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+
+import analysis2 as ana
+
+def lin(p, x):
+    return p[0]*x+p[1]
+
+class dp(object):
+    def __init__(self, x=np.nan, y=np.nan):
+        if not isinstance(x, (list, tuple, np.ndarray)):
+            if x == np.nan:
+                self.l = 0
+            else:
+                self.l = 1
+        else:
+            self.l = len(x)
+        self.x = np.asarray(x)
+        self.y = np.asarray(y)
+        #print("x shape: %s" % (self.x.shape.__str__()))
+        #print("y shape: %s" % (self.y.shape.__str__()))
+
+    def __str__(self):
+        return "%d data entries" % self.l
+
+    def __repr__(self):
+        return self.__str__()
+
+    def lin_fit(self, correlated=True):
+        if self.l < 2:
+            print("not enough data")
+            return [None, None]
+        if not correlated:
+            cov = np.diag(np.diagonal(np.cov(self.y)))
+        else:
+            cov = np.cov(self.y)
+        #print(cov)
+        if np.any(np.isnan(cov)):
+            print("nan in cov")
+            return [np.ones((1500,))*np.nan, np.ones((1500,))*np.nan]
+        cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
+
+        errfunc = lambda p, x, y: np.dot(cov, (y-lin(p, x)).T)
+        # degrees of freedom
+        dof = float(self.y.shape[0]-2) 
+        samples = self.y.shape[1]
+        # create results arrays
+        res = np.zeros((samples, 2))
+        chisquare = np.zeros(samples)
+        # The FIT to the boostrap samples
+        for b in range(samples):
+            _x = self.x[:,b]
+            _y = self.y[:,b]
+            p,cov1,infodict,mesg,ier = leastsq(errfunc, [1., 0.], args=(_x,_y),
+                full_output=1, factor=.1)
+            chisquare[b] = float(sum(infodict['fvec']**2.))
+            res[b] = np.array(p)
+        #print(np.mean(res, axis=0))
+        self.res = res
+        self.chi2 = chisquare
+        return [res, chisquare]
+
+    def get_intersect(self, yval):
+        if yval == np.nan:
+            return None
+        tmp = -self.res[:,1] + yval
+        tmp /= self.res[:,0]
+        return tmp
+
+def paper_unit_singlet():
+    """The values for unitary, strange, pseudoscalar mesons;
+    arxiv:1501.02645 and wiki"""
+    p_am = {"A30.32": np.nan,
+            "A40.20": np.nan,
+            "A40.24": 0.30708,
+            "A40.32": np.nan,
+            "A60.24": 0.31010,
+            "A80.24": 0.31406,
+            "A100.24": 0.31575,
+            "A80.24s": 0.27168,
+            "A100.24s": 0.27455,
+            "B25.32": np.nan,
+            "B35.48": np.nan,
+            "B35.32": np.nan,
+            "B55.32": 0.26087,
+            "B85.24": np.nan,
+            "D15.48": np.nan,
+            "D30.48": np.nan,
+            "D45.32": 0.21126}
+    return p_am
+
+def paper_unit_kaon():
+    """The values for unitary pseudoscalar mesons; arxiv:1501.02645 and wiki"""
+    p_am = {"A30.32": 0.25150,
+            "A40.20": 0.26130,
+            "A40.24": 0.25884,
+            "A40.32": 0.25666,
+            "A60.24": 0.26695,
+            "A80.24": 0.27706,
+            "A100.24": 0.28807,
+            "A80.24s": 0.25503,
+            "A100.24s": 0.26490,
+            "B25.32": 0.21240,
+            "B35.48": np.nan,
+            "B35.32": 0.21840,
+            "B55.32": 0.22799,
+            "B85.24": 0.24392,
+            "D15.48": 0.16897,
+            "D30.48": 0.17760,
+            "D45.32": 0.17570}
+    return p_am
+
+def parse_singlet_masses(datafolder, lattices, xcut=0.05):
+    print("parsing old \eta_s matches")
+    result = []
+    for lat in lattices:
+        #print(lat)
+        res = [[], []]
+        fname = os.path.join(datafolder, lat, "masses.txt")
+        tmp = np.loadtxt(fname).T
+        for x, y, dy in zip(tmp[0], tmp[1], tmp[2]):
+            if x > xcut:
+                continue
+            res[0].append(np.ones((1500,))*x)
+            tmpdata = ana.draw_gauss_distributed(y**2, 2*y*dy, shape=(1500,),
+                origin=True)
+            res[1].append(tmpdata)
+        result.append(dp(res[0], res[1]))
+    return result
+
+def parse_kaon_masses(datafolder, lattices, xcut=0.05):
+    print("parsing old kaon matches")
+    result = []
+    for lat in lattices:
+        #print(lat)
+        res = [[], []]
+        fname = os.path.join(datafolder, lat, "masses_kaon.txt")
+        tmp = np.loadtxt(fname).T
+        for x, y, dy in zip(tmp[0], tmp[1], tmp[2]):
+            if x > xcut:
+                continue
+            res[0].append(np.ones((1500,))*x)
+            tmpdata = ana.draw_gauss_distributed(y**2, 2*y*dy, shape=(1500,),
+                origin=True)
+            res[1].append(tmpdata)
+        result.append(dp(res[0], res[1]))
+    return result
+
+def read_singlet(datafolder, lattices):
+    print("read singlet data")
+    # parameters
+    fn_fit = "fit_eta_conn_TP0.npz"
+    pc = 1
+    # final data list
+    data = []
+    # get data from files
+    def get_data(corr, get_lowest=False):
+        d = [x**2 for x in corr.data]
+        m, dm, dmsys, w = ana.sys_error(d, corr.pval, pc, rel=False)
+        # m, dm, and dmsys still have the correlator number as first
+        # index
+        # m still has bootstrap sample indices
+        if get_lowest:
+            return [m[0], m[1]]
+        else:
+            return [m[1]]
+
+    # loop over lattices
+    for lat in lattices:
+        #print("read data for %s" % lat)
+        # get file names and paths
+        topdir = os.path.join(datafolder, lat)
+        strange_masses = glob.glob(os.path.join(topdir, "strange_*"))
+        strange_masses = sorted(strange_masses, key=lambda x: os.path.basename(x).split("_")[1])
+        # get strange quark masses
+        sm = [int(os.path.basename(s).split("_")[1]) for s in strange_masses]
+        tmp_mus = [np.ones((1500,))*float(x)*1e-5 for x in sm]
+        # get light quark mass
+        xlow = np.ones((1500,))*float(lat.split(".")[0][1:])*1e-4
+        tmp_mus.insert(0, xlow)
+        # data arrays
+        m2 = []
+
+        # read data
+        for i, sdir in enumerate(strange_masses):
+            # get data, also extract light quark data
+            try:
+                corr = ana.FitResult.read(os.path.join(sdir, fn_fit))
+            except IOError:
+                corr = None
+            if corr is not None:
+                get_lowest = True if i == 0 else False
+                res = get_data(corr, get_lowest)
+                if get_lowest:
+                    m2.append(res[0])
+                    m2.append(res[1])
+                else:
+                    m2.append(res[0])
+            else:
+                m2.append(np.ones((1500,))*np.nan)
+        # append data
+        data.append(dp(tmp_mus, m2))
+    return data
+
+def read_kaon(datafolder, lattices):
+    print("read kaon data")
+    # parameters
+    fn_fit = "fit_k_%s.npz"
+    pc = 1
+    # final data list
+    data = []
+    # get data from files
+    def get_data(corr):
+        d = [x**2 for x in corr.data]
+        m, dm, dmsys, w = ana.sys_error(d, corr.pval, pc, rel=False)
+        # m, dm, and dmsys still have the correlator number as first
+        # index
+        # m still has bootstrap sample indices
+        return [m[0]]
+
+    # loop over lattices
+    for lat in lattices:
+        #print("read data for %s" % lat)
+        # get file names and paths
+        topdir = os.path.join(datafolder, lat)
+        strange_masses = glob.glob(os.path.join(topdir, "amu_s_*/"))
+        #print(strange_masses)
+        strange_masses = sorted(strange_masses, key=lambda x: os.path.basename(x[:-1]).split("_")[-1])
+        # get strange quark masses
+        sm = [os.path.basename(s[:-1]).split("_")[-1] for s in strange_masses]
+        sm = [int("".join((x, "0"*(4-len(x))))) for x in sm]
+        tmp_mus = [np.ones((1500,))*float(x)*1e-5 for x in sm]
+        tmp_mus = np.asarray(tmp_mus)
+        # data arrays
+        m2 = []
+        ind = []
+
+        # read data
+        for i, sdir in enumerate(strange_masses):
+            # get data, also extract light quark data
+            try:
+                corr = ana.FitResult.read(os.path.join(sdir, fn_fit % lat))
+            except IOError:
+                corr = None
+            if corr is not None:
+                res = get_data(corr)
+                m2.append(res[0])
+                ind.append(i)
+            #else:
+            #    m2.append(np.ones((1500,))*np.nan)
+        # append data
+        data.append(dp(tmp_mus[ind], m2))
+    return data
+
+def interpolate_singlet(singlet, singlet_cmp, lattices):
+    fitres = []
+    fitres_cmp = []
+    intres = []
+    intres_cmp = []
+
+    unit_sing = paper_unit_singlet()
+    for d, c, lat in zip(singlet, singlet_cmp, lattices):
+        print("\n---")
+        print("lattice: %s" % lat)
+        # sLapH data
+        # fit and print
+        fitres.append(d.lin_fit())
+        res = fitres[-1][0]
+        data = [np.mean(res, axis=0), np.std(res, axis=0)]
+        #print("\eta_s fit parameters:")
+        #print("m = %.4f +- %.4f" % (data[0][0], data[1][0]))
+        #print("c = %.4f +- %.4f" % (data[0][1], data[1][1]))
+
+        # interpolate
+        u_sing = unit_sing[lat]
+        if u_sing != np.nan:
+            tmp = d.get_intersect(u_sing**2)
+            print("unitary value: %.4f" % u_sing)
+            _t = [np.mean(tmp), np.std(tmp)]
+            print("interpolated value: %.4f(%.0f)" % (_t[0], _t[1]*1e4))
+            intres.append(tmp)
+        else:
+            intres.append(np.ones((1500,))*np.nan)
+
+        # old data
+        # fit and print
+        fitres_cmp.append(c.lin_fit(correlated=False))
+        res = fitres[-1][0]
+        data = [np.mean(res, axis=0), np.std(res, axis=0)]
+        #print("old \eta_s fit parameters:")
+        #print("m = %.4f +- %.4f" % (data[0][0], data[1][0]))
+        #print("c = %.4f +- %.4f" % (data[0][1], data[1][1]))
+
+        # interpolate
+        if u_sing != np.nan:
+            tmp = c.get_intersect(u_sing**2)
+            print("unitary value: %.4f" % u_sing)
+            _t = [np.mean(tmp), np.std(tmp)]
+            print("interpolated value: %.4f(%.0f)" % (_t[0], _t[1]*1e4))
+            intres_cmp.append(tmp)
+        else:
+            intres_cmp.append(np.ones((1500,))*np.nan)
+    return fitres, fitres_cmp, intres, intres_cmp
+
+def interpolate_kaon(kaon, kaon_cmp, lattices):
+    fitres = []
+    fitres_cmp = []
+    intres = []
+    intres_cmp = []
+
+    unit_kaon = paper_unit_kaon()
+    for d, c, lat in zip(kaon, kaon_cmp, lattices):
+        print("\n---")
+        print("lattice: %s" % lat)
+        # sLapH data
+        # fit and print
+        fitres.append(d.lin_fit(correlated=False))
+        res = fitres[-1][0]
+        if res is not None:
+            data = [np.mean(res, axis=0), np.std(res, axis=0)]
+            #print("kaon fit parameters:")
+            #print("m = %.4f +- %.4f" % (data[0][0], data[1][0]))
+            #print("c = %.4f +- %.4f" % (data[0][1], data[1][1]))
+
+            # interpolate
+            u_kaon = unit_kaon[lat]
+            if u_kaon != np.nan:
+                tmp = d.get_intersect(u_kaon**2)
+                print("unitary value: %.4f" % u_kaon)
+                _t = [np.mean(tmp), np.std(tmp)]
+                print("interpolated value: %.4f(%.0f)" % (_t[0], _t[1]*1e4))
+                intres.append(tmp)
+            else:
+                intres.append(np.ones((1500,))*np.nan)
+
+        # old data
+        # fit and print
+        fitres_cmp.append(c.lin_fit(correlated=False))
+        res = fitres[-1][0]
+        if res is not None:
+            data = [np.mean(res, axis=0), np.std(res, axis=0)]
+            #print("old kaon fit parameters:")
+            #print("m = %.4f +- %.4f" % (data[0][0], data[1][0]))
+            #print("c = %.4f +- %.4f" % (data[0][1], data[1][1]))
+
+            # interpolate
+            if u_kaon != np.nan:
+                tmp = c.get_intersect(u_kaon**2)
+                print("unitary value: %.4f" % u_kaon)
+                _t = [np.mean(tmp), np.std(tmp)]
+                print("interpolated value: %.4f(%.0f)" % (_t[0], _t[1]*1e4))
+                intres_cmp.append(tmp)
+            else:
+                intres_cmp.append(np.ones((1500,))*np.nan)
+    return fitres, fitres_cmp, intres, intres_cmp
+
+def plot_singlet(plotdir, data, datacmp, fitres, fitres_cmp,
+      intres, intres_cmp, lattices):
+    print("plotting singlet data")
+    markers = ["or", "sb"]
+    markers_fit = ["-r", "b"]
+    label = ["sLapH"]
+    label_fit = ["sLapH fit"]
+    markers_cmp = ["vg", "^c"]
+    markers_fit_cmp = ["-g", "--c"]
+    label_cmp = ["standard"]
+    label_fit_cmp = ["standard fit"]
+    fname = os.path.join(plotdir, "singlet_interpolation.pdf")
+    plotter = ana.LatticePlot(fname)
+
+    unit_scalars = paper_unit_singlet()
+
+    for lat, d, c, f, fc, i, ic in zip(lattices, data, datacmp, fitres, fitres_cmp,
+        intres, intres_cmp):
+        # plot data 
+        title = [lat, "$a\mu_s$", "(aM$_{\eta_s}$)$^2$"]
+        plotter.set_title(title[0], title[1:])
+        # print sLapH data
+        x = d.x[:,0]
+        y = d.y[:,0]
+        dy = np.std(d.y, axis=1)
+        #print(x.shape, y.shape, dy.shape)
+        plt.errorbar(x, y, yerr=dy, label=label[0], fmt=markers[0])
+        # plot fit
+        _x = [min(x), max(x)]
+        plotter.plot_func(lin, f[0], _x, label=label_fit[0], fmt=markers_fit[0],
+            ploterror=True)
+        # print interpolated value
+        _t = [np.mean(i), np.std(i)]
+        if _t[0] != np.nan:
+            plt.axvline(x=_t[0], ls='-', c='r')
+
+        # print standard data
+        x = c.x[:,0]
+        y = c.y[:,0]
+        dy = np.std(c.y, axis=1)
+        #print(x.shape, y.shape, dy.shape)
+        plt.errorbar(x, y, yerr=dy, label=label_cmp[0], fmt=markers_cmp[0])
+        # plot fit
+        _x = [min(x), max(x)]
+        plotter.plot_func(lin, fc[0], _x, label=label_fit_cmp[0],
+            fmt=markers_fit_cmp[0], ploterror=True)
+
+        # print unitary line
+        y = unit_scalars[lat]
+        if not np.isnan(y):
+            plt.axhline(y=y**2, ls='--', c='k')
+            plt.text(0.001, y**2, "unitary")
+        plt.legend(loc=2)
+        plt.grid()
+        if lat[0] == "A":
+            ymax = 0.2
+        elif lat[0] == "B":
+            ymax = 0.15
+        elif lat[0] == "D":
+            ymax = 0.1
+        plt.xlim([0., 0.026])
+        plt.ylim([0., ymax])
+        plotter.save()
+    del plotter
+
+def plot_kaon(plotdir, data, datacmp, fitres, fitres_cmp,
+      intres, intres_cmp, lattices):
+    print("plotting kaon data")
+    markers = ["or", "sb"]
+    markers_fit = ["-r", "b"]
+    label = ["sLapH"]
+    label_fit = ["sLapH fit"]
+    markers_cmp = ["vg", "^c"]
+    markers_fit_cmp = ["-g", "--c"]
+    label_cmp = ["standard"]
+    label_fit_cmp = ["standard fit"]
+    fname = os.path.join(plotdir, "kaon_interpolation.pdf")
+    plotter = ana.LatticePlot(fname)
+
+    unit_kaon = paper_unit_kaon()
+
+    for lat, d, c, f, fc, i, ic in zip(lattices, data, datacmp, fitres, fitres_cmp,
+        intres, intres_cmp):
+        if d is not None:
+            # plot data 
+            title = [lat, "$a\mu_s$", "(aM$_{K^+}$)$^2$"]
+            plotter.set_title(title[0], title[1:])
+            # print sLapH data
+            try:
+                x = d.x[:,0]
+            except:
+                print(lat)
+                print(d.x)
+                raise
+            y = d.y[:,0]
+            dy = np.std(d.y, axis=1)
+            #print(x.shape, y.shape, dy.shape)
+            plt.errorbar(x, y, yerr=dy, label=label[0], fmt=markers[0])
+            # plot fit
+            _x = [min(x), max(x)]
+            plotter.plot_func(lin, f[0], _x, label=label_fit[0], fmt=markers_fit[0],
+                ploterror=True)
+            # print interpolated value
+            _t = [np.mean(i), np.std(i)]
+            if _t[0] != np.nan:
+                plt.axvline(x=_t[0], ls='-', c='r')
+
+        if c is not None:
+            # print standard data
+            x = c.x[:,0]
+            y = c.y[:,0]
+            dy = np.std(c.y, axis=1)
+            #print(x.shape, y.shape, dy.shape)
+            plt.errorbar(x, y, yerr=dy, label=label_cmp[0], fmt=markers_cmp[0])
+            # plot fit
+            _x = [min(x), max(x)]
+            plotter.plot_func(lin, fc[0], _x, label=label_fit_cmp[0],
+                fmt=markers_fit_cmp[0], ploterror=True)
+
+            # print unitary line
+            y = unit_kaon[lat]
+            if not np.isnan(y):
+                plt.axhline(y=y**2, ls='--', c='k')
+                plt.text(0.01, y**2, "unitary")
+            plt.legend(loc=2)
+            plt.grid()
+            if lat[0] == "A":
+                ymax = 0.1
+            elif lat[0] == "B":
+                ymax = 0.08
+            elif lat[0] == "D":
+                ymax = 0.05
+            plt.xlim([0., 0.026])
+            plt.ylim([0., ymax])
+        plotter.save()
+    del plotter
+
+def main():
+    #lattices = ["A40.24", "B85.24", "D45.32"]
+    lattices=["A30.32", "A40.20", "A40.24", "A40.32", "A60.24",
+              "A80.24", "A100.24", "B85.24", "D30.48", "D45.32"]
+    #lattices=["A30.32", "A40.20", "A40.24", "A40.32", "A60.24",
+    #          "A80.24", "A100.24", "B25.32", "B35.32", "B35.48",
+    #          "B55.32", "B85.24", "D15.48", "D30.48", "D45.32"]
+    datafolder = "./data/eta/"
+    plotfolder = "./plots/eta/"
+    cmp_scalar_path = "/hiskp2/jost/correlationfunctions/eta/falk_data/"
+    data_kaon = "/hiskp2/helmes/analysis/scattering/analysis_vault/k_charged_wo_outliers/data/"
+
+    # singlet masses squared
+    scalars = read_singlet(datafolder, lattices)
+    cmp_scalars = parse_singlet_masses(cmp_scalar_path, lattices)
+    fit_scal, fit_cmp, int_scal, int_cmp = interpolate_singlet(
+        scalars, cmp_scalars, lattices)
+    plot_singlet(plotfolder, scalars, cmp_scalars, fit_scal, fit_cmp,
+        int_scal, int_cmp, lattices)
+
+    # kaon masses squared
+    scalars = read_kaon(data_kaon, lattices)
+    cmp_scalars = parse_kaon_masses(cmp_scalar_path, lattices)
+    fit_scal, fit_cmp, int_scal, int_cmp = interpolate_kaon(
+        scalars, cmp_scalars, lattices)
+    plot_kaon(plotfolder, scalars, cmp_scalars, fit_scal, fit_cmp,
+        int_scal, int_cmp, lattices)
+    return
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass
