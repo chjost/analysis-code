@@ -54,6 +54,7 @@ class ChirAna(object):
     self.x_shape = None
     self.y_data = None
     self.x_data = None
+    self.nboot_fr = None
     # Parameters of extrapolation
     self.fitres = None
     # the physical point in the analysis, x and y-value with errors
@@ -116,80 +117,60 @@ class ChirAna(object):
         self.x_data.append(np.zeros(tp_x))
 
   def create_empty(self, lyt_x, lyt_y, match=None, lat_dict=None, cont_ext=None,
-      plot_cont_ext= None, cont_func=None, plot_cont_func=None):
-    """Initialize a chiral analysis with some start parameters
-    
-    At the moment the first index is used to label the lattice spacing, the
-    second index is a tuple encoding the number of lattices per spacing. the
-    third index counts the number of matched results and the last index is the
-    number of bootstrapsamples.
-    Parameters
-    ----------
-    lyt_y : tuple, shape of the y data
-    lyt_x : tuple, shape of the x data
-    match : boolean to state if matched data is to be analysed, default is False
-    """
-    #print(len(lyt_x),len(lyt_y))
-    # save layout for later use
-    self.y_shape = lyt_y
-    self.x_shape = lyt_x
-    
+        plot_cont_ext= None, cont_func=None, plot_cont_func=None, nboot_fr=None):
+      """Initialize a chiral analysis with some start parameters
       
-    if self.match is True:
-      self.amu_matched_to = []
-      for a in range(lyt_y[0]):
-        if len(lyt_y) == 5:
-          tp_mu = (lyt_y[1][a],lyt_y[2],lyt_y[3],lyt_y[4])
-        elif len(lyt_y) == 4:
-          tp_mu = (lyt_y[1][a],lyt_y[2],lyt_y[3])
-        else:
-          tp_mu = (lyt_y[1][a],lyt_y[2])
-        self.amu_matched_to.append(np.zeros(tp_mu))
-
-    self.y_data = []
-    for a in range(lyt_y[0]):
-      if len(lyt_y) == 5:
-        tp_y = (lyt_y[1][a],lyt_y[2],lyt_y[3],lyt_y[4])
-      elif len(lyt_y) == 4:
-        tp_y = (lyt_y[1][a],lyt_y[2],lyt_y[3])
-      else:
-        tp_y = (lyt_y[1][a],lyt_y[2])
-      self.y_data.append(np.zeros(tp_y))
-
-    self.x_data = []
-    for a in range(lyt_x[0]):
-      if len(lyt_x) == 5:
-        tp_x = (lyt_x[1][a],lyt_x[2],lyt_x[3],lyt_x[4])
-      elif len(lyt_x) == 4:
-        tp_x = (lyt_x[1][a],lyt_x[2],lyt_x[3])
-      else:
-        tp_x = g(lyt_x[1][a],lyt_x[2])
-      self.x_data.append(np.zeros(tp_x))
-      print("x_data tuple for allocation")
-      print(tp_x)
-    self.phys_point = np.zeros((2,2))
-    debug=True
-    if debug is True:
-      print("Created empty Chiral Analysis object with shapes:")
-      print("x-data: length %d" % len(self.x_data))
-      for i in self.x_data:
-        print(i.shape)
-    self.cont_ext = cont_ext
-    self.plot_cont_ext = plot_cont_ext
-    # Take chiral fit function for plotting unless stated otherwise
-    if plot_cont_ext is None:
-      self.plot_cont_ext = cont_ext
-    else:
+      At the moment the first index is used to label the lattice spacing, the
+      second index is a tuple encoding the number of lattices per spacing. the
+      third index counts the number of matched results and the last index is the
+      number of bootstrapsamples.
+      Parameters
+      ----------
+      lyt_y : tuple, shape of the y data
+      lyt_x : tuple, shape of the x data
+      match : boolean to state if matched data is to be analysed, default is False
+      lat_dict : dictionary of the lattice spacings
+      cont_ext : callable, function of the continuum extrapolation
+      plot_cont_ext : callable, plot function of the continuum extrapolation
+      cont_func : callable, chiral extrapolation at 0 lattice spacing
+      plot_cont_func : callable, same as plot_cont_ext for cont_func
+      nboot_fr : int, number of fitrange samples used for every datapoint
+      """
+      #print(len(lyt_x),len(lyt_y))
+      # save layout for later use
+      self.y_shape = lyt_y
+      self.x_shape = lyt_x
+      # Protect from overvwrite
+      if self.nboot_fr is None:
+          self.nboot_fr = nboot_fr 
+        
+      if self.match is True:
+          self.amu_matched_to = init_array(lyt_y,self.nboot_fr)
+      self.y_data = init_array(lyt_y,self.nboot_fr)
+      self.x_data = init_array(lyt_x,self.nboot_fr)
+      self.phys_point = np.zeros((2,2))
+      debug=True
+      if debug is True:
+          print("Created empty Chiral Analysis object with shapes:")
+          print("x-data: length %d" % len(self.x_data))
+          for i in self.x_data:
+              print(i.shape)
+      self.cont_ext = cont_ext
       self.plot_cont_ext = plot_cont_ext
-    self.cont_func = cont_func
-    self.plot_cont_func = plot_cont_func
-    # Ensemble names as dictionary sorted by lattice spacing
-    self.lat_dict = lat_dict
+      # Take chiral fit function for plotting unless stated otherwise
+      if plot_cont_ext is None:
+          self.plot_cont_ext = cont_ext
+      else:
+          self.plot_cont_ext = plot_cont_ext
+      self.cont_func = cont_func
+      self.plot_cont_func = plot_cont_func
+      # Ensemble names as dictionary sorted by lattice spacing
+      self.lat_dict = lat_dict
   #def save()
   #
   #@classmethod
   #def read(cls,):
-
+  # TODO: needs revision if fitranges are neede
   def extend_data(self,obs=['None',],dim='x'):
     """Extend data in the givene dimension for different values
 
@@ -256,7 +237,7 @@ class ChirAna(object):
 
     Parameters
     ----------
-    data : ndarray, the data to add, usually bootstrapsamples
+    data : ndarray, the data to add, usually (bootstrapsamples,fitranges)
     idx : tuple, index as in creation: lattice spacing, ensemble index, strange
           quark mass, fit dimension
     dim : string, is it x- or y-data?
