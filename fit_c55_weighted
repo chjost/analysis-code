@@ -22,40 +22,25 @@ def main():
     readfit = False
     plotdata = True
     plotfit = True
-    os = False 
-    if os:
-      corr_pi_in = "pi_os"
-      corr_pi_out="corr_pi_os"
-      corr_k_in ="k_os"
-      corr_k_out = "corr_k_os"
-      corr_c55_in ="C55"
-      corr_c55_out = "corr_c55_os"
-      pik_raw_plot = "corr_c55_os"
-      fit_k_out="fit_k_os"
-      fit_pi_out = "fit_pi_os"
-      fit_pik_out = "fit_pik_weight_unit"
-      fit_pik_plot ="fit_pik_weight_os"
-      mass_pik_plot="m_eff_pik_weight_os"
-
-    else:
-      corr_pi_in = "pi_unit"
-      corr_pi_out="corr_pi_unit"
-      corr_k_in ="k_unit"
-      corr_k_out = "corr_k_unit"
-      corr_c55_in ="C55_unit"
-      corr_c55_out = "corr_c55_unit"
-      pik_raw_plot = "corr_c55_unit"
-      fit_k_out="fit_k_unit"
-      fit_pi_out = "fit_pi_unit"
-      fit_pik_out = "fit_pik_weight_unit"
-      fit_pik_plot ="fit_pik_weight_unit" 
-      mass_pik_plot="m_eff_pik_weight_unit"
+    corr_pi_in = "pi_charged_p0"
+    corr_pi_out="corr_pi_unit"
+    corr_k_in ="k_charged_p0"
+    corr_k_out = "corr_k_unit"
+    corr_c55_in ="pik_charged_A1_TP0_00"
+    corr_c55_out = "corr_c55_unit"
+    pik_raw_plot = "corr_c55_unit"
+    fit_k_out="fit_k_unit"
+    fit_pi_out = "fit_pi_unit"
+    fit_pik_out = "fit_pik_weight_unit"
+    fit_pik_plot ="fit_pik_weight_unit" 
+    mass_pik_plot="m_eff_pik_weight_unit"
     # get data from input file
     prefix = ens.get_data("path")
     print prefix
     lat = ens.name()
     nboot = ens.get_data("nboot")
     datadir = ens.get_data("datadir")
+    datadir_pi = ens.get_data("datadir_pi")
     plotdir = ens.get_data("plotdir")
     gmax = ens.get_data("gmax")
     d2 = ens.get_data("d2")
@@ -89,7 +74,7 @@ def main():
         k_corr = ana.Correlators.read("%s/%s_%s.npz" % (datadir,corr_k_out, lat))
     # single particle correlator
     print("read single particle corrs")
-    files = ["%s/%s.dat" % (datadir,corr_pi_in)]
+    files = ["%s/%s.dat" % (datadir_pi,corr_pi_in)]
     #files = ["%s/eta_charged_p0_old.dat" % datadir] 
     #files = ["%s/pi_corr_p0.dat" % datadir] 
     if readdata == False:

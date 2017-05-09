@@ -452,7 +452,7 @@ class LatticePlot(object):
             # Lambda function for bisection
             bisec = lambda p,x : x
             plot_data(np.sort(q_theo),np.sort(q_meas),None,label[1],
-                fmt='o',markerfill ='none')
+                fmt='o')
             _range = (np.amin(np.sort(q_theo)),np.amax(np.sort(q_theo)))
             plot_function(bisec,_range,None,'',fmt='r')
             plt.legend(loc='best')
@@ -733,6 +733,7 @@ class LatticePlot(object):
         fmt_pts = ['^','v','o']
 
         for i,a in enumerate(beta):
+            _x, _y = conv_data_plot()
             # get data for beta, the data passed should be 3 arrays (X,Y,dy)
             # the quark mass values
             if dep is not None:
@@ -742,12 +743,11 @@ class LatticePlot(object):
                 _X = chirana.x_data[i][:,:,0,0].flatten()
                 _dX = chirana.x_data[i][:,:,0,:].reshape((chirana.x_data[i].shape[0]*chirana.x_data[i].shape[1],chirana.x_data[i].shape[-1]))
             _Y = chirana.y_data[i][:,:,0,0].flatten()
-            _dy = chirana.y_data[i][:,:,0,:].reshape((chirana.y_data[i].shape[0]*chirana.y_data[i].shape[1],chirana.y_data[i].shape[-1]))
+            _dY = chirana.y_data[i][:,:,0,:].reshape((chirana.y_data[i].shape[0]*chirana.y_data[i].shape[1],chirana.y_data[i].shape[-1]))
             print("yerror shape is:")
-            print(_dy.shape)
+            print(_Y)
             x_mean, _dx = compute_error(_dX,axis=1)
-            y_mean, _dy = compute_error(_dy,axis=1)
-            print(_dy.shape)
+            y_mean, _dy = compute_error(_dY,axis=1)
             if debug > 0:
                 print("x_data to be plotted:")
                 print(_X)

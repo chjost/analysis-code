@@ -76,8 +76,9 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
     # check dimensions of args, if more than one,
     # iterate over first dimension
     _args = np.asarray(args)
-    print("the arguments have shape:")
-    print(_args.shape)
+    if debug > 2:
+        print("the arguments have shape:")
+        print(_args.shape)
     if add is not None:
         _add = np.asarray(add)
     if _args.ndim > 1:

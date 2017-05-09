@@ -606,18 +606,20 @@ class FitResult(object):
         """
         self.calc_error()
         singular = FitResult("singular", False)
+        ncorr = len(self.data)
         nboot = self.data[0].shape[0]
-        npars = self.data[0].shape[1]
-        print("parameters of fitresult: %d" %npars)
         print("fitresult is derived: %s" % self.derived)
         if self.derived:
-          shape1 = (nboot,npars,1)
+          npars = 1
+          shape1 = self.data[0].shape
           #shape1 = (nboot,1,1)
         else:
+          npars = self.data[0].shape[1]
           shape1 = (nboot,npars,1)
         if debug > 0:
           print("is self derived?")
           print(self.derived)
+        #print("parameters of fitresult: %d" %npars)
         shape2 = (nboot,1)
         # Get number of correlators self.data is a list of fitresults
         ncorr = len(self.data)
@@ -643,12 +645,12 @@ class FitResult(object):
             else:
                 for n in range(npars):
                     res, res_std, res_sys, n_fits = self.error[n]
-                    singular.data[0][:,n,0] = res[0]
+                    singular.data[0][:,n,0] = res[n]
                 #res, res_std, res_sys, n_fits = self.error[par]
                 #singular.data[0][:,0,0] = res[0]
             if debug > 2:
                 print("Original values:")
-                print(self.error)
+                print(self.error[0][0])
                 print("Singular values:")
                 print(singular.data[0][0,0,0])
                 
@@ -1682,7 +1684,6 @@ class FitResult(object):
         # Initialize an empty fitresult
         _mu = FitResult("reduced_mass",True)
         _mu.create_empty(shape1,shape1,ncorr)
-        _mu.weight=[[np.zeros(nbranges) for c in range(ncorr)] for p in range(npars)]
         _mu.set_ranges([[[10,15] for r in range(nbranges)]],[[nbranges,]])
         # Fill the fitresult
         # Loop o'er fitresult list
@@ -1695,7 +1696,7 @@ class FitResult(object):
             # loop over fitrange combination j is fitres entry, r is
             # fitrange index
             _mu.data[0][:,i] = fitres[0].data[0][:,par,item[0]]*fitres[1].data[0][:,par,item[1]]/(fitres[0].data[0][:,par,item[0]]+fitres[1].data[0][:,par,item[1]])
-            _mu.weight[0][0][i] = fitres[0].weight[par][0][item[0]]*fitres[1].weight[par][0][item[1]]
+            _mu.pval[0][:,i] = np.ones((nboot,))*fitres[0].weight[par][0][item[0]]*fitres[1].weight[par][0][item[1]]
         return _mu
 
     def add_mass(self, mass, par=1):
@@ -1732,8 +1733,8 @@ class FitResult(object):
         _sum.create_empty(shape1,shape1,ncorr)
         # FitResult weights are a double list of (nboot,fitrange) arrays. first
         # list index is for parameters, secon is for correlator
-        _sum.weight = [[np.zeros((nbranges)) for c in range(ncorr)]for n
-            in range(npars)]
+        #_sum.pval = [[np.zeros((nbranges)) for c in range(ncorr)]for n
+        #    in range(npars)]
         _sum.set_ranges([[[10,15] for r in range(nbranges)]],[[nbranges,]])
         # Fill the fitresult
         # Loop o'er fitresult list
@@ -1743,12 +1744,11 @@ class FitResult(object):
         # loop over combinations of fitranges, i is index of fitrange, item is
         # array of fitrange indices from single masses
         for i,item in enumerate(itertools.product(*friter)):
-            print(item[0],item[1])
             # loop over fitrange combination j is fitres entry, r is
             # fitrange index
             # calculate sum of masses for each fitrange combination
             _sum.data[0][:,i] = fitres[0].data[0][:,par,item[0]]+fitres[1].data[0][:,par,item[1]]
-            _sum.weight[0][0][i] = fitres[0].weight[par][0][item[0]]*fitres[1].weight[par][0][item[1]]
+            _sum.pval[0][:,i] = np.ones((nboot,))*fitres[0].weight[par][0][item[0]]*fitres[1].weight[par][0][item[1]]
         return _sum
 
 #    def reduced_mass(self,mass, par=1):

@@ -200,6 +200,7 @@ class MatchResult(object):
       for i,r in enumerate(fitreslst):
         r = r.singularize()
         self.obs[i] = r.data[0][:,par,0]
+        print(r.data[0][:,0,0])
         if debug > 0:
           print("Read in %s: %.4e" %(r,self.obs[i][0]))
         # square first
