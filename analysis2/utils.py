@@ -11,6 +11,20 @@ def loop_iterator(ranges):
     for it in itertools.product(*items):
         yield it
 
+def product_with_indices(*lists):
+    """
+    Works like ``itertools.product`` but gives a tuple with indices.
+
+    :param list(iterable) lists: A number of iterables
+    :returns tuple: A tuple of two tuples, each has as many indices as there
+    are lists passed into this function. The first tuple contains the indices
+    in the original lists. The second tuple contains the actual elements from
+    the iterables.
+    Copyright Marting Ueding 2017
+    """
+    for x in itertools.product(*[enumerate(l) for l in lists]):
+        yield tuple(zip(*x))
+
 def mean_std(data, axis=0, mean=None):
     """Calculate the mean and standard deviation using
     bootstrap sample 0 as mean.

@@ -10,7 +10,7 @@ import numpy as np
 
 from statistics import compute_error
 from functions import compute_eff_mass
-from utils import loop_iterator, eig_decomp
+from utils import loop_iterator, product_with_indices, eig_decomp
 
 def fit_single(fitfunc, start, corr, franges, add=None, debug=0,
         correlated=True, xshift=0., npar=2):
@@ -326,6 +326,37 @@ def get_ranges2(lower, upper, dt_i=2, dt_f=2, dt=4):
                     # include it explicitly
                     ran.append((lo, up))
     return np.asarray(ran)
+
+def combine_ranges(fr_list, fr_shape):
+    """ Combine a list of fitranges
+     
+    Parameters : fr_list, list of fitrange lists
+    Returns : _fr_comb, list of combined fitrange arrays 
+              _fr_shape, list of  shape of fitrange arrays
+
+    fr_list is a list of fit range arrays where each list entry is a list over corrleators.
+    The numpy arrays get combined to a new list of fitrange arrays over the number of correlators. ncorr needs to be the same for every entry of fr_list
+    """
+    # intialize lists
+    _fr_comb = []
+    _fr_shape = []
+    print(len(fr_list[1]))
+    # Loop over correlators (ncorr from first fitrange)
+    for n in range(len(fr_list[0])):
+        # set ranges shape for each correlator
+        _comb_shape = []
+        # different fit ranges
+        _comb_shape += [r[n][:-1] for r in fr_shape]
+        # dimension of interval tuple
+        _comb_shape += (len(_comb_shape)*2,)
+        # initialize fit range array
+        _comb = np.zeros(_comb_shape)
+        # get fit range tuples at right indices
+        for idc, rng in product_with_indices(*[r[n] for r in fr_list]):
+            _comb[idc] = np.concatenate(rng)
+    _fr_comb.append(_comb)
+    _fr_shape.append(_comb_shape)
+    return _fr_comb, _fr_shape
 
 def fitting(fitfunc, X, Y, start, add=None, correlated=True, mute=None, debug=0):
     """A function that fits a correlation function.

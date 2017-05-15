@@ -352,5 +352,6 @@ def draw_gaussian_correlated(data, err, corr, size=1500, seed=None, orig=True):
     if orig is True:
         _samp[0]=data
     return _samp
+
 if __name__ == "main":
     pass

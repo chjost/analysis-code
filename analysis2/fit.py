@@ -7,7 +7,7 @@ import itertools
 import numpy as np
 
 from fit_routines import (fit_comb, fit_single, calculate_ranges, compute_dE,
-    get_start_values, get_start_values_comb, fitting)
+    get_start_values, get_start_values_comb, fitting, combine_ranges)
 from in_out import read_fitresults, write_fitresults
 from interpol import match_lin, match_quad, evaluate_lin
 from functions import (func_single_corr,func_single_corr_bare, func_ratio, func_const, func_two_corr,
@@ -20,6 +20,7 @@ from zeta_wrapper import Z
 from scattering_length import calculate_scat_len
 from chiral_utils import evaluate_phys
 from phaseshift_functions import compute_phaseshift
+from utils import *
 
 class LatticeFit(object):
     def __init__(self, fitfunc, dt_i=2, dt_f=2, dt=4, xshift=0.,
@@ -179,6 +180,7 @@ class LatticeFit(object):
             # prepare storage
             fitres = FitResult(corrid)
             fitres.set_ranges(franges, fshape)
+            print(franges)
             fitres.create_empty(shapes_data, shapes_other, ncorr)
             del shapes_data, shapes_other
 
@@ -267,7 +269,9 @@ class FitResult(object):
     (nbsample, npar, range [, range, ...])
     where nsample the number of samples is, npar the number of
     parameters and range is a fit range number. Arbitrary many fit
-    ranges can be used.
+    ranges can be used. The fit ranges are stored as a list of ndarrays. list
+    index denotes correlator, each array holds a tuple (nfr1, nfr2,...,2*dim
+    fr). 
 
     To keep track labels generated for the data to keep track of the
     fit a fit range comes from and the number of the correlator.
@@ -552,6 +556,7 @@ class FitResult(object):
         par : Parameter to use to singularize (usually it is not the Amplitude
         but the first one)
         """
+        # TODO: Think about how to treat several fitranges
         self.calc_error()
         select = FitResult("one fit range", False)
         nboot = self.data[0].shape[0]
@@ -772,6 +777,36 @@ class FitResult(object):
     def set_ranges(self, ranges, shape):
         self.fit_ranges = ranges
         self.fit_ranges_shape = shape
+
+    def extend_ranges(self, ranges, corr):
+        """ Extend the fitranges nd-array of self
+        
+        The fit_ranges of self are a list of ndarrays each list entry represents
+        the fitranges for one correlator.
+
+        Parameters
+        ----------
+        ranges : ndarray dimension 
+        """
+        # First define the new shape, last dimension holds number of begin, end
+        # values
+        _new_shape = self.fit_ranges_shape[corr][:-1] + ranges.shape[:-1]
+        _new_shape += (2*len(_new_shape))
+        # initialize empty array with new shape
+        _extended = np.zeros(_new_shape)
+        # fill shape with explicit loops, I do not know how to do it another way
+        if len(_new_shape)-1 == 2:
+            for i in range(_new_shape[0]):
+                for j in range(_new_shape[1]):
+                    _extended[i,j] = np.concatenate((self.fit_ranges[i],ranges[j]))
+        if len(_new_shpae)-1 == 3:
+            for i in range(_new_shape[0]):
+                for j in range(_new_shape[1]):
+                    for k in range(_new_shape[2]):
+                        _extended[i,j,k] = np.concatenate((self.fit_ranges[i,j],
+                                                           ranges[k]))
+        
+        self.fit_ranges[corr] = _extended
 
     def get_ranges(self):
         """Returns the fit ranges."""
@@ -1359,6 +1394,7 @@ class FitResult(object):
       corr_id: Id of derived observable
 
       """
+      # TODO: Deal with fitranges such that they can be selected subsequently
       # Self determines the resulting layout
       layout = self.data[0].shape
       boots = layout[0] 
@@ -1414,6 +1450,8 @@ class FitResult(object):
       mult_obs.create_empty(layout, layout, [1,1])
       mult_obs.data[0] = product
       mult_obs.pval[0] = weights
+      #mult_obs.fit_ranges = 
+      #mult_obs.fit_ranges_shape = 
       return mult_obs
 
     def mult_obs_single(self, other, corr_id="Product"):
@@ -1602,7 +1640,7 @@ class FitResult(object):
             self.calc_error()
 
     # new function interface with class        
-    def comb_fitres(self,res1,par):
+    def comb_fitres(self,res1,par,corr=0):
         """Combine parameters of a fitresult in a new fitresult
     
         The data of several fitresults are placed in a new FitResult object
@@ -1626,7 +1664,7 @@ class FitResult(object):
         # Gather necessary data from list of fitresults
         # data have to have the same number of bootstrapsamples
         fitres = [self,res1]
-        nboot = fitres[0].data[0].shape[0]
+        nboot = fitres[0].data[corr].shape[0]
         npars = len(fitres)
         # calculate the number of fitranges
         nbranges = 1
@@ -1639,20 +1677,34 @@ class FitResult(object):
         # Initialize an empty fitresult
         _comb = FitResult("combined",False)
         _comb.create_empty(shape1,shape2,ncorr)
-        _comb.set_ranges([[[10,15] for r in range(nbranges)]],[[nbranges,]])
+        print(self.fit_ranges[corr])
+        print(res1.fit_ranges[corr])
+        #_ranges = [self.fit_ranges[corr],res1.fit_ranges[corr]]
+        ## determine shape of new fitrange array
+        #_comb_ranges_shape = [self.fit_ranges_shape[corr] + res1.fit_ranges_shape[corr]]
+        #_comb_ranges_shape[0] += (len(_comb_ranges_shape[0])*2,)
+        #_comb_ranges = [np.zeros(_comb_ranges_shape[0]),]
+        #print(_comb_ranges_shape)
+        #for idc, rng in product_with_indices(*_ranges):
+        #  _comb_ranges[0][idc] = np.concatenate(rng)
+        #print(_comb_ranges_shape)
+        #_comb.set_ranges(_comb_ranges,_comb_ranges_shape)
+        _ranges = [self.fit_ranges,res1.fit_ranges]
+        _shape = [self.fit_ranges_shape,res1.fit_ranges_shape]
+        _comb.fit_ranges, _comb.fit_ranges_shape = combine_ranges(_ranges,_shape) 
         # Fill the fitresult
         # Loop o'er fitresult list
         # With itertools get product of all fitrange index combinations
         # a list of 
-        friter = [[r for r in range(f.data[0].shape[-1])] for f in fitres]
+        friter = [[r for r in range(f.data[corr].shape[-1])] for f in fitres]
         for i,item in enumerate(itertools.product(*friter)):
-            pval = np.ones_like(_comb.pval[0][:,0])
+            pval = np.ones_like(_comb.pval[corr][:,0])
             # loop over fitrange combination j is fitres entry, r is
             # fitrange index
             for j,r in enumerate(item):
-                _comb.data[0][:,j,i] = fitres[j].data[0][:,par,r]
-                pval *= fitres[j].pval[0][:,r]
-            _comb.pval[0][:,i] = pval
+                _comb.data[0][:,j,i] = fitres[j].data[corr][:,par,r]
+                pval *= fitres[j].pval[corr][:,r]
+            _comb.pval[corr][:,i] = pval
         _comb.calc_error()
     
         return _comb
