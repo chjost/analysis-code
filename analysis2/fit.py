@@ -138,10 +138,15 @@ class LatticeFit(object):
             # prepare storage
             fitres = FitResult(corrid)
             fitres.set_ranges(franges, fshape)
-            shapes_data = [(dshape[0], self.npar, fshape[0][i]) for i in range(ncorr)]
-            shapes_other = [(dshape[0], fshape[0][i]) for i in range(ncorr)]
+            # ATM every correlator has the same number of fitranges
+            shapes_data = [(dshape[0], self.npar) + fshape[1:-1] for i in range(ncorr)]
+            shapes_other = [(dshape[0],)+ fshape[1:-1] for i in range(ncorr)]
             fitres.create_empty(shapes_data, shapes_other, ncorr)
             del shapes_data, shapes_other
+            print("Initialized FitResult object:")
+            print("Data shape is :")
+            print(fitres.data[0].shape)
+            print(fitres.fit_ranges_shape)
 
             if start is None:
                 # set starting values
@@ -446,6 +451,8 @@ class FitResult(object):
             if self.derived:
                 self.data[lindex][:, index[1]] = data
             else:
+                print(self.data[lindex].shape)
+                print(index)  
                 self.data[lindex][:,:,index[1]] = data
             self.chi2[lindex][:,index[1]] = chi2
             self.pval[lindex][:,index[1]] = pval
@@ -558,7 +565,7 @@ class FitResult(object):
         """
         # TODO: Think about how to treat several fitranges
         self.calc_error()
-        select = FitResult("one fit range", False)
+        select = FitResult("one fit range", self.derived)
         nboot = self.data[0].shape[0]
         npars = self.data[0].shape[1]
         if isinstance(frange, int):
@@ -576,8 +583,11 @@ class FitResult(object):
           print("is data derived?")
           print(self.derived)
         shape2 = (nboot,1)
-        select.create_empty(shape1,shape2,1)
-        select.set_ranges(np.array([[[10,15]]]),[[1,]])
+        if self.derived is False:
+            select.create_empty(shape1,shape2,1)
+        else:
+            select.create_empty(shape1,shape1,1)
+        select.set_ranges()
         # usually only one correlator is taken into account
         # copy data to singular
         if self.derived is False:

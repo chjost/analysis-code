@@ -12,7 +12,7 @@ from statistics import compute_error
 from functions import compute_eff_mass
 from utils import loop_iterator, product_with_indices, eig_decomp
 
-def fit_single(fitfunc, start, corr, franges, add=None, debug=0,
+def fit_single(fitfunc, start, corr, franges, add=None, debug=2,
         correlated=True, xshift=0., npar=2):
     """Fits fitfunc to a Correlators object.
 
@@ -168,8 +168,9 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
                     corr.data[:,r[0]:r[1]+1,n], start,
                     add=add_data, correlated=correlated, debug=debug)
             yield item + ritem, res, chi, pva
-
-def calculate_ranges(ranges, shape, oldshape=None, dt_i=2, dt_f=2, dt=4, debug=0,
+#TODO: This function needs better documentation, I do not know what to make out
+#of it (CH)
+def calculate_ranges(ranges, shape, oldshape=None, oldranges=None, dt_i=2, dt_f=2, dt=4, debug=0,
         lintervals=False):
     """Calculates the fit ranges.
 
@@ -195,10 +196,9 @@ def calculate_ranges(ranges, shape, oldshape=None, dt_i=2, dt_f=2, dt=4, debug=0
 
     Returns
     -------
-    sequence
-        The fit ranges.
-    sequence
-        The "shape" of the ranges.
+    fit_ranges : list of 2d-arrays, [(nb_ranges,intervals) for ncorr]
+    
+    shape : list of tuples, shape of the ranges.
     """
     ncorr = shape[-1]
     if lintervals:
@@ -211,7 +211,8 @@ def calculate_ranges(ranges, shape, oldshape=None, dt_i=2, dt_f=2, dt=4, debug=0
                 ranges[1] = shape[1] - 1
             r_tmp = get_ranges2(ranges[:2], ranges[2:], dt_i=dt_i, dt_f=dt_f, dt=dt)
             fit_ranges = [r_tmp for i in range(ncorr)]
-            shape = [[r_tmp.shape[0]] * ncorr]
+            fit_ranges = np.asarray(fit_ranges)
+            shape = fit_ragnes.shape
         else:
             # one fitrange for every correlator
             if len(ranges) != ncorr:
@@ -221,8 +222,9 @@ def calculate_ranges(ranges, shape, oldshape=None, dt_i=2, dt_f=2, dt=4, debug=0
                 # check if we exceed the time extent
                 if ran[-1] > shape[1] - 1:
                     ran[-1] = shape[1] - 1
-                fit_ranges.append(get_ranges2(ran[:2], ran[2:], dt_i=dt_i, dt_f=dt_f, dt=dt))
-            shape = [[ran.shape[0] for ran in fit_ranges]]
+                fit_ranges.append(get_ranges2(ran[:2], ran[2:], dt_i=dt_i, dt_f=dt_f, dt=dt))           
+            fit_ranges = np.asarray(fit_ranges)
+            shape = fit_ranges.shape 
     else:
         # check if ranges makes sense
         if isinstance(ranges[0], int):
@@ -234,7 +236,8 @@ def calculate_ranges(ranges, shape, oldshape=None, dt_i=2, dt_f=2, dt=4, debug=0
                 ranges[1] = shape[1] - 1
             r_tmp = get_ranges(ranges[0], ranges[1], dt_i=dt_i, dt_f=dt_f, dt=dt)
             fit_ranges = [r_tmp for i in range(ncorr)]
-            shape = [[r_tmp.shape[0]] * ncorr]
+            fit_ranges = np.asarray(fit_ranges)
+            shape = fit_ranges.shape 
         else:
             # one fitrange for every correlator
             if len(ranges) != ncorr:
@@ -245,10 +248,16 @@ def calculate_ranges(ranges, shape, oldshape=None, dt_i=2, dt_f=2, dt=4, debug=0
                 if ran[1] > shape[1] - 1:
                     ran[1] = shape[1] - 1
                 fit_ranges.append(get_ranges(ran[0], ran[1], dt_i=dt_i, dt_f=dt_f, dt=dt))
-            shape = [[ran.shape[0] for ran in fit_ranges]]
+            fit_ranges = np.asarray(fit_ranges)
+            shape = fit_ranges.shape
     if oldshape is not None:
-        shape = oldshape + shape
-    fit_ranges = np.asarray(fit_ranges)
+        if oldranges is None:
+            raise ValueError("oldranges not given")
+        print(oldshape,shape)
+        fit_ranges, shape = combine_ranges((fit_ranges,oldranges),(shape,oldshape))
+    # This means, that different Correlators in one object have to have the same
+    # fit ranges
+    shape = fit_ranges.shape
     return fit_ranges, shape
 
 def get_ranges(lower, upper, dt_i=2, dt_f=2, dt=4):
@@ -334,28 +343,37 @@ def combine_ranges(fr_list, fr_shape):
     Returns : _fr_comb, list of combined fitrange arrays 
               _fr_shape, list of  shape of fitrange arrays
 
-    fr_list is a list of fit range arrays where each list entry is a list over corrleators.
+    fr_list is a list of fit range arrays where each list entry is an array over corrleators.
     The numpy arrays get combined to a new list of fitrange arrays over the number of correlators. ncorr needs to be the same for every entry of fr_list
     """
+    # check inputs
+    print(fr_list,fr_shape)
     # intialize lists
     _fr_comb = []
     _fr_shape = []
-    print(len(fr_list[1]))
     # Loop over correlators (ncorr from first fitrange)
-    for n in range(len(fr_list[0])):
-        # set ranges shape for each correlator
-        _comb_shape = []
-        # different fit ranges
-        _comb_shape += [r[n][:-1] for r in fr_shape]
-        # dimension of interval tuple
-        _comb_shape += (len(_comb_shape)*2,)
-        # initialize fit range array
-        _comb = np.zeros(_comb_shape)
-        # get fit range tuples at right indices
-        for idc, rng in product_with_indices(*[r[n] for r in fr_list]):
-            _comb[idc] = np.concatenate(rng)
-    _fr_comb.append(_comb)
-    _fr_shape.append(_comb_shape)
+    # check if number of correlators is equal
+    # set ranges shape for each correlator
+    _comb_shape = (fr_shape[0][0],)
+    # different fit ranges
+    for r in fr_shape:
+      _comb_shape += r[1:-1]
+    # dimension of interval tuple
+    # dubtract one dimension for ncorr
+    _comb_shape += ((len(_comb_shape)-1)*2,)
+    print(_comb_shape)
+    # initialize fit range array
+    _comb = np.zeros(_comb_shape)
+    print(_comb.shape)
+    # get fit range tuples at correct indices
+    for idc, rng in product_with_indices(*[r[0] for r in fr_list]):
+        # do this for all correlators
+        for n in range(_comb.shape[0]):
+            # TODO: Still ugly, but otherwise slicing goes wrong
+            print(idc,rng)
+            _comb[n][idc] = np.concatenate(rng)
+    _fr_comb = np.asarray(_comb)
+    _fr_shape = _fr_comb.shape
     return _fr_comb, _fr_shape
 
 def fitting(fitfunc, X, Y, start, add=None, correlated=True, mute=None, debug=0):

@@ -6,7 +6,7 @@ from .in_out import inputnames, read_confs, write_data_ascii, confs_add, confs_s
 from .correlator import Correlators
 from .ensemble import LatticeEnsemble
 from .fit import LatticeFit, FitResult, init_fitreslst
-from .fit_routines import fitting
+from .fit_routines import fitting, get_ranges2, calculate_ranges, combine_ranges
 from .match import MatchResult
 from .plot import LatticePlot
 from .plot_functions import plot_function
