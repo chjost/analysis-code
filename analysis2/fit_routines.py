@@ -366,12 +366,13 @@ def combine_ranges(fr_list, fr_shape):
     _comb = np.zeros(_comb_shape)
     print(_comb.shape)
     # get fit range tuples at correct indices
-    for idc, rng in product_with_indices(*[r[0] for r in fr_list]):
+    for idc, rng in product_with_indices(0,[r for r in fr_list]):
         # do this for all correlators
+        print(idc,rng)
         for n in range(_comb.shape[0]):
             # TODO: Still ugly, but otherwise slicing goes wrong
             print(idc,rng)
-            _comb[n][idc] = np.concatenate(rng)
+            _comb[n][idc] = rng
     _fr_comb = np.asarray(_comb)
     _fr_shape = _fr_comb.shape
     return _fr_comb, _fr_shape

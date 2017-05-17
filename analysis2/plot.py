@@ -203,7 +203,7 @@ class LatticePlot(object):
                   self.save()
             else:
                 # iterate over fit intervals
-                for r in range(shape[0][n]):
+                for r in range(shape[1]):
                     if debug > 1:
                         print("plotting fit ranges %s" % str(r))
                     fi = ranges[n][r]

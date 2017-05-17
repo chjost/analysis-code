@@ -11,8 +11,8 @@ def loop_iterator(ranges):
     for it in itertools.product(*items):
         yield it
 
-def product_with_indices(*lists):
-    """
+def product_with_indices(fixed, lists):
+    '''
     Works like ``itertools.product`` but gives a tuple with indices.
 
     :param list(iterable) lists: A number of iterables
@@ -20,10 +20,48 @@ def product_with_indices(*lists):
     are lists passed into this function. The first tuple contains the indices
     in the original lists. The second tuple contains the actual elements from
     the iterables.
-    Copyright Marting Ueding 2017
-    """
-    for x in itertools.product(*[enumerate(l) for l in lists]):
-        yield tuple(zip(*x))
+    Copyright Martin Ueding 2017
+    '''
+    for x in itertools.product(*[list(np_iter_2(fixed, l)) for l in lists]):
+        #yield list(x)
+        indices, values = tuple(zip(*x))
+        yield join_indices(indices), np.concatenate(values)
+
+
+def join_indices(indices_list):
+    return [
+        idx
+        for indices in indices_list
+        for idx in indices[1:]
+        if not isinstance(idx, slice)
+    ]
+
+
+def np_iter_2(fixed, array):
+    dim = len(array.shape)
+
+    idx_list = [[fixed]] + [
+        list(range(array.shape[d]))
+        for d in range(1, dim - 1)
+    ] + [[slice(None)]]
+
+
+    for idx in itertools.product(*idx_list):
+        yield idx, array[idx]
+
+#def product_with_indices(*lists):
+#    """
+#    Works like ``itertools.product`` but gives a tuple with indices.
+#
+#    :param list(iterable) lists: A number of iterables
+#    :returns tuple: A tuple of two tuples, each has as many indices as there
+#    are lists passed into this function. The first tuple contains the indices
+#    in the original lists. The second tuple contains the actual elements from
+#    the iterables.
+#    Copyright Marting Ueding 2017
+#    """
+#    for x in itertools.product(*[enumerate(l) for l in lists]):
+#        yield tuple(zip(*x))
 
 def mean_std(data, axis=0, mean=None):
     """Calculate the mean and standard deviation using
