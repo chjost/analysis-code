@@ -18,15 +18,21 @@ def main():
     readfit = False
     plotdata = True
     d2 = 0
-    plateaumin = 10
 
     # get data from input file
-    prefix = ens.get_data("path")
     lat = ens.name()
+    prefix = ens.get_data("path")
     nboot = int(ens.get_data("nboot"))
-    ddir = "/".join((ens.get_data("datadir"), lat))
-    pdir = "/".join((ens.get_data("plotdir"), lat))
+    ddir = ens.get_data("datadir")
+    pdir = ens.get_data("plotdir")
     L = ens.L()
+    # chose the plateau minimum
+    if L < 25:
+        plateaumin = 15
+    elif L < 33:
+        plateaumin = 20
+    else:
+        plateaumin = 26
     quarks = ens.get_data("quarks")
     Ti = ens.get_data("ti")
     Tf = ens.get_data("tf")
@@ -89,6 +95,11 @@ def main():
         disc_worm.data[...,1,1] += corr.data[...,1]
         #print(disc.data[0,:,0,0])
         disc_worm.save("%s/eta_gevp_%s" % (d, suffix))
+        #print("gevp data with excited states")
+        #print(disc_worm.data[0,:,0,0])
+        #print(disc_worm.data[0,:,0,1])
+        #print(disc_worm.data[0,:,1,1])
+        #return
 
         # fit the data
         fitter = ana.LatticeFit(0, dt_i=dti, dt_f=dtf, dt=dt, correlated=True)
@@ -109,17 +120,26 @@ def main():
         # cut fit ranges that contain data left of plateaumin
         fitres_cut = fitres.cut_data(plateaumin, Tf, dt)
         nmin = corr.data.shape[1]
+        print("uncorrected data")
+        print(corrrm.data.shape)
+        print(corrrm.data[0,:,0])
         for i, (da, pv) in enumerate(zip(fitres_cut.data, fitres_cut.pval)):
             # get "best" fit, determined by p-val close to 0.5
             n = np.argmin(np.abs(pv[0]-0.5))
             bfit = da[0,...,n]
             # calculate difference to original data
-            tmp = [fitter.fitfunc(bfit, t, T) for t in range(nmin)]
-            tmp = (corr.data[0,:nmin,i]-np.asarray(tmp))
-            #print(tmp)
-            corrrm.data[:,:nmin,i] -= tmp
+            tmp = [fitter.fitfunc(bfit, t, T) for t in range(corr.data.shape[1])]
+            #tmp = [fitter.fitfunc(bfit, t, T) for t in range(nmin)]
+            tmp = (corr.data[0,:,i]-np.asarray(tmp))
+            #tmp = (corr.data[0,:nmin,i]-np.asarray(tmp))
+            print("correction")
+            print(tmp)
+            corrrm.data[:,:,i] -= tmp
+            #corrrm.data[:,:nmin,i] -= tmp
         # save new data
         corrrm.save("%s/eta_conn_rm_%s" % (d, suffix))
+        print("corrected data")
+        print(corrrm.data.shape)
         print(corrrm.data[0,:,0])
 
         # create eta/eta' GEVP
@@ -131,7 +151,7 @@ def main():
         # add connected on disconnected
         disc.data[...,0,0] += corrrm.data[...,0]
         disc.data[...,1,1] += corrrm.data[...,1]
-        print(disc.data[0,:,0,0])
+        #print(disc.data[0,:,0,0])
         disc.save("%s/eta_gevp_rm_%s" % (d, suffix))
 
         # plot the result

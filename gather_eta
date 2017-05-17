@@ -212,6 +212,25 @@ def extract_data(config, innames):
             data = tmp
             corr = ana.Correlators.create(data, conf=configssorted)
             corr.save(outname, asascii=True)
+
+    if debug > 0:
+        print("connected charged diagrams")
+    matches = [x for x in innames if x.startswith("C2+")]
+    for plist,o in zip(paths, outpaths):
+        for m in matches:
+            # build file name
+            outname = os.path.join(o,m.replace("C2+/C2+", "conn"))
+            data = [] 
+            for p in plist:
+                fname = os.path.join(p, m)
+                data.append(np.fromfile(fname, dtype=complex))
+            data = np.asarray(data)
+            tmp = np.empty(data.shape + (2,))
+            tmp[...,0] = data.real
+            tmp[...,1] = data.imag
+            data = tmp
+            corr = ana.Correlators.create(data, conf=configssorted)
+            corr.save(outname, asascii=True)
     return
 
 def build_eta(config, innames):
@@ -404,6 +423,7 @@ def main():
     config = ConfigParser.SafeConfigParser()
     config.read(fname)
     innames = ana.inputnames(fname, ["C1", "C20"])
+    #innames = ana.inputnames(fname, ["C2+"])
 
     # extract data
     extract_data(config, innames)

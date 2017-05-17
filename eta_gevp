@@ -15,7 +15,6 @@ def main():
 
     # read settings
     readdata = False
-    preparedata = False
     readfit = False
     plotdata = True
     exrm = True
@@ -25,8 +24,8 @@ def main():
     prefix = ens.get_data("path")
     lat = ens.name()
     nboot = int(ens.get_data("nboot"))
-    ddir = "/".join((ens.get_data("datadir"), lat))
-    pdir = "/".join((ens.get_data("plotdir"), lat))
+    ddir = ens.get_data("datadir")
+    pdir = ens.get_data("plotdir")
     L = ens.L()
     quarks = ens.get_data("quarks")
     Ti = ens.get_data("ti")
@@ -84,7 +83,10 @@ def main():
         fitter = ana.LatticeFit(5, dt_i=dti, dt_f=dtf, dt=dt, correlated=True, xshift=0.5)
         if readfit == False:
             print("fit data")
-            fitranges = [Ti, Tf]
+            if exrm:
+                fitranges = [4, Tf]
+            else:
+                fitranges = [Ti, Tf]
             #fitranges = [[Ti, Ti+5, Tf-5, Tf],] + [[Ti, Ti+5, Tf-5, Tf],]
             #print(fitranges)
             fitres = fitter.fit(None, corr, fitranges, corrid="E", add=addT, lint=False)
@@ -100,7 +102,7 @@ def main():
                 fitres = ana.FitResult.read("%s/fit_eta_%s" % (d, suffix))
         fitres.print_data(0)
         fitres.print_data(1)
-        fitres.print_details()
+        #fitres.print_details()
 
         # plot the result
         if plotdata:
@@ -123,7 +125,7 @@ def main():
                 plotter.set_env(ylog=True)
                 plotter.plot(corr, label)
                 plotter.set_env(ylog=False, ylim=[0., 1.])
-                corr.mass()
+                corr.mass(usecosh=False)
                 label = ["eta effective mass", "t", "m$_{eff}$(t)", "m$_{\eta}$"]
                 plotter.plot(corr, label)
             if exrm:

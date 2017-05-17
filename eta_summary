@@ -23,7 +23,10 @@ class dp(object):
         self.y = np.asarray(y)
         self.dy = np.asarray(dy)
         self.dx = np.asarray(dx) if dx is not None else None
-        self.dysys = np.asarray(dysys) if dysys is not None else None
+        if dysys is None or np.asarray(dysys).size < 1:
+            self.dysys = None
+        else:
+            self.dysys = np.asarray(dysys)
 
     def ytolatex(self):
         if self.l == 1:
@@ -31,7 +34,7 @@ class dp(object):
                 rstr = ["$%.3f(%1.0f)$" % (self.y[0], self.dy[0]*1e3)]
             else:
                 rstr = ["$%.3f(%1.0f)(_{-%1.0f}^{+%1.0f})$" % (
-                    self.y[0], self.dy[0]*1e3, self.dysys[0]*1e3, self.dysys[1]*1e3)]
+                    self.y[0], self.dy[0]*1e3, self.dysys[0][0]*1e3, self.dysys[0][1]*1e3)]
         elif self.l == 0:
             rstr = ["---"]
         else:
@@ -162,186 +165,11 @@ def paper_unit_kaon():
             "D45.32": 0.17570}
     return p_am
 
-def parse_singlet_masses(datafolder, lattices, xcut=0.05):
-    print("parsing old \eta_s matches")
-    result = []
-    for lat in lattices:
-        #print(lat)
-        res = [[], [], []]
-        fname = os.path.join(datafolder, lat, "masses.txt")
-        tmp = np.loadtxt(fname).T
-        for x, y, dy in zip(tmp[0], tmp[1], tmp[2]):
-            if x > xcut:
-                continue
-            res[0].append(x)
-            #tmpdata = ana.draw_gauss_distributed(y, dy, shape=(1500,),
-            #    origin=True)
-            #tmpdata = tmpdata**2
-            #ry, rdy = ana.compute_error(tmpdata, mean=y)
-            #res[1].append(ry)
-            #res[2].append(rdy)
-            res[1].append(y**2)
-            res[2].append(2*y*dy)
-        result.append(dp(res[0], res[1], res[2]))
-    return result
-
-def parse_kaon_masses(datafolder, lattices, xcut=0.05):
-    print("parsing old kaon matches")
-    result = []
-    for lat in lattices:
-        #print(lat)
-        res = [[], [], []]
-        fname = os.path.join(datafolder, lat, "masses_kaon.txt")
-        tmp = np.loadtxt(fname).T
-        for x, y, dy in zip(tmp[0], tmp[1], tmp[2]):
-            if x > xcut:
-                continue
-            res[0].append(x)
-            #tmpdata = ana.draw_gauss_distributed(y, dy, shape=(1500,),
-            #    origin=True)
-            #tmpdata = tmpdata**2
-            #ry, rdy = ana.compute_error(tmpdata, mean=y)
-            #res[1].append(ry)
-            #res[2].append(rdy)
-            res[1].append(y**2)
-            res[2].append(2*y*dy)
-        result.append(dp(res[0], res[1], res[2]))
-    return result
-
-def read_singlet(datafolder, lattices):
-    print("read singlet data")
-    # parameters
-    fn_fit = "fit_eta_conn_TP0.npz"
-    pc = 1
-    # final data list
-    data = []
-    # get data from files
-    def get_data(corr, get_lowest=False):
-        d = [x**2 for x in corr.data]
-        m, dm, dmsys, w = ana.sys_error(d, corr.pval, pc, rel=False)
-        # m, dm, and dmsys still have the correlator number as first
-        # index
-        # m still has bootstrap sample indices
-        #print("get data:")
-        #print(m[1].shape)
-        #print(dm[1])
-        #print(dmsys[1])
-        if get_lowest:
-            return [[m[0][0], dm[0], dmsys[0]], [m[1][0], dm[1], dmsys[1]]]
-        else:
-            return [m[1][0], dm[1], dmsys[1]]
-
-    # loop over lattices
-    for lat in lattices:
-        #print("read data for %s" % lat)
-        # get file names and paths
-        topdir = os.path.join(datafolder, lat)
-        strange_masses = glob.glob(os.path.join(topdir, "strange_*"))
-        strange_masses = sorted(strange_masses, key=lambda x: os.path.basename(x).split("_")[1])
-        # get strange quark masses
-        sm = [int(os.path.basename(s).split("_")[1]) for s in strange_masses]
-        tmp_mus = [float(x)*1e-5 for x in sm]
-        # get light quark mass
-        xlow = float(lat.split(".")[0][1:])*1e-4
-        tmp_mus.insert(0, xlow)
-        # data arrays
-        m2 = []
-        dm2 = []
-        dsysm2 = []
-
-        # read data
-        for i, sdir in enumerate(strange_masses):
-            # get data, also extract light quark data
-            try:
-                corr = ana.FitResult.read(os.path.join(sdir, fn_fit))
-            except IOError:
-                corr = None
-            if corr is not None:
-                get_lowest = True if i == 0 else False
-                res = get_data(corr, get_lowest)
-                if get_lowest:
-                    m2.append(res[0][0])
-                    m2.append(res[1][0])
-                    dm2.append(res[0][1])
-                    dm2.append(res[1][1])
-                    dsysm2.append(res[0][2])
-                    dsysm2.append(res[1][2])
-                else:
-                    m2.append(res[0])
-                    dm2.append(res[1])
-                    dsysm2.append(res[2])
-            else:
-                m2.append(np.nan)
-                dm2.append(np.nan)
-                dsysm2.append(np.nan)
-        # append data
-        data.append(dp(tmp_mus, m2, dm2, dysys=dsysm2))
-    return data
-
-def read_kaon(datafolder, lattices):
-    print("read kaon data")
-    # parameters
-    fn_fit = "fit_k_%s.npz"
-    pc = 1
-    # final data list
-    data = []
-    # get data from files
-    def get_data(corr):
-        d = [x**2 for x in corr.data]
-        m, dm, dmsys, w = ana.sys_error(d, corr.pval, pc, rel=False)
-        # m, dm, and dmsys still have the correlator number as first
-        # index
-        # m still has bootstrap sample indices
-        #print("get data:")
-        #print(m[0].shape)
-        #print(dm[0])
-        #print(dmsys[0])
-        return [m[0][0], dm[0], dmsys[0]]
-
-    # loop over lattices
-    for lat in lattices:
-        #print("read data for %s" % lat)
-        # get file names and paths
-        topdir = os.path.join(datafolder, lat)
-        strange_masses = glob.glob(os.path.join(topdir, "amu_s_*/"))
-        #print(strange_masses)
-        strange_masses = sorted(strange_masses, key=lambda x: os.path.basename(x[:-1]).split("_")[-1])
-        # get strange quark masses
-        sm = [os.path.basename(s[:-1]).split("_")[-1] for s in strange_masses]
-        sm = [int("".join((x, "0"*(4-len(x))))) for x in sm]
-        tmp_mus = [float(x)*1e-5 for x in sm]
-        # data arrays
-        m2 = []
-        dm2 = []
-        dsysm2 = []
-
-        # read data
-        for i, sdir in enumerate(strange_masses):
-            # get data, also extract light quark data
-            try:
-                corr = ana.FitResult.read(os.path.join(sdir, fn_fit % lat))
-            except IOError:
-                corr = None
-            if corr is not None:
-                res = get_data(corr)
-                m2.append(res[0])
-                dm2.append(res[1])
-                dsysm2.append(res[2])
-            else:
-                m2.append(np.nan)
-                dm2.append(np.nan)
-                dsysm2.append([np.nan, np.nan])
-        # append data
-        #print(dsysm2)
-        data.append(dp(tmp_mus, m2, dm2, dysys=dsysm2))
-    return data
-
 def read_data(datafolder, lattices):
     """Print a summary of the lattices given.
 
     Args:
         datafolder: where the raw data is stored
-        plotfolder: where to store the plots
         lattices: list of lattices to work on
     """
     verbose=False
@@ -389,6 +217,7 @@ def read_data(datafolder, lattices):
             try:
                 corr = ana.FitResult.read(os.path.join(sdir, fn_fit))
             except IOError:
+                print("file %s not available" % os.path.join(sdir, fn_fit) )
                 corr = None
             if corr is not None:
                 res = get_data(corr)
@@ -396,6 +225,11 @@ def read_data(datafolder, lattices):
                     meta[i].append(res[i][0])
                     dmeta[i].append(res[i][1])
                     dsysmeta[i].append(res[i][2])
+            else:
+                for i in range(2):
+                    meta[i].append(np.nan)
+                    dmeta[i].append(np.nan)
+                    #dsysmeta[i].append(None)
             # try data with excited state removal
             try:
                 corr = ana.FitResult.read(os.path.join(sdir, fn_fitrm))
@@ -407,43 +241,54 @@ def read_data(datafolder, lattices):
                     metarm[i].append(res[i][0])
                     dmetarm[i].append(res[i][1])
                     dsysmetarm[i].append(res[i][2])
+            else:
+                for i in range(2):
+                    metarm[i].append(np.nan)
+                    dmetarm[i].append(np.nan)
+                    #dsysmetarm[i].append(None)
         # convert data to datapoints and append
         tmp1 = []
         tmp2 = []
         for i in range(2):
-            tmp1.append(dp(tmp_mus, meta[i], dmeta[i]))
-            tmp2.append(dp(tmp_mus, metarm[i], dmetarm[i]))
-            #tmp1.append(dp(tmp_mus, meta[i], dmeta[i], dysys=dsysmeta[i]))
-            #tmp2.append(dp(tmp_mus, metarm[i], dmetarm[i], dysys=dsysmetarm[i]))
+            #tmp1.append(dp(tmp_mus, meta[i], dmeta[i]))
+            #tmp2.append(dp(tmp_mus, metarm[i], dmetarm[i]))
+            tmp1.append(dp(tmp_mus, meta[i], dmeta[i], dysys=dsysmeta[i]))
+            tmp2.append(dp(tmp_mus, metarm[i], dmetarm[i], dysys=dsysmetarm[i]))
         data.append(tmp1)
         datarm.append(tmp2)
         # prepare comparison
         cmp_eta.append([_meta[lat], _metap[lat]])
     return data, datarm, cmp_eta
 
-def print_summary(eta, etarm, lattices):
-    print("ensemble & $a\mu_s$ & $aM_{\eta}$ & $aM_{\eta'}$ &$aM_{\eta}^{R}$ &$aM_{\eta'}^{R}$")
-    for lat, d, drm in zip(lattices, eta, etarm):
-        # print to screen
-        try:
-            s_mus = d[0].xtolatex()
-            eta = d[0].ytolatex()
-            etp = d[1].ytolatex()
-            etarm = drm[0].ytolatex()
-            etprm = drm[1].ytolatex()
-        except:
-            print(lat)
-            raise
-        for x, i1, i2, i3, i4 in zip(s_mus, eta, etp, etarm, etprm):
-            tmpstr = " & ".join([lat, x, i1, i2, i3, i4])
-            print(tmpstr)
+def print_summary(eta, lattices):
+    """Print data set to screen"""
+    particles = ["$aM_{\eta}^{%s}$", "$aM_{\eta'}^{%s}$"]
+    for i in range(2):
+        tmpstr = ["ensembles"] + [particles[i] % x for x in ["l", "m", "h"]]
+        tmpstr = " & ".join(tmpstr)
+        print(tmpstr + " \\\\")
+        for lat, d in zip(lattices, eta):
+            # print to screen
+            try:
+                data = d[i].ytolatex()
+            except:
+                print("ensemble %s, index %d" % (lat, i))
+                raise
+            tmpstr = ["$%s$" % lat] + data
+            # fill with - if less than 3 data points
+            for j in range(4-len(tmpstr)):
+                tmpstr.append("$--$")
+            tmpstr = " & ".join(tmpstr)
+            print(tmpstr + " \\\\")
+            print("\midrule")
+        print("") # clear line between different particles
 
-def plot_dependence(plotdir, eta, etarm, cmp_eta, lattices):
+def plot_dependence(plotdir, eta, lattices):
     markers = ["or", "sb"]
     label = ["$\eta$", "$\eta'$"]
     markers_cmp = ["vg", "^c"]
     label_cmp = ["$\eta$, cmp", "$\eta'$, cmp"]
-    fname = os.path.join(plotdir, "eta_summary_dependence.pdf")
+    fname = os.path.join(plotdir, "eta_pisq.pdf")
     plotter = ana.LatticePlot(fname)
 
     for lat, d, drm, c in zip(lattices, eta, etarm, cmp_eta):
@@ -477,122 +322,26 @@ def plot_dependence(plotdir, eta, etarm, cmp_eta, lattices):
         plt.grid()
         plotter.save()
     del plotter
-    # TODO
-    # fix axis between plots
-
-def plot_singlet(plotdir, data, datacmp, lattices):
-    print("plotting singlet data")
-    markers = ["or", "sb"]
-    label = ["$\eta_s$", "$\eta'$"]
-    markers_cmp = ["vg", "^c"]
-    label_cmp = ["$\eta_s$, cmp", "$\eta'$, cmp"]
-    fname = os.path.join(plotdir, "singlet_summary_dependence.pdf")
-    plotter = ana.LatticePlot(fname)
-
-    unit_scalars = paper_unit_singlet()
-
-    for lat, d, c in zip(lattices, data, datacmp):
-        # plot data 
-        title = ["%s $\eta_s$ matching data" % lat, "$a\mu_s$", "(aM$_\mathrm{PS}$)$^2$"]
-        plotter.set_title(title[0], title[1:])
-        # print sLapH data
-        x = d.x
-        y = d.y
-        dy = d.dy
-        #print(x.shape, y.shape, dy.shape)
-        plt.errorbar(x, y, yerr=dy, label=label[0], fmt=markers[0])
-        # print standard data
-        x = c.x
-        y = c.y
-        dy = c.dy
-        plt.errorbar(x, y, yerr=dy, label=label_cmp[0], fmt=markers_cmp[0])
-        # print unitary line
-        y = unit_scalars[lat]
-        if y != np.nan:
-            plt.axhline(y=y**2, ls='--', c='r')
-        plt.legend(loc=2)
-        plt.grid()
-        if lat[0] == "A":
-            ymax = 0.2
-        elif lat[0] == "B":
-            ymax = 0.15
-        elif lat[0] == "D":
-            ymax = 0.1
-        plt.xlim([0., 0.026])
-        plt.ylim([0., ymax])
-        plotter.save()
-    del plotter
-
-def plot_kaon(plotdir, data, datacmp, lattices):
-    print("plotting kaon data")
-    markers = ["or", "sb"]
-    label = ["$K^+$", "$\eta'$"]
-    markers_cmp = ["vg", "^c"]
-    label_cmp = ["$K^+$, cmp", "$\eta'$, cmp"]
-    fname = os.path.join(plotdir, "kaon_summary_dependence.pdf")
-    plotter = ana.LatticePlot(fname)
-
-    unit_kaon = paper_unit_kaon()
-
-    for lat, d, c in zip(lattices, data, datacmp):
-        # plot data 
-        title = ["%s $K^+$ matching data" % lat, "$a\mu_s$", "(aM$_\mathrm{PS}$)$^2$"]
-        plotter.set_title(title[0], title[1:])
-        # print sLapH data
-        x = d.x
-        y = d.y
-        dy = d.dy
-        #print(x.shape, y.shape, dy.shape)
-        #print(x, y, dy)
-        plt.errorbar(x, y, yerr=dy, label=label[0], fmt=markers[0])
-        # print standard data
-        x = c.x
-        y = c.y
-        dy = c.dy
-        plt.errorbar(x, y, yerr=dy, label=label_cmp[0], fmt=markers_cmp[0])
-        # print unitary line
-        y = unit_kaon[lat]
-        if y != np.nan:
-            plt.axhline(y=y**2, ls='--', c='k')
-        plt.legend(loc=2)
-        plt.grid()
-        if lat[0] == "A":
-            ymax = 0.1
-        elif lat[0] == "B":
-            ymax = 0.08
-        elif lat[0] == "D":
-            ymax = 0.05
-        plt.xlim([0., 0.026])
-        plt.ylim([0., ymax])
-        plotter.save()
-    del plotter
 
 def main():
-    #lattices = ["A40.24", "B85.24", "D30.48"]
+    lattices = ["A40.24"]
     lattices=["A30.32", "A40.20", "A40.24", "A40.32", "A60.24",
-              "A100.24", "B85.24", "D30.48", "D45.32"]
+              "A80.24", "A100.24", "A100.24s",
+              "B25.32", "B35.32", "B55.32", "B85.24",
+              "D30.48", "D45.32"]
     #lattices=["A30.32", "A40.20", "A40.24", "A40.32", "A60.24",
     #          "A80.24", "A100.24", "B25.32", "B35.32", "B35.48",
     #          "B55.32", "B85.24", "D15.48", "D30.48", "D45.32"]
-    datafolder = "./data/eta/"
-    plotfolder = "./plots/eta/"
-    cmp_scalar_path = "/hiskp2/jost/correlationfunctions/eta/falk_data/"
-    data_kaon = "/hiskp2/helmes/analysis/scattering/analysis_vault/k_charged_wo_outliers/data/"
+    datafolder = "/hiskp2/jost/eta_data/"
+    plotfolder = "/hiskp2/jost/eta_plot/"
 
     # eta and eta' masses
     eta, etarm, cmp_eta = read_data(datafolder, lattices)
-    print_summary(eta, etarm, lattices)
-    #plot_dependence(plotfolder, eta, etarm, cmp_eta, lattices)
-
-    # singlet masses squared
-    #scalars = read_singlet(datafolder, lattices)
-    #cmp_scalars = parse_singlet_masses(cmp_scalar_path, lattices)
-    #plot_singlet(plotfolder, scalars, cmp_scalars, lattices)
-
-    # kaon masses squared
-    #scalars = read_kaon(data_kaon, lattices)
-    #cmp_scalars = parse_kaon_masses(cmp_scalar_path, lattices)
-    #plot_kaon(plotfolder, scalars, cmp_scalars, lattices)
+    print("with excited states")
+    print_summary(eta, lattices)
+    print("\n\nwithout excited states")
+    print_summary(etarm, lattices)
+    #plot_dependence(plotfolder, eta, lattices)
     return
 
 # make this script importable, according to the Google Python Style Guide

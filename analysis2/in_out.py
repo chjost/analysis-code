@@ -601,7 +601,7 @@ def check_write(filename, verbose=False):
     # check if path exists, if not then create it
     _dir = os.path.dirname(filename)
     if not os.path.exists(_dir):
-        os.mkdir(_dir)
+        os.makedirs(_dir)
     # check whether file exists
     if os.path.isfile(filename):
         if verbose:

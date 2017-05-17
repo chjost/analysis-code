@@ -4,15 +4,39 @@ import os
 import glob
 import numpy as np
 from scipy.optimize import leastsq
+from scipy.stats import chi2
 import matplotlib
+matplotlib.rc('text', usetex=True)
 matplotlib.use('Agg') # has to be imported before the next lines
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
 import analysis2 as ana
 
+def mean_std(d, w=None, axis=None):
+    # calculate the unbiased estimator for
+    # mean and standard deviation
+    # d = data, w = weight,
+    # m = weighted mean, sw = sum weights
+    # v2 = variance^2
+    prec = 1e-9
+    kd = (axis is not None)
+    if w is None:
+        _w = np.ones_like(d)*prec
+    else:
+        _w = w
+    if np.all(np.absolute(_w)<prec):
+        #print("weights < prec, setting them to precision.")
+        _w.fill(prec)
+    sw = np.nansum(_w, axis=axis, keepdims=kd)
+    norm = sw - (np.nansum(_w**2, axis=axis, keepdims=kd)/sw)
+    m = np.nansum(d*_w, axis=axis, keepdims=kd)/sw
+    v2 = np.nansum(_w*((d-m)**2), axis=axis, keepdims=kd)/norm
+    return np.squeeze(m), np.sqrt(np.squeeze(v2))
+
 def lin(p, x):
-    return p[0]*x+p[1]
+    _x = np.asarray(x)
+    return p[...,0]*_x+p[...,1]
 
 class dp(object):
     def __init__(self, x=np.nan, y=np.nan):
@@ -23,10 +47,8 @@ class dp(object):
                 self.l = 1
         else:
             self.l = len(x)
-        self.x = np.asarray(x)
-        self.y = np.asarray(y)
-        #print("x shape: %s" % (self.x.shape.__str__()))
-        #print("y shape: %s" % (self.y.shape.__str__()))
+        self.x = np.asarray(x, dtype=np.float)
+        self.y = np.asarray(y, dtype=np.float)
 
     def __str__(self):
         return "%d data entries" % self.l
@@ -37,6 +59,7 @@ class dp(object):
     def lin_fit(self, correlated=True):
         if self.l < 2:
             print("not enough data")
+            print(self.y)
             return [None, None]
         if not correlated:
             cov = np.diag(np.diagonal(np.cov(self.y)))
@@ -45,12 +68,10 @@ class dp(object):
         #print(cov)
         if np.any(np.isnan(cov)):
             print("nan in cov")
-            return [np.ones((1500,))*np.nan, np.ones((1500,))*np.nan]
+            return [None, None]
         cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
 
         errfunc = lambda p, x, y: np.dot(cov, (y-lin(p, x)).T)
-        # degrees of freedom
-        dof = float(self.y.shape[0]-2) 
         samples = self.y.shape[1]
         # create results arrays
         res = np.zeros((samples, 2))
@@ -65,64 +86,115 @@ class dp(object):
             res[b] = np.array(p)
         #print(np.mean(res, axis=0))
         self.res = res
-        self.chi2 = chisquare
-        return [res, chisquare]
+        self.pval = 1.-chi2.cdf(chisquare, float(self.l-2))
+        return [res, self.pval]
 
     def get_intersect(self, yval):
-        if yval == np.nan:
+        if np.any(np.isnan(yval)):
             return None
-        tmp = -self.res[:,1] + yval
+        tmp = yval - self.res[:,1]
         tmp /= self.res[:,0]
         return tmp
 
+## FSE correction factors
+def FSE_pion():
+    """The values for the finite size correction for m_pi"""
+    k_mpi = {"A30.32": ana.draw_gauss_distributed(1.0081, 0.0052, (1500,)),
+             "A40.20": ana.draw_gauss_distributed(1., 1e-4, (1500,)),
+             "A40.24": ana.draw_gauss_distributed(1.0206, 0.0095, (1500,)),
+             "A40.32": ana.draw_gauss_distributed(1.0039, 0.0028, (1500,)),
+             "A60.24": ana.draw_gauss_distributed(1.0099, 0.0049, (1500,)),
+             "A80.24": ana.draw_gauss_distributed(1.0057, 0.0029, (1500,)),
+             "A100.24": ana.draw_gauss_distributed(1.0037, 0.0019, (1500,)),
+             "A80.24s": ana.draw_gauss_distributed(1., 1e-4, (1500,)),
+             "A100.24s": ana.draw_gauss_distributed(1., 1e-4, (1500,)),
+             "B25.32": ana.draw_gauss_distributed(1.0136, 0.0060, (1500,)),
+             "B35.48": ana.draw_gauss_distributed(1., 1e-4, (1500,)),
+             "B35.32": ana.draw_gauss_distributed(1.0069, 0.0032, (1500,)),
+             "B55.32": ana.draw_gauss_distributed(1.0027, 0.0014, (1500,)),
+             "B85.24": ana.draw_gauss_distributed(1.0083, 0.0028, (1500,)),
+             "D15.48": ana.draw_gauss_distributed(1.0081, 0.0022, (1500,)),
+             "D30.48": ana.draw_gauss_distributed(1.0021, 0.0007, (1500,)),
+             "D45.32": ana.draw_gauss_distributed(1.0047, 0.0013, (1500,))} # values for D20.48
+    return k_mpi
+
+def FSE_kaon():
+    """The values for the finite size correction for m_pi"""
+    k_kaon = {"A30.32": ana.draw_gauss_distributed(0.9954, 1e-4, (1500,)),
+             "A40.20": ana.draw_gauss_distributed(0.9974, 1e-4, (1500,)),
+             "A40.24": ana.draw_gauss_distributed(0.9974, 1e-4, (1500,)),
+             "A40.32": ana.draw_gauss_distributed(0.9974, 1e-4, (1500,)),
+             "A60.24": ana.draw_gauss_distributed(0.9907, 1e-4, (1500,)),
+             "A80.24": ana.draw_gauss_distributed(0.9950, 1e-4, (1500,)),
+             "A100.24": ana.draw_gauss_distributed(0.9970, 1e-4, (1500,)),
+             "A80.24s": ana.draw_gauss_distributed(1., 1e-4, (1500,)),
+             "A100.24s": ana.draw_gauss_distributed(1., 1e-4, (1500,)),
+             "B25.32": ana.draw_gauss_distributed(1., 1e-4, (1500,)),
+             "B35.48": ana.draw_gauss_distributed(1., 1e-4, (1500,)),
+             "B35.32": ana.draw_gauss_distributed(0.9951, 1e-4, (1500,)),
+             "B55.32": ana.draw_gauss_distributed(0.9982, 1e-4, (1500,)),
+             "B85.24": ana.draw_gauss_distributed(0.9937, 1e-4, (1500,)),
+             "D15.48": ana.draw_gauss_distributed(1., 1e-4, (1500,)),
+             "D30.48": ana.draw_gauss_distributed(0.9986, 1e-4, (1500,)),
+             "D45.32": ana.draw_gauss_distributed(1., 1e-4, (1500,))}
+    return k_kaon
+
+## unitary values
+
 def paper_unit_singlet():
     """The values for unitary, strange, pseudoscalar mesons;
-    arxiv:1501.02645 and wiki"""
-    p_am = {"A30.32": np.nan,
-            "A40.20": np.nan,
-            "A40.24": 0.30708,
-            "A40.32": np.nan,
-            "A60.24": 0.31010,
-            "A80.24": 0.31406,
-            "A100.24": 0.31575,
-            "A80.24s": 0.27168,
-            "A100.24s": 0.27455,
-            "B25.32": np.nan,
-            "B35.48": np.nan,
-            "B35.32": np.nan,
-            "B55.32": 0.26087,
-            "B85.24": np.nan,
-            "D15.48": np.nan,
-            "D30.48": np.nan,
-            "D45.32": 0.21126}
+    arxiv:1501.02645, wiki, and Konstantin's analysis"""
+    p_am = {}
+    topdir = "/hiskp2/ottnad/data/[ABD]*/"
+    ensemble = sorted(glob.glob(topdir))
+    filename = "analyse/eta_trick/conn_only/LF_4x4.blocking.tshift0.Z_M1.masses.cosh.state.0.fit.original_data"
+    for e in ensemble:
+        fname = os.path.join(e, filename)
+        try:
+            tmp = np.loadtxt(fname)
+            lat = os.path.basename(e[:-1]).split("_")[0]
+            if lat == "D45.32":
+                continue
+            elif lat == "D45.32sc":
+                lat = "D45.32"
+            p_am.update({lat: tmp})
+        except IOError:
+            pass
     return p_am
 
 def paper_unit_kaon():
-    """The values for unitary pseudoscalar mesons; arxiv:1501.02645 and wiki"""
-    p_am = {"A30.32": 0.25150,
-            "A40.20": 0.26130,
-            "A40.24": 0.25884,
-            "A40.32": 0.25666,
-            "A60.24": 0.26695,
-            "A80.24": 0.27706,
-            "A100.24": 0.28807,
-            "A80.24s": 0.25503,
-            "A100.24s": 0.26490,
-            "B25.32": 0.21240,
-            "B35.48": np.nan,
-            "B35.32": 0.21840,
-            "B55.32": 0.22799,
-            "B85.24": 0.24392,
-            "D15.48": 0.16897,
-            "D30.48": 0.17760,
-            "D45.32": 0.17570}
+    """The values for unitary pseudoscalar kaons; arxiv:1501.02645 and wiki"""
+    p_am = {}
+    topdir = "/hiskp2/ottnad/data/[ABD]*/"
+    ensemble = sorted(glob.glob(topdir))
+    filename = "analyse/kaon/LF_8x8.blocking.Z_M1.masses.cosh.state.0.fit"
+    for e in ensemble:
+        fname = os.path.join(e, filename)
+        try:
+            tmp = np.loadtxt(fname)
+            lat = os.path.basename(e[:-1]).split("_")[0]
+            if lat == "D45.32":
+                continue
+            elif lat == "D45.32sc":
+                lat = "D45.32"
+            p_am.update({lat: tmp})
+        except IOError:
+            pass
     return p_am
+
+def paper_r0():
+    """Values for the chirally extrapolated Sommer parameter r_0"""
+    val = [5.31, 5.77, 7.60]
+    dval = [0.08, 0.06, 0.08]
+    tmp = [ana.draw_gauss_distributed(val[i], dval[i], shape=(1500,)) for i in range(3)]
+    return {"A": tmp[0], "B": tmp[1], "D": tmp[2]}
+
+# parse Falks data
 
 def parse_singlet_masses(datafolder, lattices, xcut=0.05):
     print("parsing old \eta_s matches")
     result = []
     for lat in lattices:
-        #print(lat)
         res = [[], []]
         fname = os.path.join(datafolder, lat, "masses.txt")
         tmp = np.loadtxt(fname).T
@@ -140,7 +212,6 @@ def parse_kaon_masses(datafolder, lattices, xcut=0.05):
     print("parsing old kaon matches")
     result = []
     for lat in lattices:
-        #print(lat)
         res = [[], []]
         fname = os.path.join(datafolder, lat, "masses_kaon.txt")
         tmp = np.loadtxt(fname).T
@@ -154,6 +225,132 @@ def parse_kaon_masses(datafolder, lattices, xcut=0.05):
         result.append(dp(res[0], res[1]))
     return result
 
+## strange quark folder extraction
+
+def parse_s_quarks(path):
+    # define sort function
+    fsort = lambda x: os.path.basename(x).split("_")[1]
+    # get folder and sort
+    #strange_masses = glob.glob(os.path.join(path, "amu_s_*/"))
+    strange_masses = glob.glob(os.path.join(path, "strange_*"))
+    strange_masses = sorted(strange_masses, key=fsort)
+    # get strange quark masses
+    sm = [int(fsort(s)) for s in strange_masses]
+    tmp = [np.ones((1500,))*float(x)*1e-5 for x in sm]
+    return strange_masses, tmp
+
+def read_pion_eta(pifolder, etafolder, int_data, lattices):
+    print("read pion data")
+    # parameters
+    fn_pi = "fit_pi.npz"
+    fn_etarm = "fit_eta_rm_TP0.npz"
+    fn_eta = "fit_eta_TP0.npz"
+    pc = 1
+    # final data list
+    data = []
+    datarm = []
+    # r0 scaling
+    r0_val = paper_r0()
+    pifse = FSE_pion()
+
+    # get data from files
+    def get_pi(fname, r0, fse):
+        try:
+            corr = ana.FitResult.read(fname)
+        except IOError:
+            return None
+        d = [(r0*x/fse)**2 for x in corr.data]
+        m, dm, dmsys, w = ana.sys_error(d, corr.pval, pc, rel=False)
+        return [m[0], m[0]]
+
+    def get_eta(fname, r0, pi):
+        try:
+            corr = ana.FitResult.read(fname)
+        except IOError:
+            return None
+        d = [r0*x for x in corr.data]
+        m, dm, dmsys, w = ana.sys_error(d, corr.pval, pc, rel=False)
+        return dp(pi, [m[0], m[1]])
+
+    # loop over lattices
+    for lat, inter in zip(lattices, int_data):
+        #print("read data for %s" % lat)
+        lr0 = (r0_val[lat[0]])[:,np.newaxis, np.newaxis]
+        lfse = pifse[lat][:,np.newaxis, np.newaxis]
+
+        # read pi data
+        fname = os.path.join(pifolder, lat, fn_pi)
+        _x = get_pi(fname, lr0, lfse)
+        if _x is None:
+            data.append(None)
+            datarm.append(None)
+            continue
+
+        # read eta data
+        # select mu_s value closest to intersection
+        topdir = os.path.join(etafolder, lat)
+        strange_masses, mu_s = parse_s_quarks(topdir)
+        mu_s = np.asarray(mu_s)[:,0]
+        n = np.argmin(np.absolute(mu_s-inter[0]))
+        print("%s: selected mu_s = %.4f" % (lat, mu_s[n]))
+        # with excited states
+        _f = os.path.join(topdir, strange_masses[n], fn_eta)
+        data.append(get_eta(_f, lr0, _x))
+        # without excited states
+        _f = os.path.join(topdir, strange_masses[n], fn_etarm)
+        datarm.append(get_eta(_f, lr0, _x))
+    return data, datarm
+
+def read_k_eta(etafolder, kdata, lattices):
+    print("read eta data")
+    # parameters
+    fn_etarm = "fit_eta_rm_TP0.npz"
+    fn_eta = "fit_eta_TP0.npz"
+    pc = 1
+    ncorr = 0 # 0 for eta, 1 for eta'
+    # final data list
+    data = []
+    datarm = []
+
+    def get_eta(corr):
+        d = [x**2 for x in corr.data]
+        m, dm, dmsys, w = ana.sys_error(d, corr.pval, pc, rel=False)
+        # m, dm, and dmsys still have the correlator number as first
+        # index
+        # m still has bootstrap sample indices
+        return m[ncorr]
+
+    def get_corr(fname):
+        try:
+            corr = ana.FitResult.read(fname)
+        except IOError:
+            corr = None
+        if corr is not None:
+            return get_eta(corr)
+        else:
+            return np.ones((1500,))*np.nan
+
+    # loop over lattices
+    for lat, k in zip(lattices, kdata):
+        #print("read data for %s" % lat)
+        kvals = k.y
+        # read eta data
+        topdir = os.path.join(etafolder, lat)
+        strange_masses, mu_s = parse_s_quarks(topdir)
+
+        m1, m2 = [], []
+        # with excited states
+        for sm in strange_masses:
+            _f = os.path.join(topdir, sm, fn_eta)
+            # with excited states
+            m1.append(get_corr(_f))
+            # without excited states
+            _f = os.path.join(topdir, sm, fn_etarm)
+            m2.append(get_corr(_f))
+        data.append(dp(kvals, m1))
+        datarm.append(dp(kvals, m2))
+    return data, datarm
+
 def read_singlet(datafolder, lattices):
     print("read singlet data")
     # parameters
@@ -162,33 +359,32 @@ def read_singlet(datafolder, lattices):
     # final data list
     data = []
     # get data from files
-    def get_data(corr, get_lowest=False):
+    def get_data(corr, m2, get_lowest=False):
+        if corr is None:
+            m2.append(np.ones((1500,))*np.nan)
+            return
         d = [x**2 for x in corr.data]
         m, dm, dmsys, w = ana.sys_error(d, corr.pval, pc, rel=False)
         # m, dm, and dmsys still have the correlator number as first
         # index
         # m still has bootstrap sample indices
         if get_lowest:
-            return [m[0], m[1]]
-        else:
-            return [m[1]]
+            m2.append(m[0])
+        m2.append(m[1])
+        return
 
     # loop over lattices
     for lat in lattices:
         #print("read data for %s" % lat)
-        # get file names and paths
+        # get strange quark folders and values
         topdir = os.path.join(datafolder, lat)
-        strange_masses = glob.glob(os.path.join(topdir, "strange_*"))
-        strange_masses = sorted(strange_masses, key=lambda x: os.path.basename(x).split("_")[1])
-        # get strange quark masses
-        sm = [int(os.path.basename(s).split("_")[1]) for s in strange_masses]
-        tmp_mus = [np.ones((1500,))*float(x)*1e-5 for x in sm]
+        strange_masses, mu_s = parse_s_quarks(topdir)
         # get light quark mass
         xlow = np.ones((1500,))*float(lat.split(".")[0][1:])*1e-4
-        tmp_mus.insert(0, xlow)
+        mu_s.insert(0, xlow)
+
         # data arrays
         m2 = []
-
         # read data
         for i, sdir in enumerate(strange_masses):
             # get data, also extract light quark data
@@ -196,18 +392,9 @@ def read_singlet(datafolder, lattices):
                 corr = ana.FitResult.read(os.path.join(sdir, fn_fit))
             except IOError:
                 corr = None
-            if corr is not None:
-                get_lowest = True if i == 0 else False
-                res = get_data(corr, get_lowest)
-                if get_lowest:
-                    m2.append(res[0])
-                    m2.append(res[1])
-                else:
-                    m2.append(res[0])
-            else:
-                m2.append(np.ones((1500,))*np.nan)
+            res = get_data(corr, m2, (i==0))
         # append data
-        data.append(dp(tmp_mus, m2))
+        data.append(dp(mu_s, m2))
     return data
 
 def read_kaon(datafolder, lattices):
@@ -217,31 +404,30 @@ def read_kaon(datafolder, lattices):
     pc = 1
     # final data list
     data = []
+    # FSE corrections
+    kfse = FSE_kaon()
     # get data from files
-    def get_data(corr):
-        d = [x**2 for x in corr.data]
+    def get_data(corr, m2, fse):
+        if corr is None:
+            m2.append(np.ones((1500,))*np.nan)
+            return
+        d = [(x/fse)**2 for x in corr.data]
         m, dm, dmsys, w = ana.sys_error(d, corr.pval, pc, rel=False)
         # m, dm, and dmsys still have the correlator number as first
         # index
         # m still has bootstrap sample indices
-        return [m[0]]
+        m2.append(m[0])
+        return
 
     # loop over lattices
     for lat in lattices:
         #print("read data for %s" % lat)
-        # get file names and paths
         topdir = os.path.join(datafolder, lat)
-        strange_masses = glob.glob(os.path.join(topdir, "amu_s_*/"))
-        #print(strange_masses)
-        strange_masses = sorted(strange_masses, key=lambda x: os.path.basename(x[:-1]).split("_")[-1])
-        # get strange quark masses
-        sm = [os.path.basename(s[:-1]).split("_")[-1] for s in strange_masses]
-        sm = [int("".join((x, "0"*(4-len(x))))) for x in sm]
-        tmp_mus = [np.ones((1500,))*float(x)*1e-5 for x in sm]
-        tmp_mus = np.asarray(tmp_mus)
+        strange_masses, mu_s = parse_s_quarks(topdir)
+        mu_s = np.asarray(mu_s)
+        lfse = kfse[lat][:, np.newaxis, np.newaxis]
         # data arrays
         m2 = []
-        ind = []
 
         # read data
         for i, sdir in enumerate(strange_masses):
@@ -250,64 +436,54 @@ def read_kaon(datafolder, lattices):
                 corr = ana.FitResult.read(os.path.join(sdir, fn_fit % lat))
             except IOError:
                 corr = None
-            if corr is not None:
-                res = get_data(corr)
-                m2.append(res[0])
-                ind.append(i)
-            #else:
-            #    m2.append(np.ones((1500,))*np.nan)
+            get_data(corr, m2, lfse)
         # append data
-        data.append(dp(tmp_mus[ind], m2))
+        data.append(dp(mu_s, m2))
     return data
 
 def interpolate_singlet(singlet, singlet_cmp, lattices):
+    print("interpolate singlet")
     fitres = []
     fitres_cmp = []
     intres = []
     intres_cmp = []
 
     unit_sing = paper_unit_singlet()
-    for d, c, lat in zip(singlet, singlet_cmp, lattices):
-        print("\n---")
-        print("lattice: %s" % lat)
-        # sLapH data
-        # fit and print
-        fitres.append(d.lin_fit())
-        res = fitres[-1][0]
-        data = [np.mean(res, axis=0), np.std(res, axis=0)]
-        #print("\eta_s fit parameters:")
-        #print("m = %.4f +- %.4f" % (data[0][0], data[1][0]))
-        #print("c = %.4f +- %.4f" % (data[0][1], data[1][1]))
+    def stats(res):
+        if res[0] is None:
+            return None
+        # see comment in interpolate_derivative
+        d = res[0]
+        w = 1. - 2*np.absolute(0.5 - res[1])
+        return mean_std(d, w)
 
+    def inter(uval, res, dat):
+        if uval[0] == np.nan or res is None:
+            return np.ones((1500,))*np.nan
+        tmpdat = ana.draw_gauss_distributed(uval[0], uval[1], (1500,))
+        #print("unitary singlet: %.4f(%.0f)" % (uval[0], uval[1]*1e4))
+        tmp = dat.get_intersect(tmpdat**2)
+        res = np.asarray(stats([tmp, dat.pval]))
+        #print("intersection: %.4f(%.0f)" % (res[0], res[1]*1e4))
+        return res
+        
+    for d, c, lat in zip(singlet, singlet_cmp, lattices):
+        #print(lat)
+        uval = unit_sing[lat]
+        # sLapH data
+        # fit
+        fitres.append(d.lin_fit(correlated=True))
         # interpolate
-        u_sing = unit_sing[lat]
-        if u_sing != np.nan:
-            tmp = d.get_intersect(u_sing**2)
-            print("unitary value: %.4f" % u_sing)
-            _t = [np.mean(tmp), np.std(tmp)]
-            print("interpolated value: %.4f(%.0f)" % (_t[0], _t[1]*1e4))
-            intres.append(tmp)
-        else:
-            intres.append(np.ones((1500,))*np.nan)
+        res = fitres[-1]
+        intres.append(inter(uval, res, d).copy())
 
         # old data
         # fit and print
         fitres_cmp.append(c.lin_fit(correlated=False))
-        res = fitres[-1][0]
-        data = [np.mean(res, axis=0), np.std(res, axis=0)]
-        #print("old \eta_s fit parameters:")
-        #print("m = %.4f +- %.4f" % (data[0][0], data[1][0]))
-        #print("c = %.4f +- %.4f" % (data[0][1], data[1][1]))
-
         # interpolate
-        if u_sing != np.nan:
-            tmp = c.get_intersect(u_sing**2)
-            print("unitary value: %.4f" % u_sing)
-            _t = [np.mean(tmp), np.std(tmp)]
-            print("interpolated value: %.4f(%.0f)" % (_t[0], _t[1]*1e4))
-            intres_cmp.append(tmp)
-        else:
-            intres_cmp.append(np.ones((1500,))*np.nan)
+        res = fitres_cmp[-1]
+        intres_cmp.append(inter(uval, res, c).copy())
+    #print(intres)
     return fitres, fitres_cmp, intres, intres_cmp
 
 def interpolate_kaon(kaon, kaon_cmp, lattices):
@@ -317,105 +493,160 @@ def interpolate_kaon(kaon, kaon_cmp, lattices):
     intres_cmp = []
 
     unit_kaon = paper_unit_kaon()
-    for d, c, lat in zip(kaon, kaon_cmp, lattices):
-        print("\n---")
-        print("lattice: %s" % lat)
-        # sLapH data
-        # fit and print
-        fitres.append(d.lin_fit(correlated=False))
-        res = fitres[-1][0]
-        if res is not None:
-            data = [np.mean(res, axis=0), np.std(res, axis=0)]
-            #print("kaon fit parameters:")
-            #print("m = %.4f +- %.4f" % (data[0][0], data[1][0]))
-            #print("c = %.4f +- %.4f" % (data[0][1], data[1][1]))
+    kfse = FSE_kaon()
+    def stats(res):
+        if res[0] is None:
+            return None
+        # see comment in interpolate_derivative
+        d = res[0]
+        w = 1. - 2*np.absolute(0.5 - res[1])
+        return mean_std(d, w)
 
-            # interpolate
-            u_kaon = unit_kaon[lat]
-            if u_kaon != np.nan:
-                tmp = d.get_intersect(u_kaon**2)
-                print("unitary value: %.4f" % u_kaon)
-                _t = [np.mean(tmp), np.std(tmp)]
-                print("interpolated value: %.4f(%.0f)" % (_t[0], _t[1]*1e4))
-                intres.append(tmp)
-            else:
-                intres.append(np.ones((1500,))*np.nan)
+    def inter(uval, res, dat, fse):
+        if uval[0] == np.nan or res is None:
+            return np.ones((2,))*np.nan
+        tmpdat = ana.draw_gauss_distributed(uval[0], uval[1], (1500,))
+        #print("unitary singlet: %.4f(%.0f)" % (uval[0], uval[1]*1e4))
+        tmp = dat.get_intersect((tmpdat/fse)**2)
+        res = np.asarray(stats([tmp, dat.pval]))
+        #print("intersection: %.4f(%.0f)" % (res[0], res[1]*1e4))
+        return res
+
+    for d, c, lat in zip(kaon, kaon_cmp, lattices):
+        uval = unit_kaon[lat]
+        lfse = kfse[lat]
+        # sLapH data
+        # fit
+        fitres.append(d.lin_fit(correlated=True))
+        # interpolate
+        res = fitres[-1]
+        intres.append(inter(uval, res, d, lfse).copy())
 
         # old data
-        # fit and print
+        # fit
         fitres_cmp.append(c.lin_fit(correlated=False))
-        res = fitres[-1][0]
-        if res is not None:
-            data = [np.mean(res, axis=0), np.std(res, axis=0)]
-            #print("old kaon fit parameters:")
-            #print("m = %.4f +- %.4f" % (data[0][0], data[1][0]))
-            #print("c = %.4f +- %.4f" % (data[0][1], data[1][1]))
-
-            # interpolate
-            if u_kaon != np.nan:
-                tmp = c.get_intersect(u_kaon**2)
-                print("unitary value: %.4f" % u_kaon)
-                _t = [np.mean(tmp), np.std(tmp)]
-                print("interpolated value: %.4f(%.0f)" % (_t[0], _t[1]*1e4))
-                intres_cmp.append(tmp)
-            else:
-                intres_cmp.append(np.ones((1500,))*np.nan)
+        # interpolate
+        res = fitres_cmp[-1]
+        intres_cmp.append(inter(uval, res, c, lfse).copy())
+    #print(intres)
     return fitres, fitres_cmp, intres, intres_cmp
+
+def interpolate_derivative(eta, etarm, lattices):
+    fitres = []
+    fitresrm = []
+    ave1 = []
+    w1 = []
+    ave2 = []
+    w2 = []
+
+    def stats(res, prepared=False, dat=None, weight=None):
+        if res[0] is None:
+            return "--"
+        if prepared:
+            d = res[0]
+            w = res[1]
+        else:
+            d = res[0][:,0]
+            w = 1. - 2*np.absolute(0.5 - res[1])
+        if dat is not None:
+            dat.append(d)
+        if weight is not None:
+            weight.append(w)
+        m, v = mean_std(d, w)
+        return "%.2f(%.0f)" % (m, v*1e2)
+
+    for e, erm, lat in zip(eta, etarm, lattices):
+        fstr = ["$%s$" % lat]
+        #print("lattice: %s" % lat)
+
+        # fit w/ excited states
+        fitres.append(e.lin_fit(correlated=True))
+        tmp = stats(fitres[-1], False, ave1, w1)
+        fstr.append(tmp)
+
+        # fit w/o excited states
+        fitresrm.append(erm.lin_fit(correlated=True))
+        tmp = stats(fitresrm[-1], False, ave2, w2)
+        fstr.append(tmp)
+
+        print(" & ".join(fstr) + " \\\\")
+    # calculate weighted average
+    tmp = stats([np.asarray(ave1), np.asarray(w1)], True)
+    print("average: %s" % (tmp))
+    tmp = stats([np.asarray(ave2), np.asarray(w2)], True)
+    print("average (rm): %s" % (tmp))
+    return fitres, fitresrm
+
+def interpolate_eta_kaon(data, lattices):
+    result = []
+    der = []
+    matches = paper_unit_kaon()
+
+    for d, lat in zip(data, lattices):
+        #print("lattice: %s" % lat)
+        lm = matches[lat]
+        lmatch = ana.draw_gauss_distributed(lm[0], lm[1], shape=(1500,))
+        lmatch = lmatch**2 # interpolate in the squared kaon mass
+
+        # fit data
+        der.append(d.lin_fit(correlated=True))
+        _l = der[-1][0]
+        # interpolate
+        tmp = lin(_l, lmatch)
+        result.append(dp(lmatch, tmp))
+
+    # calculate weighted average
+    return result, der
 
 def plot_singlet(plotdir, data, datacmp, fitres, fitres_cmp,
       intres, intres_cmp, lattices):
     print("plotting singlet data")
-    markers = ["or", "sb"]
-    markers_fit = ["-r", "b"]
-    label = ["sLapH"]
-    label_fit = ["sLapH fit"]
-    markers_cmp = ["vg", "^c"]
-    markers_fit_cmp = ["-g", "--c"]
-    label_cmp = ["standard"]
-    label_fit_cmp = ["standard fit"]
+    markers = ["or", "vg"]
+    markers_fit = ["-r", "-g"]
+    label = ["$\mathrm{sLapH}$", "$\mathrm{standard}$"]
     fname = os.path.join(plotdir, "singlet_interpolation.pdf")
     plotter = ana.LatticePlot(fname)
+
+    # legend handles
+    lh = [matplotlib.lines.Line2D([],[],label=x,marker=markers[n][0],
+        color=markers[n][1]) for n,x in enumerate(label)]
 
     unit_scalars = paper_unit_singlet()
 
     for lat, d, c, f, fc, i, ic in zip(lattices, data, datacmp, fitres, fitres_cmp,
         intres, intres_cmp):
+        #print(lat)
         # plot data 
-        title = [lat, "$a\mu_s$", "(aM$_{\eta_s}$)$^2$"]
+        title = ["$\mathrm{%s}$"%lat, "$a\mu_s$", "$(aM_{\eta_s})^2$"]
         plotter.set_title(title[0], title[1:])
         # print sLapH data
         x = d.x[:,0]
-        y = d.y[:,0]
-        dy = np.std(d.y, axis=1)
-        #print(x.shape, y.shape, dy.shape)
-        plt.errorbar(x, y, yerr=dy, label=label[0], fmt=markers[0])
+        y, dy = mean_std(d.y, np.ones_like(d.y), axis=1)
+        plt.errorbar(x, y, yerr=dy, fmt=markers[0])
         # plot fit
         _x = [min(x), max(x)]
-        plotter.plot_func(lin, f[0], _x, label=label_fit[0], fmt=markers_fit[0],
+        plotter.plot_func(lin, f[0], _x, label="", fmt=markers_fit[0],
             ploterror=True)
         # print interpolated value
-        _t = [np.mean(i), np.std(i)]
-        if _t[0] != np.nan:
-            plt.axvline(x=_t[0], ls='-', c='r')
+        if i[0] != np.nan:
+            plt.axvline(x=i[0], ls='-', c='r')
 
         # print standard data
         x = c.x[:,0]
-        y = c.y[:,0]
-        dy = np.std(c.y, axis=1)
+        y, dy = mean_std(c.y, np.ones_like(c.y), axis=1)
         #print(x.shape, y.shape, dy.shape)
-        plt.errorbar(x, y, yerr=dy, label=label_cmp[0], fmt=markers_cmp[0])
+        plt.errorbar(x, y, yerr=dy, fmt=markers[1])
         # plot fit
         _x = [min(x), max(x)]
-        plotter.plot_func(lin, fc[0], _x, label=label_fit_cmp[0],
-            fmt=markers_fit_cmp[0], ploterror=True)
+        plotter.plot_func(lin, fc[0], _x, label="", fmt=markers_fit[1],
+            ploterror=True)
 
         # print unitary line
-        y = unit_scalars[lat]
+        y = unit_scalars[lat][0]
         if not np.isnan(y):
             plt.axhline(y=y**2, ls='--', c='k')
-            plt.text(0.001, y**2, "unitary")
-        plt.legend(loc=2)
-        plt.grid()
+            plt.text(0.001, y**2, "$\mathrm{unitary}$")
+        plt.legend(lh, label, loc=4, numpoints=1, frameon=False)
         if lat[0] == "A":
             ymax = 0.2
         elif lat[0] == "B":
@@ -430,64 +661,55 @@ def plot_singlet(plotdir, data, datacmp, fitres, fitres_cmp,
 def plot_kaon(plotdir, data, datacmp, fitres, fitres_cmp,
       intres, intres_cmp, lattices):
     print("plotting kaon data")
-    markers = ["or", "sb"]
-    markers_fit = ["-r", "b"]
-    label = ["sLapH"]
-    label_fit = ["sLapH fit"]
-    markers_cmp = ["vg", "^c"]
-    markers_fit_cmp = ["-g", "--c"]
-    label_cmp = ["standard"]
-    label_fit_cmp = ["standard fit"]
+    markers = ["or", "vg"]
+    markers_fit = ["-r", "-g"]
+    label = ["$\mathrm{sLapH}$", "$\mathrm{standard}$"]
     fname = os.path.join(plotdir, "kaon_interpolation.pdf")
     plotter = ana.LatticePlot(fname)
 
+    # legend handles
+    lh = [matplotlib.lines.Line2D([],[],label=x,marker=markers[n][0],
+        color=markers[n][1]) for n,x in enumerate(label)]
+
     unit_kaon = paper_unit_kaon()
+    kfse = FSE_kaon()
 
     for lat, d, c, f, fc, i, ic in zip(lattices, data, datacmp, fitres, fitres_cmp,
         intres, intres_cmp):
         if d is not None:
             # plot data 
-            title = [lat, "$a\mu_s$", "(aM$_{K^+}$)$^2$"]
+            title = ["$\mathrm{%s}$"%lat, "$a\mu_s$", "$(aM_{K^+})^2$"]
             plotter.set_title(title[0], title[1:])
             # print sLapH data
-            try:
-                x = d.x[:,0]
-            except:
-                print(lat)
-                print(d.x)
-                raise
-            y = d.y[:,0]
-            dy = np.std(d.y, axis=1)
-            #print(x.shape, y.shape, dy.shape)
-            plt.errorbar(x, y, yerr=dy, label=label[0], fmt=markers[0])
+            x = d.x[:,0]
+            y, dy = mean_std(d.y, np.ones_like(d.y), axis=1)
+            plt.errorbar(x, y, yerr=dy, fmt=markers[0])
             # plot fit
             _x = [min(x), max(x)]
-            plotter.plot_func(lin, f[0], _x, label=label_fit[0], fmt=markers_fit[0],
+            plotter.plot_func(lin, f[0], _x, label="", fmt=markers_fit[0],
                 ploterror=True)
             # print interpolated value
-            _t = [np.mean(i), np.std(i)]
-            if _t[0] != np.nan:
-                plt.axvline(x=_t[0], ls='-', c='r')
+            if i[0] != np.nan:
+                plt.axvline(x=i[0], ls='-', c='r')
 
         if c is not None:
             # print standard data
             x = c.x[:,0]
-            y = c.y[:,0]
-            dy = np.std(c.y, axis=1)
-            #print(x.shape, y.shape, dy.shape)
-            plt.errorbar(x, y, yerr=dy, label=label_cmp[0], fmt=markers_cmp[0])
+            y, dy = mean_std(c.y, np.ones_like(c.y), axis=1)
+            plt.errorbar(x, y, yerr=dy, fmt=markers[1])
             # plot fit
             _x = [min(x), max(x)]
-            plotter.plot_func(lin, fc[0], _x, label=label_fit_cmp[0],
-                fmt=markers_fit_cmp[0], ploterror=True)
+            plotter.plot_func(lin, fc[0], _x, label="", fmt=markers_fit[1],
+                ploterror=True)
 
+        if d is not None or c is not None:
             # print unitary line
-            y = unit_kaon[lat]
+            lfse = np.mean(kfse[lat])
+            y = unit_kaon[lat][0]/lfse
             if not np.isnan(y):
                 plt.axhline(y=y**2, ls='--', c='k')
-                plt.text(0.01, y**2, "unitary")
-            plt.legend(loc=2)
-            plt.grid()
+                plt.text(0.001, y**2, "$\mathrm{unitary}$")
+            plt.legend(lh, label, loc=3, numpoints=1, frameon=False)
             if lat[0] == "A":
                 ymax = 0.1
             elif lat[0] == "B":
@@ -499,33 +721,363 @@ def plot_kaon(plotdir, data, datacmp, fitres, fitres_cmp,
         plotter.save()
     del plotter
 
+def plot_all(plotdir, dataa, fita, datab, fitb, lattices):
+    print("plotting all data")
+    markers = ["or", "sb"]
+    markers_fit = ["-r", "-b"]
+    label = ["$\eta_s$", "$K^+$"]
+    fname = os.path.join(plotdir, "all_interpolation.pdf")
+    plotter = ana.LatticePlot(fname)
+    # legend handles
+    lh = [matplotlib.lines.Line2D([],[],label=x,marker=markers[n][0],
+        color=markers[n][1]) for n,x in enumerate(label)]
+
+    unit_scal = paper_unit_singlet()
+    unit_kaon = paper_unit_kaon()
+    kfse = FSE_kaon()
+    fx = [0., 0.026]
+
+    for lat, da, fa, db, fb in zip(lattices, dataa, fita, datab, fitb):
+        title = ["$\mathrm{%s}$"%lat, "$a\mu_s$", "$(aM)^2$"]
+        if da is not None:
+            # plot data 
+            plotter.set_title(title[0], title[1:])
+            # print sLapH data
+            x = da.x[:,0]
+            y = da.y[:,0]
+            dy = np.std(da.y, axis=1)
+            plt.errorbar(x, y, yerr=dy, label=label[0], fmt=markers[0])
+            # print unitary line
+            y = unit_scal[lat][0]
+            if not np.isnan(y):
+                plt.axhline(y=y**2, ls='--', c='k')
+                plt.text(0.001, y**2*1.06, "$aM_{\eta_s}^2$")
+            # plot fit
+            plotter.plot_func(lin, fa[0], fx, label="", fmt=markers_fit[0],
+                ploterror=False)
+
+        if db is not None:
+            # plot data 
+            plotter.set_title(title[0], title[1:])
+            # print sLapH data
+            x = db.x[:,0]
+            y = db.y[:,0]
+            dy = np.std(db.y, axis=1)
+            plt.errorbar(x, y, yerr=dy, label=label[1], fmt=markers[1])
+            # print unitary line
+            lfse = np.mean(kfse[lat])
+            y = unit_kaon[lat][0]/lfse
+            if not np.isnan(y):
+                plt.axhline(y=y**2, ls='--', c='k')
+                plt.text(0.001, y**2*0.88, "$aM_{K^+}^2$")
+            # plot fit
+            plotter.plot_func(lin, fb[0], fx, label="", fmt=markers_fit[1],
+                ploterror=False)
+
+        if (da is not None or db is not None):
+            plt.legend(lh, label, loc=4, numpoints=1, frameon=False)
+            if lat[0] == "A":
+                ymax = 0.16
+            elif lat[0] == "B":
+                ymax = 0.13
+            elif lat[0] == "D":
+                ymax = 0.08
+            plt.xlim([0., 0.026])
+            plt.ylim([0., ymax])
+            plotter.save()
+    del plotter
+
+def plot_scaled(plotdir, eta, etarm, lattices):
+    print("plotting all data")
+    markers = {"A":"or", "B":"sb", "D": "^g"}
+    label = ["$A$ $\mathrm{ensemble}$", "$B$ $\mathrm{ensemble}$",
+        "$D$ $\mathrm{ensemble}$"]
+    fname = os.path.join(plotdir, "r0meta_r0mpisq.pdf")
+    plotter = ana.LatticePlot(fname)
+    title = ["", "$(r_0 M_{\pi})^2$", "$r_0 M_{\eta,\eta'}$"]
+    # legend handles
+    lh = [matplotlib.lines.Line2D([],[],label=x,marker=markers[x[1]][0],
+        color=markers[x[1]][1]) for x in label]
+
+    def plot(latt, data):
+        for lat, e in zip(latt, data):
+            #print(lat)
+            fmt = markers[lat[0]]
+            if e is None:
+                continue
+            x, dx = mean_std(e.x[0], np.ones_like(e.x[0]))
+            # get y data
+            y, dy = mean_std(e.y, np.ones_like(e.y), axis=1)
+            for i in range(2):
+                if i == 0:
+                    plt.errorbar(x, y[i], xerr=dx, yerr=dy[i], fmt=fmt)
+                else:
+                    plt.errorbar(x, y[i], xerr=dx, yerr=dy[i], fmt=fmt, mfc="none")
+    plotter.set_title(title[0], title[1:])
+    plt.ylim([0., 4.])
+    plt.xlim([0., 1.45])
+    plot(lattices, eta)
+    plt.legend(lh, label, loc=4, numpoints=1, frameon=False)
+    plotter.save()
+
+    plotter.set_title(title[0], title[1:])
+    plt.ylim([0., 4.])
+    plt.xlim([0., 1.45])
+    plot(lattices, etarm)
+    plt.legend(lh, label, loc=4, numpoints=1, frameon=False)
+    plotter.save()
+    del plotter
+
+def plot_der(plotdir, eta, etarm, der, derrm, lattices):
+    print("plotting all data")
+    markers = {"A":"or", "B":"sb", "D": "^g"}
+    markers_fit = {"A":"-r", "B":"-b", "D": "-g"}
+    fname = os.path.join(plotdir, "metasq_mksq.pdf")
+    plotter = ana.LatticePlot(fname)
+    title = ["", "$(M_{K})^2$", "$(aM_{\eta})^2$"]
+
+    def plot(e, d, plotter, mk, mkf):
+        x, dx = mean_std(e.x, np.ones_like(e.x), axis=1)
+        # get y data
+        y, dy = mean_std(e.y, np.ones_like(e.y), axis=1)
+        plt.errorbar(x, y, xerr=dx, yerr=dy, fmt=mk)
+        # plot fit
+        _x = [min(x), max(x)]
+        plotter.plot_func(lin, d[0], _x, label="", fmt=mkf,
+            ploterror=False)
+        plotter.save()
+
+    xlims = {"A": [0.2**2, 0.3**2], "B": [0.19**2, 0.27**2], "D": [0.14**2, 0.2**2]}
+    ylims = {"A": [0.3**2, 0.4**2], "B": [0.25**2, 0.32**2], "D": [0.15**2, 0.25**2]}
+    # plot with excited states
+    for lat, e, d in zip(lattices, eta, der):
+        plotter.set_title("$\mathrm{%s}$"%lat, title[1:])
+        plt.xlim(xlims[lat[0]])
+        plt.ylim(ylims[lat[0]])
+        #print(lat)
+        if e is None:
+            continue
+        plot(e, d, plotter, markers[lat[0]], markers_fit[lat[0]])
+
+    ylims = {"A": [0.3**2, 0.36**2], "B": [0.25**2, 0.32**2], "D": [0.18**2, 0.23**2]}
+    # plot without excited states
+    for lat, e, d in zip(lattices, etarm, derrm):
+        plotter.set_title(lat, title[1:])
+        plt.xlim(xlims[lat[0]])
+        plt.ylim(ylims[lat[0]])
+        #print(lat)
+        if e is None:
+            continue
+        plot(e, d, plotter, markers[lat[0]], markers_fit[lat[0]])
+    del plotter
+
+def plot_der_kaon(plotdir, data, der, match, lattices):
+    print("plotting derivative data")
+    markers = ["or", "sb"]
+    markers_fit = ["-r", "-b"]
+    fname = os.path.join(plotdir, "metasq_mksq_inter_kaon.pdf")
+    plotter = ana.LatticePlot(fname)
+    title = ["", "$(M_{K})^2$", "$(aM_{\eta})^2$"]
+
+    def plot(_data, plotter, mk, ax=1):
+        x, dx = mean_std(_data.x, np.ones_like(_data.x), axis=ax)
+        y, dy = mean_std(_data.y, np.ones_like(_data.y), axis=ax)
+        #print(x, dx)
+        #print(y, dy)
+        plt.errorbar(x, y, xerr=dx, yerr=dy, fmt=mk)
+
+    def pfit(_data, _der, plotter, mkf):
+        # plot fit
+        _x = [_data.x.min(), _data.x.max()]
+        plotter.plot_func(lin, _der[0], _x, label="", fmt=mkf,
+            col=mkf[-1], ploterror=True)
+
+    xlims = {"A": [0.2**2, 0.3**2], "B": [0.19**2, 0.27**2], "D": [0.14**2, 0.2**2]}
+    ylims = {"A": [0.3**2, 0.36**2], "B": [0.25**2, 0.32**2], "D": [0.16**2, 0.22**2]}
+    # plot data
+    for lat, dat, de, ma in zip(lattices, data, der, match):
+        print(lat)
+        plotter.set_title("$\mathrm{%s}$"%lat, title[1:])
+        plt.xlim(xlims[lat[0]])
+        plt.ylim(ylims[lat[0]])
+        if dat is None:
+            continue
+        # plot data and fit
+        plot(dat, plotter, markers[0])
+        pfit(dat, de, plotter, markers_fit[0])
+        # plot interpolated value
+        plot(ma, plotter, markers[1], ax=None)
+        plotter.save()
+
+    del plotter
+
+def read_plot_masses(datafolder, plotfolder, lattices):
+    print("read eta effective masses")
+    # filenames
+    fn_corrs = ["corr_eta_TP0.npz", "corr_eta_rm_TP0.npz"]
+    fn_fits = ["fit_eta_TP0.npz", "fit_eta_rm_TP0.npz"]
+    # use cosh for calculating eff mass
+    cosh_mass = False
+    # plot file
+    fname = os.path.join(plotfolder, "eta_meff.pdf")
+    plotter = ana.LatticePlot(fname)
+    # plot vars
+    a = 0.25
+    mk = ["or", "sb"]
+    # legend handles
+    label = ["$\eta$", "$\eta'$"]
+    lh = [matplotlib.lines.Line2D([],[],label=x,marker=mk[n][0],
+        color=mk[n][1]) for n,x in enumerate(label)]
+
+    def get_fit(fname):
+        try:
+            corr = ana.FitResult.read(fname)
+        except IOError:
+            return None
+        m, dm, dmsys, w = ana.sys_error(corr.data, corr.pval, 1, rel=False)
+        return [[m[0][0],m[1][0]], dm, dmsys]
+
+    def get_corr(fname):
+        try:
+            corr = ana.Correlators.read(fname)
+        except IOError:
+            return None
+        corr.mass(cosh_mass)
+        # return mean and std of the data with indices
+        # [time, correlator]
+        return mean_std(corr.data, np.ones_like(corr.data), axis=0)
+
+    def plot(corr, fit, plotter):
+        T, N = corr[0].shape
+        x = np.linspace(0, T, int(T), endpoint=False)+1.
+        for i in range(N):
+            # plot fit results including errorbands
+            tmp = [fit[0][i]-fit[1][i]-fit[2][i][0],
+                fit[0][i]+fit[1][i]+fit[2][i][1]]
+            plt.fill_between(x, tmp[0], tmp[1], color=mk[i][1], alpha=a)
+            tmp = [fit[0][i]-fit[1][i], fit[0][i]+fit[1][i]]
+            plt.fill_between(x, tmp[0], tmp[1], color=mk[i][1], alpha=a)
+            plt.axhline(y=fit[0][i], ls="-", c=mk[i][1])
+            # plot data
+            plt.errorbar(x, corr[0][:,i], yerr=corr[1][:,i], fmt=mk[i])
+        plotter.save()
+
+    # loop over lattices
+    laxis = ["$t$", "$aM(t)$"]
+    title = ["$%s,$ $\mu_{s}=%.4f$",
+        "$%s,$ $\mu_{s}=%.4f,$ $\mathrm{(rm)}$"]
+    for lat in lattices:
+        topdir = os.path.join(datafolder, lat)
+        sdirs, mu_s = parse_s_quarks(topdir)
+        for sm, mu in zip(sdirs, mu_s):
+            # iterate over w/ excited states and w/o exited states
+            for r in range(2):
+                # read eta correlator
+                _f = os.path.join(sm, fn_corrs[r])
+                c = get_corr(_f)
+                # read fit
+                _f = os.path.join(sm, fn_fits[r])
+                f = get_fit(_f)
+                if c is None or f is None:
+                    continue
+                # set plot parameters
+                plotter.set_title(title[r]%(lat,mu[0]),laxis)
+                plt.legend(lh, label, loc=1, numpoints=1, frameon=False)
+                plt.ylim([0., 1.])
+                # plot
+                plot(c, f, plotter)
+    del plotter
+    return
+
+def print_summary(int_scalar, int_kaon, lattices):
+    unit_scal = paper_unit_singlet()
+    unit_kaon = paper_unit_kaon()
+    kfse = FSE_kaon()
+
+    print("ensemble & unit eta_s & unit K & eta_s & K")
+    for lat, sc, ka in zip(lattices, int_scalar, int_kaon):
+        tmp = unit_scal[lat]
+        using = "$%.5f(%.0f)$" % (tmp[0], tmp[1]*1e5)
+        lfse = kfse[lat]
+        tmp = unit_kaon[lat]
+        dat = ana.draw_gauss_distributed(tmp[0], tmp[1], (1500,))/lfse
+        tmp = mean_std(dat, np.ones_like(dat))
+        ukaon = "$%.5f(%.0f)$" % (tmp[0], tmp[1]*1e5)
+        sing = "$%.5f(%.0f)$" % (sc[0], sc[1]*1e5) if sc[0] != np.nan else "$-$"
+        kaon = "$%.5f(%.0f)$" % (ka[0], ka[1]*1e5) if ka[0] != np.nan else "$-$"
+        s = " & ".join(["$%s$" % lat, using, ukaon, sing, kaon])
+        print(s + " \\\\")
+
+def print_der_kaon(der, match, lattices):
+    print("ensemble & $D_{eta}$ & $aM_{eta}^K$ \\\\")
+    for lat, de, ma in zip(lattices, der, match):
+        # derivative
+        _d = mean_std(de[0][:,0], de[1], axis=0)
+        kder = "$%.2f(%.0f)$" % (_d[0], _d[1]*1e2)
+        # eta mass
+        _m = mean_std(np.sqrt(ma.y), de[1])
+        mass = "$%.4f(%.0f)$" % (_m[0], _m[1]*1e4)
+        s = " & ".join(["$%s$" % lat, kder, mass])
+        print(s + " \\\\")
+
 def main():
+    #lattices = ["A100.24", "A100.24s"]
     #lattices = ["A40.24", "B85.24", "D45.32"]
-    lattices=["A30.32", "A40.20", "A40.24", "A40.32", "A60.24",
-              "A80.24", "A100.24", "B85.24", "D30.48", "D45.32"]
-    #lattices=["A30.32", "A40.20", "A40.24", "A40.32", "A60.24",
-    #          "A80.24", "A100.24", "B25.32", "B35.32", "B35.48",
-    #          "B55.32", "B85.24", "D15.48", "D30.48", "D45.32"]
-    datafolder = "./data/eta/"
-    plotfolder = "./plots/eta/"
-    cmp_scalar_path = "/hiskp2/jost/correlationfunctions/eta/falk_data/"
-    data_kaon = "/hiskp2/helmes/analysis/scattering/analysis_vault/k_charged_wo_outliers/data/"
+    lattices=["A40.24", "A40.32", "A60.24",
+              "A80.24", "A100.24", "A100.24s",
+              "B25.32", "B35.32", "B55.32", "B85.24",
+              "D30.48", "D45.32"]
+    datafolder = "/hiskp2/jost/eta_data/"
+    plotfolder = "/hiskp2/jost/eta_plot/"
+    pidatafolder = "./data/I2/"
+    #plotfolder = "./plots/eta/"
+    cmp_path = "/hiskp2/jost/correlationfunctions/eta/falk_data/"
+    #old kaon path:
+    #"/hiskp2/helmes/analysis/scattering/analysis_vault/k_charged_wo_outliers/data/"
+
+    # read data
+    # m_{\eta_s}^2(mu_s)
+    #scalars = read_singlet(datafolder, lattices)
+    #cmp_scalars = parse_singlet_masses(cmp_path, lattices)
+    # m_k^2(mu_s)
+    kaon = read_kaon(datafolder, lattices)
+    #cmp_kaon = parse_kaon_masses(cmp_path, lattices)
+    # [r_0*m_eta]((r_0*m_pi)^2)
+    #pieta, pietarm = read_pion_eta(pidatafolder, datafolder, int_kaon, lattices)
+    # m_eta^2(m_k^2)
+    keta, ketarm = read_k_eta(datafolder, kaon, lattices)
 
     # singlet masses squared
-    scalars = read_singlet(datafolder, lattices)
-    cmp_scalars = parse_singlet_masses(cmp_scalar_path, lattices)
-    fit_scal, fit_cmp, int_scal, int_cmp = interpolate_singlet(
-        scalars, cmp_scalars, lattices)
-    plot_singlet(plotfolder, scalars, cmp_scalars, fit_scal, fit_cmp,
-        int_scal, int_cmp, lattices)
+    #fit_scal, fit_cmp, int_scal, int_cmp = interpolate_singlet(
+    #    scalars, cmp_scalars, lattices)
+    #plot_singlet(plotfolder, scalars, cmp_scalars, fit_scal, fit_cmp,
+    #    int_scal, int_cmp, lattices)
 
     # kaon masses squared
-    scalars = read_kaon(data_kaon, lattices)
-    cmp_scalars = parse_kaon_masses(cmp_scalar_path, lattices)
-    fit_scal, fit_cmp, int_scal, int_cmp = interpolate_kaon(
-        scalars, cmp_scalars, lattices)
-    plot_kaon(plotfolder, scalars, cmp_scalars, fit_scal, fit_cmp,
-        int_scal, int_cmp, lattices)
+    #fit_kaon, fit_k_cmp, int_kaon, int_k_cmp = interpolate_kaon(
+    #    kaon, cmp_kaon, lattices)
+    #plot_kaon(plotfolder, kaon, cmp_kaon, fit_kaon, fit_k_cmp,
+    #    int_kaon, int_k_cmp, lattices)
+
+    # all in one plot
+    #plot_all(plotfolder, scalars, fit_scal, kaon, fit_kaon, lattices)
+    #print_summary(int_scal, int_kaon, lattices)
+
+    # plot scaled masses vs (r_0*m_pi)^2
+    #plot_scaled(plotfolder, pieta, pietarm, lattices)
+
+    # eta mass dependence
+    #der, derrm = interpolate_derivative(keta, ketarm, lattices)
+    #plot_der(plotfolder, keta, ketarm, der, derrm, lattices)
+
+    # GEVP effective masses
+    read_plot_masses(datafolder, plotfolder, lattices)
+
+    # match the different ensembles
+    kmatch, kmatchder = interpolate_eta_kaon(ketarm, lattices)
+    plot_der_kaon(plotfolder, ketarm, kmatchder, kmatch, lattices)
+    print_der_kaon(kmatchder, kmatch, lattices)
+
     return
 
 # make this script importable, according to the Google Python Style Guide
