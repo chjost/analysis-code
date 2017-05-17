@@ -641,11 +641,11 @@ class FitResult(object):
         # One correlator
         if ncorr == 1:
             singular.create_empty(shape1,shape2,1)
-            singular.set_ranges(np.array([[[10,15]]]),[[1,]])
+            franges, fshape = calculate_ranges((1,1),(nboot,24,ncorr))
+            singular.set_ranges(franges, fshape)
             # usually only one correlator is taken into account
             # copy data to singular
             if self.derived is False:
-                
                 for n in range(npars):
                     print("FitRes parameter is %d." % n)
                     res, res_std, res_sys, n_fits = self.error[n]
@@ -675,7 +675,8 @@ class FitResult(object):
         # several correlators
         else:
             singular.create_empty(shape1,shape2,ncorr)
-            singular.set_ranges(np.array([[[10,15]]]),[[1,]])
+            franges, fshape = calculate_ranges((1,1),(nboot,24,ncorr))
+            singular.set_ranges(franges, fshape)
             for n in range(ncorr):
                 # usually only one correlator is taken into account
                 # copy data to singular
@@ -932,31 +933,53 @@ class FitResult(object):
                                               tmppar))
                         print(tmpstring)
                 else:
-                    for j, r in enumerate(self.fit_ranges[i]):
-                        # iterate over additional fit intervals
-                        nintervals = self.data[i].shape[2:-1]
-                        ninteriter = [[x for x in range(n)] for n in nintervals]
-                        for item in itertools.product(*ninteriter):
-                            # create a string containing the fit parameters
-                            tmppar = ["par:"]
-                            for p in range(self.data[i].shape[1]):
-                                select = (slice(None), p) + item + (j,)
-                                tmppar.append("%e" % (self.data[i][select])[0])
-                            # Relative error for tmpstring
-                            rel_err = np.std(self.data[i][select])/self.data[i][select][0] 
-                            select = (slice(None),) + item + (j,)
-                            tmppar = " ".join(tmppar)
-                            select = (0,) + item + (j,)
-                            tmpstring = " ".join(("%d: range %2d:%2d" % (j, r[0],r[1]),
-                                                  "add ranges %s" % str(item),
-                                                  "chi^2/dof %e" % 
-                                                  (self.chi2[i][select]/(r[1]-r[0]-self.data[i].shape[1])),
-                                                  "pval %5f" % (self.pval[i][select]),
-                                                  "rel. err: %e" % rel_err,
-                                                  "p-val*rel.err: %e" 
-                                                  %(rel_err*self.pval[i][select]),
-                                                  tmppar))
-                            print(tmpstring)
+                    #for j, r in enumerate(self.fit_ranges[i]):
+                    for idc, rng in product_with_indices(0,[self.fit_ranges]):
+                        # create a string containing the fit parameters
+                        tmppar = ["par:"]
+                        for p in range(self.data[i].shape[1]):
+                            select = (slice(None), p) + tuple(idc)
+                            tmppar.append("%e" % (self.data[i][select])[0])
+                        # Relative error for tmpstring
+                        rel_err = np.std(self.data[i][select])/self.data[i][select][0] 
+                        select = (slice(None),) + tuple(idc)
+                        tmppar = " ".join(tmppar)
+                        select = (0,) + tuple(idc)
+                        tmpstring = " ".join(("%r: range: %r" % (idc, rng),
+                                              "add ranges %s" % str(idc),
+                                              "chi^2/dof %e" % 
+                                              (self.chi2[i][select]/(rng[0]-rng[1]-self.data[i].shape[1])),
+                                              "pval %5f" % (self.pval[i][select]),
+                                              "rel. err: %e" % rel_err,
+                                              "p-val*rel.err: %e" 
+                                              %(rel_err*self.pval[i][select]),
+                                              tmppar))
+                        print(tmpstring)
+                    #for j, r in enumerate(np.nditer(self.fit_ranges[i])):
+                    #    # iterate over additional fit intervals
+                    #    nintervals = self.data[i].shape[2:-1]
+                    #    ninteriter = [[x for x in range(n)] for n in nintervals]
+                    #    for item in itertools.product(*ninteriter):
+                    #        # create a string containing the fit parameters
+                    #        tmppar = ["par:"]
+                    #        for p in range(self.data[i].shape[1]):
+                    #            select = (slice(None), p) + item + (j,)
+                    #            tmppar.append("%e" % (self.data[i][select])[0])
+                    #        # Relative error for tmpstring
+                    #        rel_err = np.std(self.data[i][select])/self.data[i][select][0] 
+                    #        select = (slice(None),) + item + (j,)
+                    #        tmppar = " ".join(tmppar)
+                    #        select = (0,) + item + (j,)
+                    #        tmpstring = " ".join(("%d: range %2d:%2d" % (j, r[0],r[1]),
+                    #                              "add ranges %s" % str(item),
+                    #                              "chi^2/dof %e" % 
+                    #                              (self.chi2[i][select]/(r[1]-r[0]-self.data[i].shape[1])),
+                    #                              "pval %5f" % (self.pval[i][select]),
+                    #                              "rel. err: %e" % rel_err,
+                    #                              "p-val*rel.err: %e" 
+                    #                              %(rel_err*self.pval[i][select]),
+                    #                              tmppar))
+                    #        print(tmpstring)
 
     def data_for_plot(self, par=0, new=False):
         """Prints the errors etc of the data."""
@@ -1677,47 +1700,41 @@ class FitResult(object):
         nboot = fitres[0].data[corr].shape[0]
         npars = len(fitres)
         # calculate the number of fitranges
-        nbranges = 1
-        for f in fitres:
-          nbranges *=f.data[0].shape[2]
-        print("number of fitranges is %d" % nbranges)
-        shape1 = (nboot,npars,nbranges)
-        shape2 = (nboot,nbranges)
+        _ranges, _shape = combine_ranges((self.fit_ranges,res1.fit_ranges),
+                                        (self.fit_ranges_shape,res1.fit_ranges_shape))
+        shape1 = (nboot,npars)+_shape[1:-1]
+        shape2 = (nboot,)+_shape[1:-1]
         ncorr=1
         # Initialize an empty fitresult
         _comb = FitResult("combined",False)
         _comb.create_empty(shape1,shape2,ncorr)
-        print(self.fit_ranges[corr])
-        print(res1.fit_ranges[corr])
-        #_ranges = [self.fit_ranges[corr],res1.fit_ranges[corr]]
-        ## determine shape of new fitrange array
-        #_comb_ranges_shape = [self.fit_ranges_shape[corr] + res1.fit_ranges_shape[corr]]
-        #_comb_ranges_shape[0] += (len(_comb_ranges_shape[0])*2,)
-        #_comb_ranges = [np.zeros(_comb_ranges_shape[0]),]
-        #print(_comb_ranges_shape)
-        #for idc, rng in product_with_indices(*_ranges):
-        #  _comb_ranges[0][idc] = np.concatenate(rng)
-        #print(_comb_ranges_shape)
-        #_comb.set_ranges(_comb_ranges,_comb_ranges_shape)
-        _ranges = [self.fit_ranges,res1.fit_ranges]
-        _shape = [self.fit_ranges_shape,res1.fit_ranges_shape]
-        _comb.fit_ranges, _comb.fit_ranges_shape = combine_ranges(_ranges,_shape) 
+        _comb.set_ranges(_ranges,_shape)
+        # To fill the combination we need the individual fit range indices
+        #TODO: Cheapest solution, does not scale
+        for fr1 in range(fitres[0].fit_ranges_shape[1]):
+            for fr2 in range(fitres[1].fit_ranges_shape[1]):
+                _comb.data[0][:,0,fr1,fr2] = fitres[0].data[0][:,par,fr1]
+                _comb.data[0][:,1,fr1,fr2] = fitres[1].data[0][:,par,fr2]
+                pval = fitres[0].pval[0][:,fr1] * fitres[1].pval[0][:,fr2]
+            _comb.pval[corr][:,fr1,fr2] = pval
+        _comb.calc_error()
+        return _comb
+
         # Fill the fitresult
         # Loop o'er fitresult list
         # With itertools get product of all fitrange index combinations
-        # a list of 
-        friter = [[r for r in range(f.data[corr].shape[-1])] for f in fitres]
-        for i,item in enumerate(itertools.product(*friter)):
-            pval = np.ones_like(_comb.pval[corr][:,0])
-            # loop over fitrange combination j is fitres entry, r is
-            # fitrange index
-            for j,r in enumerate(item):
-                _comb.data[0][:,j,i] = fitres[j].data[corr][:,par,r]
-                pval *= fitres[j].pval[corr][:,r]
-            _comb.pval[corr][:,i] = pval
-        _comb.calc_error()
+        # a list of
+        #friter = [[r for r in range(f.data[corr].shape[-1])] for f in fitres]
+        #for i,item in enumerate(itertools.product(*friter)):
+        #    pval = np.ones_like(_comb.pval[corr][:,0])
+        #    # loop over fitrange combination j is fitres entry, r is
+        #    # fitrange index
+        #    for j,r in enumerate(item):
+        #        _comb.data[0][:,j,i] = fitres[j].data[corr][:,par,r]
+        #        pval *= fitres[j].pval[corr][:,r]
+        #    _comb.pval[corr][:,i] = pval
+        #_comb.calc_error()
     
-        return _comb
 
     def reduced_mass(self,mass, par=1):
         """Calculate reduced mass mu = m1*m2/(m1+m2) for different particles

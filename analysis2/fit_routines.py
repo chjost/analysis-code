@@ -347,7 +347,6 @@ def combine_ranges(fr_list, fr_shape):
     The numpy arrays get combined to a new list of fitrange arrays over the number of correlators. ncorr needs to be the same for every entry of fr_list
     """
     # check inputs
-    print(fr_list,fr_shape)
     # intialize lists
     _fr_comb = []
     _fr_shape = []
