@@ -260,6 +260,71 @@ def read_data(datafolder, lattices):
         cmp_eta.append([_meta[lat], _metap[lat]])
     return data, datarm, cmp_eta
 
+def read_data_singlet(datafolder, lattices):
+    """Print a summary of the lattices given.
+
+    Args:
+        datafolder: where the raw data is stored
+        lattices: list of lattices to work on
+    """
+    verbose=False
+    # file name of interest
+    fn_fit = "fit_eta_conn_TP0.npz"
+    # parameter of interest
+    pc = 1
+
+    data = []
+
+    def get_data(corr):
+        corr.calc_error()
+        res = []
+        res.append([corr.error[pc][0][0][0], corr.error[pc][1][0],
+            corr.error[pc][2][0]])
+        res.append([corr.error[pc][0][1][0], corr.error[pc][1][1],
+            corr.error[pc][2][1]])
+        return res
+
+    for lat in lattices:
+        print("read data for %s" % lat)
+
+        # get strange quark masses
+        topdir = os.path.join(datafolder, lat)
+        strange_masses = glob.glob(os.path.join(topdir, "strange_*"))
+        strange_masses = sorted(strange_masses, key=lambda x: os.path.basename(x).split("_")[1])
+        sm = [int(os.path.basename(s).split("_")[1]) for s in strange_masses]
+        tmp_mus = [float(x)*1e-5 for x in sm]
+        # prepare lists for all data
+        meta = [[], []]
+        dmeta = [[], []]
+        dsysmeta = [[], []]
+
+        # read data
+        for sdir in strange_masses:
+            # first try data without excited state removal
+            try:
+                corr = ana.FitResult.read(os.path.join(sdir, fn_fit))
+            except IOError:
+                print("file %s not available" % os.path.join(sdir, fn_fit) )
+                corr = None
+            if corr is not None:
+                res = get_data(corr)
+                for i in range(2):
+                    meta[i].append(res[i][0])
+                    dmeta[i].append(res[i][1])
+                    dsysmeta[i].append(res[i][2])
+            else:
+                for i in range(2):
+                    meta[i].append(np.nan)
+                    dmeta[i].append(np.nan)
+                    #dsysmeta[i].append(None)
+            # try data with excited state removal
+        # convert data to datapoints and append
+        tmp1 = []
+        for i in range(2):
+            tmp1.append(dp(tmp_mus, meta[i], dmeta[i], dysys=dsysmeta[i]))
+        data.append(tmp1)
+    return data
+
 def print_summary(eta, lattices):
     """Print data set to screen"""
     particles = ["$aM_{\eta}^{%s}$", "$aM_{\eta'}^{%s}$"]
@@ -283,49 +348,37 @@ def print_summary(eta, lattices):
             print("\midrule")
         print("") # clear line between different particles
 
-def plot_dependence(plotdir, eta, lattices):
-    markers = ["or", "sb"]
-    label = ["$\eta$", "$\eta'$"]
-    markers_cmp = ["vg", "^c"]
-    label_cmp = ["$\eta$, cmp", "$\eta'$, cmp"]
-    fname = os.path.join(plotdir, "eta_pisq.pdf")
-    plotter = ana.LatticePlot(fname)
-
-    for lat, d, drm, c in zip(lattices, eta, etarm, cmp_eta):
-        # plot eta data without ex removed
-        title = ["%s data w/ excited states" % lat, "$\mu_s$", "M"]
-        plotter.set_title(title[0], title[1:])
-        for i in range(2):
-            x = d[i].x
-            y = d[i].y
-            dy = d[i].dy
-            plt.errorbar(x, y, yerr=dy, label=label[i], fmt=markers[i])
-            x = c[i].x
-            y = c[i].y
-            dy = c[i].dy
-            plt.errorbar(x, y, yerr=dy, label=label_cmp[i], fmt=markers_cmp[i])
-        plt.legend(loc=0)
-        plt.grid()
-        plotter.save()
-        title = ["%s data w/o excited states" % lat, "$\mu_s$", "M"]
-        plotter.set_title(title[0], title[1:])
-        for i in range(2):
-            x = drm[i].x
-            y = drm[i].y
-            dy = drm[i].dy
-            plt.errorbar(x, y, yerr=dy, label=label[i], fmt=markers[i])
-            x = c[i].x
-            y = c[i].y
-            dy = c[i].dy
-            plt.errorbar(x, y, yerr=dy, label=label_cmp[i], fmt=markers_cmp[i])
-        plt.legend(loc=0)
-        plt.grid()
-        plotter.save()
-    del plotter
+def print_summary_singlet(eta, lattices):
+    """Print data set to screen"""
+    part = "$aM_{\eta_s}^{%s}$"
+    tmpstr = ["ensembles", "$aM_{\eta_\ell}$"] +\
+        [part % x for x in ["l", "m", "h"]]
+    tmpstr = " & ".join(tmpstr)
+    print(tmpstr + " \\\\")
+    for lat, d in zip(lattices, eta):
+        # print to screen
+        try:
+            data = d[0].ytolatex()
+        except:
+            print("ensemble %s, light" % (lat))
+            raise
+        tmpstr = ["$%s$" % lat] + [data[0]]
+        try:
+            data = d[1].ytolatex()
+        except:
+            print("ensemble %s, strange" % (lat))
+            raise
+        tmpstr = tmpstr + data
+        # fill with - if less than 4 data points
+        for j in range(5-len(tmpstr)):
+            tmpstr.append("$--$")
+        tmpstr = " & ".join(tmpstr)
+        print(tmpstr + " \\\\")
+        print("\midrule")
 
 def main():
-    lattices = ["A40.24"]
-    lattices=["A30.32", "A40.20", "A40.24", "A40.32", "A60.24",
+    #lattices = ["A40.24"]
+    lattices=["A30.32", "A40.24", "A40.32", "A60.24",
               "A80.24", "A100.24", "A100.24s",
               "B25.32", "B35.32", "B55.32", "B85.24",
               "D30.48", "D45.32"]
@@ -341,7 +394,10 @@ def main():
     print_summary(eta, lattices)
     print("\n\nwithout excited states")
     print_summary(etarm, lattices)
-    #plot_dependence(plotfolder, eta, lattices)
+
+    # singlet masses
+    etas = read_data_singlet(datafolder, lattices)
+    print_summary_singlet(etas, lattices)
     return
 
 # make this script importable, according to the Google Python Style Guide

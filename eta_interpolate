@@ -182,12 +182,43 @@ def paper_unit_kaon():
             pass
     return p_am
 
+def paper_unit_eta(par=0):
+    """The values for unitary, strange, pseudoscalar mesons;
+    arxiv:1501.02645, wiki, and Konstantin's analysis"""
+    p_am = {}
+    topdir = "/hiskp2/ottnad/data/[ABD]*/"
+    ensemble = sorted(glob.glob(topdir))
+    filename = "analyse/eta_trick/L_2x2.blocking.tshift0.Z_M1.masses.cosh.state.%d.fit.original_data"%par
+    for e in ensemble:
+        fname = os.path.join(e, filename)
+        try:
+            tmp = np.loadtxt(fname)
+            data = ana.draw_gauss_distributed(tmp[0], tmp[1], shape=(1500,))
+            lat = os.path.basename(e[:-1]).split("_")[0]
+            if lat == "D45.32":
+                continue
+            elif lat == "D45.32sc":
+                lat = "D45.32"
+            p_am.update({lat: data})
+        except IOError:
+            pass
+    return p_am
+
 def paper_r0():
     """Values for the chirally extrapolated Sommer parameter r_0"""
     val = [5.31, 5.77, 7.60]
     dval = [0.08, 0.06, 0.08]
     tmp = [ana.draw_gauss_distributed(val[i], dval[i], shape=(1500,)) for i in range(3)]
     return {"A": tmp[0], "B": tmp[1], "D": tmp[2]}
+
+def phys_kaon():
+    """from the PDG, divided by """
+    hbarc = 197.327
+    mphys = 494.2
+    dmphys = 0.3
+    tmp = ana.draw_gauss_distributed(mphys, dmphys, shape=(1500,))
+    r0 = paper_r0()
+    return {key: val*tmp/hbarc for (key, val) in r0}
 
 # parse Falks data
 
@@ -598,6 +629,46 @@ def interpolate_eta_kaon(data, lattices):
     # calculate weighted average
     return result, der
 
+def extrapolate_cont(data, lattices, par=0):
+    sets = [["A60.24", "B55.32", "D45.32"], ["A40.24", "B35.32", "D30.48"]]
+    result = []
+    fits = []
+    etau = paper_unit_eta(par)
+    r0 = paper_r0()
+    # loop over sets
+    for s in sets:
+        # check if needed ensembles are present
+        if (not s[0] in lattices) or (not s[1] in lattices) or\
+            (not s[2] in lattices):
+            continue
+        x, y = [], []
+        for _s in s:
+            sind = lattices.index(_s)
+            x.append(1/(r0[_s[0]]**2))
+            y.append(data[sind].y[par] - r0[_s[0]]*etau[_s])
+        result.append(dp(x, y))
+        tmp, tmppvals = result[-1].lin_fit(correlated=True)
+        fits.append(dp(np.zeros_like(tmp[:,1]), tmp[:,1]))
+    if not result:
+        return None, None
+    else:
+      return result, fits
+
+def dependence_light(data, lattices, par=0):
+    result = []
+    etau = paper_unit_eta(par)
+    r0 = paper_r0()
+    # loop over sets
+    for dat, lat in zip(data, lattices):
+        x, y = [], []
+        x.append(dat.x[par])
+        y.append(dat.y[par] - r0[lat[0]]*etau[lat])
+        result.append(dp(x, y))
+    if not result:
+        return None
+    else:
+      return result
+
 def plot_singlet(plotdir, data, datacmp, fitres, fitres_cmp,
       intres, intres_cmp, lattices):
     print("plotting singlet data")
@@ -911,6 +982,99 @@ def plot_der_kaon(plotdir, data, der, match, lattices):
 
     del plotter
 
+def plot_extra_cont(plotdir, data, fits, par=0):
+    if data is None:
+        return
+    print("plotting continuum extrapolation")
+    markers = ["or", "sk"]
+    markers_fit = ["-r", "-k"]
+    if par == 0:
+        fname = os.path.join(plotdir, "dmeta_ar0sq_extra_cont.pdf")
+    else:
+        fname = os.path.join(plotdir, "dmetap_ar0sq_extra_cont.pdf")
+    plotter = ana.LatticePlot(fname)
+    alab = ["$(a/r_0)^2$", "$r_0 \Delta M_{\eta}$"]
+    if par != 0:
+        alab[1] = "$r_0 \Delta M_{\eta}$"
+
+    def plot(_data, plotter, mk, ax=1):
+        x, dx = mean_std(_data.x, np.ones_like(_data.x), axis=ax)
+        y, dy = mean_std(_data.y, np.ones_like(_data.y), axis=ax)
+        plt.errorbar(x, y, xerr=dx, yerr=dy, fmt=mk)
+
+    def pfit(_data, plotter, mkf):
+        # plot fit
+        _x = [_data.x.min(), _data.x.max()]
+        plotter.plot_func(lin, _data.res, _x, label="", fmt=mkf,
+            col=mkf[-1], ploterror=True)
+
+    # plot data
+    for dat, f in zip(data, fits):
+        plotter.set_title("", alab)
+        xmax = dat.x.max()
+        plt.xlim([-0.1*xmax, 1.1*xmax])
+        plt.ylim([-0.3, 0.3])
+        # plot data and fit
+        plot(dat, plotter, markers[0])
+        pfit(dat, plotter, markers_fit[0])
+        # plot interpolated value
+        plot(f, plotter, markers[1], ax=None)
+        # plot line at y=0
+        plt.axhline(y=0, ls="-", c="k")
+        plotter.save()
+
+    del plotter
+
+def plot_light_dependence(plotdir, data, lattices, par=0):
+    if data is None:
+        return
+    print("plotting light dependence")
+    markers = {"A":"or", "B":"sb", "D":"vg"}
+    if par == 0:
+        fname = os.path.join(plotdir, "dmeta_r0pisq_light.pdf")
+    else:
+        fname = os.path.join(plotdir, "dmetap_r0pisq_light.pdf")
+    plotter = ana.LatticePlot(fname)
+    alab = ["$(r_0M_\pi)^2$", "$r_0 \Delta M_{\eta}$"]
+    if par != 0:
+        alab[1] = "$r_0 \Delta M_{\eta}$"
+
+    label = ["$A$ $\mathrm{ensemble}$", "$B$ $\mathrm{ensemble}$",
+        "$D$ $\mathrm{ensemble}$"]
+    # legend handles
+    lh = [matplotlib.lines.Line2D([],[],label=x,marker=markers[x[1]][0],
+        color=markers[x[1]][1]) for x in label]
+
+    def plot(_data, plotter, mk, ax=1, empty=False):
+        x, dx = mean_std(_data.x, np.ones_like(_data.x), axis=ax)
+        y, dy = mean_std(_data.y, np.ones_like(_data.y), axis=ax)
+        #print(x, dx)
+        #print(y, dy)
+        if empty:
+            plt.errorbar(x, y, xerr=dx, yerr=dy, fmt=mk, mfc="k")
+        else:
+            plt.errorbar(x, y, xerr=dx, yerr=dy, fmt=mk)
+
+    # plot data
+    plotter.set_title("", alab)
+    plt.xlim([0., 1.5])
+    if par == 0:
+        plt.ylim([-0.05, 0.4])
+    else:
+        plt.ylim([-0.8, 0.4])
+    for lat, dat in zip(lattices, data):
+        # plot data and fit
+        if lat == "A100.24s":
+            empty = True
+        else:
+            empty = False
+        plot(dat, plotter, markers[lat[0]])
+    # plot line at y=0
+    plt.axhline(y=0, ls="-", c="k")
+    plt.legend(lh, label, loc=1, numpoints=1, frameon=False)
+    plotter.save()
+    del plotter
+
 def read_plot_masses(datafolder, plotfolder, lattices):
     print("read eta effective masses")
     # filenames
@@ -1021,9 +1185,9 @@ def print_der_kaon(der, match, lattices):
         print(s + " \\\\")
 
 def main():
-    #lattices = ["A100.24", "A100.24s"]
-    #lattices = ["A40.24", "B85.24", "D45.32"]
-    lattices=["A40.24", "A40.32", "A60.24",
+    #lattices = ["A40.24", "B85.24"]
+    #lattices = ["A40.24", "A60.24", "B35.32", "B55.32", "D30.48", "D45.32"]
+    lattices=["A30.32", "A40.24", "A40.32", "A60.24",
               "A80.24", "A100.24", "A100.24s",
               "B25.32", "B35.32", "B55.32", "B85.24",
               "D30.48", "D45.32"]
@@ -1035,48 +1199,60 @@ def main():
     #old kaon path:
     #"/hiskp2/helmes/analysis/scattering/analysis_vault/k_charged_wo_outliers/data/"
 
-    # read data
+    #  singlet interpolation
     # m_{\eta_s}^2(mu_s)
     #scalars = read_singlet(datafolder, lattices)
     #cmp_scalars = parse_singlet_masses(cmp_path, lattices)
-    # m_k^2(mu_s)
-    kaon = read_kaon(datafolder, lattices)
-    #cmp_kaon = parse_kaon_masses(cmp_path, lattices)
-    # [r_0*m_eta]((r_0*m_pi)^2)
-    #pieta, pietarm = read_pion_eta(pidatafolder, datafolder, int_kaon, lattices)
-    # m_eta^2(m_k^2)
-    keta, ketarm = read_k_eta(datafolder, kaon, lattices)
-
-    # singlet masses squared
     #fit_scal, fit_cmp, int_scal, int_cmp = interpolate_singlet(
     #    scalars, cmp_scalars, lattices)
     #plot_singlet(plotfolder, scalars, cmp_scalars, fit_scal, fit_cmp,
     #    int_scal, int_cmp, lattices)
 
-    # kaon masses squared
+    # kaon interpolation
+    # m_k^2(mu_s)
+    kaon = read_kaon(datafolder, lattices)
+    #cmp_kaon = parse_kaon_masses(cmp_path, lattices)
     #fit_kaon, fit_k_cmp, int_kaon, int_k_cmp = interpolate_kaon(
     #    kaon, cmp_kaon, lattices)
     #plot_kaon(plotfolder, kaon, cmp_kaon, fit_kaon, fit_k_cmp,
     #    int_kaon, int_k_cmp, lattices)
 
+    # plot scaled masses vs (r_0*m_pi)^2
+    # [r_0*m_eta]((r_0*m_pi)^2)
+    #pieta, pietarm = read_pion_eta(pidatafolder, datafolder, int_kaon, lattices)
+    #plot_scaled(plotfolder, pieta, pietarm, lattices)
+
+    # eta mass dependence
+    # m_eta^2(m_k^2)
+    keta, ketarm = read_k_eta(datafolder, kaon, lattices)
+    der, derrm = interpolate_derivative(keta, ketarm, lattices)
+    plot_der(plotfolder, keta, ketarm, der, derrm, lattices)
+
     # all in one plot
     #plot_all(plotfolder, scalars, fit_scal, kaon, fit_kaon, lattices)
     #print_summary(int_scal, int_kaon, lattices)
 
-    # plot scaled masses vs (r_0*m_pi)^2
-    #plot_scaled(plotfolder, pieta, pietarm, lattices)
-
-    # eta mass dependence
-    #der, derrm = interpolate_derivative(keta, ketarm, lattices)
-    #plot_der(plotfolder, keta, ketarm, der, derrm, lattices)
-
     # GEVP effective masses
-    read_plot_masses(datafolder, plotfolder, lattices)
+    #read_plot_masses(datafolder, plotfolder, lattices)
 
     # match the different ensembles
-    kmatch, kmatchder = interpolate_eta_kaon(ketarm, lattices)
-    plot_der_kaon(plotfolder, ketarm, kmatchder, kmatch, lattices)
-    print_der_kaon(kmatchder, kmatch, lattices)
+    #kmatch, kmatchder = interpolate_eta_kaon(ketarm, lattices)
+    #plot_der_kaon(plotfolder, ketarm, kmatchder, kmatch, lattices)
+    #print_der_kaon(kmatchder, kmatch, lattices)
+
+    # continuum limit
+    # eta
+    #cdata, cextra = extrapolate_cont(pietarm, lattices)
+    #plot_extra_cont(plotfolder, cdata, cextra)
+    # eta'
+    #cdatap, cextrap = extrapolate_cont(pietarm, lattices, par=1)
+    #plot_extra_cont(plotfolder, cdatap, cextrap, par=1)
+
+    # light quark mass dependence
+    #ldata = dependence_light(pietarm, lattices)
+    #plot_light_dependence(plotfolder, ldata, lattices)
+    #ldatap = dependence_light(pietarm, lattices, par=1)
+    #plot_light_dependence(plotfolder, ldatap, lattices, par=1)
 
     return
 
