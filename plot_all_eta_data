@@ -68,7 +68,7 @@ def plot1(fn, corrs, effm, plotter, markers, folders):
     plotter.save()
     plt.close(fig)
 
-def plot2(corrs1, corrs2, effm1, effm2, plotter, markers, folders):
+def plot2(corrs1, corrs2, effm1, effm2, plotter, markers, folders, title=""):
     # get length of x axis
     x = get_x(corrs1, corrs2)
     xm = get_x(effm1, effm2) + 1.
@@ -90,8 +90,27 @@ def plot2(corrs1, corrs2, effm1, effm2, plotter, markers, folders):
     subplot(ax, xm, effm2, folders, markers, axislabs=["t", ""], shift=0.15,
         legend=False, xticks=True, ylog=False, ylim=[0., 0.8])
 
+    fig.suptitle(title)
     plotter.save()
     plt.close(fig)
+
+def plot_eff_mass(effm1, effm2, plotter, title="", ylim=None):
+    if effm1[0] is "":
+        return
+    lab = ["$\eta$", "$\eta'$"]
+    mark = ["or", "sb"]
+    plotter.set_title(title, ["$t$", "$M_{\\mathrm{eff}}(t)$"])
+    xlen = np.max([effm1[0].shape[0], effm2[0].shape[0]])
+    x = np.linspace(0, xlen, xlen, endpoint=False)
+    plt.errorbar(x, effm1[0], yerr=effm1[1], fmt=mark[0], label=lab[0])
+    plt.errorbar(x, effm2[0], yerr=effm2[1], fmt=mark[1], label=lab[1])
+    #ax.grid(True)
+    #plt.legend(loc=1, numpoints=1, fontsize="small", framealpha=0.9)
+    plt.legend(loc=1)
+    plt.xlim([0.,xlen+1])
+    if ylim is not None:
+        plt.ylim(ylim)
+    plotter.save()
 
 def main():
     # lattice to work on
@@ -105,8 +124,8 @@ def main():
     L = int(L)
     # top dir in which the data resides
     topdir = "/hiskp2/jost/correlationfunctions/eta/data/"
-    finaldir = "/hiskp2/jost/code/analysis-code/data/eta/"
-    plotdir = "/hiskp2/jost/code/analysis-code/plots/eta/"
+    finaldir = "/hiskp2/jost/eta_data/"
+    plotdir = "/hiskp2/jost/eta_plot/"
     print("get files")
     # search for folders and files
     path = os.path.join(topdir, lat)
@@ -127,39 +146,39 @@ def main():
     markers = ["bo", "rs", "gD", "k^"]
     ppath = os.path.join(plotdir, lat, "eta_all_%s.pdf" % lat)
     plotter = ana.LatticePlot(ppath)
-    for fn in filenames:
-        shift=False
-        if fn.startswith("pi"):
-            shift = True  
-        if fn.startswith("disc"):
-            shift = True  
-        corrs = []
-        effm = []
-        for k, f in enumerate(files):
-            for d in f:
-                if d.endswith(fn):
-                    print("reading %s" % d)
-                    outfile = d.replace(".dat", ".npz")
-                    if os.path.isfile(outfile):
-                        corr = ana.Correlators.read(outfile)
-                    else:
-                        corr = ana.Correlators(d, matrix=False)
-                        corr.sym_and_boot(1500)
-                        corr.save(outfile)
-                    if shift:
-                        corr.shift(1, L=L)
-                    mean, std = ana.mean_std(corr.data)
-                    if mean[1] < 0:
-                        mean *= -1.
-                    corrs.append((mean[:,0], std[:,0]))
-                    corr.mass()
-                    mean, std = ana.mean_std(corr.data)
-                    effm.append((mean[:,0], std[:,0]))
-                    break
-            else:
-                corrs.append(("", ""))
-                effm.append(("", ""))
-        plot1(fn, corrs, effm, plotter, markers, folders)
+    #for fn in filenames:
+    #    shift=False
+    #    if fn.startswith("pi"):
+    #        shift = True  
+    #    if fn.startswith("disc"):
+    #        shift = True  
+    #    corrs = []
+    #    effm = []
+    #    for k, f in enumerate(files):
+    #        for d in f:
+    #            if d.endswith(fn):
+    #                print("reading %s" % d)
+    #                outfile = d.replace(".dat", ".npz")
+    #                if os.path.isfile(outfile):
+    #                    corr = ana.Correlators.read(outfile)
+    #                else:
+    #                    corr = ana.Correlators(d, matrix=False)
+    #                    corr.sym_and_boot(1500)
+    #                    corr.save(outfile)
+    #                if shift:
+    #                    corr.shift(1, L=L)
+    #                mean, std = ana.mean_std(corr.data)
+    #                if mean[1] < 0:
+    #                    mean *= -1.
+    #                corrs.append((mean[:,0], std[:,0]))
+    #                corr.mass()
+    #                mean, std = ana.mean_std(corr.data)
+    #                effm.append((mean[:,0], std[:,0]))
+    #                break
+    #        else:
+    #            corrs.append(("", ""))
+    #            effm.append(("", ""))
+    #    plot1(fn, corrs, effm, plotter, markers, folders)
 
     # check for excited state removed data
     path = os.path.join(finaldir, lat)
@@ -188,7 +207,7 @@ def main():
                 for k, f in enumerate(files):
                     for d in f:
                         if d.endswith(fn):
-                            print("printing %s" % d)
+                            print("reading %s" % d)
                             corr = ana.Correlators.read(d)
                             mean, std = ana.mean_std(corr.data)
                             corrs1.append((mean[:,0], std[:,0]))
@@ -203,7 +222,52 @@ def main():
                         corrs2.append(("", ""))
                         effm1.append(("", ""))
                         effm2.append(("", ""))
-                plot2(corrs1, corrs2, effm1, effm2, plotter, markers, folders)
+                plot2(corrs1, corrs2, effm1, effm2, plotter, markers, folders,
+                    title="conn diagrams, w/o excited states")
+    # disconnected diagrams
+    path = os.path.join(finaldir, lat)
+    dirs = glob.glob(os.path.join(path, "strange_*"))
+    if dirs:
+        filestmp = [glob.glob(os.path.join(d, "disc_eta_TP?.npz")) for d in dirs]
+        files = []
+        for ft in filestmp:
+            if len(ft) > 0:
+                files.append(ft)
+        if len(files) > 0:
+            # get all the folder names
+            folders = [os.path.basename(x) for x in dirs]
+            # get all the file names
+            filenames = [os.path.basename(x) for x in files[0]]
+            for f in files[1:]:
+                for d in f:
+                    dprime = os.path.basename(d)
+                    if dprime not in filenames:
+                        filenames.append(dprime)
+            filenames = sorted(filenames)
+            # get data
+            corrs1, corrs2 = [], []
+            effm1, effm2 = [], []
+            for fn in filenames:
+                for k, f in enumerate(files):
+                    for d in f:
+                        if d.endswith(fn):
+                            print("reading %s" % d)
+                            corr = ana.Correlators.read(d)
+                            mean, std = ana.mean_std(-corr.data)
+                            corrs1.append((mean[:,0,0], std[:,0,0]))
+                            corrs2.append((mean[:,1,1], std[:,1,1]))
+                            corr.mass()
+                            mean, std = ana.mean_std(corr.data)
+                            effm1.append((mean[:,0,0], std[:,0,0]))
+                            effm2.append((mean[:,1,1], std[:,1,1]))
+                            break
+                    else:
+                        corrs1.append(("", ""))
+                        corrs2.append(("", ""))
+                        effm1.append(("", ""))
+                        effm2.append(("", ""))
+                plot2(corrs1, corrs2, effm1, effm2, plotter, markers, folders,
+                    title="conn diagrams, w/o excited states")
 
     # correlators on the diagonal before GEVP
     if dirs:
@@ -230,7 +294,7 @@ def main():
                 for k, f in enumerate(files):
                     for d in f:
                         if d.endswith(fn):
-                            print("printing %s" % d)
+                            print("reading %s" % d)
                             corr = ana.Correlators.read(d)
                             mean, std = ana.mean_std(corr.data)
                             corrs1.append((mean[:,0,0], std[:,0,0]))
@@ -245,7 +309,8 @@ def main():
                         corrs2.append(("", ""))
                         effm1.append(("", ""))
                         effm2.append(("", ""))
-                plot2(corrs1, corrs2, effm1, effm2, plotter, markers, folders)
+                plot2(corrs1, corrs2, effm1, effm2, plotter, markers, folders,
+                    title="diagonals before GEVP, w/o excited states")
 
     # check for data after GEVP
     if dirs:
@@ -272,7 +337,7 @@ def main():
                 for k, f in enumerate(files):
                     for d in f:
                         if d.endswith(fn):
-                            print("printing %s" % d)
+                            print("reading %s" % d)
                             corr = ana.Correlators.read(d)
                             mean, std = ana.mean_std(corr.data)
                             corrs1.append((mean[:,0], std[:,0]))
@@ -287,7 +352,11 @@ def main():
                         corrs2.append(("", ""))
                         effm1.append(("", ""))
                         effm2.append(("", ""))
-                plot2(corrs1, corrs2, effm1, effm2, plotter, markers, folders)
+                plot2(corrs1, corrs2, effm1, effm2, plotter, markers, folders,
+                    title="diagonals after GEVP, w/ excited states")
+                for i in range(len(files)):
+                    # effm1, effm2, plotter, title="", ylim=None
+                    plot_eff_mass(effm1[i], effm2[i], plotter, ylim=[0., 0.8])
         filestmp = [glob.glob(os.path.join(d, "corr_eta_rm_TP?.npz")) for d in dirs]
         files = []
         for ft in filestmp:
@@ -311,7 +380,7 @@ def main():
                 for k, f in enumerate(files):
                     for d in f:
                         if d.endswith(fn):
-                            print("printing %s" % d)
+                            print("reading %s" % d)
                             corr = ana.Correlators.read(d)
                             mean, std = ana.mean_std(corr.data)
                             corrs1.append((mean[:,0], std[:,0]))
@@ -326,7 +395,11 @@ def main():
                         corrs2.append(("", ""))
                         effm1.append(("", ""))
                         effm2.append(("", ""))
-                plot2(corrs1, corrs2, effm1, effm2, plotter, markers, folders)
+                plot2(corrs1, corrs2, effm1, effm2, plotter, markers, folders,
+                    title="diagonals after GEVP, w/o excited states")
+                for i in range(len(files)):
+                    # effm1, effm2, plotter, title="", ylim=None
+                    plot_eff_mass(effm1[i], effm2[i], plotter, ylim=[0., 0.8])
     del plotter
 
 # make this script importable, according to the Google Python Style Guide

@@ -1211,16 +1211,16 @@ def main():
     # kaon interpolation
     # m_k^2(mu_s)
     kaon = read_kaon(datafolder, lattices)
-    #cmp_kaon = parse_kaon_masses(cmp_path, lattices)
-    #fit_kaon, fit_k_cmp, int_kaon, int_k_cmp = interpolate_kaon(
-    #    kaon, cmp_kaon, lattices)
+    cmp_kaon = parse_kaon_masses(cmp_path, lattices)
+    fit_kaon, fit_k_cmp, int_kaon, int_k_cmp = interpolate_kaon(
+        kaon, cmp_kaon, lattices)
     #plot_kaon(plotfolder, kaon, cmp_kaon, fit_kaon, fit_k_cmp,
     #    int_kaon, int_k_cmp, lattices)
 
     # plot scaled masses vs (r_0*m_pi)^2
     # [r_0*m_eta]((r_0*m_pi)^2)
-    #pieta, pietarm = read_pion_eta(pidatafolder, datafolder, int_kaon, lattices)
-    #plot_scaled(plotfolder, pieta, pietarm, lattices)
+    pieta, pietarm = read_pion_eta(pidatafolder, datafolder, int_kaon, lattices)
+    plot_scaled(plotfolder, pieta, pietarm, lattices)
 
     # eta mass dependence
     # m_eta^2(m_k^2)
