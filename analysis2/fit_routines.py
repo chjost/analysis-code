@@ -114,10 +114,11 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
         Use the full covariance matrix or just the errors.
     """
     dshape = corr.shape
-    ncorrs = [len(s) for s in fshape]
-    if not useall:
-        ncorrs[-2] = 1
-    if ncorrs[-1] != dshape[-1]:
+    #ncorrs = [len(s) for s in fshape]
+    ncorrs = fshape[0] 
+    #if not useall:
+    #    ncorrs[-2] = 1
+    if ncorrs != dshape[-1]:
         print(fshape)
         print(ncorrs)
         print(dshape)
@@ -131,20 +132,23 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
     if debug > 0:
         print("fitting the data")
     # iterate over the correlation functions
-    for item in loop_iterator(ncorrs):
-        if debug > 1:
-            print("fitting correlators %s" % str(item))
-        n = item[-1]
-        # iterate over the fit ranges
-        tmp = [fshape[i][x] for i,x in enumerate(item)]
-        for ritem in loop_iterator(tmp):
-            m = ritem[-1]
+    #for item in loop_iterator(ncorrs):
+    #    if debug > 1:
+    #        print("fitting correlators %s" % str(item))
+    #    n = item[-1]
+    #    # iterate over the fit ranges
+    #    tmp = [fshape[i][x] for i,x in enumerate(item)]
+    #    for ritem in loop_iterator(tmp):
+    for idc, rng in product_with_indices(0,[franges]):
+            m = idc[1:-1]
             if debug > 1:
-                print("fitting fit ranges %s" % str(ritem))
+              print("fitting fit ranges %s" % str(idc[1:-1]))
             # get fit interval
-            r = franges[n][m]
+            r = rng[0:2]
             # get old data
-            add_data = oldfit.get_data(item[:-1] + ritem[:-1]) 
+            print(idc[:-1])
+            add_data = oldfit.get_data(idc)
+            print(add_data.shape)
             # get only the wanted parameter if oldfitpar is given
             if oldfitpar is not None:
                 add_data = add_data[:,oldfitpar]
@@ -157,8 +161,11 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
                     add.shape = (-1, 1)
                 if add_data.ndim == 1:
                     add_data.shape = (-1, 1)
+                print(add.shape)
                 add_data = np.hstack((add_data, add))
             # do the fitting
+            # number of correlators:
+            n = idc[0]
             if isinstance(start[0], (tuple, list)):
                 res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
                     corr.data[:,r[0]:r[1]+1,item[-2],n], start[n],
@@ -167,7 +174,7 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
                 res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
                     corr.data[:,r[0]:r[1]+1,n], start,
                     add=add_data, correlated=correlated, debug=debug)
-            yield item + ritem, res, chi, pva
+            yield idc, res, chi, pva
 #TODO: This function needs better documentation, I do not know what to make out
 #of it (CH)
 def calculate_ranges(ranges, shape, oldshape=None, oldranges=None, dt_i=2, dt_f=2, dt=4, debug=0,
@@ -365,8 +372,10 @@ def combine_ranges(fr_list, fr_shape):
     for idc, rng in product_with_indices(0,[r for r in fr_list]):
         # do this for all correlators
         for n in range(_comb.shape[0]):
+            #build index tuple
+            tup = tuple([n,])+tuple(idc)
             # TODO: Still ugly, but otherwise slicing goes wrong
-            _comb[n][idc] = rng
+            _comb[tup] = rng
     _fr_comb = np.asarray(_comb)
     _fr_shape = _fr_comb.shape
     return _fr_comb, _fr_shape

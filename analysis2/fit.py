@@ -163,30 +163,35 @@ class LatticeFit(object):
             dshape = corr.shape
             oldranges, oldshape = oldfit.get_ranges()
             franges, fshape = calculate_ranges(ranges, dshape, oldshape,
-                    dt_i=self.dt_i, dt_f=self.dt_f, dt=self.dt,
-                    debug=self.debug, lintervals=lint)
+                                               oldranges, dt_i=self.dt_i,
+                                               dt_f=self.dt_f, dt=self.dt,
+                                               debug=self.debug,
+                                               lintervals=lint)
 
             # generate the shapes for the data
-            shapes_data = []
-            shapes_other = []
             # iterate over the correlation functions
             #print(fshape)
-            ncorr = [len(s) for s in fshape]
-            if not useall:
-                print(ncorr)
-                ncorr[-2] = 1
+            #ncorr = [len(s) for s in fshape]
+            #if not useall:
+            #    print(ncorr)
+            #    ncorr[-2] = 1
 
-            ncorriter = [[x for x in range(n)] for n in ncorr]
-            for item in itertools.product(*ncorriter):
-                # create the iterator over the fit ranges
-                tmp = [fshape[i][x] for i,x in enumerate(item)]
-                shapes_data.append((dshape[0], self.npar) + tuple(tmp))
-                shapes_other.append((dshape[0],) + tuple(tmp))
+            #ncorriter = [[x for x in range(n)] for n in ncorr]
+            #for item in itertools.product(*ncorriter):
+            #    # create the iterator over the fit ranges
+            #    tmp = [fshape[i][x] for i,x in enumerate(item)]
+            #    shapes_data.append((dshape[0], self.npar) + tuple(tmp))
+            #    shapes_other.append((dshape[0],) + tuple(tmp))
+            # at this point fshape[1:-1] should always be a tuple
+            ncorr = fshape[0]
+            shapes_data = (dshape[0], self.npar) + fshape[1:-1]
+            shapes_other =(dshape[0],) + fshape[1:-1]
             # prepare storage
             fitres = FitResult(corrid)
             fitres.set_ranges(franges, fshape)
-            print(franges)
             fitres.create_empty(shapes_data, shapes_other, ncorr)
+            print("fitres shape (1500,npars,fr1,fr2):")
+            print(fitres.data[0].shape)
             del shapes_data, shapes_other
 
             if start is None:
@@ -356,14 +361,21 @@ class FitResult(object):
         if self.data is None:
             raise RuntimeError("No data stored, add data first")
         if isinstance(self.corr_num, int):
-            if len(index) != 2:
-                raise ValueError("Index has wrong length")
-            lindex = self._get_index(index[0])
-            return self.data[lindex][:,:,index[1]]
+            # not valid anymore, can have several fitrange indices
+            #if len(index) != 2:
+            #    raise ValueError("Index has wrong length")
+            # Not sure if necessary, try without
+            #lindex = self._get_index(index[0])
+            lindex = index[0]
+            tup = [slice(None), slice(None)] + index[1:]
+            return self.data[lindex][tup]
         else:
             if len(index) != 2*len(self.corr_num):
                 raise ValueError("Index has wrong length")
-            lindex = self._get_index(index[:len(self.corr_num)])
+
+            # Not sure if necessary, try without
+            #lindex = self._get_index(index[:len(self.corr_num)])
+            lindex = index[0]
             rindex = [slice(None), slice(None)] + [x for x in index[len(self.corr_num):]]
             return self.data[lindex][rindex]
 
@@ -445,20 +457,27 @@ class FitResult(object):
             raise RuntimeError("No place to store data, call create_empty first")
         #print(data.shape)
         if isinstance(self.corr_num, int):
-            if len(index) != 2:
-                raise ValueError("Index has wrong length")
+            #if len(index) != 2:
+            #    raise ValueError("Index has wrong length")
             lindex = self._get_index(index[0])
             if self.derived:
-                self.data[lindex][:, index[1]] = data
+                tup = [slice(None)]+index
+                self.data[lindex][tup] = data
             else:
                 print(self.data[lindex].shape)
                 print(index)  
-                self.data[lindex][:,:,index[1]] = data
-            self.chi2[lindex][:,index[1]] = chi2
-            self.pval[lindex][:,index[1]] = pval
+                tup_data = [slice(None),slice(None)]+index
+                tup = [slice(None)]+index
+                print("data has shape:")
+                print(data.shape)
+                print("index to place at:")
+                print(self.data[lindex][tup_data].shape)
+                self.data[lindex][tup_data] = data
+            self.chi2[lindex][tup] = chi2
+            self.pval[lindex][tup] = pval
         else:
-            if len(index) != 2*len(self.corr_num):
-                raise ValueError("Index has wrong length")
+            #if len(index) != 2*len(self.corr_num):
+            #    raise ValueError("Index has wrong length")
             lindex = self._get_index(index[:len(self.corr_num)])
             if self.derived:
                 rindex = [slice(None)] + [x for x in index[len(self.corr_num):]]
@@ -546,6 +565,8 @@ class FitResult(object):
         except TypeError:
             pass
         for n, la in enumerate(self.label):
+            print("_get_index for-loop:")
+            print(np.asarray(index),la)
             if np.array_equal(np.asarray(index), la):
                 return n
         else:

@@ -26,7 +26,9 @@ def analyse_two_point_corr(dnames, fnames, ens, func_id, fr_min, fr_int, add,
 
     Returns
     -------
-    fit_res : FitResult object, details: analysis2/fit.py
+    corr : Correlator object, symmetrised and bootstrapped,
+           details: analysis2/Correlators.py
+    fitres : FitResult object, details: analysis2/fit.py
     """
     #################### Prepare correlator #################### 
     print("read single particle corrs")
@@ -67,5 +69,5 @@ def analyse_two_point_corr(dnames, fnames, ens, func_id, fr_min, fr_int, add,
                     fitfunc = fit_single, add=add)
         del plotter
         
-    return fitres
+    return corr, fitres
 
