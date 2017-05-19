@@ -955,31 +955,6 @@ class FitResult(object):
                                               %(rel_err*self.pval[i][select]),
                                               tmppar))
                         print(tmpstring)
-                    #for j, r in enumerate(np.nditer(self.fit_ranges[i])):
-                    #    # iterate over additional fit intervals
-                    #    nintervals = self.data[i].shape[2:-1]
-                    #    ninteriter = [[x for x in range(n)] for n in nintervals]
-                    #    for item in itertools.product(*ninteriter):
-                    #        # create a string containing the fit parameters
-                    #        tmppar = ["par:"]
-                    #        for p in range(self.data[i].shape[1]):
-                    #            select = (slice(None), p) + item + (j,)
-                    #            tmppar.append("%e" % (self.data[i][select])[0])
-                    #        # Relative error for tmpstring
-                    #        rel_err = np.std(self.data[i][select])/self.data[i][select][0] 
-                    #        select = (slice(None),) + item + (j,)
-                    #        tmppar = " ".join(tmppar)
-                    #        select = (0,) + item + (j,)
-                    #        tmpstring = " ".join(("%d: range %2d:%2d" % (j, r[0],r[1]),
-                    #                              "add ranges %s" % str(item),
-                    #                              "chi^2/dof %e" % 
-                    #                              (self.chi2[i][select]/(r[1]-r[0]-self.data[i].shape[1])),
-                    #                              "pval %5f" % (self.pval[i][select]),
-                    #                              "rel. err: %e" % rel_err,
-                    #                              "p-val*rel.err: %e" 
-                    #                              %(rel_err*self.pval[i][select]),
-                    #                              tmppar))
-                    #        print(tmpstring)
 
     def data_for_plot(self, par=0, new=False):
         """Prints the errors etc of the data."""

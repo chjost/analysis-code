@@ -253,7 +253,6 @@ def calculate_ranges(ranges, shape, oldshape=None, oldranges=None, dt_i=2, dt_f=
     if oldshape is not None:
         if oldranges is None:
             raise ValueError("oldranges not given")
-        print(oldshape,shape)
         fit_ranges, shape = combine_ranges((fit_ranges,oldranges),(shape,oldshape))
     # This means, that different Correlators in one object have to have the same
     # fit ranges
@@ -360,17 +359,13 @@ def combine_ranges(fr_list, fr_shape):
     # dimension of interval tuple
     # dubtract one dimension for ncorr
     _comb_shape += ((len(_comb_shape)-1)*2,)
-    print(_comb_shape)
     # initialize fit range array
     _comb = np.zeros(_comb_shape)
-    print(_comb.shape)
     # get fit range tuples at correct indices
     for idc, rng in product_with_indices(0,[r for r in fr_list]):
         # do this for all correlators
-        print(idc,rng)
         for n in range(_comb.shape[0]):
             # TODO: Still ugly, but otherwise slicing goes wrong
-            print(idc,rng)
             _comb[n][idc] = rng
     _fr_comb = np.asarray(_comb)
     _fr_shape = _fr_comb.shape

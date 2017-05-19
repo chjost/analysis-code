@@ -1,0 +1,50 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+
+import sys
+import numpy as np
+import itertools
+
+import analysis2 as ana
+import standard_analyses as std_ana
+    
+
+def main():
+    # parse the input file
+    if len(sys.argv) < 2:
+        ens = ana.LatticeEnsemble.parse("kk_I1_TP0_A40.24.ini")
+    else:
+        ens = ana.LatticeEnsemble.parse(sys.argv[1])
+    # define filenames depending on os flag
+    # get data from input file
+    prefix = ens.get_data("path")
+    lat = ens.name()
+    nboot = ens.get_data("nboot")
+    datadir = ens.get_data("datadir")
+    datadir_pi = ens.get_data("datadir_pi")
+    plotdir = ens.get_data("plotdir")
+    t_mass = np.int_(ens.get_data("fitmass"))
+    if isinstance(t_mass[0],int):
+      print(t_mass)
+    min_size_mass = ens.get_data("tmin_mass")
+    try:
+        debug = ens.get_data("debug")
+    except KeyError:
+        debug = 0
+    L = ens.L()
+    T = ens.T()
+    T2 = ens.T2()
+    addT = np.ones((nboot,)) * T
+    addT2 = np.ones((nboot,)) * T2
+    
+    dnames = [datadir_pi, plotdir]
+    fnames = ["pi_charged_p0", "fit_pi"]
+
+    pi_fit = std_ana.analyse_two_point_corr(dnames, fnames, lat, 9, min_size_mass,
+                                    [t_mass], addT, debug=True)
+    
+if __name__ == '__main__':
+    try:
+        print("starting")
+        main()
+    except KeyboardInterrupt:
+        pass
