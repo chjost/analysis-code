@@ -438,7 +438,8 @@ class FitResult(object):
         Parameters
         ----------
         index : tuple of int
-            The index where to save the data
+            The index where to save the data,
+            CH: ATM this is only the fitrange indices
         data : ndarray
             The fit data to add.
         chi2 : ndarray
@@ -459,6 +460,7 @@ class FitResult(object):
         if isinstance(self.corr_num, int):
             #if len(index) != 2:
             #    raise ValueError("Index has wrong length")
+            # this is the correlator index
             lindex = self._get_index(index[0])
             if self.derived:
                 tup = [slice(None)]+index
@@ -476,8 +478,8 @@ class FitResult(object):
             self.chi2[lindex][tup] = chi2
             self.pval[lindex][tup] = pval
         else:
-            #if len(index) != 2*len(self.corr_num):
-            #    raise ValueError("Index has wrong length")
+            if len(index) != 2*len(self.corr_num):
+                raise ValueError("Index has wrong length")
             lindex = self._get_index(index[:len(self.corr_num)])
             if self.derived:
                 rindex = [slice(None)] + [x for x in index[len(self.corr_num):]]

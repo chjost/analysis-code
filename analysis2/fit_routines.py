@@ -147,8 +147,10 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
             r = rng[0:2]
             # get old data
             print(idc[:-1])
-            add_data = oldfit.get_data(idc)
-            print(add_data.shape)
+            # skip the new indices
+            # oldind needs to be a list
+            oldind = [0,] + idc[2:]
+            add_data = oldfit.get_data(oldind)
             # get only the wanted parameter if oldfitpar is given
             if oldfitpar is not None:
                 add_data = add_data[:,oldfitpar]
@@ -161,8 +163,11 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
                     add.shape = (-1, 1)
                 if add_data.ndim == 1:
                     add_data.shape = (-1, 1)
+                print(add_data.shape)
                 print(add.shape)
-                add_data = np.hstack((add_data, add))
+                _get_add_data(add_data,add)
+                add_data = np.zeros()
+                add_data = np.hstack((add_data, add.reshape(add_data.shape)))
             # do the fitting
             # number of correlators:
             n = idc[0]
@@ -175,6 +180,17 @@ def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
                     corr.data[:,r[0]:r[1]+1,n], start,
                     add=add_data, correlated=correlated, debug=debug)
             yield idc, res, chi, pva
+
+    #def _get_add_data(arr1,arr2):
+    #    """ helper to get data of two arrays with equal 0th dimension  into right shape"""
+    #    _added_shape = arr1.shape[0]+arr1.shape[1:]+arr2.shape[1:]
+    #    _added = np.zeros(_added_shape)
+    #    for b in range(arr1.shape[0]):
+    #      _added[b] = np.concatenate(arr1
+    #    #copy over data
+
+    #    return _added
+
 #TODO: This function needs better documentation, I do not know what to make out
 #of it (CH)
 def calculate_ranges(ranges, shape, oldshape=None, oldranges=None, dt_i=2, dt_f=2, dt=4, debug=0,

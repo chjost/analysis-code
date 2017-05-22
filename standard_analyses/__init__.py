@@ -4,3 +4,4 @@ Helmes
 """
 from .two_point_corr import *
 from .four_point_corr import *
+from .plot_corr import *
