@@ -48,33 +48,42 @@ def fit_single(fitfunc, start, corr, franges, add=None, debug=2,
     # fitting
     if debug > 0:
         print("fitting the data")
-    for n in range(ncorr):
-        if debug > 1:
-            print("fitting correlator %d" % (n))
-        if isinstance(start[0], (tuple, list)) and len(start[0]) == 1:
-            for i, r in enumerate(franges[n]):
-                if debug > 1:
-                    print("fitting interval %d" % (i))
-                res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
-                    corr.data[:,r[0]:r[1]+1,n], start[n], add=add,
-                        correlated=correlated, debug=debug)
-                yield (n, i), res, chi, pva
-        elif isinstance(start[0], (tuple, list)):
-            for i, r in enumerate(franges[n]):
-                if debug > 1:
-                    print("fitting interval %d" % (i))
-                res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
-                    corr.data[:,r[0]:r[1]+1,n], start[n][i], add=add,
-                        correlated=correlated, debug=debug)
-                yield (n, i), res, chi, pva
-        else:
-            for i, r in enumerate(franges[n]):
-                if debug > 1:
-                    print("fitting interval %d" % (i))
-                res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
-                    corr.data[:,r[0]:r[1]+1,n], start, add=add,
-                        correlated=correlated, debug=debug)
-                yield (n, i), res, chi, pva
+    #for n in range(ncorr):
+    n=0
+    if debug > 1:
+        print("fitting correlator %d" % (n))
+    if isinstance(start[0], (tuple, list)) and len(start[0]) == 1:
+        for i, r in enumerate(franges[n]):
+            if debug > 1:
+                print("fitting interval %d" % (i))
+            res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
+                corr.data[:,r[0]:r[1]+1,n], start[n], add=add,
+                    correlated=correlated, debug=debug)
+            yield (n, i), res, chi, pva
+    elif isinstance(start[0], (tuple, list)):
+        for i, r in enumerate(franges[n]):
+            if debug > 1:
+                print("fitting interval %d" % (i))
+            res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
+                corr.data[:,r[0]:r[1]+1,n], start[n][i], add=add,
+                    correlated=correlated, debug=debug)
+            yield (n, i), res, chi, pva
+    else:
+        #for i, r in enumerate(franges[n]):
+        #    if debug > 1:
+        #        print("fitting interval %d" % (i))
+        #    res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
+        #        corr.data[:,r[0]:r[1]+1,n], start, add=add,
+        #            correlated=correlated, debug=debug)
+        #    yield (n, i), res, chi, pva
+        for i, r in product_with_indices(0,[franges]):
+            print(i, r)
+            if debug > 1:
+                print("fitting interval %d" % (i))
+            res, chi, pva = fitting(fitfunc, X[r[0]:r[1]+1],
+                corr.data[:,r[0]:r[1]+1,i[0]], start, add=add,
+                    correlated=correlated, debug=debug)
+            yield i, res, chi, pva
 
 def fit_comb(fitfunc, start, corr, franges, fshape, oldfit, add=None,
         oldfitpar=None, useall=False, debug=0, xshift=0., correlated=True, npar=1):

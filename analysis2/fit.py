@@ -468,12 +468,12 @@ class FitResult(object):
             else:
                 print(self.data[lindex].shape)
                 print(index)  
-                tup_data = [slice(None),slice(None)]+index
-                tup = [slice(None)]+index
+                tup_data = (slice(None),slice(None))+tuple(index)
+                tup = (slice(None),)+tuple(index)
                 print("data has shape:")
                 print(data.shape)
                 print("index to place at:")
-                print(self.data[lindex][tup_data].shape)
+                print(tup_data)
                 self.data[lindex][tup_data] = data
             self.chi2[lindex][tup] = chi2
             self.pval[lindex][tup] = pval
