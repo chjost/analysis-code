@@ -14,9 +14,9 @@ def main():
         ens = ana.LatticeEnsemble.parse(sys.argv[1])
     # define filenames depending on os flag
     # read settings
-    readdata = False
-    read_kfit = False 
-    read_pifit = False
+    readdata = True
+    read_kfit = True 
+    read_pifit = True
     read_pikfit = False
     read_massfit = False
     readfit = False
@@ -44,11 +44,12 @@ def main():
     plotdir = ens.get_data("plotdir")
     gmax = ens.get_data("gmax")
     d2 = ens.get_data("d2")
-    t_mass = np.int_(ens.get_data("fitmass"))
-    fit_e_tot = np.int_(ens.get_data("fit_e_tot"))
-    if isinstance(t_mass[0],int):
-      print(t_mass)
-    min_size_mass = ens.get_data("tmin_mass")
+    t_mass_pi = np.int_(ens.get_data("fitmass_pi"))
+    t_mass_k = np.int_(ens.get_data("fitmass_k"))
+    fit_e_tot = np.int_(ens.get_data("fitetot"))
+    min_size_mass_pi = ens.get_data("tmin_mass_pi")
+    min_size_mass_k = ens.get_data("tmin_mass_k")
+    min_size_etot = ens.get_data("tmin_etot")
     try:
         debug = ens.get_data("debug")
     except KeyError:
@@ -113,12 +114,12 @@ def main():
     plotter.save()
     del plotter
     print(corr.data.shape)
-    fit_k_single = ana.LatticeFit(9,dt_f=1, dt_i=2,
-                                  dt=min_size_mass, correlated=True)
+    fit_k_single = ana.LatticeFit(9,dt_f=-1, dt_i=-1,
+                                  dt=min_size_mass_k, correlated=True)
     start_single = [1., 0.3]
     if read_kfit == False:
         print("fitting kaon")
-        k_fit = fit_k_single.fit(start_single, k_corr, [t_mass],
+        k_fit = fit_k_single.fit(start_single, k_corr, [t_mass_k],
             add=addT)
         k_fit.save("%s/%s_%s.npz" % (datadir,fit_k_out, lat))
     else:
@@ -127,12 +128,12 @@ def main():
     k_fit.print_details()
     k_fit.calc_error()
 
-    fit_pi_single = ana.LatticeFit(9,dt_f=1, dt_i=2,
-                                   dt=min_size_mass, correlated=True)
+    fit_pi_single = ana.LatticeFit(9,dt_f=-1, dt_i=-1,
+                                   dt=min_size_mass_pi, correlated=True)
     start_single = [1., 0.3]
     if read_pifit == False:
         print("fitting kaon")
-        pi_fit = fit_pi_single.fit(start_single, pi_corr, [t_mass],
+        pi_fit = fit_pi_single.fit(start_single, pi_corr, [t_mass_pi],
             add=addT)
         pi_fit.save("%s/%s_%s.npz" % (datadir,fit_pi_out, lat))
     else:
@@ -158,14 +159,19 @@ def main():
  #-------------- Fit weighted and shifted correlator ---------------------------- 
     #masses = comb_fitres((pi_fit,k_fit),1)
     masses = pi_fit.comb_fitres(k_fit,1)
+    print("combined particle masses:")
+    print(masses.data[0])
     masses.print_details()
-    fit_pi_k = ana.LatticeFit(8, dt_f=2, dt=min_size_mass,
+    # fix the fitranges
+    fit_pi_k = ana.LatticeFit(8, dt_f=-1, dt_i=-1, dt=min_size_etot,
                               correlated=True)
     #start = [10.,10.5]
     if read_pikfit == False:
+        print("fitting correlator")
         start = [5.,0.5,10.]
         pi_k_fit = fit_pi_k.fit(start,corr_ws,fit_e_tot,add=addT,oldfit=masses,
                             oldfitpar=slice(0,2))
+        print(pi_k_fit.data[0])
         pi_k_fit.save("%s/%s_%s.npz" % (datadir,fit_pik_out,lat))
     else:
         pi_k_fit = ana.FitResult.read("%s/%s_%s.npz" % (datadir,fit_pik_out,lat))
@@ -174,6 +180,11 @@ def main():
     pi_k_fit.print_data(2)
     pi_k_fit.print_details()
     pi_k_fit.calc_error()
+    plotter = ana.LatticePlot("%s/fit_c55_weight_%s.pdf"%(plotdir,lat))
+    plotter.set_env(ylog=True,grid=False)
+    label=["C_55 weighted", "t", "C(t)","fit"]
+    plotter.plot(corr_ws,label,pi_k_fit,fit_pi_k,add=addT,oldfit=masses,oldfitpar=slice(0,2))
+    del plotter
 
  #---------------- Subtract subleading term from C_{\pi K} --------------------
     #corr_ws_sub = sub_subleading(corr_ws, pi_k_fit, masses, addT)
@@ -203,32 +214,32 @@ def main():
     plotter.save()
     del plotter
 
-    #-------- Fit mass plateau to WS mass -------------------------------------
-    fit_pik_mass = ana.LatticeFit(2,dt_f=1, dt_i=1, dt=6,correlated=True)
-    if read_massfit == False:
-        start = [0.6]
-        pik_mass_fit = fit_pik_mass.fit(start,corr_ws_sub,fit_e_tot,add=addT)
-        pik_mass_fit.save("%s/%s_%s.npz" % (datadir,"scratch",lat))
-    else:
-        pik_mass_fit = ana.FitResult.read("%s/%s_%s.npz" % (datadir,"scratch",lat))
+    ##-------- Fit mass plateau to WS mass -------------------------------------
+    #fit_pik_mass = ana.LatticeFit(2,dt_f=-1, dt_i=1, dt=tmin_etot,correlated=True)
+    #if read_massfit == False:
+    #    start = [0.6]
+    #    pik_mass_fit = fit_pik_mass.fit(start,corr_ws_sub,fit_e_tot,add=addT)
+    #    pik_mass_fit.save("%s/%s_%s.npz" % (datadir,"scratch",lat))
+    #else:
+    #    pik_mass_fit = ana.FitResult.read("%s/%s_%s.npz" % (datadir,"scratch",lat))
 
-    pik_mass_fit.print_data()
-    pik_mass_fit.print_details()
+    #pik_mass_fit.print_data()
+    #pik_mass_fit.print_details()
 
-    #---------------- Plot mass fit------------------------- 
-    plotter=ana.LatticePlot("%s/scratch_zoom_%s.pdf" % (plotdir,lat))
-    plotter.set_env(ylog=False, grid=False, ylim=[0.3,0.6])
-    label=["Effective Mass", "t", "m_eff(t)", "weighted and shifted"]
-    plotter.plot(corr_ws_sub,label,fitresult=pik_mass_fit,fitfunc=fit_pik_mass,add=addT)
-    plotter.new_file("%s/fit_pi_%s.pdf" %(plotdir,lat))
-    label = ["C_pi", "t", "C(t)","data with fit"]
-    plotter.set_env(ylog=True)
-    plotter.plot(pi_corr,label,fitresult=pi_fit,fitfunc=fit_pi_single,add=addT)
-    plotter.new_file("%s/fit_k_%s.pdf" %(plotdir,lat))
-    label = ["C_K", "t", "C(t)","data with fit"]
-    plotter.set_env(ylog=True)
-    plotter.plot(k_corr,label,fitresult=k_fit,fitfunc=fit_k_single,add=addT)
-    del plotter
+    ##---------------- Plot mass fit------------------------- 
+    #plotter=ana.LatticePlot("%s/scratch_zoom_%s.pdf" % (plotdir,lat))
+    #plotter.set_env(ylog=False, grid=False, ylim=[0.3,0.6])
+    #label=["Effective Mass", "t", "m_eff(t)", "weighted and shifted"]
+    #plotter.plot(corr_ws_sub,label,fitresult=pik_mass_fit,fitfunc=fit_pik_mass,add=addT)
+    #plotter.new_file("%s/fit_pi_%s.pdf" %(plotdir,lat))
+    #label = ["C_pi", "t", "C(t)","data with fit"]
+    #plotter.set_env(ylog=True)
+    #plotter.plot(pi_corr,label,fitresult=pi_fit,fitfunc=fit_pi_single,add=addT)
+    #plotter.new_file("%s/fit_k_%s.pdf" %(plotdir,lat))
+    #label = ["C_K", "t", "C(t)","data with fit"]
+    #plotter.set_env(ylog=True)
+    #plotter.plot(k_corr,label,fitresult=k_fit,fitfunc=fit_k_single,add=addT)
+    #del plotter
 
 if __name__ == '__main__':
     try:

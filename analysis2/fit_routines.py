@@ -260,7 +260,8 @@ def get_ranges(lower, upper, dt_i=2, dt_f=2, dt=4):
     if dt_i < 0:
         # keep upper time slice fixed
         if dt_f < 0:
-            if (up - lo + 2) > dt:
+            #if (up - lo + 2) > dt:
+            if (upper - lower + 2) > dt:
                 ran.append((lower, upper))
         else:
             for up in range(upper, lower-1, -dt_f):

@@ -796,6 +796,8 @@ class FitResult(object):
                 #print(self.data)
                 nfits = [d[0,0].size for d in self.data]
                 npar = self.data[0].shape[1]
+                print("In calc_error: Data")
+                print(self.data)
                 for i in range(npar):
                     r, r_std, r_syst, w = sys_error(self.data, self.pval,
                         i,rel=rel)
@@ -865,6 +867,8 @@ class FitResult(object):
                                                     np.std(self.data[i][select]))))
                             print(tmpstring)
         else:
+            print("Print details: data")
+            print(self.data[0])
             # iterate over the correlators
             for i, lab in enumerate(self.label):
                 print("correlator %s" % (str(lab)))
