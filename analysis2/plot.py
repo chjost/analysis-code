@@ -770,7 +770,8 @@ class LatticePlot(object):
           plt.clf()
         
 
-    def plot_chiral_fit(self,chirana,beta,label,xlim,func=None,args=None):
+    def plot_chiral_fit(self,chirana,beta,label,xlim,ylim=None,
+                        func=None,args=None,x_phys=None):
         """ Function to plot a chiral fit.
         
         This function sets up a plotter object, puts in the data in the right
@@ -794,26 +795,33 @@ class LatticePlot(object):
             print(_dy.shape)
             plot_data(_X,_Y,_dy,label=a,col=col[i],fmt=fmt_pts[i])
             # Check if we want to plot a function in addition to the data
-            if func is not None:
-                print("Arguments for plotting function")
-                print(args[i])
-                for s in chirana.x_data[i][0,:,1,0]: 
+            #if func is not None:
+                #print("Arguments for plotting function")
+                #print(args[i])
+                #for s in chirana.x_data[i][0,:,1,0]: 
                   # Check for numbers of lattice spacings, if > 1 loop over args
                   #if len(beta)==1:
                   #    plotargs = np.hstack((args,s,r))
                   #else:
                   # adapt shape for errorbands in plot_function
-                  _mus = np.full((args.shape[1],1),s) 
-                  plotargs = np.hstack((args[i],_mus))
-                  print("Arguments to plotting function")
-                  print(plotargs)
-                  plot_function(func,xlim,plotargs,label=None,ploterror=True)
+                  #_mus = np.full((args.shape[1],1),s) 
+                  #plotargs = np.hstack((args[i],_mus))
+                  #plotargs=None
+                  #print("Arguments to plotting function")
+                  #print(plotargs)
+                  #plot_function(func,xlim,plotargs,label=None,ploterror=True)
             plt.xlim(xlim[0],xlim[1])
             plt.locator_params(nbins=4)
             plt.xlabel(label[0],fontsize=24)
             plt.ylabel(label[1],fontsize=24)
-            self.save()
+            #self.save()
+        # plot a vertical dashed line at physical x_value
+        if func is not None:
+            plot_function(func,xlim,args,label=r'LO $\chi$-pt',ploterror=True)
+        if x_phys is not None:
+            plt.axvline(x=x_phys, color='k', ls='--', label=label[0]+'_phys.')
         plt.xlim(xlim[0],xlim[1])
+        plt.ylim(ylim[0],ylim[1])
         plt.locator_params(nbins=4)
         plt.xlabel(label[0],fontsize=24)
         plt.ylabel(label[1],fontsize=24)

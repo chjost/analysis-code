@@ -23,10 +23,6 @@ def main():
     plotdir = ens.get_data("plotdir")
     gmax = ens.get_data("gmax")
     d2 = ens.get_data("d2")
-    t_mass = np.int_(ens.get_data("fitmass"))
-    if isinstance(t_mass[0],int):
-      print(t_mass)
-    min_size_mass = ens.get_data("tmin_mass")
     try:
         debug = ens.get_data("debug")
     except KeyError:

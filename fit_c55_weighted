@@ -14,9 +14,9 @@ def main():
         ens = ana.LatticeEnsemble.parse(sys.argv[1])
     # define filenames depending on os flag
     # read settings
-    readdata = True
-    read_kfit = True 
-    read_pifit = True
+    readdata = False 
+    read_kfit = False
+    read_pifit = False
     read_pikfit = False
     read_massfit = False
     readfit = False

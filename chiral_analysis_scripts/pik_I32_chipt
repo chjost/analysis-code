@@ -1,0 +1,142 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+
+################################################################################
+#
+# Author: Christopher Helmes (helmes@hiskp.uni-bonn.de)
+# Date:   May 2017
+#
+# Copyright (C) 2017 Christopher Helmes
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Fit mu*a_32 in NLO-chipt
+# 
+# The fitfunction reads:
+# mu*a_3/2 = mu^2/(4*pi f^2_pi)(-1 + L_piK(Lambda) * 32*m_pi*m_K/f^2_pi
+#                               -L_5(Lambda) * 16*m^2_pi/f^2_pi
+#                               +Chi^I32_piK(Lambda,m_pi,m_K)/(16*pi^2*f^2_pi))
+# Chi^I32_piK(Lambda,m_pi,m_K) is a NLO-function including chiral logarithms
+################################################################################
+# system imports
+import sys
+from scipy import stats
+from scipy import interpolate as ip
+import numpy as np
+from numpy.polynomial import polynomial as P
+import math
+import matplotlib
+matplotlib.use('Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+from matplotlib.backends.backend_pdf import PdfPages
+
+# Christian's packages
+sys.path.append('/hiskp2/helmes/projects/analysis-code/')
+import analysis2 as ana
+
+def main():
+    # Get parameters from initfile
+    if len(sys.argv) < 2:
+        ens = ana.LatticeEnsemble.parse("A40.24.ini")
+    else:
+        ens = ana.LatticeEnsemble.parse(sys.argv[1])
+
+    # get data from input file
+    lat = ens.name()
+    latA = ens.get_data("namea")
+    latB = ens.get_data("nameb")
+    latD = ens.get_data("named")
+    strangeA = ens.get_data("strangea")
+    strangeB = ens.get_data("strangeb")
+    strangeD = ens.get_data("stranged")
+    #space=['A','B','D']
+    space=['A','B','D']
+    seeds = [1772, 2741, 8807]
+    #seeds = [1772, 2741]
+    #seeds = [1772,]
+    lat_dict = {'A':latA,'B':latB,'D':latD}
+    #lat_dict = {'A':latA,'B':latB}
+    #print("\nDicitonary for ensemble names:")
+    #print(lat_dict)
+    #dicitionary of light quark masses
+    amulA = ens.get_data("amu_l_a")
+    amulB = ens.get_data("amu_l_b")
+    amulD = ens.get_data("amu_l_d")
+    amu_l_dict = {'A': amulA,'B': amulB, 'D': amulD}
+
+    #dictionary of strange quark masses
+    mu_s_dict = {'A': strangeA,'B': strangeB, 'D': strangeD}
+    amusA = ens.get_data("amu_s_a")
+    amusB = ens.get_data("amu_s_b")
+    amusD = ens.get_data("amu_s_d")
+    amu_s_dict = {'A': amusA,'B': amusB, 'D': amusD}
+    print(amu_s_dict)
+    #quark = ens.get_data("quark")
+    datadir = ens.get_data("datadir") 
+    plotdir = ens.get_data("plotdir") 
+    resdir = ens.get_data("resultdir") 
+    nboot = ens.get_data("nboot")
+    # Prepare inputs
+    #ext_data = ana.ExtDat(seeds,space,1)
+    fpi_raw = ana.read_extern("../plots2/data/fpi.dat",(1,2))
+    print(fpi_raw)
+    chipt_tree = lambda p,x : -x**2/(4.*np.pi) 
+    #------------------------- Setup objects -----------------------------------
+    extrapol = ana.ChirAna("pi-K I-3_2")
+    lyt_xvals = (3,(7,4,2),3,1,1500)
+    lyt_yvals = (3,(7,4,2),3,1,1500)
+    extrapol.create_empty(lyt_xvals,lyt_yvals,lat_dict=lat_dict)
+    print("\nSetup complete, begin chiral analysis")
+    #------------------------- Get x-values --------------------------------
+    for i,a in enumerate(space):
+        print("\nWorking at lattice spacing %s" %a)
+        for j,e in enumerate(lat_dict[a]):
+            # if using D30.48 modify lowest amus to 0.0115
+            if e == 'D30.48':
+                print("modifying lowest mu_s values")
+                mu_s_dict[a][0] ='amu_s_115' 
+                amu_s_dict[a][0]=0.0115
+            for k,s in enumerate(mu_s_dict[a]):
+                print("strange quark mass is: %s" %s)
+                print("Read in data for %s" %e)
+                mu_a0 = ana.FitResult.read("%s/%s/%s/mu_a0_TP0_%s.npz"% (datadir,e,s,e))
+                tmp_y = mu_a0.data[0][:,0,0]
+                extrapol.add_data(tmp_y,(i,j,k,0),dim='y')
+                _tmp_x = ana.FitResult.read("%s/%s/%s/mu_pi_k_TP0_%s.npz"% (datadir,e,s,e))
+                _tmp_x.print_data(0)
+                # select only one fitrange
+                #TODO: needs to be implemented properly
+                tmp_x = _tmp_x.data[0][:,0]
+                extrapol.add_data(tmp_x,(i,j,k,0),dim='x')
+                # Divide reduced mass by according value of f_pi
+                dummy, fpi = ana.prepare_fk(fpi_raw,e,1500)
+                print("0th Bootstrapsample for fpi: %f" %fpi[0])
+                extrapol.x_data[i][j,k,0] /= fpi
+    # Plot the data the given function
+    label=[r'$\mu_{\pi K}/f_{\pi}$',r'$\mu_{\pi K}\,a_{3/2}$',r' ',
+           r'$(\mu_{\pi K}/f_{\pi})_{phys}$']
+    filename = plotdir+'/compare_mua0_decay.pdf'
+    chiral_plot = ana.LatticePlot(filename, join = False)
+    #chiral_plot.plot_comparison(fix_ms,space,label,[0.,0.13],dep=1)
+    chiral_plot.plot_chiral_fit(extrapol,space,label,[0.5,1.6],ylim=[-0.2,0],
+                                func=chipt_tree,x_phys=0.835)
+    del chiral_plot
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Keyboard Interrupt")
+
