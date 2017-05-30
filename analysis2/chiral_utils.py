@@ -669,3 +669,18 @@ def compute_bare_mu_s(r0,ml,mk,mul,args,disc_eff=False):
 ################# Scratch region for trying out functions ######################
 ################################################################################
 
+def concatenate_data(lst,par=0):
+    _b=[]                                               
+    for i, d in enumerate(lst):
+        if par is not 0:
+            _n = np.zeros((d.shape[0]*d.shape[1],d.shape[2],d.shape[3]))
+        else:
+            _n = np.zeros((d.shape[0]*d.shape[1],d.shape[3]))
+        for i in range(d.shape[0]):
+            for j in range(d.shape[1]):
+                # Only one parameter at the moment
+                _n[i*d.shape[1]+j] = d[i,j,par]
+        _b.append(_n)
+    # Take all three lattice spacings
+    _c = np.concatenate((_b[0],_b[1],_b[2]))
+    return _c

@@ -14,6 +14,7 @@ from correlator import Correlators
 from statistics import compute_error, draw_gauss_distributed, acf
 from plot_functions import plot_data, plot_function, plot_histogram
 from in_out import check_write
+from chiral_functions import *
 
 class LatticePlot(object):
     def __init__(self, filename, join=False):
@@ -832,8 +833,35 @@ class LatticePlot(object):
           self.save()
           plt.clf()
 
+    # Dirty helper function to abbreviate plot_chiral_ext
+    def shape_data_kk(self,x,y,args):
+        print("argument shape:")
+        print(args.shape)
+        _X = x[:,:,0,0].flatten()*args[0,0]/args[0,1]
+        print("x-data:")
+        print(_X)
+        _Y = y[:,:,0,0].flatten()
+        _dy = y[:,:,0,:].reshape((y.shape[0]*y.shape[1],y.shape[-1]))
+        print("yerror shape is:")
+        print(_dy.shape)
+        return _X,_Y,_dy
+
+    # Dirty helper function to abbreviate plot_chiral_ext
+    def shape_data_pik(self,x,y):
+        # calculate mu over fpi squared, plot_function does not support
+        # arbitrary many x-values, TODO: change that
+        _X = reduced_mass(x[:,:,0,0].flatten(),
+                          x[:,:,1,0].flatten())/x[:,:,2,0].flatten()
+        print("x-data:")
+        print(_X)
+        _Y = y[:,:,0,0].flatten()
+        _dy = y[:,:,0,:].reshape((y.shape[0]*y.shape[1],y.shape[-1]))
+        print("yerror shape is:")
+        print(_dy.shape)
+        return _X,_Y,_dy
+
     def plot_chiral_ext(self,chirana,beta,label,xlim,ylim=None,func=None,
-                        args=None,ploterror=True):
+                        args=None,ploterror=True, kk=True):
         """ Function to plot a chiral extrapolation fit.
         
         This function sets up a plotter object, puts in the data in the right
@@ -848,24 +876,22 @@ class LatticePlot(object):
         dat_label = [r'$a=0.0885$fm',r'$a=0.0815$fm',r'$a=0.0619$fm']
 
         for i,a in enumerate(beta):
+            #TODO: DAC is too specialized, leave that to another function
             # get data for beta, the data passed should be 3 arrays (X,Y,dy)
             # the light quark mass values
-            print("argument shape:")
-            print(args[i].shape)
-            _X = chirana.x_data[i][:,:,0,0].flatten()*args[i,0,0]/args[i,0,1]
-            print("x-data:")
-            print(_X)
-            _Y = chirana.y_data[i][:,:,0,0].flatten()
-            _dy = chirana.y_data[i][:,:,0,:].reshape((chirana.y_data[i].shape[0]*chirana.y_data[i].shape[1],chirana.y_data[i].shape[-1]))
-            print("yerror shape is:")
-            print(_dy.shape)
+            if kk is True:
+                _X,_Y,_dy = self.shape_data_kk(chirana.x_data[i],
+                                               chirana.y_data[i],args[i])
+            else:
+                _X,_Y,_dy = self.shape_data_pik(chirana.x_data[i],
+                                                chirana.y_data[i])
             _mean, _dy = compute_error(_dy,axis=1)
             print(_dy.shape)
             plot_data(_X,_Y,_dy,label=a,col=col[i],fmt=fmt_pts[i])
             # Check if we want to plot a function in addition to the data
             if func is not None:
                 print("Arguments for plotting function")
-                print(args[i])
+                print(args[i].shape)
                 plot_function(func,xlim,args[i],label=dat_label[i],
                               ploterror=ploterror,fmt=col[i]+fmt_ls[i],col=col[i])
             plt.xlabel(label[0],fontsize=24)

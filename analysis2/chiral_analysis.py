@@ -10,6 +10,7 @@ matplotlib.rcParams['font.size'] = 14
 matplotlib.rcParams['axes.labelsize'] = 'large'
 
 import chiral_utils as chut
+from chiral_functions import *
 import extern_bootstrap as extboot
 import plot as plot
 from fit import FitResult
@@ -1443,9 +1444,58 @@ class ChirAna(object):
       #compute_bare_mu_s
     else:
       print("Prevented data override, nothing happened.")
-
 ################################################################################
 ################# Scratch region for trying out functions ######################
 ################################################################################
+  def mu_a32_errfunc(self,p,x,y,cov):
+      _res = pik_I32_chipt_nlo(x[:,0],x[:,1],x[:,2],p)-y
+      # calculate the chi values weighted with inverse covariance matrix
+      _chi = np.dot(cov,_res)
+      return _chi
 
+  def mu_a32_lo_errfunc(self,p,x,y,cov):
+      # pik_I32_chipt_lo includes an a^2 term
+      print("In LO-Errfunc shape of x-values is:")
+      print(x.shape)
+      _res = pik_I32_chipt_lo(x[:,0],x[:,1],x[:,2],x[:,3],p)-y
+      _chi = np.dot(cov,_res)
+      return _chi
+ 
+  def fit_mu_a32(self,LO=False,debug=2):
+      """ Fit the NLO chiPT formula to the data of self
+      """
+
+      # Look at the shapes first
+      print(self.x_shape)
+      print(self.y_shape)
+      # stack all lattice spacings together
+      # determine dimensions for array
+      #nb_ensembles
+      if LO is False:
+        _x = chut.concatenate_data(self.x_data,par=slice(0,3))
+      else:
+        _x = chut.concatenate_data(self.x_data,par=slice(0,4))
+      _y = chut.concatenate_data(self.y_data)
+      print(_x.shape)
+      print(_y.shape)
+      # The data for the fit should be just two arrays containing the
+      # bootstrapsamples
+      #if debug > 3:
+      ## Fit the data
+      ## invoke a chiral fit, yielding a fitresult
+      if LO is False:
+          start=[1.,1.]
+          mu_a32 = ChiralFit("mu_a32",self.mu_a32_errfunc)
+      else:
+          start=[1.]
+          mu_a32 = ChiralFit("mu_a32_lo",self.mu_a32_lo_errfunc)
+      print(_y[:,0:4])
+      self.fitres = mu_a32.chiral_fit(_x,_y,start,parlim=None,correlated=False,cov=None,debug=debug)
+      self.fitres.set_ranges(np.array([[[10,15]]]),[[1,]])
+      self.fitres.print_data()
+      ## Save the fitresult data
+      #if dat is not None:
+      #  self.fitres.save(dat+self.proc_id+'.npz')
+      ## Calculate check of the data for original data
+      #args = self.fitres.data[0]
 

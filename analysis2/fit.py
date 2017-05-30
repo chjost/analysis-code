@@ -790,14 +790,14 @@ class FitResult(object):
                 nfits = [d[0].size for d in self.data]
                 r, r_std, r_syst, w = sys_error_der(self.data, self.pval)
                 self.error.append((r, r_std, r_syst, nfits))
-                print(w[0].shape)
+                #print(w[0].shape)
                 self.weight.append(w)
             else:
                 #print(self.data)
                 nfits = [d[0,0].size for d in self.data]
                 npar = self.data[0].shape[1]
-                print("In calc_error: Data")
-                print(self.data)
+                #print("In calc_error: Data")
+                #print(self.data)
                 for i in range(npar):
                     r, r_std, r_syst, w = sys_error(self.data, self.pval,
                         i,rel=rel)

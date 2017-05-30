@@ -536,7 +536,7 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
               _cov[3*i:3*i+3,3*i:3*i+3]=_tmp
           for k in range(33,39):
               _cov[k,k] = np.cov(y[k])
-      
+    print(_cov.diagonal())  
     _cov = (np.linalg.cholesky(np.linalg.inv(_cov))).T
     print("vector of inverse errors: %r" % _cov)
     print("vector of x-values: %r" % x[...,0])

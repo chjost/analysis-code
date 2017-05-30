@@ -109,10 +109,10 @@ def compute_weight(data, pvals, rel=True):
     else:
         errors = np.nanstd(data, axis=0)
     # get the minimum of the errors
-    print("the data inside compute weight are:")
-    print(data)
-    print("the errors inside compute weight are:")
-    print(errors)
+    #print("the data inside compute weight are:")
+    #print(data)
+    #print("the errors inside compute weight are:")
+    #print(errors)
     min_err = np.amin(errors)
     # prepare storage
     weights = np.zeros((data.shape[1:]))
@@ -165,8 +165,8 @@ def sys_error(data, pvals, par=0, rel=True):
     res, res_std, res_sys = [], [], []
     # loop over principal correlators
     for i, d in enumerate(data):
-        print("Debug info for sys_error: i,data and par")
-        print(i,d,par)
+        #print("Debug info for sys_error: i,data and par")
+        #print(i,d,par)
         # append the necessary data arrays
         #data_weight.append(np.zeros((d.shape[2:])))
         res.append(np.zeros(d.shape[0]))

@@ -70,6 +70,7 @@ class ChiralFit(fit.LatticeFit):
 
         # fit the data
         dof = X.shape[0] - len(_start)
+        print("In global fit, dof are: %d" %dof)
          #fit every bootstrap sample
         tmpres, tmpchi2, tmppval = globalfitting(self.errfunc, X, Y, _start,
             parlim=parlim, debug=debug,correlated=correlated,cov=cov)

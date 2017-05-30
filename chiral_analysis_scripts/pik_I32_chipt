@@ -63,7 +63,8 @@ def main():
     strangeD = ens.get_data("stranged")
     #space=['A','B','D']
     space=['A','B','D']
-    seeds = [1772, 2741, 8807]
+    #seeds = [1772, 2741, 8807]
+    seeds = [5859, 5672, 4104, 5382, 8439, 6186]
     #seeds = [1772, 2741]
     #seeds = [1772,]
     lat_dict = {'A':latA,'B':latB,'D':latD}
@@ -89,14 +90,15 @@ def main():
     resdir = ens.get_data("resultdir") 
     nboot = ens.get_data("nboot")
     # Prepare inputs
-    #ext_data = ana.ExtDat(seeds,space,1)
+    ext_data = ana.ExtDat(seeds,space,1)
     fpi_raw = ana.read_extern("../plots2/data/fpi.dat",(1,2))
     print(fpi_raw)
     chipt_tree = lambda p,x : -x**2/(4.*np.pi) 
     #------------------------- Setup objects -----------------------------------
     extrapol = ana.ChirAna("pi-K I-3_2")
-    lyt_xvals = (3,(7,4,2),3,1,1500)
-    lyt_yvals = (3,(7,4,2),3,1,1500)
+    # have four x-values: mk,mpi,fpi,a
+    lyt_xvals = (3,(6,4,2),3,4,1500)
+    lyt_yvals = (3,(6,4,2),3,1,1500)
     extrapol.create_empty(lyt_xvals,lyt_yvals,lat_dict=lat_dict)
     print("\nSetup complete, begin chiral analysis")
     #------------------------- Get x-values --------------------------------
@@ -112,27 +114,48 @@ def main():
                 print("strange quark mass is: %s" %s)
                 print("Read in data for %s" %e)
                 mu_a0 = ana.FitResult.read("%s/%s/%s/mu_a0_TP0_%s.npz"% (datadir,e,s,e))
+                mu_a0.print_data()
                 tmp_y = mu_a0.data[0][:,0,0]
                 extrapol.add_data(tmp_y,(i,j,k,0),dim='y')
-                _tmp_x = ana.FitResult.read("%s/%s/%s/mu_pi_k_TP0_%s.npz"% (datadir,e,s,e))
-                _tmp_x.print_data(0)
+                #_tmp_x = ana.FitResult.read("%s/%s/%s/mu_pi_k_TP0_%s.npz"% (datadir,e,s,e))
+                _tmp_x = ana.FitResult.read("%s/%s/%s/fit_pi_unit_%s.npz"% (datadir,e,s,e))
+                #_tmp_x.print_data(1)
                 # select only one fitrange
                 #TODO: needs to be implemented properly
-                tmp_x = _tmp_x.data[0][:,0]
+                tmp_x = _tmp_x.data[0][:,1,0]
                 extrapol.add_data(tmp_x,(i,j,k,0),dim='x')
+                _tmp_x = ana.FitResult.read("%s/%s/%s/fit_k_unit_%s.npz"% (datadir,e,s,e))
+                #_tmp_x.print_data(1)
+                tmp_x = _tmp_x.data[0][:,1,0]
+                extrapol.add_data(tmp_x,(i,j,k,1),dim='x')
                 # Divide reduced mass by according value of f_pi
                 dummy, fpi = ana.prepare_fk(fpi_raw,e,1500)
                 print("0th Bootstrapsample for fpi: %f" %fpi[0])
-                extrapol.x_data[i][j,k,0] /= fpi
+                extrapol.x_data[i][j,k,2] = fpi
+                extrapol.x_data[i][j,k,3] = ext_data.get(a,'r0')
+    extrapol.fit_mu_a32(LO=True)
+    plotargs = extrapol.fitres.data[0]
+    args = np.asarray([np.vstack((plotargs[:,0,0],
+                                       extrapol.x_data[i][0,0,3])).T
+                                       for i in range(3)])
+    plotfunc = lambda p,x: -x**2/(4.*np.pi) + p[:,0]/p[:,1]**2
     # Plot the data the given function
     label=[r'$\mu_{\pi K}/f_{\pi}$',r'$\mu_{\pi K}\,a_{3/2}$',r' ',
            r'$(\mu_{\pi K}/f_{\pi})_{phys}$']
-    filename = plotdir+'/compare_mua0_decay.pdf'
+    filename = plotdir+'/mua0_decay_lo.pdf'
+    print("args have shape")
+    print(args[1].shape)
     chiral_plot = ana.LatticePlot(filename, join = False)
-    #chiral_plot.plot_comparison(fix_ms,space,label,[0.,0.13],dep=1)
-    chiral_plot.plot_chiral_fit(extrapol,space,label,[0.5,1.6],ylim=[-0.2,0],
-                                func=chipt_tree,x_phys=0.835)
+    chiral_plot.plot_chiral_ext(extrapol,space,label,xlim=[0.5,1.8],
+                                func=plotfunc, args=args,
+                                ploterror=False,kk=False)
+    chiral_plot.save()
     del chiral_plot
+    #chiral_plot = ana.LatticePlot(filename, join = False)
+    ##chiral_plot.plot_comparison(fix_ms,space,label,[0.,0.13],dep=1)
+    #chiral_plot.plot_chiral_fit(extrapol,space,label,[0.5,1.6],ylim=[-0.2,0],
+    #                            func=chipt_tree,x_phys=0.835)
+    #del chiral_plot
 
 if __name__ == '__main__':
     try:

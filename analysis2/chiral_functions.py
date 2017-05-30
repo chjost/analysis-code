@@ -19,7 +19,7 @@ import analysis2 as ana
 def chi_I32_nlo(ren,mpi,mk):
     # initialize a 2d-array (5,nboot) for the terms
     # take sum afterwards
-    _chi = np.zeros(5,mpi.shape)
+    _chi = np.zeros((5,mpi.shape[-1]))
     _chi[0] = kappa_pi(mpi,mk)*np.log(mpi**2/ren**2) 
     _chi[1] = kappa_k(mpi,mk)*np.log(mk**2/ren**2)
     _chi[2] = kappa_eta(mpi,mk)*np.log(m_eta_sq(mpi,mk)/ren**2)
@@ -48,6 +48,8 @@ def pik_I32_chipt_nlo(mpi, mk, fpi, p, lambda_x=None):
     -------
     _mua32 : 1d-array, the calculated values of _mua32
     """
+    if lambda_x is None:
+        lambda_x = fpi
     # Term with L_piK, a collection of Lower LECs
     _sum1 = p[0]*32.*mpi*mk/fpi**2
     # Term with L5
@@ -55,4 +57,9 @@ def pik_I32_chipt_nlo(mpi, mk, fpi, p, lambda_x=None):
     # Term with NLO function (does not take eta mass at the moment)
     _sum3 = chi_I32_nlo(lambda_x, mpi, mk)
     _mua32 = (reduced_mass(mpi,mk)/fpi)**2/(4.*np.pi)*(-1.+_sum1-_sum2+_sum3)
+    return _mua32
+
+def pik_I32_chipt_lo(mpi, mk, fpi, r0, p):
+    
+    _mua32 = -(reduced_mass(mpi,mk)/fpi)**2/(4.*np.pi)+(p/(r0**2))
     return _mua32

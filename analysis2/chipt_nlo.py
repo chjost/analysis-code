@@ -48,4 +48,4 @@ def m_eta_sq(mpi,mk):
 def nlo_arctan(mpi,mk):
     _prod1 = 2.*(mk-mpi)/(mk+2*mpi)
     _prod2 = np.sqrt((mk+mpi)/(2.*mk-mpi))
-    return np.arctan(_prod1*prod_2)
+    return np.arctan(_prod1 * _prod2)
