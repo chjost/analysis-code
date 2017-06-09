@@ -544,11 +544,11 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
     print("shape of y-values:")
     print(y[...,0].shape)
     print("shape of x-values:")
-    print(x[...,0].shape)
+    print(x.shape)
     print("shape of err-values:")
     print(_cov.shape)
     #TODO: Get samplesize from elsewhere
-    samples=1500
+    samples=x.shape[-1]
     chisquare=np.zeros((samples,))
     res = np.zeros((samples,len(start)))
     dof = float(y.shape[0]-len(start))

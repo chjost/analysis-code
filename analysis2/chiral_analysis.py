@@ -1448,20 +1448,21 @@ class ChirAna(object):
 ################# Scratch region for trying out functions ######################
 ################################################################################
   def mu_a32_errfunc(self,p,x,y,cov):
-      _res = pik_I32_chipt_nlo(x[:,0],x[:,1],x[:,2],p)-y
+      #_res = pik_I32_chipt_nlo(x[:,0],x[:,1],x[:,2],p)-y
+      _res = p[0]-2.*x*p[1]-y
       # calculate the chi values weighted with inverse covariance matrix
       _chi = np.dot(cov,_res)
       return _chi
 
   def mu_a32_lo_errfunc(self,p,x,y,cov):
       # pik_I32_chipt_lo includes an a^2 term
-      print("In LO-Errfunc shape of x-values is:")
-      print(x.shape)
+      #print("In LO-Errfunc shape of x-values is:")
+      #print(x.shape)
       _res = pik_I32_chipt_lo(x[:,0],x[:,1],x[:,2],x[:,3],p)-y
       _chi = np.dot(cov,_res)
       return _chi
  
-  def fit_mu_a32(self,LO=False,debug=2):
+  def fit_mu_a32(self,LO=False,xcut=None,debug=2):
       """ Fit the NLO chiPT formula to the data of self
       """
 
@@ -1472,7 +1473,8 @@ class ChirAna(object):
       # determine dimensions for array
       #nb_ensembles
       if LO is False:
-        _x = chut.concatenate_data(self.x_data,par=slice(0,3))
+        #_x = chut.concatenate_data(self.x_data,par=slice(0,3))
+        _x = chut.concatenate_data(self.x_data,par=0)
       else:
         _x = chut.concatenate_data(self.x_data,par=slice(0,4))
       _y = chut.concatenate_data(self.y_data)
@@ -1490,9 +1492,10 @@ class ChirAna(object):
           start=[1.]
           mu_a32 = ChiralFit("mu_a32_lo",self.mu_a32_lo_errfunc)
       print(_y[:,0:4])
-      self.fitres = mu_a32.chiral_fit(_x,_y,start,parlim=None,correlated=False,cov=None,debug=debug)
-      self.fitres.set_ranges(np.array([[[10,15]]]),[[1,]])
-      self.fitres.print_data()
+      print("cutting x-values at: %r" %xcut)
+      self.fitres = mu_a32.chiral_fit(_x,_y,start,xcut=xcut,parlim=None,correlated=False,cov=None,debug=debug)
+      self.fitres.set_ranges(np.array([[[0,_x.shape[0]]]]),[[1,]])
+      self.fitres.print_details()
       ## Save the fitresult data
       #if dat is not None:
       #  self.fitres.save(dat+self.proc_id+'.npz')

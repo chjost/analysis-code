@@ -850,8 +850,11 @@ class LatticePlot(object):
     def shape_data_pik(self,x,y):
         # calculate mu over fpi squared, plot_function does not support
         # arbitrary many x-values, TODO: change that
-        _X = reduced_mass(x[:,:,0,0].flatten(),
-                          x[:,:,1,0].flatten())/x[:,:,2,0].flatten()
+        #_X = reduced_mass(x[:,:,0,0].flatten(),
+        #                  x[:,:,1,0].flatten())/x[:,:,2,0].flatten()
+        #_X = x[:,:,1,0].flatten()/x[:,:,0,0].flatten()
+        _X = x[:,:,0,0].flatten()
+       
         print("x-data:")
         print(_X)
         _Y = y[:,:,0,0].flatten()
@@ -860,8 +863,8 @@ class LatticePlot(object):
         print(_dy.shape)
         return _X,_Y,_dy
 
-    def plot_chiral_ext(self,chirana,beta,label,xlim,ylim=None,func=None,
-                        args=None,ploterror=True, kk=True):
+    def plot_chiral_ext(self, chirana, beta, label, xlim, ylim=None, func=None,
+                       args=None, ploterror=True, kk=True, x_phys=None,xcut=None):
         """ Function to plot a chiral extrapolation fit.
         
         This function sets up a plotter object, puts in the data in the right
@@ -897,7 +900,27 @@ class LatticePlot(object):
             plt.xlabel(label[0],fontsize=24)
             plt.ylabel(label[1],fontsize=24)
             #self.save()
+        if x_phys is not None:
+            plt.axvline(x=x_phys, color='k', ls='--', label=label[0]+'_phys.')
         # Plot the physical point as well as the continuum function
+        if xcut is not None:
+            if hasattr(xcut, "__iter__"):
+                y = func(args[0,:,:], xcut[0])
+                print("y-value for cut: %r" %y)
+                plt.vlines(xcut[0], 0.9*y[0], 1.1*y[0], colors="k", label="")
+                plt.hlines(0.9*y[0], xcut[0]*1.02, xcut[0], colors="k", label="")
+                plt.hlines(1.1*y[0], xcut[0]*1.02, xcut[0], colors="k", label="")
+                plt.vlines(xcut[0], 0.9*y[0], 1.1*y[0], colors="k", label="")
+                y = func(args[0,:,:], xcut[1])
+                plt.hlines(0.9*y[0], xcut[1]*0.98, xcut[1], colors="k", label="")
+                plt.hlines(1.1*y[0], xcut[1]*0.98, xcut[1], colors="k", label="")
+                plt.vlines(xcut[1], 0.9*y[0], 1.1*y[0], colors="k", label="")
+            else:
+                y = plotfunc(args[0,:,0], xcut)
+                plt.vlines(xcut, 0.95*y, 1.05*y, colors="k", label="")
+                plt.hlines(0.95*y, xcut*0.98, xcut, colors="k", label="")
+                plt.hlines(1.05*y, xcut*0.98, xcut, colors="k", label="")
+            
         plt.xlim(xlim[0],xlim[1])
         if ylim is not None:
           plt.ylim(ylim[0],ylim[1])

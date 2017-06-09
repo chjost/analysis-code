@@ -49,3 +49,9 @@ def nlo_arctan(mpi,mk):
     _prod1 = 2.*(mk-mpi)/(mk+2*mpi)
     _prod2 = np.sqrt((mk+mpi)/(2.*mk-mpi))
     return np.arctan(_prod1 * _prod2)
+
+# same as above but switched signs
+def nlo_atan_opp(mpi,mk):
+    _prod1 = 2.*(mk+mpi)/(mk-2*mpi)
+    _prod2 = np.sqrt((mk-mpi)/(2.*mk+mpi))
+    return np.arctan(_prod1 * _prod2)

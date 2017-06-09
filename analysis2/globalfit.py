@@ -42,8 +42,8 @@ class ChiralFit(fit.LatticeFit):
         start : list or tuple or ndarray
             Start value for the fit.
         xcut : float
-            A maximal value for the X values. Everything above will not
-            be used in the fit.
+            A maximal value for the X values. Everything above (below) will not
+            be used in the fit. 
         parlim : tuple, errors on the fitparameters, if given they are
             considered as weights to the parameter constraints
         debug : int
@@ -54,25 +54,44 @@ class ChiralFit(fit.LatticeFit):
             _start = [3.0]
         else:
           _start = start
+        #cut the xdata if necessary
+        # implement a cut on the data if given, negative means everything above
+        # that x-value
+        if xcut is not None:
+            print("xcut is: %r" %xcut)
+            if hasattr(xcut,"__iter__"):
+                lo = X[:,0] > xcut[0]
+                hi = X[:,0] < xcut[1]
+                tmp = np.logical_and(lo,hi)
+            elif xcut >= 0.:
+                tmp = X[:,0] < xcut
+            elif xcut < 0.:
+                tmp = X[:,0] > -xcut
+            _X = X[tmp]
+            _Y = Y[tmp]
+            print("x-data after cut:")
+            print(_X[:,0])
+        else:
+            _X = X
+            _Y = Y
         # create FitResults
         fitres = fit.FitResult("chiral_fit")
         #shape1 = (_X.shape[0], 1, _X.shape[0])
         #shape1 = (_X.shape[0], len(start), _Y.shape[0])
         #shape2 = (_X.shape[0], _Y.shape[0])
-        shape1 = (Y.shape[-1], len(start), 1)
-        shape2 = (Y.shape[-1], 1)
+        shape1 = (_Y.shape[-1], len(start), 1)
+        shape2 = (_Y.shape[-1], 1)
         if ncorr is None:
           fitres.create_empty(shape1, shape2, 1)
         elif isinstance(ncorr, int):
           fitres.create_empty(shape1, shape2,ncorr)
         else:
           raise ValueError("ncorr needs to be integer")
-
         # fit the data
-        dof = X.shape[0] - len(_start)
+        dof = _X.shape[0] - len(_start)
         print("In global fit, dof are: %d" %dof)
          #fit every bootstrap sample
-        tmpres, tmpchi2, tmppval = globalfitting(self.errfunc, X, Y, _start,
+        tmpres, tmpchi2, tmppval = globalfitting(self.errfunc, _X, _Y, _start,
             parlim=parlim, debug=debug,correlated=correlated,cov=cov)
         fitres.add_data((0,0), tmpres, tmpchi2, tmppval)
         #timing = []
