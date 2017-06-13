@@ -1447,9 +1447,11 @@ class ChirAna(object):
 ################################################################################
 ################# Scratch region for trying out functions ######################
 ################################################################################
-  def mu_a32_errfunc(self,p,x,y,cov):
-      #_res = pik_I32_chipt_nlo(x[:,0],x[:,1],x[:,2],p)-y
-      _res = p[0]-2.*x*p[1]-y
+  def mu_a32_errfunc(self,p,x,y,cov,gamma=False):
+      if gamma is not True:
+        _res = pik_I32_chipt_nlo(x[:,0],x[:,1],x[:,2],x[:,3],p)-y
+      else:
+          _res = p[0]-2.*x*p[1]-y
       # calculate the chi values weighted with inverse covariance matrix
       _chi = np.dot(cov,_res)
       return _chi
@@ -1473,8 +1475,8 @@ class ChirAna(object):
       # determine dimensions for array
       #nb_ensembles
       if LO is False:
-        #_x = chut.concatenate_data(self.x_data,par=slice(0,3))
-        _x = chut.concatenate_data(self.x_data,par=0)
+        _x = chut.concatenate_data(self.x_data,par=slice(0,4))
+        #_x = chut.concatenate_data(self.x_data,par=0)
       else:
         _x = chut.concatenate_data(self.x_data,par=slice(0,4))
       _y = chut.concatenate_data(self.y_data)
@@ -1486,7 +1488,7 @@ class ChirAna(object):
       ## Fit the data
       ## invoke a chiral fit, yielding a fitresult
       if LO is False:
-          start=[1.,1.]
+          start=[1.,1.,1.]
           mu_a32 = ChiralFit("mu_a32",self.mu_a32_errfunc)
       else:
           start=[1.]

@@ -847,13 +847,16 @@ class LatticePlot(object):
         return _X,_Y,_dy
 
     # Dirty helper function to abbreviate plot_chiral_ext
-    def shape_data_pik(self,x,y):
+    def shape_data_pik(self,x,y,gamma=False):
         # calculate mu over fpi squared, plot_function does not support
         # arbitrary many x-values, TODO: change that
-        #_X = reduced_mass(x[:,:,0,0].flatten(),
-        #                  x[:,:,1,0].flatten())/x[:,:,2,0].flatten()
+        if gamma is False:
+            _X = reduced_mass(x[:,:,0,0].flatten(),
+                              x[:,:,1,0].flatten())/x[:,:,2,0].flatten()
+        
         #_X = x[:,:,1,0].flatten()/x[:,:,0,0].flatten()
-        _X = x[:,:,0,0].flatten()
+        else:
+            _X = x[:,:,0,0].flatten()
        
         print("x-data:")
         print(_X)
@@ -864,7 +867,8 @@ class LatticePlot(object):
         return _X,_Y,_dy
 
     def plot_chiral_ext(self, chirana, beta, label, xlim, ylim=None, func=None,
-                       args=None, ploterror=True, kk=True, x_phys=None,xcut=None):
+                       args=None,calc_x=None, ploterror=True, kk=True,
+                       gamma=False, x_phys=None,xcut=None,plotlim=None):
         """ Function to plot a chiral extrapolation fit.
         
         This function sets up a plotter object, puts in the data in the right
@@ -879,7 +883,7 @@ class LatticePlot(object):
         dat_label = [r'$a=0.0885$fm',r'$a=0.0815$fm',r'$a=0.0619$fm']
 
         for i,a in enumerate(beta):
-            #TODO: DAC is too specialized, leave that to another function
+            #TOD: DAC is too specialized, leave that to another function
             # get data for beta, the data passed should be 3 arrays (X,Y,dy)
             # the light quark mass values
             if kk is True:
@@ -887,16 +891,16 @@ class LatticePlot(object):
                                                chirana.y_data[i],args[i])
             else:
                 _X,_Y,_dy = self.shape_data_pik(chirana.x_data[i],
-                                                chirana.y_data[i])
+                                                chirana.y_data[i],gamma=gamma)
             _mean, _dy = compute_error(_dy,axis=1)
             print(_dy.shape)
             plot_data(_X,_Y,_dy,label=a,col=col[i],fmt=fmt_pts[i])
             # Check if we want to plot a function in addition to the data
             if func is not None:
-                print("Arguments for plotting function")
-                print(args[i].shape)
-                plot_function(func,xlim,args[i],label=dat_label[i],
-                              ploterror=ploterror,fmt=col[i]+fmt_ls[i],col=col[i])
+                # xlim  
+                plot_function(func,xlim,args[i],calc_x=calc_x,label=dat_label[i],
+                              ploterror=ploterror,fmt=col[i]+fmt_ls[i],col=col[i],
+                              debug=3)
             plt.xlabel(label[0],fontsize=24)
             plt.ylabel(label[1],fontsize=24)
             #self.save()
@@ -904,24 +908,15 @@ class LatticePlot(object):
             plt.axvline(x=x_phys, color='k', ls='--', label=label[0]+'_phys.')
         # Plot the physical point as well as the continuum function
         if xcut is not None:
-            if hasattr(xcut, "__iter__"):
-                y = func(args[0,:,:], xcut[0])
-                print("y-value for cut: %r" %y)
-                plt.vlines(xcut[0], 0.9*y[0], 1.1*y[0], colors="k", label="")
-                plt.hlines(0.9*y[0], xcut[0]*1.02, xcut[0], colors="k", label="")
-                plt.hlines(1.1*y[0], xcut[0]*1.02, xcut[0], colors="k", label="")
-                plt.vlines(xcut[0], 0.9*y[0], 1.1*y[0], colors="k", label="")
-                y = func(args[0,:,:], xcut[1])
-                plt.hlines(0.9*y[0], xcut[1]*0.98, xcut[1], colors="k", label="")
-                plt.hlines(1.1*y[0], xcut[1]*0.98, xcut[1], colors="k", label="")
-                plt.vlines(xcut[1], 0.9*y[0], 1.1*y[0], colors="k", label="")
+            if len(xcut) > 1:
+                plot_brace(args,xcut,func,xpos="low")
+                plot_brace(args,xcut,func,xpos="up")
             else:
-                y = plotfunc(args[0,:,0], xcut)
-                plt.vlines(xcut, 0.95*y, 1.05*y, colors="k", label="")
-                plt.hlines(0.95*y, xcut*0.98, xcut, colors="k", label="")
-                plt.hlines(1.05*y, xcut*0.98, xcut, colors="k", label="")
-            
-        plt.xlim(xlim[0],xlim[1])
+                plot_brace(args,xcut,func,xpos="up")
+        if plotlim is None:
+            plt.xlim(np.amin(_X),np.amax(_X))
+        else: 
+            plt.xlim(plotlim[0],plotlim[1])
         if ylim is not None:
           plt.ylim(ylim[0],ylim[1])
         plt.xlabel(label[0])
@@ -932,6 +927,28 @@ class LatticePlot(object):
         #if self.join is False:
         #  self.save()
         #  plt.clf()
+
+    def plot_brace(args, xcut, func, xpos=None):
+        """ internal function that plots vertical braces at xcut"""
+        if len(xcut) > 1:
+            if xpos == "low":
+                y = func(args[0,:,:], xcut[0])
+                plt.hlines(0.9*y[0], xcut[0]*1.02, xcut[0], colors="k", label="")
+                plt.hlines(1.1*y[0], xcut[0]*1.02, xcut[0], colors="k", label="")
+                plt.vlines(xcut[0], 0.9*y[0], 1.1*y[0], colors="k", label="")
+            
+            elif xpos == "up":
+                y = func(args[0,:,:], xcut[1])
+                plt.hlines(0.9*y[0], xcut[1]*0.98, xcut[1], colors="k", label="")
+                plt.hlines(1.1*y[0], xcut[1]*0.98, xcut[1], colors="k", label="")
+                plt.vlines(xcut[1], 0.9*y[0], 1.1*y[0], colors="k", label="")
+            else:
+                print("x position not known, not plotting anything")
+        else:
+            y = func(args[0,:,:], xcut)
+            plt.hlines(0.9*y[0], xcut*0.98, xcut, colors="k", label="")
+            plt.hlines(1.1*y[0], xcut*0.98, xcut, colors="k", label="")
+            plt.vlines(xcut, 0.9*y[0], 1.1*y[0], colors="k", label="")
 
     def plot_cont(self,chirana,func,phys_x,xlim,args):
       """ Plot the continuum curve of a chiral analysis and the physical point

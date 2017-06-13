@@ -97,8 +97,10 @@ def main():
     #------------------------- Setup objects -----------------------------------
     extrapol = ana.ChirAna("pi-K I-3_2")
     # have four x-values: mk,mpi,fpi,a
-    lyt_xvals = (3,(6,4,2),3,4,1500)
-    lyt_yvals = (3,(6,4,2),3,1,1500)
+    ens_shape_chirana = (len(latA),len(latB),len(latD))
+    print(ens_shape_chirana)
+    lyt_xvals = (3,ens_shape_chirana,3,4,1500)
+    lyt_yvals = (3,ens_shape_chirana,3,1,1500)
     extrapol.create_empty(lyt_xvals,lyt_yvals,lat_dict=lat_dict)
     print("\nSetup complete, begin chiral analysis")
     #------------------------- Get x-values --------------------------------
@@ -133,22 +135,29 @@ def main():
                 print("0th Bootstrapsample for fpi: %f" %fpi[0])
                 extrapol.x_data[i][j,k,2] = fpi
                 extrapol.x_data[i][j,k,3] = ext_data.get(a,'r0')
-    extrapol.fit_mu_a32(LO=True)
+    extrapol.fit_mu_a32(LO=False)
     plotargs = extrapol.fitres.data[0]
-    args = np.asarray([np.vstack((plotargs[:,0,0],
-                                       extrapol.x_data[i][0,0,3])).T
-                                       for i in range(3)])
-    plotfunc = lambda p,x: -x**2/(4.*np.pi) + p[:,0]/p[:,1]**2
+    # LO-arguments
+    #args = np.asarray([np.vstack((plotargs[:,0,0],
+    #                                   extrapol.x_data[i][0,0,3])).T
+    #                                   for i in range(len(space))])
+    # NLO arguments
+    args = np.asarray([np.vstack((plotargs[:,0,0], plotargs[:,1,0],
+      plotargs[:,2,0],extrapol.x_data[i][0,0,3])).T for i in range(len(space))])
+    print("Argument shape after stacking")
+    print(args.shape)
     # Plot the data the given function
     label=[r'$\mu_{\pi K}/f_{\pi}$',r'$\mu_{\pi K}\,a_{3/2}$',r' ',
            r'$(\mu_{\pi K}/f_{\pi})_{phys}$']
-    filename = plotdir+'/mua0_decay_lo.pdf'
+    filename = plotdir+'/mua0_decay_nlo.pdf'
     print("args have shape")
     print(args[1].shape)
     chiral_plot = ana.LatticePlot(filename, join = False)
-    chiral_plot.plot_chiral_ext(extrapol,space,label,xlim=[0.5,1.8],
-                                func=plotfunc, args=args,
-                                ploterror=False,kk=False)
+    chiral_plot.plot_chiral_ext(extrapol,space,label, xlim=[[0.09,0.23],
+                                [0.03,0.3],[0.04,0.08], [5.,8.]],
+                                func=ana.pik_I32_chipt_plot, args=args,
+                                calc_x = ana.calc_x_plot, ploterror=True,
+                                kk=False, gamma=False, plotlim=[0.5,1.8])
     chiral_plot.save()
     del chiral_plot
     #chiral_plot = ana.LatticePlot(filename, join = False)

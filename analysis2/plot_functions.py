@@ -29,8 +29,15 @@ def print_label(keys, vals, xpos=0.7, ypos=0.8):
     x = xlim()[1] * xpos
     y = ylim()[1] * ypos
 
+# X is a tuple of ranges for each dimension in accordance to function
+def x_linspace(X,samples):
+    _x1 = np.zeros((samples,len(X)))
+    for i,x in enumerate(X):
+        _x1[:,i] = np.linspace(x[0],x[1],samples)
+    return _x1
+
 def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=False,
-        fmt="k", col="black", samples=300, debug=0):
+        fmt="k", col="black", samples=300, calc_x=None, debug=0):
     """A function that plots a function.
 
     Parameters
@@ -55,6 +62,8 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
         The color of the line and errorband.
     samples : int
         The number of points between the min and max x values.
+    calc_x : callable
+        a function that calculates the values for the x-axis
     debug : int
         The level of verboseness.
     """
@@ -65,7 +74,8 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
             print("more than 2 _X values, truncating...")
     elif _X.size < 2:
         raise RuntimeError("need min and max x values for plot, only one given.")
-    x1 = np.linspace(_X[0], _X[1], samples)
+    #x1 = np.linspace(_X[0], _X[1], samples) 
+    x1 = x_linspace(X, samples) 
     if debug > 2:
         print("option summary:")
         print("function name is %s" % func)
@@ -122,12 +132,16 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
             print(x1.shape)
             for j,x in enumerate(x1):
                 # ATM _args[0] has to be dimension of fit parameters
+                # every x is four values
+                #print(x)
                 y1.append(func(np.atleast_2d(_args[0]), x))
                 if ploterror:
                     tmp = func(_args, x)
                     mean, std = compute_error(np.asarray(tmp))
                     ymin.append(float(mean-std))
                     ymax.append(float(mean+std))
+            print("y-values are:")
+            print(y1[-1])
     # only one args
     else:
         # the first sample contains original data,
@@ -149,9 +163,14 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
             else:
                 # calculate on original data
                 y1.append(func(_args, x))
-    plt.plot(x1, y1, fmt, label=label)
+    # If given, calculate x-values of plot
+    if calc_x is not None:
+        _x1  = calc_x(x1)
+    else: 
+        _x1 = x1
+    plt.plot(_x1, y1, fmt, label=label)
     if ymax and ymin:
-        plt.fill_between(x1, ymin, ymax, facecolor=col, edgecolor=col,
+        plt.fill_between(_x1, ymin, ymax, facecolor=col, edgecolor=col,
             alpha=0.2)
 # Old function 
 #def plot_data(X, Y, dY, label, dX=None,plotrange=None,
