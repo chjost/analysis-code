@@ -169,8 +169,8 @@ def read_data(datafolder, lattices, d2=0):
     ## other variables
     filempi = "fit_pi.npz"
     par_mpi=1
-    fileam = "am_pi_TP%d.npz" % d2
-    #fileam = "am_pi_ratio_TP%d.npz" % d2
+    #fileam = "am_pi_TP%d.npz" % d2
+    fileam = "am_pi_ratio_TP%d.npz" % d2
 
     # get reference values
     fpi = ottnad_f_pi()
@@ -244,26 +244,22 @@ def read_data(datafolder, lattices, d2=0):
         del tmpfile
     return summ_ampi, summ_mf, usumm_ampi, usumm_mf
 
-def all_fit(x, y, datafolder, xcut, readfit=True):
+def all_fit(x, y, datafolder, xcut, readfit=True, suff=""):
+    if xcut:
+        fname = "%s/summary/chiral_fit_xcut%.1f%s.npz" % (datafolder, xcut, suff)
+        dof = np.count_nonzero(x[:,0] < xcut)
+        print("\n###\nxcut = %.1f" % xcut)
+    else:
+        fname = "%s/summary/chiral_fit%s.npz" % (datafolder, suff)
+        dof = x.shape[0]
     if not readfit:
         print("NLO fit")
         fit_chi = ana.LatticeFit(fchiptNLO)
         fitres = fit_chi.chiral_fit(x, y, xcut=xcut)
-        if xcut:
-            fitres.save("%s/summary/chiral_fit_xcut%.1f.npz" % (datafolder, xcut))
-        else:
-            fitres.save("%s/summary/chiral_fit.npz" % (datafolder))
+        fitres.save(fname)
     else:
-        if xcut:
-            fitres = ana.FitResult.read("%s/summary/chiral_fit_xcut%.1f.npz" % (datafolder, xcut))
-        else:
-            fitres = ana.FitResult.read("%s/summary/chiral_fit.npz" % (datafolder))
+        fitres = ana.FitResult.read(fname)
     fitres.print_data()
-    if xcut:
-        dof = np.count_nonzero(x[:,0] < xcut)
-        print("xcut = %.1f" % xcut)
-    else:
-        dof = x.shape[0]
     print("chi2 / dof = %.3f / %d" % (fitres.chi2[0][0][0], dof - 1))
     print("pval = %.3e" % (1. - scipy.stats.chi2.cdf(fitres.chi2[0][0][0], dof - 1)))
     retval = fitres.error[0]
@@ -273,13 +269,12 @@ def all_fit(x, y, datafolder, xcut, readfit=True):
     mfp = 1.0703
     mf_phys = fchiptNLO(retval[0][0], mfp)
     mf_p = ana.mean_std(mf_phys)
-    #print("m_pi/f_pi|phys = %.5f +- %.5f" %(mf_p[0], mf_p[1]))
+    print("m_pi/f_pi|phys = %.5f +- %.5f" %(mf_p[0], mf_p[1]))
 
     return fitres.error[0], mfp, mf_p
 
-def plot_cmp_to_carsten(summ_mf, summ_ampi):
-    fmt = ["or", "sb", "^c", "Dg"]
-    labels = ["A ensembles", "B ensembles", "tmClover Ensembles", "D ensembles"]
+def plot_cmp_to_carsten(summ_mf, summ_ampi, labels):
+    fmt = ["or", "sb", "vc", "^g"]
     cdata = carsten_plot()
     for i, mf in enumerate(summ_mf):
         x = [d[0][0] for d in mf]
@@ -307,9 +302,8 @@ def plot_cmp_to_carsten(summ_mf, summ_ampi):
     plt.grid(True)
     plt.xlim([1.5,2.5])
 
-def cmp_to_uncorrected(summ_mf, summ_ampi, usumm_mf, usumm_ampi):
-    fmt = ["or", "sb", "^c", "Dg"]
-    labels = ["A ensembles", "B ensembles", "tmClover ensembles", "D ensembles"]
+def cmp_to_uncorrected(summ_mf, summ_ampi, usumm_mf, usumm_ampi, labels):
+    fmt = ["or", "sb", "vc", "^g"]
     for i, mf in enumerate(summ_mf):
         x = [d[0][0] for d in mf]
         y = [d[0][0] for d in summ_ampi[i]]
@@ -328,10 +322,8 @@ def cmp_to_uncorrected(summ_mf, summ_ampi, usumm_mf, usumm_ampi):
         dy2 = np.asarray([d[3] for d in usumm_ampi[i]])
         dytot = [np.sqrt(dy**2 + dy1**2), np.sqrt(dy**2 + dy2**2)]
         plt.errorbar(x, y, yerr=dytot, xerr=dx, fmt=fmt[i], label="", mfc="None")
-    plt.grid(True)
-    plt.legend(numpoints=1)
 
-def print_summary(data, datafolder, plotfolder, lattices):
+def print_summary(data, datafolder, plotfolder, lattices, fitnf2=False, readfit=False):
     """Print a summary of the lattices given.
 
     Args:
@@ -341,7 +333,11 @@ def print_summary(data, datafolder, plotfolder, lattices):
     """
     debug=False
     verbose=False
-    xcut = 2.5
+    if fitnf2:
+        nf2suffix = "_w_cA2_wo_B3548"
+    else:
+        nf2suffix = "_wo_cA2_wo_B3548"
+    xcuts = [2.0, 2.2, 2.4, 2.5, False]
     summ_ampi = data[0]
     summ_mf = data[1]
     usumm_ampi = data[2]
@@ -349,10 +345,14 @@ def print_summary(data, datafolder, plotfolder, lattices):
 
     # regroup data for fit
     all_data_x, all_data_y = [], []
-    for mf in summ_mf:
+    for i, mf in enumerate(summ_mf):
+        if not fitnf2 and i == 2:
+            continue
         for d in mf:
             all_data_x.append(d[0])
-    for ampi in summ_ampi:
+    for i, ampi in enumerate(summ_ampi):
+        if not fitnf2 and i == 2:
+            continue
         for d in ampi:
             all_data_y.append(d[0])
     all_data_x = np.asarray(all_data_x)
@@ -366,84 +366,89 @@ def print_summary(data, datafolder, plotfolder, lattices):
             ty = ana.mean_std(dy)
             print("(%.3f +- %.3f, %.3f +- %.3f)" % (tx[0], tx[1], ty[0], ty[1]))
 
-    # fit and evaluate chiPT at physical value
-    retval, mfp, mf_p = all_fit(all_data_x, all_data_y, datafolder, xcut, readfit=True)
+    for xcut in xcuts:
+        # fit and evaluate chiPT at physical value
+        retval, mfp, mf_p = all_fit(all_data_x, all_data_y, datafolder, xcut,
+            readfit=readfit, suff=nf2suffix)
 
-    # open plot file
-    if xcut:
-        plotter = ana.LatticePlot("%s/ampi_mfpi_xcut%.1f_TP%d_seperate_fits.pdf" % (plotfolder, xcut, 0))
-    else:
-        plotter = ana.LatticePlot("%s/ampi_mfpi_TP%d.pdf" % (plotfolder, 0))
-    # set title etc.
-    plotter.set_title("", ["M$_\pi$/f$_\pi$", "M$_\pi$a$_0$"])
+        # open plot file
+        if xcut:
+            plotter = ana.LatticePlot("%s/ampi_mfpi_xcut%.1f_TP%d%s.pdf" % (plotfolder, xcut, 0, nf2suffix))
+        else:
+            plotter = ana.LatticePlot("%s/ampi_mfpi_TP%d%s.pdf" % (plotfolder, 0, nf2suffix))
+        # set title etc.
+        plotter.set_title("", ["$M_\pi/f_\pi$", "$M_\pi a_0$"])
 
-    # plot the data
-    fmt = ["or", "sb", "^c", "Dg"]
-    labels = ["A ensembles", "B ensembles", "tmClover Ensembles", "D ensembles"]
-    for i, mf in enumerate(summ_mf):
-        if not mf:
-            continue
-        x = [d[0][0] for d in mf]
-        y = [d[0][0] for d in summ_ampi[i]]
-        dx = [d[1] for d in mf]
-        dy = np.asarray([d[1] for d in summ_ampi[i]])
-        dy1 = np.asarray([d[2] for d in summ_ampi[i]])
-        dy2 = np.asarray([d[3] for d in summ_ampi[i]])
-        dytot = [np.sqrt(dy**2 + dy1**2), np.sqrt(dy**2 + dy2**2)]
-        plt.errorbar(x, y, yerr=dytot, xerr=dx, fmt=fmt[i], label="")
-        plt.errorbar(x, y, yerr=dy, xerr=dx, fmt=fmt[i], label=labels[i])
+        # plot the data
+        fmt = ["or", "sb", "vc", "^g"]
+        labels = ["$A$ $\mathrm{ensembles}$", "$B$ $\mathrm{ensembles}$",
+            "$c$ $\mathrm{ensembles}$", "$D$ $\mathrm{ensembles}$"]
+        for i, mf in enumerate(summ_mf):
+            if not mf:
+                continue
+            x = [d[0][0] for d in mf]
+            y = [d[0][0] for d in summ_ampi[i]]
+            dx = [d[1] for d in mf]
+            dy = np.asarray([d[1] for d in summ_ampi[i]])
+            dy1 = np.asarray([d[2] for d in summ_ampi[i]])
+            dy2 = np.asarray([d[3] for d in summ_ampi[i]])
+            dytot = [np.sqrt(dy**2 + dy1**2), np.sqrt(dy**2 + dy2**2)]
+            plt.errorbar(x, y, yerr=dytot, xerr=dx, fmt=fmt[i], label="")
+            plt.errorbar(x, y, yerr=dy, xerr=dx, fmt=fmt[i], label=labels[i])
 
-    # plot ChiPT formula
-    plotter.plot_func(fchiptLO, None, [1., 3.], "LO ChiPT", fmt="--k", ploterror=False)
-    #plotter.plot_func(fchiptNLO, 3.79, [1., 3.], "NLO ChiPT", fmt="--k")
-    plotter.plot_func(fchiptNLO, np.atleast_2d(retval[0][0]).T, [1., 3.], "NLO ChiPT")
-    if xcut:
-        y = fchiptNLO(retval[0][0][0], xcut)
-        plt.vlines(xcut, 0.8*y, 1.2*y, colors="k", label="")
-        plt.hlines(0.8*y, xcut*0.98, xcut, colors="k", label="")
-        plt.hlines(1.2*y, xcut*0.98, xcut, colors="k", label="")
+        # plot ChiPT formula
+        plotter.plot_func(fchiptLO, None, [1., 3.], "$\mathrm{LO}\ \chi\mathrm{PT}$", fmt="--k", ploterror=False)
+        plotter.plot_func(fchiptNLO, np.atleast_2d(retval[0][0]).T, [1., 3.], "$\mathrm{NLO}\ \chi\mathrm{PT}$")
+        if xcut:
+            y = fchiptNLO(retval[0][0][0], xcut)
+            plt.vlines(xcut, 0.8*y, 1.2*y, colors="k", label="")
+            plt.hlines(0.8*y, xcut*0.98, xcut, colors="k", label="")
+            plt.hlines(1.2*y, xcut*0.98, xcut, colors="k", label="")
 
-    # plot extrapolated value
-    #plt.errorbar(1.1, -0.044, fmt='^k', label="extrapol. from paper")
-    #plt.errorbar(mfp, mf_p[0], mf_p[1], fmt='^m', label="extrapol.")
+        # plot extrapolated value
+        #plt.errorbar(1.1, -0.044, fmt='^k', label="extrapol. from paper")
+        plt.errorbar(mfp, mf_p[0], mf_p[1], fmt='dk', label="$\mathrm{extrapolation}$")
+        plt.legend(numpoints=1, fontsize="small", frameon=False)
+        plt.grid(False)
+        plt.xlim([1., 3.])
+        plt.ylim([-0.35, 0.])
+        plotter.save()
 
-    plt.legend(numpoints=1, fontsize="small")
-    plt.grid(True)
-    plt.ylim([-0.35, 0.])
-    plotter.save()
+        # compare to Carsten data
+        #plotter.set_title("", ["M$_\pi$/f$_\pi$", "M$_\pi$a$_0$"])
+        #plot_cmp_to_carsten(summ_mf, summ_ampi, labels)
+        #plotter.save()
 
-    # compare to Carsten data
-    #plotter.set_title("", ["M$_\pi$/f$_\pi$", "M$_\pi$a$_0$"])
-    #plot_cmp_to_carsten(summ_mf, summ_ampi)
-    #plotter.save()
+        # compare to uncorrected data
+        plotter.set_title("", ["$M_\pi/f_\pi$", "$M_\pi a_0$"])
+        cmp_to_uncorrected(summ_mf, summ_ampi, usumm_mf, usumm_ampi, labels)
+        plt.legend(numpoints=1, fontsize="small", frameon=False)
+        plt.grid(False)
+        plt.xlim([1., 3.])
+        plt.ylim([-0.35, 0.])
+        plotter.save()
 
-    # compare to uncorrected data
-    plotter.set_title("", ["M$_\pi$/f$_\pi$", "M$_\pi$a$_0$"])
-    cmp_to_uncorrected(summ_mf, summ_ampi, usumm_mf, usumm_ampi)
-    plotter.save()
-
-    # plot histogram
-    #if xcut:
-    #    plotter.new_file("%s/hist_l_pipi_xcut%.1f_TP%d.pdf" % (plotfolder, xcut, 0))
-    #else:
-    #    plotter.new_file("%s/hist_l_pipi_TP%d.pdf" % (plotfolder, 0))
-    #labels = ["l$_{\pi\pi}$ fit results", "l$_{\pi\pi}$", "l$_{\pi\pi}$"]
-    #plotter.histogram(fitres, labels, 20, 0)
-    del plotter
+        # plot histogram
+        #if xcut:
+        #    plotter.new_file("%s/hist_l_pipi_xcut%.1f_TP%d.pdf" % (plotfolder, xcut, 0))
+        #else:
+        #    plotter.new_file("%s/hist_l_pipi_TP%d.pdf" % (plotfolder, 0))
+        #labels = ["l$_{\pi\pi}$ fit results", "l$_{\pi\pi}$", "l$_{\pi\pi}$"]
+        #plotter.histogram(fitres, labels, 20, 0)
+        del plotter
 
     return
 
 def main():
     d0 = np.array([0., 0., 0.]) # total momentum of the system
     s = 1
-    # left out A40.20 since f_pi not known
-    # D30.48 missing
     #Aens = ["A30.32", "A40.32", "A60.24"]
     #Aens = []
     #Bens, Dens = [], []
     Aens = ["A30.32", "A40.24", "A40.32", "A60.24",
             "A80.24", "A100.24"]
-    Bens = ["B25.32", "B35.48", "B55.32", "B85.24"]
+    Bens = ["B25.32", "B35.32", "B55.32", "B85.24"]
+    #Bens = ["B25.32", "B35.32", "B35.48", "B55.32", "B85.24"]
     Dens = ["D15.48", "D30.48", "D45.32"]
     #Cens = []
     Cens = ["cA2.09.48", "cA2.30.24", "cA2.60.32"]
@@ -454,7 +459,11 @@ def main():
     datafolder = "./data/I2/"
     plotfolder = "./plots/I2/summary/"
     data = read_data(datafolder, [Aens, Bens, Cens, Dens])
-    print_summary(data, datafolder, plotfolder, [Aens, Bens, Cens, Dens])
+    fitnf2 = False
+    readfit = False
+    print("fit N_f=2 data: %r" % fitnf2)
+    print_summary(data, datafolder, plotfolder, [Aens, Bens, Cens, Dens],
+        fitnf2, readfit)
     return
 
 # make this script importable, according to the Google Python Style Guide
