@@ -1,0 +1,891 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+
+import os
+import glob
+import numpy as np
+from scipy.optimize import leastsq
+from scipy.stats import chi2
+import matplotlib
+matplotlib.rc('text', usetex=True)
+matplotlib.use('Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+
+import analysis2 as ana
+
+# utils
+def mean_std(d, w=None, axis=None):
+    # calculate the unbiased estimator for
+    # mean and standard deviation
+    # d = data, w = weight,
+    # m = weighted mean, sw = sum weights
+    # v2 = variance^2
+    prec = 1e-9
+    kd = (axis is not None)
+    if kd:
+        select = [slice(None)] * d.ndim
+        select[axis] = 0
+        _s = list(d.shape)
+        _s[axis] = 1
+        mean = d[select].reshape(tuple(_s))
+    else:
+        select = [0,] * d.ndim
+        mean = d[select]
+        mean.reshape((1,)*d.ndim)
+    if w is None:
+        _w = np.ones_like(d)*prec
+    else:
+        _w = w
+    if np.all(np.absolute(_w)<prec):
+        #print("weights < prec, setting them to precision.")
+        _w.fill(prec)
+    sw = np.nansum(_w, axis=axis, keepdims=kd)
+    norm = sw - (np.nansum(_w**2, axis=axis, keepdims=kd)/sw)
+    #m = np.nansum(d*_w, axis=axis, keepdims=kd)/sw
+    #v2 = np.nansum(_w*((d-m)**2), axis=axis, keepdims=kd)/norm
+    v2 = np.nansum(_w*((d-mean)**2), axis=axis, keepdims=kd)/norm
+    return np.squeeze(mean), np.sqrt(np.squeeze(v2))
+
+def myplot(e, plotter, mk, ax=1, mfc=None):
+    x, dx = mean_std(e.x, np.ones_like(e.x), axis=ax)
+    y, dy = mean_std(e.y, np.ones_like(e.y), axis=ax)
+    if mfc is None:
+        plt.errorbar(x, y, xerr=dx, yerr=dy, fmt=mk)
+    else:
+        plt.errorbar(x, y, xerr=dx, yerr=dy, fmt=mk, mfc=mfc)
+
+def mypfit(e, plotter, mkf, xrng=None, ploterr=True):
+    # plot fit
+    if xrng is None:
+        _x = [e.x.min(), e.x.max()]
+    else:
+        _x = xrng
+    plotter.plot_func(lin, e.res, _x, label="", fmt=mkf,
+        col=mkf[-1], ploterror=ploterr)
+
+def mypfit2(e, plotter, mkf, xrng=None, ploterr=True):
+    # plot fit
+    if xrng is None:
+        _x = [e.x.min(), e.x.max()]
+    else:
+        _x = xrng
+    plotter.plot_func(fit2, e.res, _x, label="", fmt=mkf,
+        col=mkf[-1], ploterror=ploterr)
+
+# fit function
+def lin(p, x):
+    _x = np.asarray(x)
+    return p[...,0]*_x+p[...,1]
+
+def fit2(p, x):
+    _x = np.asarray(x)
+    return np.sqrt(p[...,0]*_x+p[...,1])
+
+# data objects
+class dp(object):
+    def __init__(self, x=np.nan, y=np.nan):
+        if not isinstance(x, (list, tuple, np.ndarray)):
+            if x == np.nan:
+                self.l = 0
+            else:
+                self.l = 1
+        else:
+            self.l = len(x)
+        self.x = np.asarray(x, dtype=np.float)
+        self.y = np.asarray(y, dtype=np.float)
+
+    def __str__(self):
+        return "%d data entries" % self.l
+
+    def __repr__(self):
+        return self.__str__()
+
+    def lin_fit(self, correlated=True):
+        if self.l < 2:
+            print("not enough data")
+            print(self.y)
+            return [None, None]
+        if not correlated:
+            cov = np.diag(np.diagonal(np.cov(self.y)))
+        else:
+            cov = np.cov(self.y)
+        #print(cov)
+        if np.any(np.isnan(cov)):
+            print("nan in cov")
+            return [None, None]
+        cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
+
+        errfunc = lambda p, x, y: np.dot(cov, (y-lin(p, x)).T)
+        samples = self.y.shape[1]
+        # create results arrays
+        res = np.zeros((samples, 2))
+        chisquare = np.zeros(samples)
+        # The FIT to the boostrap samples
+        for b in range(samples):
+            _x = self.x[:,b]
+            _y = self.y[:,b]
+            p,cov1,infodict,mesg,ier = leastsq(errfunc, [1., 0.], args=(_x,_y),
+                full_output=1, factor=.1)
+            chisquare[b] = float(sum(infodict['fvec']**2.))
+            res[b] = np.array(p)
+        #print(np.mean(res, axis=0))
+        self.res = res
+        self.pval = 1.-chi2.cdf(chisquare, float(self.l-2))
+        return [res, self.pval]
+
+    def get_intersect(self, yval):
+        if np.any(np.isnan(yval)):
+            return None
+        tmp = yval - self.res[:,1]
+        tmp /= self.res[:,0]
+        return tmp
+
+## FSE correction factors
+def FSE_pion():
+    """The values for the finite size correction for m_pi"""
+    k_mpi = {"A30.32": ana.draw_gauss_distributed(1.0081, 0.0052, (1500,), True),
+             "A40.20": ana.draw_gauss_distributed(1., 1e-4, (1500,), True),
+             "A40.24": ana.draw_gauss_distributed(1.0206, 0.0095, (1500,), True),
+             "A40.32": ana.draw_gauss_distributed(1.0039, 0.0028, (1500,), True),
+             "A60.24": ana.draw_gauss_distributed(1.0099, 0.0049, (1500,), True),
+             "A80.24": ana.draw_gauss_distributed(1.0057, 0.0029, (1500,), True),
+             "A100.24": ana.draw_gauss_distributed(1.0037, 0.0019, (1500,), True),
+             "A80.24s": ana.draw_gauss_distributed(1., 1e-4, (1500,), True),
+             "A100.24s": ana.draw_gauss_distributed(1., 1e-4, (1500,), True),
+             "B25.32": ana.draw_gauss_distributed(1.0136, 0.0060, (1500,), True),
+             "B35.48": ana.draw_gauss_distributed(1., 1e-4, (1500,), True),
+             "B35.32": ana.draw_gauss_distributed(1.0069, 0.0032, (1500,), True),
+             "B55.32": ana.draw_gauss_distributed(1.0027, 0.0014, (1500,), True),
+             "B85.24": ana.draw_gauss_distributed(1.0083, 0.0028, (1500,), True),
+             "D15.48": ana.draw_gauss_distributed(1.0081, 0.0022, (1500,), True),
+             "D30.48": ana.draw_gauss_distributed(1.0021, 0.0007, (1500,), True),
+              # values for D20.48
+             "D45.32": ana.draw_gauss_distributed(1.0047, 0.0013, (1500,), True)} 
+    return k_mpi
+
+def FSE_kaon():
+    """The values for the finite size correction for m_pi"""
+    k_kaon = {"A30.32": ana.draw_gauss_distributed(0.9954, 1e-4, (1500,), True),
+             "A40.20": ana.draw_gauss_distributed(0.9974, 1e-4, (1500,), True),
+             "A40.24": ana.draw_gauss_distributed(0.9974, 1e-4, (1500,), True),
+             "A40.32": ana.draw_gauss_distributed(0.9974, 1e-4, (1500,), True),
+             "A60.24": ana.draw_gauss_distributed(0.9907, 1e-4, (1500,), True),
+             "A80.24": ana.draw_gauss_distributed(0.9950, 1e-4, (1500,), True),
+             "A100.24": ana.draw_gauss_distributed(0.9970, 1e-4, (1500,), True),
+             "A80.24s": ana.draw_gauss_distributed(1., 1e-4, (1500,), True),
+             "A100.24s": ana.draw_gauss_distributed(1., 1e-4, (1500,), True),
+             "B25.32": ana.draw_gauss_distributed(1., 1e-4, (1500,), True),
+             "B35.48": ana.draw_gauss_distributed(1., 1e-4, (1500,), True),
+             "B35.32": ana.draw_gauss_distributed(0.9951, 1e-4, (1500,), True),
+             "B55.32": ana.draw_gauss_distributed(0.9982, 1e-4, (1500,), True),
+             "B85.24": ana.draw_gauss_distributed(0.9937, 1e-4, (1500,), True),
+             "D15.48": ana.draw_gauss_distributed(1., 1e-4, (1500,), True),
+             "D30.48": ana.draw_gauss_distributed(0.9986, 1e-4, (1500,), True),
+             "D45.32": ana.draw_gauss_distributed(1., 1e-4, (1500,), True)}
+    return k_kaon
+
+## unitary values
+
+def paper_unit_kaon():
+    """The values for unitary pseudoscalar kaons; arxiv:1501.02645 and wiki"""
+    p_am = {}
+    topdir = "/hiskp2/ottnad/data/[ABD]*/"
+    ensemble = sorted(glob.glob(topdir))
+    filename = "analyse/kaon/LF_8x8.blocking.Z_M1.masses.cosh.state.0.fit"
+    for e in ensemble:
+        fname = os.path.join(e, filename)
+        try:
+            tmp = np.loadtxt(fname)
+            dat = ana.draw_gauss_distributed(tmp[0], tmp[1], (1500,), True)
+            lat = os.path.basename(e[:-1]).split("_")[0]
+            #print(lat)
+            #print(dat)
+            if lat == "D45.32":
+                continue
+            elif lat == "D45.32sc":
+                lat = "D45.32"
+            p_am.update({lat: dat})
+        except IOError:
+            pass
+    return p_am
+
+def paper_r0():
+    """Values for the chirally extrapolated Sommer parameter r_0"""
+    val = [5.31, 5.77, 7.60]
+    dval = [0.08, 0.06, 0.08]
+    tmp = [ana.draw_gauss_distributed(val[i], dval[i], shape=(1500,), origin=True)
+        for i in range(3)]
+    return {"A": tmp[0], "B": tmp[1], "D": tmp[2]}
+
+def phys_r0():
+    # M1 from the Z paper
+    #return ana.draw_gauss_distributed(0.470, 0.001, shape=(1500,), origin=True)
+    return ana.draw_gauss_distributed(0.474, 0.014, shape=(1500,), origin=True)
+
+def phys_pion():
+    """from the PDG, divided by """
+    hbarc = 197.327
+    mphys = 134.9766
+    dmphys = 0.0006
+    tmp = ana.draw_gauss_distributed(mphys, dmphys, shape=(1500,), origin=True)
+    r0phys = phys_r0()
+    return (r0phys*tmp)/(hbarc)
+
+def phys_kaon():
+    """from the PDG, divided by """
+    hbarc = 197.327
+    mphys = 494.2
+    dmphys = 0.3
+    tmp = ana.draw_gauss_distributed(mphys, dmphys, shape=(1500,), origin=True)
+    r0phys = phys_r0()
+    return (r0phys*tmp)/(hbarc)
+
+def phys_eta():
+    """from the PDG, divided by """
+    hbarc = 197.327
+    mphys = 547.862
+    dmphys = 0.018
+    tmp = ana.draw_gauss_distributed(mphys, dmphys, shape=(1500,), origin=True)
+    r0phys = phys_r0()
+    return (r0phys*tmp)/(hbarc)
+
+## strange quark folder extraction
+
+def parse_s_quarks(path):
+    # define sort function
+    fsort = lambda x: os.path.basename(x).split("_")[1]
+    # get folder and sort
+    #strange_masses = glob.glob(os.path.join(path, "amu_s_*/"))
+    strange_masses = glob.glob(os.path.join(path, "strange_*"))
+    strange_masses = sorted(strange_masses, key=fsort)
+    # get strange quark masses
+    sm = [int(fsort(s)) for s in strange_masses]
+    tmp = [np.ones((1500,))*float(x)*1e-5 for x in sm]
+    return strange_masses, tmp
+
+def read_r0pi_data(datafolder, lattices, par=1, ncorr=0, verb=1):
+    if verb > 0:
+        print("read pion data")
+    fn_pi = "fit_pi.npz"
+    # scaling and corrections
+    r0_val = paper_r0()
+    pifse = FSE_pion()
+    # read data
+    res = []
+    sres = [[], [], []]
+
+    # get data from files
+    def get_pi(fname, r0, fse):
+        try:
+            corr = ana.FitResult.read(fname)
+        except IOError:
+            return None
+        d = [(r0*x/fse)**2 for x in corr.data]
+        m, dm, dmsys, w = ana.sys_error(d, corr.pval, par, rel=False)
+        return m[ncorr]
+
+    for lat in lattices:
+        if verb > 1:
+            print("read pion data for %s" % lat)
+        ind = 0
+        if lat[0] == "B":
+            ind = 1
+        elif lat[0] == "D":
+            ind = 2
+        lr0 = (r0_val[lat[0]])[:,np.newaxis, np.newaxis]
+        lfse = pifse[lat][:,np.newaxis, np.newaxis]
+
+        # read pi data
+        fname = os.path.join(datafolder, lat, fn_pi)
+        _x = get_pi(fname, lr0, lfse)
+        if _x is None:
+            res.append(None)
+            continue
+        res.append(_x)
+        sres[ind].append(_x)
+    return res, sres
+
+def read_kaon_data(datafolder, lattices, par=1, ncorr=0, verb=0):
+    if verb > 0:
+        print("read kaon data")
+    fn_kaon = "fit_k_%s.npz"
+    # corrections
+    kfse = FSE_kaon()
+    # read data
+    res = []
+    sres = [[], [], []]
+    data = []
+
+    # get data from files
+    def get_data(fname, fse):
+        try:
+            corr = ana.FitResult.read(fname)
+        except IOError:
+            return None
+        d = [(x/fse)**2 for x in corr.data]
+        m, dm, dmsys, w = ana.sys_error(d, corr.pval, par, rel=False)
+        return m[ncorr]
+
+    for lat in lattices:
+        if verb > 1:
+            print("read kaon data for %s" % lat)
+        ind = 0
+        if lat[0] == "B":
+            ind = 1
+        elif lat[0] == "D":
+            ind = 2
+        lfse = kfse[lat][:,np.newaxis, np.newaxis]
+
+        tmp = []
+        # read kaon data
+        topdir = os.path.join(datafolder, lat)
+        sdirs, mu_s = parse_s_quarks(topdir)
+        for s in sdirs:
+            fname = os.path.join(s, fn_kaon % lat)
+            _x = get_data(fname, lfse)
+            if _x is None:
+                tmp.append(None)
+                continue
+            tmp.append(_x)
+        res.append(np.asarray(tmp))
+        sres[ind].append(tmp)
+        data.append(dp(mu_s, tmp))
+    return res, sres, data
+    
+def read_eta_data(datafolder, lattices, par=1, ncorr=0, verb=0):
+    if verb > 0:
+        print("read eta data")
+    fn_eta = "fit_eta_rm_TP0.npz"
+    #fn_eta = "fit_eta_TP0.npz"
+    # read data
+    res = []
+    sres = [[], [], []]
+    data = []
+
+    # get data from files
+    def get_data(fname):
+        try:
+            corr = ana.FitResult.read(fname)
+        except IOError:
+            return None
+        d = [x**2 for x in corr.data]
+        m, dm, dmsys, w = ana.sys_error(d, corr.pval, par, rel=False)
+        return m[ncorr]
+
+    for lat in lattices:
+        if verb > 1:
+            print("read eta data for %s" % lat)
+        tmp = []
+        # read eta data
+        topdir = os.path.join(datafolder, lat)
+        sdirs, mu_s = parse_s_quarks(topdir)
+        for s in sdirs:
+            fname = os.path.join(s, fn_eta)
+            _x = get_data(fname)
+            if _x is None:
+                tmp.append(None)
+                continue
+            tmp.append(_x)
+        res.append(np.asarray(tmp))
+        data.append(dp(mu_s, tmp))
+    return res, data
+
+def read_kaon(datafolder, lattices):
+    print("read kaon data")
+    # parameters
+    fn_fit = "fit_k_%s.npz"
+    pc = 1
+    # final data list
+    data = []
+    # FSE corrections
+    kfse = FSE_kaon()
+    # get data from files
+    def get_data(corr, m2, fse):
+        if corr is None:
+            m2.append(np.ones((1500,))*np.nan)
+            return
+        d = [(x/fse)**2 for x in corr.data]
+        m, dm, dmsys, w = ana.sys_error(d, corr.pval, pc, rel=False)
+        m2.append(m[0])
+        return
+
+    # loop over lattices
+    for lat in lattices:
+        #print("read data for %s" % lat)
+        topdir = os.path.join(datafolder, lat)
+        strange_masses, mu_s = parse_s_quarks(topdir)
+        mu_s = np.asarray(mu_s)
+        lfse = kfse[lat][:, np.newaxis, np.newaxis]
+        # data arrays
+        m2 = []
+
+        # read data
+        for i, sdir in enumerate(strange_masses):
+            # get data, also extract light quark data
+            try:
+                corr = ana.FitResult.read(os.path.join(sdir, fn_fit % lat))
+            except IOError:
+                corr = None
+            get_data(corr, m2, lfse)
+        # append data
+        data.append(dp(mu_s, m2))
+    return data
+
+def correct_kaon(r0pi, sr0pi, lattices):
+    print("calculate kaon corrections")
+    # constants
+    r0 = paper_r0()
+    ppi = phys_pion()**2
+    pkaon = phys_kaon()**2
+    ukaon = paper_unit_kaon()
+    kfse = FSE_kaon()
+    udat = [[], [], []]
+    udatdic = {}
+    data = []
+    datacorr = []
+    res = []
+    fits = []
+    weight = []
+    # prepare kaon data
+    for lat in lattices:
+        ind = 0
+        if lat[0] == "B":
+            ind = 1
+        elif lat[0] == "D":
+            ind = 2
+        udatdic[lat] = (ukaon[lat]*r0[lat[0]]/kfse[lat])**2
+        if lat[-1] == "s":
+            continue
+        udat[ind].append((ukaon[lat]*r0[lat[0]]/kfse[lat])**2)
+    # set up corrections
+    for k, p, l in zip(udat, sr0pi, ["A", "B"]):
+        # fit
+        if l == "A" and "A100.24s" in lattices:
+            tmp = dp(p[:-1], k)
+        else:
+            tmp = dp(p, k)
+        fit, pvals = tmp.lin_fit(correlated=False)
+        data.append(tmp)
+        fits.append(fit)
+        weight.append(1.-2.*(np.absolute(0.5 - pvals)))
+        print("fit for %s ensembles" % l)
+        m, d = mean_std(fit[:,0])
+        print("b = %.3f(%.0f)" % (m, d*1e3))
+        m, d = mean_std(fit[:,1])
+        print("a = %.3f(%.0f)" % (m, d*1e3))
+        datacorr = dp(p, k)
+    # calculate weighted average between the three values
+    # for the slope
+    m, d = mean_std(np.asarray(fits)[:,:,0], np.asarray(weight), axis=0)
+    _y = pkaon - ppi*m
+    #_y = ana.draw_gauss_distributed(1.24, 0.11, (1500,), origin=True)
+    nfit = np.zeros_like(fits[0])
+    nfit[:,0] = m
+    nfit[:,1] = _y
+    datacorr.res = nfit
+    print("average")
+    m, d = mean_std(nfit[:,0])
+    print("b = %.3f(%.0f)" % (m, d*1e3))
+    m, d = mean_std(nfit[:,1])
+    print("a = %.3f(%.0f)" % (m, d*1e3))
+    # calculate difference between fit and unitary kaon,
+    # as the data will be matched to unitary kaon masses
+    for lat, r in zip(lattices, r0pi):
+        if lat == "A100.24s" or lat == "D45.32":
+            res.append(np.zeros((1500,)))
+            continue
+        diff = (udatdic[lat] - lin(nfit, r))
+        res.append(diff)
+    return data, datacorr, res
+
+def eta_correction(eta, r0pi, deltak, lattices):
+    print("correcting eta masses")
+    #deta = ana.draw_gauss_distributed(1.60, 0.18, (1500,), origin=True)
+    deta = ana.draw_gauss_distributed(1.46, 0.06, (1500,), origin=True)
+    r0 = paper_r0()
+    allx, ally = [], []
+    dataold = []
+    data = []
+    sdatax, sdatay = [[], []], [[], []]
+    for lat, edat, pdat, dk in zip(lattices, eta, r0pi, deltak):
+        ind = 0
+        if lat[0] == "B":
+            ind = 1
+        elif lat[0] == "D":
+            ind = 2
+        tmpy = edat.y*(r0[lat[0]]**2)
+        corry = tmpy - deta*dk
+        dataold.append(dp(pdat, tmpy))
+        data.append(dp(pdat, corry))
+        allx.append(pdat)
+        ally.append(corry)
+        if ind < 2:
+            sdatax[0].append(pdat)
+            sdatay[0].append(corry)
+        else:
+            sdatax[1].append(pdat)
+            sdatay[1].append(corry)
+    alldat = dp(allx, ally)
+    sdata = [dp(sdatax[0], sdatay[0]), dp(sdatax[1], sdatay[1])]
+    return dataold, data, alldat, sdata
+
+def calc_gmo_data(pieta, kfit, lattices):
+    res = []
+    allx, ally = [], []
+    r0 = paper_r0()
+    ukaon = paper_unit_kaon()
+    kfse = FSE_kaon()
+    for lat, pdat in zip(lattices, pieta):
+        x = pdat.x
+        y1 = 3*pdat.y/(r0[lat[0]]**2)
+        pitmp = pdat.x/(r0[lat[0]]**2)
+        y2 = 4*(lin(kfit.res, pdat.x)/r0[lat[0]]**2) - pitmp
+        #y2 = 4*((ukaon[lat]/kfse[lat])**2) - pdat.x/(r0[lat[0]]**2)
+        res.append(dp(x, y1/y2))
+        allx.append(x)
+        ally.append(y1/y2)
+    alldata = dp(allx, ally)
+    return res, alldata
+
+def calc_ratio_data(pieta, keta, lattices):
+    res = []
+    allx, ally = [], []
+    r0 = paper_r0()
+    pkaon = phys_kaon()
+    for lat, pdata, kdata in zip(lattices, pieta, keta):
+        x = pdata.x
+        y1 = 3*(pdata.y/r0[lat[0]])**2
+        y2 = 4*(pkaon/r0[lat[0]])**2 - pdata.x/(r0[lat[0]]**2)
+        res.append(dp(x, y1/y2))
+        allx.append(x)
+        ally.append(y1/y2)
+    alldata = dp(allx, ally)
+    return res, alldata
+
+def interpolate_eta(kaon, eta, lattices):
+    print("interpolate Meta^2")
+    res = []
+    data = []
+    ukaon = paper_unit_kaon()
+    kfse = FSE_kaon()
+    r0 = paper_r0()
+    def stats(dat, weight):
+        if dat is None:
+            return None
+        d = dat
+        w = 1. - 2*np.absolute(0.5 - weight)
+        return mean_std(d, w)
+
+    for kdat, edat, lat in zip(kaon, eta, lattices):
+        kval = ukaon[lat]/kfse[lat]
+        tmpdat = dp(kdat, edat)
+        data.append(tmpdat)
+        # fit
+        par, pval = tmpdat.lin_fit(correlated=False)
+        # interpolate
+        if par is None or np.all(np.isnan(kval)):
+            continue
+        tmp = lin(par, kval**2)
+        res.append(dp(kval**2, tmp))
+        m, d = mean_std(np.sqrt(tmp))
+        print("$%s$ & $%.3f(%.0f)$ \\\\" % (lat, m, d*1e3))
+    return data, res
+
+def extrapolate_chiral(alleta):
+    print("extrapolate r0Meta[(r0Mpi)^2] to phys")
+    ppion = phys_pion()
+    peta = phys_eta()
+
+    #print(alleta.x.shape)
+    #print(alleta.y.shape)
+    print(alleta.x[:,0])
+    print(alleta.y[:,0])
+    fits = alleta.lin_fit(correlated=True)
+    #fits = alleta.lin_fit(correlated=False)
+    if fits is None:
+        raise RuntimeError("Nothing to fit")
+    tmp = lin(fits[0], ppion**2)
+    d, m = mean_std(np.sqrt(tmp))
+    res = dp(ppion**2, np.sqrt(tmp))
+    #res = dp(ppion**2, np.sqrt(tmp))
+    print("chiral extrapolation: %.2f(%.0f)" % (d, m*1e2))
+    r0phys = phys_r0()
+    tmpphys = np.sqrt(tmp)*197.327/r0phys
+    d, m = mean_std(tmpphys)
+    print("in physical units: %.0f(%.0f) MeV" % (d, m))
+    d, m = mean_std(peta)
+    print("experimental: %.2f(%.0f)" % (d, m*1e2))
+    return fits, res
+
+def extrapolate_cont(data, lattices):
+    sets = [["A60.24", "B55.32", "D45.32"], ["A40.24", "B35.32", "D30.48"]]
+    result = []
+    fits = []
+    r0 = paper_r0()
+    r0phys = phys_r0()/197.327
+    # loop over sets
+    for i, s in enumerate(sets):
+        # check if needed ensembles are present
+        if (not s[0] in lattices) or (not s[1] in lattices) or\
+            (not s[2] in lattices):
+            continue
+        print("set %d" % i)
+        x, y = [], []
+        for _s in s:
+            sind = lattices.index(_s)
+            x.append(1/(r0[_s[0]]**2))
+            y.append(np.sqrt(data[sind].y))
+        result.append(dp(x, y))
+        print(result[-1].y[:,0])
+        m, d = mean_std(result[-1].y)
+        print("average: %.2f(%.0f)" % (m, d*1e2))
+        tmp, tmppvals = result[-1].lin_fit(correlated=True)
+        fits.append(dp(np.zeros_like(tmp[:,1]), tmp[:,1]))
+        m, d = mean_std(tmp, axis=0)
+        print("cont. extrapolation: %.2f(%.0f)" % (m[1], d[1]*1e2))
+    avedata = []
+    aveweight = []
+    for r in result:
+        avedata.append(r.res[:,1])
+        aveweight.append(1.-2*(np.absolute(0.5-r.pval)))
+    avedata = np.asarray(avedata)
+    aveweight = np.asarray(aveweight)
+    m, d = mean_std(avedata, aveweight)
+    print("weighted average: %.2f(%.0f)" % (m, d*1e2))
+    m, d = mean_std(avedata/r0phys[np.newaxis,:], aveweight)
+    print("weighted average (MeV): %.0f(%.0f)" % (m, d))
+
+    if not result:
+        return None, None
+    else:
+      return result, fits
+
+def extrapolate_gmo(data):
+    print("extrapolate GMO to phys")
+    ppion = phys_pion()
+    pkaon = phys_kaon()
+    peta = phys_eta()
+
+    #print(data.x[:,0])
+    #print(data.y[:,0])
+    fits = data.lin_fit(correlated=True)
+    if fits is None:
+        raise RuntimeError("Nothing to fit")
+    tmp = lin(fits[0], ppion**2)
+    d, m = mean_std(tmp)
+    res = dp(ppion**2, tmp)
+    print("chiral extrapolation: %.2f(%.0f)" % (d, m*1e2))
+    d, m = mean_std(3*peta**2/(4*pkaon**2 - ppion**2))
+    print("experimental: %.2f(%.0f)" % (d, m*1e2))
+    return fits, res
+
+def plot_kaon_correction(plotfolder, fitdata, corrfitdata):
+    print("plotting kaon correction")
+    markers = {"A":"or", "B":"sb", "D": "^g"}
+    markers_fit = {"A":"-r", "B":"-b", "D": "-g"}
+    fname = os.path.join(plotfolder, "kaon_correction.pdf")
+    plotter = ana.LatticePlot(fname)
+    alab = ["$(r_0 M_{\pi})^2$", "$r_0 M_{K}$"]
+    dataexp = dp(phys_pion()**2, phys_kaon())
+
+    plt.xlim([0., 1.5])
+    plt.ylim([0.5, 2.0])
+    plotter.set_title("", alab)
+    for f, l in zip(fitdata, ["A", "B"]):
+        ftmp = dp(f.x, np.sqrt(f.y))
+        myplot(ftmp, plotter, markers[l])
+        mypfit2(f, plotter, markers_fit[l], ploterr=False, xrng=[0.,1.5])
+    mypfit2(corrfitdata, plotter, "--k", ploterr=False, xrng=[0.,1.5])
+    myplot(dataexp, plotter, "dk", ax=None)
+    plotter.save()
+    del plotter
+
+def plot_corrected_eta(plotfolder, euncorr, eta, lattices):
+    print("plotting corrected eta data")
+    markers = {"A":"or", "B":"sb", "D": "^g"}
+    fname = os.path.join(plotfolder, "eta_corrected_MB.pdf")
+    plotter = ana.LatticePlot(fname)
+    alab = ["$(r_0 M_{\pi})^2$", "$r_0 M_{\eta}$"]
+
+    plotter.set_title("", alab)
+    plt.xlim([0., 1.5])
+    plt.ylim([1.0, 2.0])
+    for lat, e, d in zip(lattices, eta, euncorr):
+        if e is None:
+            continue
+        etmp = dp(e.x, np.sqrt(e.y))
+        myplot(etmp, plotter, markers[lat[0]], ax=None)
+        dtmp = dp(d.x, np.sqrt(d.y))
+        myplot(dtmp, plotter, markers[lat[0]], ax=None, mfc="none")
+    plotter.save()
+    del plotter
+
+def plot_eta(plotdir, eta, inter, lattices, suffix=""):
+    print("plotting all data")
+    markers = {"A":"or", "B":"sb", "D": "^g"}
+    markers_fit = {"A":"-r", "B":"-b", "D": "-g"}
+    fname = os.path.join(plotdir, "metasq_mksq_phys_MB%s.pdf" % suffix)
+    plotter = ana.LatticePlot(fname)
+    title = ["", "$(aM_{K})^2$", "$(aM_{\eta})^2$"]
+
+    xlims = {"A": [0.2**2, 0.3**2], "B": [0.19**2, 0.27**2], "D": [0.14**2, 0.2**2]}
+    ylims = {"A": [0.28**2, 0.36**2], "B": [0.25**2, 0.32**2], "D": [0.18**2, 0.23**2]}
+    for lat, e, d in zip(lattices, eta, inter):
+        plotter.set_title("$\mathrm{%s}$"%lat, title[1:])
+        plt.xlim(xlims[lat[0]])
+        plt.ylim(ylims[lat[0]])
+        #print(lat)
+        if e is None:
+            continue
+        myplot(e, plotter, markers[lat[0]])
+        mypfit(e, plotter, markers_fit[lat[0]])
+        myplot(d, plotter, "dk", ax=None)
+        plotter.save()
+    del plotter
+
+def plot_extrapolate_chiral(plotdir, eta, inter, fit, lattices, suffix=""):
+    print("plotting physical point extrapolation")
+    markers = {"A":"or", "B":"sb", "D": "^g"}
+    fname = os.path.join(plotdir, "r0meta_r0mpisq_phys%s_MB.pdf" % suffix)
+    plotter = ana.LatticePlot(fname)
+    alab = ["$(r_0 M_{\pi})^2$", r"$r_0 \bar{M}_{\eta}$"]
+
+    # generate experimental point
+    dataexp = dp(phys_pion()**2, phys_eta())
+    plt.xlim([0., 1.5])
+    plt.ylim([0.75, 2.0])
+    plotter.set_title("", alab)
+    for lat, data in zip(lattices, eta):
+        #print(lat)
+        if data is None:
+            continue
+        dtmp = dp(data.x, np.sqrt(data.y))
+        myplot(dtmp, plotter, markers[lat[0]],ax=None)
+        #myplot(data, plotter, markers[lat[0]],ax=None)
+    # print physical extrapolation
+    myplot(inter, plotter, "dk", ax=None)
+    #mypfit(fit, plotter, "-k", xrng=[0., 1.5])
+    mypfit2(fit, plotter, "-k", xrng=[0., 1.5])
+    # plot experimental value
+    myplot(dataexp, plotter, "dc", ax=None)
+    plotter.save()
+
+    del plotter
+
+def plot_pi_eta_cont(plotdir, data, fits, par=0):
+    if data is None:
+        return
+    print("plotting continuum extrapolation")
+    markers = ["or", "sk"]
+    markers_fit = ["-r", "-k"]
+    if par == 0:
+        fname = os.path.join(plotdir, "meta_ar0sq_phys_cont_MB.pdf")
+    else:
+        fname = os.path.join(plotdir, "metap_ar0sq_phys_cont_MB.pdf")
+    plotter = ana.LatticePlot(fname)
+    alab = ["$(a/r_0)^2$", "$r_0 M_{\eta}$"]
+    if par != 0:
+        alab[1] = "$r_0 M_{\eta}$"
+    dataexp = dp(np.zeros((1500,)), phys_eta())
+
+    # plot data
+    for dat, f in zip(data, fits):
+        plotter.set_title("", alab)
+        xmax = dat.x.max()
+        plt.xlim([-0.001, 0.04])
+        plt.ylim([1.1, 1.7])
+        # plot data and fit
+        myplot(dat, plotter, markers[0])
+        mypfit(dat, plotter, markers_fit[0], xrng=[-0.01, 0.04])
+        # plot interpolated value
+        myplot(f, plotter, markers[1], ax=None)
+        # plot experimental value
+        myplot(dataexp, plotter, "dc", ax=None)
+        plotter.save()
+
+    del plotter
+
+def plot_gmo(plotdir, data, fit, lattices, suffix=""):
+    if data is None:
+        return
+    print("plotting gmo extrapolation")
+    markers = {"A":"or", "B":"sb", "D": "^g"}
+    fname = os.path.join(plotdir, "gmo_phys%s_MB.pdf" % suffix)
+    plotter = ana.LatticePlot(fname)
+    alab = ["$(r_0M_\pi)^2$", r"$\frac{3M_{\eta}}{4M_K - M_\pi}$"]
+
+    # plot data
+    plt.xlim([0., 1.5])
+    plt.ylim([0.8, 2.])
+    plotter.set_title("", alab)
+    for lat, data in zip(lattices, data):
+        #print(lat)
+        if data is None:
+            continue
+        myplot(data, plotter, markers[lat[0]],ax=None)
+    # print physical extrapolation
+    #myplot(inter, plotter, "dk", ax=None)
+    #mypfit(fit, plotter, "-k", xrng=[0., 1.5])
+    plotter.save()
+
+    del plotter
+
+def main():
+    #lattices = ["A40.24", "B85.24", "D45.32"]
+    lattices = ["A40.24", "A60.24", "B35.32", "B55.32", "D30.48", "D45.32"]
+    lattices=["A30.32", "A40.24", "A40.32", "A60.24",
+              "A80.24", "A100.24", "A100.24s",
+              "B25.32", "B35.32", "B55.32", "B85.24",
+              "D30.48", "D45.32"]
+    datafolder = "/hiskp2/jost/eta_data/"
+    plotfolder = "/hiskp2/jost/eta_plot/"
+    pidatafolder = "./data/I2/"
+    #plotfolder = "./plots/eta/"
+    cmp_path = "/hiskp2/jost/correlationfunctions/eta/falk_data/"
+    par = 0 # 0 for eta, 1 for eta'
+
+    # read data
+    r0pi, sr0pi = read_r0pi_data(pidatafolder, lattices)
+    kaon, skaon, kdata = read_kaon_data(datafolder, lattices)
+    # par=0 for eta (default), par=1 for eta'
+    eta, edata = read_eta_data(datafolder, lattices)
+    # correction kaon mass
+    fitdata, corrfitdata, dkmass = correct_kaon(r0pi, sr0pi, lattices)
+    #plot_kaon_correction(plotfolder, fitdata, corrfitdata)
+
+    # interpolate the eta mass to unitary kaon 
+    # m_eta^2(m_k^2)
+    #keta = read_k_eta(datafolder, kaon, lattices)
+    etafit, etaint = interpolate_eta(kaon, eta, lattices)
+    #plot_eta(plotfolder, etafit, etaint, lattices)
+
+    # correct eta mass
+    pietau, pieta, allpieta, spieta = eta_correction(etaint, r0pi, dkmass, lattices)
+    plot_corrected_eta(plotfolder, pietau, pieta, lattices)
+    # extrapolate to physical point (MA)
+    #pietafit, pietaint = extrapolate_chiral(allpieta)
+    #plot_extrapolate_chiral(plotfolder, pieta, pietaint, allpieta, lattices)
+    #for s, l in zip(spieta, ["_AB", "_D"]):
+    #    spietafit, spietaint = extrapolate_chiral(s)
+    #    plot_extrapolate_chiral(plotfolder, pieta, spietaint, s, lattices, suffix=l)
+
+    ## continuum extrapolation
+    #pietacontfit, pietacontint = extrapolate_cont(pieta, lattices)
+    #plot_pi_eta_cont(plotfolder, pietacontfit, pietacontint)
+
+    ## GMO relation (lattice artefacts?)
+    gmodata, allgmodata = calc_gmo_data(pieta, corrfitdata, lattices)
+    #gmofit, gmoint = extrapolate_gmo(allgmodata)
+    plot_gmo(plotfolder, gmodata, allgmodata, lattices)
+
+    # M_eta/M_K ratio
+    #ratiodata, allratiodata = calc_ratio_data(pietacorr, keta, lattices)
+
+    return
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass

@@ -157,28 +157,6 @@ def FSE_kaon():
     return k_kaon
 
 ## unitary values
-
-def paper_unit_singlet():
-    """The values for unitary, strange, pseudoscalar mesons;
-    arxiv:1501.02645, wiki, and Konstantin's analysis"""
-    p_am = {}
-    topdir = "/hiskp2/ottnad/data/[ABD]*/"
-    ensemble = sorted(glob.glob(topdir))
-    filename = "analyse/eta_trick/conn_only/LF_4x4.blocking.tshift0.Z_M1.masses.cosh.state.0.fit.original_data"
-    for e in ensemble:
-        fname = os.path.join(e, filename)
-        try:
-            tmp = np.loadtxt(fname)
-            lat = os.path.basename(e[:-1]).split("_")[0]
-            if lat == "D45.32":
-                continue
-            elif lat == "D45.32sc":
-                lat = "D45.32"
-            p_am.update({lat: tmp})
-        except IOError:
-            pass
-    return p_am
-
 def paper_unit_kaon():
     """The values for unitary pseudoscalar kaons; arxiv:1501.02645 and wiki"""
     p_am = {}
@@ -209,7 +187,7 @@ def paper_r0():
 def phys_r0():
     # M1 from the Z paper
     #return ana.draw_gauss_distributed(0.470, 0.001, shape=(1500,))
-    return ana.draw_gauss_distributed(0.470, 0.012, shape=(1500,))
+    return ana.draw_gauss_distributed(0.474, 0.014, shape=(1500,))
 
 def phys_pion():
     """from the PDG, divided by """
@@ -418,39 +396,6 @@ def calc_ratio_data(pieta, keta, lattices):
         ally.append(y1/y2)
     alldata = dp(allx, ally)
     return res, alldata
-
-def interpolate_kaon(kaon, lattices):
-    fits = []
-    res = []
-    unit_kaon = paper_unit_kaon()
-    kfse = FSE_kaon()
-    def stats(dat, weight):
-        if dat is None:
-            return None
-        d = dat
-        w = 1. - 2*np.absolute(0.5 - weight)
-        return mean_std(d, w)
-
-    def inter(uval, dat, fse):
-        #print("kaon: %.4f(%.0f)" % (uval[0], uval[1]*1e4))
-        # FSE corrections to unitary data
-        tmpdat = ana.draw_gauss_distributed(uval[0], uval[1], (1500,))/fse
-        tmp = dat.get_intersect(tmpdat**2)
-        result = np.asarray(stats(tmp, dat.pval))
-        #print("intersection: %.4f(%.0f)" % (result[0], result[1]*1e4))
-        return result
-
-    for data, lat in zip(kaon, lattices):
-        uval = unit_kaon[lat]
-        lfse = kfse[lat]
-        # fit
-        fits.append(data.lin_fit(correlated=True))
-        # interpolate
-        if fits[-1] is None or uval == np.nan:
-            res.append(None)
-        else:
-            res.append(inter(uval, data, lfse))
-    return fits, res
 
 def interpolate_eta(eta, lattices):
     print("interpolate Meta^2")
@@ -700,29 +645,28 @@ def main():
     # kaon interpolation
     # m_k^2(mu_s)
     kaon = read_kaon(datafolder, lattices)
-    #kaonfit, kaoninter = interpolate_kaon(kaon, lattices)
 
     # interpolate the eta mass to physical kaon 
     # m_eta^2(m_k^2)
     keta = read_k_eta(datafolder, kaon, lattices)
     etafit, etaint = interpolate_eta(keta, lattices)
-    #plot_eta(plotfolder, keta, etaint, lattices)
+    plot_eta(plotfolder, keta, etaint, lattices)
 
     # correct eta mass
     pietacorr, allpieta, sortpieta = read_pi_eta(pidatafolder, etaint, lattices)
 
     # extrapolate to physical point (MA)
-    #pietafit, pietaint = extrapolate_pi_eta(allpieta)
-    #plot_pi_eta(plotfolder, pietacorr, pietaint, allpieta, lattices)
-    #sortcont = []
-    #for d, s in zip(sortpieta, ["_A", "_B", "_D"]):
-    #    print(s)
-    #    tmppietafit, tmppietaint = extrapolate_pi_eta(d)
-    #    sortcont.append(tmppietaint)
-    #    plot_pi_eta(plotfolder, pietacorr, tmppietaint, d, lattices, suffix=s)
-    ## continuum extrapolation
-    #pietacontfit, pietacontint = extrapolate_pi_eta_cont(pietacorr, lattices, sortcont)
-    #plot_pi_eta_cont(plotfolder, pietacontfit, pietacontint)
+    pietafit, pietaint = extrapolate_pi_eta(allpieta)
+    plot_pi_eta(plotfolder, pietacorr, pietaint, allpieta, lattices)
+    sortcont = []
+    for d, s in zip(sortpieta, ["_A", "_B", "_D"]):
+        print(s)
+        tmppietafit, tmppietaint = extrapolate_pi_eta(d)
+        sortcont.append(tmppietaint)
+        plot_pi_eta(plotfolder, pietacorr, tmppietaint, d, lattices, suffix=s)
+    # continuum extrapolation
+    pietacontfit, pietacontint = extrapolate_pi_eta_cont(pietacorr, lattices, sortcont)
+    plot_pi_eta_cont(plotfolder, pietacontfit, pietacontint)
 
     ## GMO relation (lattice artefacts?)
     #gmodata, allgmodata = calc_gmo_data(pietacorr, keta, lattices)

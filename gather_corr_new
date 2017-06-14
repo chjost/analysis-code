@@ -174,11 +174,11 @@ def main():
             print("save data to %s" % outname)
         corrs.save(outname, asascii=True)
 
-        # plot the data
-        corrs.sym_and_boot(500)
-        plotter = ana.LatticePlot(outname.replace(".dat", ".pdf"))
-        labels = ["correlation function", "t", "C(t)", "data"]
-        plotter.plot(corrs, labels)
+        ## plot the data
+        #corrs.sym_and_boot(500)
+        #plotter = ana.LatticePlot(outname.replace(".dat", ".pdf"))
+        #labels = ["correlation function", "t", "C(t)", "data"]
+        #plotter.plot(corrs, labels)
         #plotter.set_env(ylog=True)
         #labels[0] = "correlation function, log plot"
         #plotter.plot(corrs, labels)
@@ -430,8 +430,8 @@ def build_pi0():
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':
     try:
-        #main()
+        main()
         #build_pi0()
-        build_eta()
+        #build_eta()
     except KeyboardInterrupt:
         print("\nKeyboard Interrupt, exiting...")
