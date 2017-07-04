@@ -528,14 +528,15 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
       if cov is not None:
           _cov = cov
       else:
-          _cov = np.zeros((y.shape[0],y.shape[0]))
-          for i in range(11):
-              _tmp = np.cov(y[3*i:3*i+3])
-              #print("\nCovariance submatrix %d" %i)
-              #print(_tmp)
-              _cov[3*i:3*i+3,3*i:3*i+3]=_tmp
-          for k in range(33,39):
-              _cov[k,k] = np.cov(y[k])
+          #_cov = np.zeros((y.shape[0],y.shape[0]))
+          #for i in range(11):
+          #    _tmp = np.cov(y[3*i:3*i+3])
+          #    #print("\nCovariance submatrix %d" %i)
+          #    #print(_tmp)
+          #    _cov[3*i:3*i+3,3*i:3*i+3]=_tmp
+          #for k in range(33,39):
+          #    _cov[k,k] = np.cov(y[k])
+          _cov = np.cov(y)
     print(_cov.diagonal())  
     _cov = (np.linalg.cholesky(np.linalg.inv(_cov))).T
     print("vector of inverse errors: %r" % _cov)

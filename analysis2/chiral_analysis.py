@@ -1447,11 +1447,11 @@ class ChirAna(object):
 ################################################################################
 ################# Scratch region for trying out functions ######################
 ################################################################################
-  def mu_a32_errfunc(self,p,x,y,cov,gamma=False):
+  def mu_a32_errfunc(self,p,x,y,cov,gamma=True):
       if gamma is not True:
         _res = pik_I32_chipt_nlo(x[:,0],x[:,1],x[:,2],x[:,3],p)-y
       else:
-          _res = p[0]-2.*x*p[1]-y
+        _res = p[0]-2.*x.ravel()*p[1]-y
       # calculate the chi values weighted with inverse covariance matrix
       _chi = np.dot(cov,_res)
       return _chi
@@ -1495,7 +1495,9 @@ class ChirAna(object):
           mu_a32 = ChiralFit("mu_a32_lo",self.mu_a32_lo_errfunc)
       print(_y[:,0:4])
       print("cutting x-values at: %r" %xcut)
-      self.fitres = mu_a32.chiral_fit(_x,_y,start,xcut=xcut,parlim=None,correlated=False,cov=None,debug=debug)
+      self.fitres = mu_a32.chiral_fit(_x,_y,start,xcut=xcut,parlim=None,
+                                      correlated=self.correlated,cov=None,
+                                      debug=debug)
       self.fitres.set_ranges(np.array([[[0,_x.shape[0]]]]),[[1,]])
       self.fitres.print_details()
       ## Save the fitresult data

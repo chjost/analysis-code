@@ -18,8 +18,6 @@ def main():
     plotsingle = True
 
     # get data from input file
-    prefix = ens.get_data("path")
-    print prefix
     lat = ens.name()
     nboot = ens.get_data("nboot")
     datadir = ens.get_data("datadir")
@@ -41,11 +39,11 @@ def main():
 
     # single particle correlator
     print("read single particle corrs")
-    files = ["%s/pi_os_p%d.dat" % (datadir, d) for d in range(1)]
+    files = ["%s/pi_unit.dat" % (datadir) ]
     #files = ["%s/eta_charged_p0_old.dat" % datadir] 
     #files = ["%s/pi_corr_p0.dat" % datadir] 
     if readsingledata == False:
-        picorr = ana.Correlators(files, matrix=False)
+        picorr = ana.Correlators(files, matrix=False, conf_col=2)
         picorr.sym_and_boot(nboot)
         #picorr.symmetrize()
         print(picorr.shape)
@@ -53,7 +51,8 @@ def main():
     else:
         picorr = ana.Correlators.read("%s/%s/corr_pi_%s.npz" % (datadir, lat, lat))
     print(picorr.data.shape)
-    fit_single = ana.LatticeFit(0,dt_f=-1, dt=min_size_mass, correlated=True)
+    fit_single = ana.LatticeFit(0, dt_i= 1, dt_f=-1, dt=min_size_mass,
+        correlated=True, debug=5)
     start_single = [1., 0.3]
     if readsinglefit == False:
         print("fitting")

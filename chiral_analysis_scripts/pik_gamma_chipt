@@ -135,7 +135,7 @@ def main():
                 mu_a0 = np.copy(mu_a0.data[0][:,0,0])
                 tmp_y = ana.gamma_pik(mpi, mk, mu_a0, fpi)
                 extrapol.add_data(tmp_y,(i,j,k,0),dim='y')
-    cut = [1.5,2.2]
+    cut = [1.5,2.1]
     extrapol.fit_mu_a32(xcut=cut)
     plotargs = extrapol.fitres.data[0]
     args = np.asarray([plotargs[:,slice(0,2),0] for i in range(3)])
@@ -147,9 +147,9 @@ def main():
     print(args[1].shape)
     line = lambda p,x: p[:,0]-2*x*p[:,1]
     chiral_plot = ana.LatticePlot(filename, join = False)
-    chiral_plot.plot_chiral_ext(extrapol,space,label,xlim=[1.0,2.2], args=args,
+    chiral_plot.plot_chiral_ext(extrapol,space,label,xlim=[0,2.2], args=args,
                                 func=line, ploterror=True,kk=False,xcut=cut,
-                                gamma=True)
+                                gamma=True,plotlim=[0.,2.2])
     chiral_plot.save()
     del chiral_plot
     #chiral_plot = ana.LatticePlot(filename, join = False)

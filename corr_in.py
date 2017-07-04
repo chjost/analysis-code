@@ -21,7 +21,7 @@ def miss_confs(path,rng):
 
 def main():
     
-    read_c4=True
+    read_c4=False
     # parse the input file
     if len(sys.argv) < 2:
         ens = ana.LatticeEnsemble.parse("charged.ini")
@@ -37,14 +37,14 @@ def main():
     if len(sys.argv) < 2:
       Corrs = ana.inputnames('charged.ini',['C2+', 'C4+C', 'C4+D'])
     else:
-      Corrs = ana.inputnames(sys.argv[1],['c0','c1','c2','c3'])
+      Corrs = ana.inputnames(sys.argv[1],['c0'])
       #Corrs = ana.inputnames(sys.argv[1],['c0','c1','c2','c3','c4','c5','c6','c7'])
       #Corrs = ana.inputnames(sys.argv[1],['c5'])
 
     print(rawdir)
     print(datadir)
     inputlist = []
-    cfg_rng = [714,2330,4]
+    cfg_rng = [501,533,8]
     #omit = [20, 164, 416, 540, 568, 596, 668, 1000]
     omit=[]
     print(omit)
@@ -62,12 +62,13 @@ def main():
     print("Reading Correlation functions from %s..." % rawdir)
     print("C2")
     print(Corrs)
-    C2_k = ana.read_confs(rawdir,Corrs[0],inputlist,T)
-    C2_pi = ana.read_confs(rawdir,Corrs[1],inputlist,T)
+    #C2_k = ana.read_confs(rawdir,Corrs[0],inputlist,T)
+    C2_pi = ana.read_confs(rawdir,Corrs[0],inputlist,T)
+    print(C2_pi.shape)
     # Multiplication only needed for neutral function
     #C2_k = ana.confs_mult(C2_k,-1)
     #C2_pi = ana.confs_mult(C2_pi,-1)
-    ana.write_data_ascii(C2_k,datadir+'k_unit.dat',conf=inputlist)
+    #ana.write_data_ascii(C2_k,datadir+'k_unit.dat',conf=inputlist)
     ana.write_data_ascii(C2_pi,datadir+'pi_unit.dat',conf=inputlist)
     #C2_tot = ana.confs_mult(C2,-1)
     #C57 = np.zeros((len(inputlist),T,2))

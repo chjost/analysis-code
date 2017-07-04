@@ -928,28 +928,6 @@ class LatticePlot(object):
         #  self.save()
         #  plt.clf()
 
-    def plot_brace(args, xcut, func, xpos=None):
-        """ internal function that plots vertical braces at xcut"""
-        if len(xcut) > 1:
-            if xpos == "low":
-                y = func(args[0,:,:], xcut[0])
-                plt.hlines(0.9*y[0], xcut[0]*1.02, xcut[0], colors="k", label="")
-                plt.hlines(1.1*y[0], xcut[0]*1.02, xcut[0], colors="k", label="")
-                plt.vlines(xcut[0], 0.9*y[0], 1.1*y[0], colors="k", label="")
-            
-            elif xpos == "up":
-                y = func(args[0,:,:], xcut[1])
-                plt.hlines(0.9*y[0], xcut[1]*0.98, xcut[1], colors="k", label="")
-                plt.hlines(1.1*y[0], xcut[1]*0.98, xcut[1], colors="k", label="")
-                plt.vlines(xcut[1], 0.9*y[0], 1.1*y[0], colors="k", label="")
-            else:
-                print("x position not known, not plotting anything")
-        else:
-            y = func(args[0,:,:], xcut)
-            plt.hlines(0.9*y[0], xcut*0.98, xcut, colors="k", label="")
-            plt.hlines(1.1*y[0], xcut*0.98, xcut, colors="k", label="")
-            plt.vlines(xcut, 0.9*y[0], 1.1*y[0], colors="k", label="")
-
     def plot_cont(self,chirana,func,phys_x,xlim,args):
       """ Plot the continuum curve of a chiral analysis and the physical point
       result
@@ -961,6 +939,28 @@ class LatticePlot(object):
                    fmt='d', color='darkorange', label='phys.')
       plt.legend(loc='best',ncol=2,numpoints=1,fontsize=16)
     
+def plot_brace(args, xcut, func, xpos=None):
+    """ internal function that plots vertical braces at xcut"""
+    if len(xcut) > 1:
+        if xpos == "low":
+            y = func(args[0,:,:], xcut[0])
+            plt.hlines(0.9*y[0], xcut[0]*1.02, xcut[0], colors="k", label="")
+            plt.hlines(1.1*y[0], xcut[0]*1.02, xcut[0], colors="k", label="")
+            plt.vlines(xcut[0], 0.9*y[0], 1.1*y[0], colors="k", label="")
+        
+        elif xpos == "up":
+            y = func(args[0,:,:], xcut[1])
+            plt.hlines(0.9*y[0], xcut[1]*0.98, xcut[1], colors="k", label="")
+            plt.hlines(1.1*y[0], xcut[1]*0.98, xcut[1], colors="k", label="")
+            plt.vlines(xcut[1], 0.9*y[0], 1.1*y[0], colors="k", label="")
+        else:
+            print("x position not known, not plotting anything")
+    else:
+        y = func(args[0,:,:], xcut)
+        plt.hlines(0.9*y[0], xcut*0.98, xcut, colors="k", label="")
+        plt.hlines(1.1*y[0], xcut*0.98, xcut, colors="k", label="")
+        plt.vlines(xcut, 0.9*y[0], 1.1*y[0], colors="k", label="")
+
         
 def plot_single_line(x,y,label,col):
   """plot horizontal and vertical lines at the specific points, labeled with

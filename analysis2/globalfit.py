@@ -27,6 +27,50 @@ class ChiralFit(fit.LatticeFit):
         self.fit_id = fit_id
         self.fitfunc = None
         self.errfunc = errfunc
+        
+    def cut_data(self,x,y,interval):
+        """ cut data of chiral fit object according to given interval
+        Parameters
+        ----------
+        interval: tuple or float, interval where to cut
+        
+        Returns
+        -------
+        _data: cutted data with same shape as input except for 0th axis
+        """
+        # determine shapes
+        _x_shape = x.shape
+        _y_shape = y.shape
+ 
+        #cut the xdata if necessary
+        # implement a cut on the data if given, negative means everything above
+        # that x-value
+        print("interval is: %r" %interval)
+        # only interested in first range
+        if hasattr(interval,"__iter__"):
+            sub = (0,)*len(_x_shape[1:])
+            select = (slice(None),)+sub
+            print(x[select])
+            lo = x[select] > interval[0]
+            hi = x[select] < interval[1]
+            tmp = np.logical_and(lo,hi)
+            print("Shape for cutting:")
+            # should be a 1d array
+            print(tmp)
+        elif interval >= 0.:
+            tmp = x[:,0] < interval
+        elif interval < 0.:
+            tmp = x[:,0] > -interval
+        print("y-shape before cut:")
+        print(y.shape)
+        _x = x[tmp,...]
+        _y = y[tmp,...]
+        print("y-data after cut:")
+        print(_y[:,0])
+        print("y-shape after cut:")
+        print(_y.shape)
+        
+        return _x, _y
 
     def chiral_fit(self, X, Y, start=None, xcut=None, ncorr=1,
         parlim=None,correlated=False,cov=None, debug=3):
@@ -54,23 +98,9 @@ class ChiralFit(fit.LatticeFit):
             _start = [3.0]
         else:
           _start = start
-        #cut the xdata if necessary
-        # implement a cut on the data if given, negative means everything above
-        # that x-value
+
         if xcut is not None:
-            print("xcut is: %r" %xcut)
-            if hasattr(xcut,"__iter__"):
-                lo = X[:,0] > xcut[0]
-                hi = X[:,0] < xcut[1]
-                tmp = np.logical_and(lo,hi)
-            elif xcut >= 0.:
-                tmp = X[:,0] < xcut
-            elif xcut < 0.:
-                tmp = X[:,0] > -xcut
-            _X = X[tmp]
-            _Y = Y[tmp]
-            print("x-data after cut:")
-            print(_X[:,0])
+            _X, _Y = self.cut_data(X,Y,xcut)
         else:
             _X = X
             _Y = Y

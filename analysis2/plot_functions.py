@@ -33,6 +33,7 @@ def print_label(keys, vals, xpos=0.7, ypos=0.8):
 def x_linspace(X,samples):
     _x1 = np.zeros((samples,len(X)))
     for i,x in enumerate(X):
+        print(x)
         _x1[:,i] = np.linspace(x[0],x[1],samples)
     return _x1
 
@@ -74,8 +75,10 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
             print("more than 2 _X values, truncating...")
     elif _X.size < 2:
         raise RuntimeError("need min and max x values for plot, only one given.")
-    #x1 = np.linspace(_X[0], _X[1], samples) 
-    x1 = x_linspace(X, samples) 
+    if hasattr(X[0],"__iter__"):
+        x1 = x_linspace(X, samples) 
+    else:
+        x1 = np.linspace(_X[0], _X[1], samples) 
     if debug > 2:
         print("option summary:")
         print("function name is %s" % func)
