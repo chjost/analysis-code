@@ -44,7 +44,7 @@ def main():
     print(rawdir)
     print(datadir)
     inputlist = []
-    cfg_rng = [501,533,8]
+    cfg_rng = [501,1541,40]
     #omit = [20, 164, 416, 540, 568, 596, 668, 1000]
     omit=[]
     print(omit)
@@ -69,7 +69,7 @@ def main():
     #C2_k = ana.confs_mult(C2_k,-1)
     #C2_pi = ana.confs_mult(C2_pi,-1)
     #ana.write_data_ascii(C2_k,datadir+'k_unit.dat',conf=inputlist)
-    ana.write_data_ascii(C2_pi,datadir+'pi_unit.dat',conf=inputlist)
+    ana.write_data_ascii(C2_pi,datadir+'pi_charged.dat',conf=inputlist)
     #C2_tot = ana.confs_mult(C2,-1)
     #C57 = np.zeros((len(inputlist),T,2))
     #ana.write_data_ascii(C2_tot,datadir+'pi_unit_opposite_p0.dat',conf=inputlist)

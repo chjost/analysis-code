@@ -1447,7 +1447,7 @@ class ChirAna(object):
 ################################################################################
 ################# Scratch region for trying out functions ######################
 ################################################################################
-  def mu_a32_errfunc(self,p,x,y,cov,gamma=True):
+  def mu_a32_errfunc(self,p,x,y,cov,gamma=False):
       if gamma is not True:
         _res = pik_I32_chipt_nlo(x[:,0],x[:,1],x[:,2],x[:,3],p)-y
       else:

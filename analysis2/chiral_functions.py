@@ -14,7 +14,7 @@ from chipt_nlo import *
 # Christian's packages
 import analysis2 as ana
 
-# chipt functions for fitting
+# chipt functions for fitting, according to arXiv:1110.1422 
 
 def chi_I32_nlo(ren,mpi,mk):
     # initialize a 2d-array (5,nboot) for the terms
@@ -40,13 +40,11 @@ def calc_x_plot(x):
 def pik_I32_chipt_plot(args, x):
     """ Wrapper for plotfunction"""
     _x = x.reshape((len(x),1))
-    print(args.shape)
     return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], args[0,3], args[0,0:3])
 
 def pik_I32_chipt_lo_plot(args, x):
     """ Wrapper for plotfunction"""
     _x = x.reshape((len(x),1))
-    print(args.shape)
     return pik_I32_chipt_lo(_x[0],_x[1],_x[2], args[:,1], args[:,0])
 
 def pik_I32_chipt_nlo(mpi, mk, fpi, r0, p, lambda_x=None):
@@ -74,7 +72,8 @@ def pik_I32_chipt_nlo(mpi, mk, fpi, r0, p, lambda_x=None):
     _sum2 = p[1]*16.*mpi**2/fpi**2
     # Term with NLO function (does not take eta mass at the moment)
     _sum3 = chi_I32_nlo(lambda_x, mpi, mk)
-    _mua32 = (reduced_mass(mpi,mk)/fpi)**2/(4.*np.pi)*(-1.+_sum1-_sum2+_sum3)+p[2]/(r0**2)
+    _mua32 = (reduced_mass(mpi,mk)/fpi)**2/(4.*np.pi)*(-1.+_sum1-_sum2+_sum3)
+    #+p[2]/(r0**2)
     return _mua32
 
 def pik_I32_chipt_lo(mpi, mk, fpi, r0, p):
@@ -121,5 +120,4 @@ def gamma_pik(mpi, mk, mu_a0, fpi, ren=None):
     _res[2] = -2.*mk*mpi/fpi**2*chi_nlo_pos(ren,mpi,mk)
     _sum = np.sum(_res,axis=0)
     _gamma = -fpi**2/(16.*mpi**2)*_sum 
-    print(_gamma[0])
     return _gamma

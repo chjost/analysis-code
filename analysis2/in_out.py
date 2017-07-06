@@ -249,7 +249,8 @@ def write_data_ascii(data, filename, verbose=False, conf=None):
     # init variables
     nsamples = data.shape[0]
     T = data.shape[1]
-    L = int(T/2)
+    #L = int(T/2)
+    L = int(T/4)
     # write header
     head = "%i %i %i %i %i" % (nsamples, T, 0, L, 0)
     # prepare data and counter
