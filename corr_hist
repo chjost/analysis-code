@@ -82,8 +82,14 @@ def main():
         print("plotting")
         plotter = ana.LatticePlot("%s/outlier_corr_hist.pdf" % (plotdir))
         print("Plotting to file %s/outlier_corr_hist.pdf" % (plotdir))
-        for ts in range(T+1):
+        for ts in range(T):
             label=['2pt Configuration History', 'cnfg', r'$C(%d)$' % ts,r'$C_2$']
             plotter.history(kcorr,label,ts,boot=False)
         del plotter
+if __name__ == '__main__':
+    try:
+        print("starting")
+        main()
+    except KeyboardInterrupt:
+        pass
 

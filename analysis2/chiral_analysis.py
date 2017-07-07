@@ -734,7 +734,8 @@ class ChirAna(object):
     # invoke a chiral fit, yielding a fitresult
     mk_phys = ChiralFit("ms_phys",self.mka0_errfunc)
     cov=np.cov(y)
-    self.fitres = mk_phys.chiral_fit(x,y,start,parlim=None,correlated=False,cov=None,debug=debug)
+    self.fitres = mk_phys.chiral_fit(x,y,start,parlim=None,correlated=False,
+                                      cov=None,debug=debug)
     # Save the fitresult data
     if dat is not None:
       self.fitres.save(dat+self.proc_id+'.npz')
@@ -1447,6 +1448,7 @@ class ChirAna(object):
 ################################################################################
 ################# Scratch region for trying out functions ######################
 ################################################################################
+  # TODO: implement gamma better
   def mu_a32_errfunc(self,p,x,y,cov,gamma=False):
       if gamma is not True:
         _res = pik_I32_chipt_nlo(x[:,0],x[:,1],x[:,2],x[:,3],p)-y
@@ -1488,7 +1490,7 @@ class ChirAna(object):
       ## Fit the data
       ## invoke a chiral fit, yielding a fitresult
       if LO is False:
-          start=[1.,1.,1.]
+          start=[1.,1.,0.]
           mu_a32 = ChiralFit("mu_a32",self.mu_a32_errfunc)
       else:
           start=[1.]
@@ -1505,4 +1507,32 @@ class ChirAna(object):
       #  self.fitres.save(dat+self.proc_id+'.npz')
       ## Calculate check of the data for original data
       #args = self.fitres.data[0]
+
+  #TODO:  Think about placing this somewhere else
+  def mu_a0_pik_phys(self, mpi, mk, fpi, r0=None, ren=None, iso_32=True, gamma=True):
+      """Calculate m0ua0 for pi-K from fitted LECs and continuum input
+
+      Parameters
+      ----------
+      mpi: 1darray, bootstrap samples of continuum pion mass
+      mk: 1darray, bootstrap samples of continuum kaon mass
+      fpi: 1darray, bootstrap samples of continuum pion decay constant
+      """
+      # build x-data array, at moment nsamples,nx
+      if ren is None:
+          ren = fpi
+      if gamma is True:
+          _x = np.column_stack((ren,mpi,mk,fpi))
+          if iso_32 is True:
+                  self.phys_point_fitres = self.fitres.calc_mua0_pik_phys(_x,
+                                                                  mua0_I32_from_fit)
+          else:
+              self.phys_point_fitres = self.fitres.calc_mua0_pik_phys(_x,
+                                                                  mua0_I12_from_fit)
+      else:
+          if iso_32 is True:
+              _x = np.column_stack((ren,mpi,mk,fpi,r0))
+              self.phys_point_fitres = self.fitres.calc_mua0_pik_phys(_x,
+                                                              mua0_I32_nlo_from_fit)
+      self.phys_point_fitres.print_data()
 

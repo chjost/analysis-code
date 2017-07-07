@@ -1031,6 +1031,22 @@ class FitResult(object):
             mka0_phys.add_data(*res)
         return mka0_phys
 
+    #TODO:  Think about placing this somewhere else
+    def calc_mua0_pik_phys(self, x, func):
+        """Calculate m0ua0 for pi-K from fitted LECs and continuum input
+        """
+        
+        self.calc_error()
+        _pars = self.data[0]
+        _pars_w = self.weight[:][0]
+        _nsam = self.data[0].shape[0]
+        _mua0_phys = FitResult("mua0_phys",True)
+        _shape = (_nsam,1)
+        _mua0_phys.create_empty(_shape, _shape, len(self.data))
+        for res in evaluate_phys(x, _pars, _pars_w, func,False):
+            _mua0_phys.add_data(*res)
+        return _mua0_phys
+
     def calc_dE(self, mass, parself=0, parmass=0, flv_diff=False, isdependend=True):
         """Calculate dE from own data and the mass of the particles.
 

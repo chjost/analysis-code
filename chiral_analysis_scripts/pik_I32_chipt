@@ -65,6 +65,7 @@ def main():
     space=['A','B','D']
     #seeds = [1772, 2741, 8807]
     seeds = [5859, 5672, 4104, 5382, 8439, 6186]
+    seeds2 = [9042, 9280, 2219, 4911, 2506]
     #seeds = [1772, 2741]
     #seeds = [1772,]
     lat_dict = {'A':latA,'B':latB,'D':latD}
@@ -91,6 +92,7 @@ def main():
     nboot = ens.get_data("nboot")
     # Prepare inputs
     ext_data = ana.ExtDat(seeds,space,1)
+    cont_dat = ana.ContDat(seeds2,zp_meth="phys")
     fpi_raw = ana.read_extern("../plots2/data/fpi.dat",(1,2))
     print(fpi_raw)
     chipt_tree = lambda p,x : -x**2/(4.*np.pi) 
@@ -153,11 +155,12 @@ def main():
     print("args have shape")
     print(args[1].shape)
     chiral_plot = ana.LatticePlot(filename, join = False)
-    chiral_plot.plot_chiral_ext(extrapol,space,label, xlim=[[0.09,0.23],
-                                [0.03,0.3],[0.04,0.08], [5.,8.]],
+    chiral_plot.plot_chiral_ext(extrapol,space,label, xlim=[[0.,0.5],
+                                [0.01,0.3],[0.04,0.08],
+                                [5.,8.]],ylim=[-0.25,0.],
                                 func=ana.pik_I32_chipt_plot, args=args,
                                 calc_x = ana.calc_x_plot, ploterror=True,
-                                kk=False, gamma=False, plotlim=[0.5,1.8])
+                                kk=False, gamma=False, x_phys=0.814,plotlim=[0.5,1.8])
     chiral_plot.save()
     del chiral_plot
     #chiral_plot = ana.LatticePlot(filename, join = False)
@@ -165,6 +168,9 @@ def main():
     #chiral_plot.plot_chiral_fit(extrapol,space,label,[0.5,1.6],ylim=[-0.2,0],
     #                            func=chipt_tree,x_phys=0.835)
     #del chiral_plot
+    extrapol.mu_a0_pik_phys(cont_dat.get('mpi_0'),cont_dat.get('mk'),
+                                     cont_dat.get('fpi'),r0=cont_dat.get('r0'),
+                                     iso_32=True,gamma=False)
 
 if __name__ == '__main__':
     try:

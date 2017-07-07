@@ -121,3 +121,74 @@ def gamma_pik(mpi, mk, mu_a0, fpi, ren=None):
     _sum = np.sum(_res,axis=0)
     _gamma = -fpi**2/(16.*mpi**2)*_sum 
     return _gamma
+
+# Crossing even and crossing odd scattering lengths a_0^\pm
+def a_pik_pos(ren,mpi,mk,fpi,l_pik):
+    """ Calculate pi-K crossing even scattering length
+
+    Parameters
+    ----------
+    ren: 1darray, renormalisation scale 
+    mpi: 1darray, pion mass
+    mk:  1darray, kaon mass
+    fpi: 1darray, pion decay constant
+    l_pik: 1darray, Collection of Gasser-Leutwyler LECs: 
+                    L_pik = 2L_1 + 2L_2 + L_3 - 2L_4 - L_5/2 + 2L_6 + L_8
+
+    Returns
+    -------
+    a_pik_pos: 1darray, crossing even scattering length
+    """
+    _paren = 16.*l_pik + chi_nlo_pos(ren,mpi,mk)
+    _pre = reduced_mass(mpi,mk)*mpi*mk/(2.*np.pi*fpi**4)
+    return _pre * _paren
+
+def a_pik_neg(ren,mpi,mk,fpi,l_5):
+    """ Calculate pi-K crossing odd scattering length
+
+    Parameters
+    ----------
+    ren: 1darray, renormalisation scale 
+    mpi: 1darray, pion mass
+    mk:  1darray, kaon mass
+    fpi: 1darray, pion decay constant
+    l_5: 1darray, Gasser-Leutwyler LEC L_5
+
+    Returns
+    -------
+    a_pik_pos: 1darray, crossing odd scattering length
+    """
+    _paren = 1.+16.*mpi**2/fpi**2*l_5+chi_nlo_neg(ren,mpi,mk,fpi)
+    _pre = reduced_mass(mpi,mk)/(4.*np.pi*fpi**2)
+    return _pre * _paren
+
+def a_I32(ren,mpi,mk,fpi,l_5,l_pik):
+    return a_pik_pos(ren,mpi,mk,fpi,l_pik) - a_pik_neg(ren,mpi,mk,fpi,l_5)
+
+def a_I12(ren,mpi,mk,fpi,l_5,l_pik):
+    return a_pik_pos(ren,mpi,mk,fpi,l_pik) + 2 * a_pik_neg(ren,mpi,mk,fpi,l_5)
+
+def mu_aI32(ren,mpi,mk,fpi,l_5,l_pik):
+    return reduced_mass(mpi,mk) * a_I32(ren,mpi,mk,fpi,l_5,l_pik)
+
+def mu_aI12(ren,mpi,mk,fpi,l_5,l_pik):
+    return reduced_mass(mpi,mk) * a_I12(ren,mpi,mk,fpi,l_5,l_pik)
+  # Wrapper functions for evaluate_phys in chiral_utils.py
+  # Operates bootstrapsample wise
+def mua0_I32_from_fit(pars,x):
+    # Ensure that x has at least 2 dimensions
+    _x = np.atleast_2d(x)
+    _mua0 = mu_aI32(_x[:,0],_x[:,1],_x[:,2],_x[:,3],pars[0],pars[1])
+    return _mua0
+
+def mua0_I12_from_fit(pars,x):
+    # Ensure that x has at least 2 dimensions
+    _x = np.atleast_2d(x)
+    _mua0 = mu_aI12(_x[:,0],_x[:,1],_x[:,2],_x[:,3],pars[0],pars[1])
+    return _mua0
+
+def mua0_I32_nlo_from_fit(pars,x):
+    _x = np.atleast_2d(x)
+    print(_x)
+    _mua0 = pik_I32_chipt_nlo(_x[:,1], _x[:,2], _x[:,3], _x[:,4], pars, lambda_x=None) 
+    return _mua0
