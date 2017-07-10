@@ -6,6 +6,7 @@ import os
 
 import numpy as np
 import itertools
+import pandas as pd
 
 import in_out
 import bootstrap as boot
@@ -134,6 +135,108 @@ class Correlators(object):
             tmp.ncorr = 1
         return tmp
 
+    @classmethod
+    def read_hdf5(cls, filenames, key="data", debug=0):
+        """Reads data in numpy format.
+
+        Expects a hdf5 file with correlators with data written by pandas.
+
+        Parameters
+        ----------
+        filename : str, list of str
+            The name of the data file.
+        key : string, optional
+            The data set to read from the file
+        debug : int, optional
+            The amount of debug information printed.
+
+        Raises
+        ------
+        IOError
+            If file or folder not found.
+        """
+        if isinstance(filenames, (tuple, list)):
+            adata = []
+            confs = []
+            confset = False
+            for fn in filenames:
+                # read data, written by pandas
+                tdata = pd.read_hdf(fn, key)
+                # parse config numbers
+                tconf = tdata.axes[1].get_level_values('cnfg').unique().get_values()
+                if not confset:
+                    confs = tconf
+                    confset = True
+                if np.all(tconf == confs):
+                    # transform to numpy array with config number as first
+                    # index and time as second index
+                    adata.append(tdata.reset_index(drop=True).stack('cnfg').values)
+                else:
+                    print("file %s uses different configs" % fn)
+            data = np.stack(adata, axis=2).real
+        else:
+            # read data, written to file by pandas
+            data = pd.read_hdf(filenames, key)
+            print(data.shape)
+            # parse config numbers
+            confs = data.axes[1].get_level_values('cnfg').unique().get_values()
+            # transform to numpy array with config number as first
+            # index and time as second index
+            data = data.reset_index(drop=True).stack('cnfg').values
+            #data = data.reset_index(drop=True).stack('cnfg').values[:,:,np.newaxis].real
+
+        print(data.shape)
+        tmp = cls(debug=debug)
+        tmp.data = data
+        tmp.shape = tmp.data.shape
+        tmp.conf = confs
+        tmp.matrix = False
+        tmp.ncorr = tmp.shape[-1]
+        return tmp
+
+    @classmethod
+    def read_hdf5_matrix(cls, filename, key="data", debug=0):
+        """Reads data in numpy format.
+
+        Expects a hdf5 file with correlators with data written by pandas.
+
+        Parameters
+        ----------
+        filename : str
+            The name of the data file.
+        key : string, optional
+            The data set to read from the file
+        debug : int, optional
+            The amount of debug information printed.
+
+        Raises
+        ------
+        IOError
+            If file or folder not found.
+        """
+        # read data, written to file by pandas
+        data = pd.read_hdf(filename, key).T
+        # parse config numbers
+        confs = data.axes[0].get_level_values('cnfg').unique().get_values()
+        # transform to numpy array with config number as first
+        # index, time as second index, and GEVP indices as last two indices
+        ncnfg = len(confs)
+        T = data.shape[0]/ncnfg
+        _n = int(np.floor(np.sqrt(data.shape[1])))
+        if _n*_n != data.shape[1]:
+            raise RuntimeError("Wrong number of correlators for matrix")
+        # TODO: should work, but not checked
+        tmpdata = data.values.reshape(ncnfg, T, _n, _n)
+
+        #print(data.shape)
+        tmp = cls(debug=debug)
+        tmp.data = tmpdata
+        tmp.shape = tmp.data.shape
+        tmp.conf = confs
+        tmp.matrix = True
+        tmp.ncorr = tmp.shape[-1]
+        return tmp
+        
     @classmethod
     def create(cls, data, conf=None, debug=0):
         """Create correlator class from preexisting data.
@@ -290,13 +393,13 @@ class Correlators(object):
             The index of the inverted matrix.
         """
         if not self.matrix:
+            print("not a matrix")
             return
 
         tmp = gevp.calculate_gevp(self.data, t0)
         self.data = tmp
         if not self.data is tmp:
             raise RuntimeError("data not assinged correctly")
-        #self.data = gevp.calculate_gevp(self.data, t0)
         self.shape = self.data.shape
         self.matrix = False
 
@@ -408,6 +511,8 @@ class Correlators(object):
             obj.data = ratiofunc(self.data, single_corr.data, single_corr1.data,
                 shift, dE, useall, p2=d2, L=L, irrep=irrep)
         obj.shape = obj.data.shape
+        obj.ncorr = obj.shape[-1]
+        obj.matrix = False
         return obj
 
     def back_derivative(self):

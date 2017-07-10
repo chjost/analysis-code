@@ -1,0 +1,133 @@
+#!/hiskp2/jost/code/Enthought/System/bin/python
+
+import os
+import numpy as np
+import matplotlib
+matplotlib.use('Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+
+import analysis2 as ana
+
+def main():
+    # parse the input file
+    if len(os.sys.argv) < 2:
+        ens = ana.LatticeEnsemble.parse("A40.24.ini")
+    else:
+        ens = ana.LatticeEnsemble.parse(os.sys.argv[1])
+
+    # read settings
+    readdata = False
+    preparedata = True
+    readfit = False
+    plotdata = True
+
+    # get data from input file
+    prefix = ens.get_data("path")
+    lat = ens.name()
+    nboot = int(ens.get_data("nboot"))
+    gmax = int(ens.get_data("gmax"))
+    datadir = "/".join((ens.get_data("datadir"), lat))
+    plotdir = "/".join((ens.get_data("plotdir"), lat))
+    d2 = ens.get_data("d2")
+    try:
+        debug = ens.get_data("debug")
+    except KeyError:
+        debug = 0
+    T2 = ens.T2()
+    L = ens.L()
+    Ti = ens.get_data("ti")
+    Tf = ens.get_data("tf")
+    dti = ens.get_data("dti")
+    dtf = ens.get_data("dtf")
+    dt = ens.get_data("dt")
+    try:
+        irrep = ens.get_data("irrep")
+    except:
+        irrep = "A1g"
+
+    addT2 = np.ones((nboot,)) * T2
+    addT = np.ones((nboot,)) * ens.T()
+
+    files = os.path.join(prefix, "../3_gevp-data", "Gevp_p%d_%s.h5" % (d2, irrep))
+
+    # read pion data
+    pi = ana.Correlators.read("%s/corr_pi.npz" % (datadir))
+    pifit = ana.FitResult.read("%s/fit_pi.npz" % (datadir))
+
+    fname_raw = os.path.join(datadir, "corr_pipi_raw_TP%d_%s.npz" % (d2, irrep))
+    fname_dat = os.path.join(datadir, "corr_pipi_TP%d_%s.npz" % (d2, irrep))
+    fname_rat = os.path.join(datadir, "ratio_pipi_TP%d_%s.npz" % (d2, irrep))
+    fname_fit = os.path.join(datadir, "fit_pipi_ratio_TP%d_%s.npz" % (d2, irrep))
+
+    print("read data")
+    if readdata == False:
+        corr = ana.Correlators.read_hdf5_matrix(files)
+        corr.sym_and_boot(nboot)
+        corr.save(fname_raw)
+    else:
+        corr = ana.Correlators.read(fname_raw)
+
+    if preparedata:
+        if d2 != 0:
+            # get m_pi for fitrange
+            mpi = pifit.data[0][:,1]
+            corr.shift(1, mass=mpi, d2=d2, L=L)
+        else:
+            corr.shift(1)
+        corr.gevp(1)
+        corr.save(fname_dat)
+        if d2 != 0:
+            ratio = corr.ratio(pi, 1, mass=mpi, d2=d2, useall=False, L=L)
+        else:
+            ratio = corr.ratio(pi, 1, useall=False, L=L)
+        ratio.save(fname_rat)
+    else:
+        corr = ana.Correlators.read(fname_dat)
+        ratio = ana.Correlators.read(fname_rat)
+
+    print("fitting")
+    fitter = ana.LatticeFit(1, dt_i=dti, dt_f=dtf, dt=dt, correlated=True, xshift=0.5)
+    if readfit == False:
+        #fitranges = [Ti,Tf]
+        n = ratio.ncorr-1
+        if L < 25:
+            fitranges = [[11,15,18,23],] + [[11,13,19,20],]*n
+        elif L < 33:
+            fitranges = [[11,15,24,30],] + [[11,13,19,20],]*n
+        else:
+            fitranges = [[10,20,28,35],] + [[10,12,19,20],]*n
+            #fitranges = [[15,27,40,47],] + [[10,12,19,20],]*n
+        #print(fitranges)
+        fitres = fitter.fit(None, ratio, fitranges, corrid="E", oldfit=pifit,
+            oldfitpar=1, useall=False, add=addT, lint=True)
+        fitres.save(fname_fit)
+    else:
+        fitres = ana.FitResult.read(fname_fit)
+    fitres.print_data(0)
+    fitres.print_data(1)
+    #fitres.print_details()
+
+    # plot the result
+    fname_plot = os.path.join(plotdir, "fit_pipi_ratio_TP%d_%s.pdf" % (
+        d2, irrep))
+    fname_hist = os.path.join(plotdir, "hist_fit_pipi_ratio_TP%d_%s.pdf" % (
+        d2, irrep))
+    if plotdata:
+        print("plotting")
+        plotter = ana.LatticePlot(fname_plot)
+        plotter.set_env(ylog=True)
+        label = ["ratio fit", "t", "R(t)", "dE"]
+        plotter.plot(ratio, label, fitres, fitter, oldfit=pifit, oldfitpar=1,
+            add=addT, xshift=0.5)
+
+        plotter.new_file(fname_hist)
+        label = ["ratio hist", "dE$_{\pi\pi}$/a", "dE$_{\pi\pi}$"]
+        plotter.histogram(fitres, label, par=1)
+        del plotter
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass

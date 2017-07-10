@@ -85,7 +85,7 @@ def ratio_shift(d1, d2, d3, shift=1, dE=None, useall=False, p2=0, L=24, irrep="A
     if (d2.shape[1] - shift) > rshape[1]:
         raise RuntimeError("The ratio with shift %d cannot be computed" % shift)
 
-    tmp2, tmp3 = get_states(d2, d3, p2, irrep, useall)
+    tmp2, tmp3 = get_states(d2, d3, p2, d1.shape[-1], irrep, useall)
     ## fill temporary arrays for the denominator calculation
     #tmp2 = np.zeros_like(d2)
     #tmp3 = np.zeros_like(d3)
@@ -178,11 +178,11 @@ def ratio(d1, d2, d3, shift=1, dE=None, useall=False, p2=0, L=24, irep="A1"):
             ratio[_s,_t] = num/den
     return ratio
 
-def get_states(mass1, mass2, d2, irrep, useall):
+def get_states(mass1, mass2, d2, ncorr, irrep, useall):
     """Calculate the expected energy for states for a given
     irrep and total momentum d2."""
-    res1 = np.zeros_like(mass1)
-    res2 = np.zeros_like(mass2)
+    res1 = np.zeros(mass1.shape[:-1] + (ncorr,))
+    res2 = np.zeros(mass2.shape[:-1] + (ncorr,))
     # calculate ground states, always needed
     if d2 == 0:
         res1[...,0] = mass1[...,0]
@@ -199,34 +199,30 @@ def get_states(mass1, mass2, d2, irrep, useall):
     # get all states
     if useall:
         if d2 == 0:
-            for n in range(1, mass1.shape[-1]):
+            for n in range(1, ncorr):
                 res1[...,n] = 2.*WfromMass_lat(mass1[...,0], n, L)
-            for n in range(1, mass2.shape[-1]):
                 res2[...,n] = 2.*WfromMass_lat(mass2[...,0], n, L)
         elif d2 == 1:
             k1 = [0, 1, 2, 1, 2, 4, 3]
             k2 = [1, 2, 3, 4, 5, 5, 6]
-            for n in range(1, mass1.shape[-1]):
+            for n in range(1, ncorr):
                 res1[...,n] = (WfromMass_lat(mass1[...,0], k1[n], L) + 
                                WfromMass_lat(mass1[...,0], k2[n], L))
-            for n in range(1, mass2.shape[-1]):
                 res2[...,n] = (WfromMass_lat(mass2[...,0], k1[n], L) + 
                                WfromMass_lat(mass2[...,0], k2[n], L))
         elif d2 == 2:
             k1 = [0, 1, 1, 2, 2, 1, 3, 2]
             k2 = [2, 1, 3, 2, 4, 5, 5, 6]
-            for n in range(1, mass1.shape[-1]):
+            for n in range(1, ncorr):
                 res1[...,n] = (WfromMass_lat(mass1[...,0], k1[n], L) + 
                                WfromMass_lat(mass1[...,0], k2[n], L))
-            for n in range(1, mass2.shape[-1]):
                 res2[...,n] = (WfromMass_lat(mass2[...,0], k1[n], L) + 
                                WfromMass_lat(mass2[...,0], k2[n], L))
         
     # use only ground state
     else:
-        for n in range(1, mass1.shape[-1]):
+        for n in range(1, ncorr):
             res1[...,n] = res1[...,0]
-        for n in range(1, mass2.shape[-1]):
             res2[...,n] = res2[...,0]
     return res1, res2
 

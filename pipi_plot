@@ -31,6 +31,7 @@ import sys
 import numpy as np
 import scipy
 import matplotlib
+matplotlib.rc('text', usetex=True)
 matplotlib.use('Agg') # has to be imported before the next lines
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
@@ -250,6 +251,7 @@ def all_fit(x, y, datafolder, xcut, readfit=True, suff=""):
         dof = np.count_nonzero(x[:,0] < xcut)
         print("\n###\nxcut = %.1f" % xcut)
     else:
+        print("\n###\n")
         fname = "%s/summary/chiral_fit%s.npz" % (datafolder, suff)
         dof = x.shape[0]
     if not readfit:
@@ -260,8 +262,9 @@ def all_fit(x, y, datafolder, xcut, readfit=True, suff=""):
     else:
         fitres = ana.FitResult.read(fname)
     fitres.print_data()
+    pvals = (1. - scipy.stats.chi2.cdf(fitres.chi2[0][0], dof - 1))
     print("chi2 / dof = %.3f / %d" % (fitres.chi2[0][0][0], dof - 1))
-    print("pval = %.3e" % (1. - scipy.stats.chi2.cdf(fitres.chi2[0][0][0], dof - 1)))
+    print("pval = %.3f" % (pvals[0]))
     retval = fitres.error[0]
 
     # get the physical value of a_0*m_pi
@@ -271,7 +274,7 @@ def all_fit(x, y, datafolder, xcut, readfit=True, suff=""):
     mf_p = ana.mean_std(mf_phys)
     print("m_pi/f_pi|phys = %.5f +- %.5f" %(mf_p[0], mf_p[1]))
 
-    return fitres.error[0], mfp, mf_p
+    return retval, mfp, mf_p, pvals
 
 def plot_cmp_to_carsten(summ_mf, summ_ampi, labels):
     fmt = ["or", "sb", "vc", "^g"]
@@ -334,9 +337,12 @@ def print_summary(data, datafolder, plotfolder, lattices, fitnf2=False, readfit=
     debug=False
     verbose=False
     if fitnf2:
-        nf2suffix = "_w_cA2_wo_B3548"
+        nf2suffix = "_w_cA2"
+        #nf2suffix = "_w_cA2_wo_B3548"
     else:
-        nf2suffix = "_wo_cA2_wo_B3548"
+        nf2suffix = "_wo_cA2"
+        #nf2suffix = "_wo_cA2_wo_B3548"
+    #xcuts = [2.0, 2.2, 2.4]
     xcuts = [2.0, 2.2, 2.4, 2.5, False]
     summ_ampi = data[0]
     summ_mf = data[1]
@@ -366,10 +372,13 @@ def print_summary(data, datafolder, plotfolder, lattices, fitnf2=False, readfit=
             ty = ana.mean_std(dy)
             print("(%.3f +- %.3f, %.3f +- %.3f)" % (tx[0], tx[1], ty[0], ty[1]))
 
+    res, pval = [], []
     for xcut in xcuts:
         # fit and evaluate chiPT at physical value
-        retval, mfp, mf_p = all_fit(all_data_x, all_data_y, datafolder, xcut,
+        retval, mfp, mf_p, pvals = all_fit(all_data_x, all_data_y, datafolder, xcut,
             readfit=readfit, suff=nf2suffix)
+        res.append(retval[0][0])
+        pval.append(pvals)
 
         # open plot file
         if xcut:
@@ -437,6 +446,18 @@ def print_summary(data, datafolder, plotfolder, lattices, fitnf2=False, readfit=
         #plotter.histogram(fitres, labels, 20, 0)
         del plotter
 
+    # calculate average
+    ave = np.zeros_like(res[0])
+    norm = np.zeros_like(res[0])
+    for x, y in zip(res, pval):
+        ave += x*y
+        norm += y
+    average = ana.mean_std(ave/norm)
+    print("average l_pipi: %.2f(%.2f)" % (average[0], average[1]))
+    mfp = 1.0703
+    mf_phys = fchiptNLO(ave/norm, mfp)
+    mf_p = ana.mean_std(mf_phys)
+    print("m_pi/f_pi|phys = %.4f +- %.4f" %(mf_p[0], mf_p[1]))
     return
 
 def main():
@@ -447,9 +468,9 @@ def main():
     #Bens, Dens = [], []
     Aens = ["A30.32", "A40.24", "A40.32", "A60.24",
             "A80.24", "A100.24"]
-    Bens = ["B25.32", "B35.32", "B55.32", "B85.24"]
-    #Bens = ["B25.32", "B35.32", "B35.48", "B55.32", "B85.24"]
+    Bens = ["B25.32", "B35.32", "B35.48", "B55.32", "B85.24"]
     Dens = ["D15.48", "D30.48", "D45.32"]
+    #Dens = ["D15.48", "D30.48", "D45.32"]
     #Cens = []
     Cens = ["cA2.09.48", "cA2.30.24", "cA2.60.32"]
     #Aens = ["A30.32", "A40.32", "A60.24",
@@ -459,8 +480,8 @@ def main():
     datafolder = "./data/I2/"
     plotfolder = "./plots/I2/summary/"
     data = read_data(datafolder, [Aens, Bens, Cens, Dens])
-    fitnf2 = False
-    readfit = False
+    fitnf2 = True
+    readfit = True
     print("fit N_f=2 data: %r" % fitnf2)
     print_summary(data, datafolder, plotfolder, [Aens, Bens, Cens, Dens],
         fitnf2, readfit)

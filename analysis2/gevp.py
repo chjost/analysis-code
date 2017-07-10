@@ -147,7 +147,7 @@ def permutation_indices(data):
     """
     return list(reversed(sorted(range(len(data)), key = data.__getitem__)))
 
-def reorder_by_ev(ev1, ev2, B):
+def reorder_by_ev(ev1, ev2, B, verbose=False):
     """Creates an index list based on eigenvectors and the matrix B.
 
     Creates an index list where the first entry corresponds to the
@@ -182,7 +182,14 @@ def reorder_by_ev(ev1, ev2, B):
     # (numerically) same largest overlap with some eigenvector ev1. In this
     # case the behaviour is not specified.
     ev1_b = np.dot(np.array(B), ev1)
+    if verbose:
+        print("sort by evec, ev1_b:")
+        print(ev1_b.shape)
+        print(ev1_b)
     dot_products = [ np.abs(np.dot(e, ev1_b)) for e in ev2.transpose() ]
+    if verbose:
+        print("sort by evec, dot_products:")
+        print(dot_products)
     # Sort the eigenvectors ev2 according to overlap with eigenvectors ev1 by
     # using the scalar product. This assumes that ev1 was already sorted.
     res = []
@@ -197,9 +204,12 @@ def reorder_by_ev(ev1, ev2, B):
             if not candidate in res:
                 res.append(candidate)
                 break
+    if verbose:
+        print("sort by evecs, permutation:")
+        print(res)
     return res
 
-def solve_gevp_gen(data, t0):
+def solve_gevp_gen(data, t0, verbose=False):
     """Generator that returns the eigenvalues for t_0 -> t where t is in
     (t0, t_max].
        
@@ -233,6 +243,7 @@ def solve_gevp_gen(data, t0):
     # initialization
     eigenvectors = None
     count = 0
+    evdone = np.zeros((data.shape[1],))
 
     # calculate the eigensystem for t in (t0, T/2+1)
     for j in range(t0 + 1, data.shape[0]):
@@ -250,7 +261,7 @@ def solve_gevp_gen(data, t0):
             # due to the normalization of the eigenvectors return by the eigh
             # solver.
             else:
-                perm = reorder_by_ev(new_eigenvectors, eigenvectors, B)
+                perm = reorder_by_ev(eigenvectors, new_eigenvectors, B, verbose)
             # permutation of the lists
             eigenvectors = new_eigenvectors[:,perm]
             eigenvalues = eigenvalues[perm]
@@ -289,6 +300,7 @@ def calculate_gevp(data, t0=1):
     """
     # Initialize the eigenvalue array
     values_array = np.zeros(data.shape[:-1])
+    vec_array = np.zeros(data.shape)
     if data.ndim == 4:
         # iterate over the bootstrap samples
         for _samples in range(data.shape[0]):
@@ -296,6 +308,7 @@ def calculate_gevp(data, t0=1):
             for eigenvalues, _eigenvectors, _t in solve_gevp_gen(data[_samples], t0):
                 # save the eigenvalues to the array
                 values_array[_samples, _t] = eigenvalues
+                vec_array[_samples, _t] = _eigenvectors
         # set the eigenvalues for t=t0 to 1.0
         values_array[:,t0] = 1.0
     else:
@@ -312,6 +325,7 @@ def calculate_gevp(data, t0=1):
                     s1 = (_samples, _t) + it + (Ellipsis,)
                     # save the eigenvalues to the array
                     values_array[s1] = eigenvalues
+                    vec_array[s1] = _eigenvectors
             # set the eigenvalues for t=t0 to 1.0
             values_array[:,t0] = 1.0
 
