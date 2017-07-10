@@ -101,6 +101,7 @@ def extract_data(config, innames):
     outputpath = config.get("main", "outputpath")
     nbran = parse_list_int(config.get("main", "nbran"))
     masses = parse_list_str(config.get("main", "strange_masses"))
+    broken = set(["cnfg1270"])
     if masses == [""]:
         skipstrange = True
     else:
@@ -116,7 +117,7 @@ def extract_data(config, innames):
     # need a workaround to get only config dirs
     configsall = [set([x for x in os.listdir(cp) if x.startswith("cnfg")]) for cp in corrpaths]
     # get all the configs available for all masses
-    configssorted = sorted(set.intersection(*configsall), key=lambda x: int(x[4:]))
+    configssorted = sorted(set.intersection(*configsall)-broken, key=lambda x: int(x[4:]))
     # for easier path building and because some functions expect this
     configssorted = [x+"/" for x in configssorted]
     # build all paths

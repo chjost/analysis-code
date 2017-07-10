@@ -1,0 +1,374 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+
+import sys
+import numpy as np
+from sympy import nsimplify
+import sympy.physics.wigner as sp
+
+import analysis2 as ana
+
+def C_func(l1, m1, l2, m2, l3, m3):
+    tmp1 = sp.wigner_3j(l1, l2, l3, m1, m2, -m3)
+    tmp2 = sp.wigner_3j(l1, l2, l3, 0, 0, 0)
+    exp = (l1 - l2 + l3)%4
+    res = 1j**exp * (-1)**m3
+    return res * tmp1 * tmp2
+
+def M_func(l1, m1, l2, m2):
+    # set range for j
+    jstart = np.abs(l1-l2)
+    jend = l1+l2
+    # needed variables
+    prefactor = (-1)**l1
+    tmp1 = np.sqrt((2*l1+1)*(2*l2+1)) * prefactor
+    # memory for results
+    tmp = np.zeros((1,), dtype=complex)
+    res = []
+    for j in range(jstart, jend+1):
+        for s in range(-j, j+1):
+            tmp[0] = 1j**j * tmp1 * (2*j+1) * C_func(l1, m1, j, s, l2, m2)
+            if np.abs(tmp) < 1.e-6:
+                continue
+            res.append([j, s, tmp.copy()])
+    return res
+
+def delta_f(x, y):
+    if int(x) == int(y):
+        return 1.
+    else:
+        return 0.
+
+def subduction_coefficients(eta, helicity, irrep, row, d2):
+    s = np.sign(helicity)
+    sq2 = 1./np.sqrt(2)
+    dp = delta_f(s, +1.)
+    dm = eta*delta_f(s, -1)
+    if d2 == 1:
+        if (helicity == 0) and (irrep == "A1" or irrep == "A2"):
+            return 1.
+        elif (helicity == 2 and irrep == "B1") or (helicity == 4 and irrep == "A1"):
+            return (dp + dm)*sq2
+        elif (helicity == 2 and irrep == "B2") or (helicity == 4 and irrep == "A2"):
+            return (dp - dm)*sq2
+        elif irrep == "E2":
+            if helicity == 1:
+                return (dp - (-1)**row * dm)*sq2
+            elif helicity == 3:
+                return (- (-1)**row * dp + dm)*sq2
+    elif d2 == 2:
+        if (helicity == 0) and (irrep == "A1" or irrep == "A2"):
+            return 1.
+        elif (helicity in [1,3] and irrep == "B1") or (helicity in [2,4] and irrep == "A1"):
+            return (dp + dm)*sq2
+        elif (helicity in [1,3] and irrep == "B2") or (helicity in [2,4] and irrep == "A2"):
+            return (dp - dm)*sq2
+    elif d2 == 3:
+        if (helicity == 0) and (irrep == "A1" or irrep == "A2"):
+            return 1.
+        elif helicity == 3:
+            if irrep == "A1":
+                return (dp - dm)*sq2
+            elif irrep == "A2":
+                return (dp + dm)*sq2
+        elif irrep == "E2":
+            if helicity == 1:
+                return (dp - (-1)**row * dm)*sq2
+            elif helicity == 2:
+                return (- (-1)**row * dp + dm)*sq2
+            elif helicity == 4:
+                return (dp + (-1)**row * dm)*sq2
+    return 0.
+
+def WignerD(l, m, helicity, d):
+    d2 = np.dot(d,d)
+    if np.abs(helicity) > 1.e-6:
+        return 0.
+    if d2 == 1:
+        if m == 0 and l in [0,2]:
+            return 1.
+    elif d2 == 2:
+        if l == 0 and m == 0:
+            return 1.
+        elif l == 2:
+            if m == 0:
+                return -0.5
+            elif np.abs(m) == 2:
+                return 0.5j*np.sqrt(3./2.) * (-1) * np.sign(m)
+    return 0.
+
+def symmetry(l, m, d2):
+    sq2 = np.sqrt(2)
+    if d2 == 1:
+        if m%4 == 0:
+            return (l, np.abs(m), 1.)
+    elif d2 == 2:
+        if l%2 == 0:
+            if m == -2:
+                return (l, np.abs(m), -1.)
+            return (l, np.abs(m), 1.)
+        else:
+            s = 1.
+            if l == 1 and m < 0:
+                s = -1.
+            elif l == 3 and (m+1)%4 == 0:
+                s = -1.
+            return (l, np.abs(m), sq2*np.exp(1j*s*np.pi/4)*np.sign(m))
+    return (-1, -1, 0.)
+
+
+def get_matrix(irrep, helicity, eta=+1, row=1, lmax=2, d=np.asarray([0,0,1])):
+    # precision for comparing
+    prec = 1.e-6
+    d2 = np.dot(d, d)
+    # the subduction coefficient for given problem
+    sub = subduction_coefficients(eta, helicity, irrep, row, d2)
+
+    matrix = []
+    deltas = []
+
+    for l1 in range(lmax+1):
+        # only even partial waves contribute
+        if l1 % 2 == 1:
+            continue
+        matrix.append([])
+        for l2 in range(lmax+1):
+            # only even partial waves contribute
+            if l2 % 2 == 1:
+                continue
+            # save the phaseshift contributing
+            if l1 == l2:
+                deltas.append(l1)
+            res = []
+            for m1 in range(-l1, l1+1):
+                w1 = WignerD(l1, m1, helicity, d)
+                #print("WignerD for m1=%d: %r" % (m1, w1))
+                if np.abs(w1) < prec:
+                    continue
+                for m2 in range(-l2, l2+1):
+                    w2 = WignerD(l2, m2, helicity, d)
+                    #print("WignerD for m2=%d: %r" % (m2, w2))
+                    if np.abs(w2) < prec:
+                        continue
+                    elements = M_func(l1, m1, l2, m2)
+
+                    if not elements:
+                        continue
+                    if not res:
+                        for e in elements:
+                            tmp = [e[0], e[1], sub.conjugate()*w1.conjugate()*e[2]*sub*w2]
+                            # check for symmetry of elements
+                            #stmp = symmetry(e[0], e[1], d2)
+                            #if stmp[0] < 0:
+                            #    continue
+                            res.append(tmp)
+                    else:
+                        for e in elements:
+                            tmp = [e[0], e[1], sub.conjugate()*w1.conjugate()*e[2]*sub*w2]
+                            # check for symmetry of elements
+                            #stmp = symmetry(e[0], e[1], d2)
+                            #if stmp[0] < 0:
+                            #    continue
+                            for r in res:
+                                if tmp[0] == r[0] and tmp[1] == r[1]:
+                                    r[2] += tmp[2]
+                                    break
+                            else:
+                                res.append(tmp)
+            matrix[-1].append(res)
+    mat = np.asarray(matrix, dtype=object)
+    return matrix, deltas
+
+def phaseshift_params(l, q):
+    # TODO values taken from preliminary analysis
+    if l == 2:
+        #a = -1.e10
+        #a = -65.13
+        a = -9.
+        r = 0.
+    # should never be called
+    elif l == 0:
+        a = -1.05
+        r = 147.
+    # everything higher should be close to 0
+    else:
+        a = 1.e10
+        r = 0.
+    return np.arctan(1./(q**(-2*l-1)/a + 0.5*r*q**(-2l+1)))
+
+def get_U(mat, q, gamma=None):
+    _q = np.asarray(q)
+    res = []
+    # iterate over rows of the matrix
+    for m in mat:
+        res.append([])
+        # iterate over the columns of the matrix
+        for n in m:
+            tmp = np.zeros_like(_q, dtype=complex)
+            # iterate over all omegas contributing
+            for data in n:
+                # data[2] is an array, see M_func
+                tmp += data[2]*ana.omega(_q, gamma=gamma, l=data[0], m=data[1])
+            res[-1].append(tmp)
+    res = np.asarray(res)
+    # res has bootstrap samples as last index, rotate to front
+    res = np.rollaxis(res, 2)
+    # create matrix U from Dudek's paper
+    U = np.zeros_like(res, dtype=complex)
+    # manually iterate over bootstrap samples
+    for i, r in enumerate(res):
+        I = 1.j*np.eye(r.shape[0])
+        U1 = (r + I)
+        U2 = np.linalg.inv(r - I)
+        U[i] = np.dot(U1, U2)
+    return U
+
+def solve_U_2d(U, shifts):
+    """Solve the case U is 2D and two different partial waves contribute."""
+    shifts[:,0] = U[:,0,0] + U[:,1,0]*U[:,0,1]/(shifts[:,1] - U[:,1,1])
+    return np.log(shifts)/2.j
+
+def solve_U_3d_1(U, shifts):
+    """Solve the case U is 3D and one or two higher different partial waves contribute."""
+    tmp = U[:,0,2]*(-U[:,1,1]*U[:,2,0] + U[:,1,0]*U[:,2,1] + U[:,2,0]*shifts[:,1]) - \
+      U[:,0,0]*(U[:,1,2]*U[:,2,1] - (U[:,1,1] - shifts[:,1])*(U[:,2,2] - shifts[:,2])) + \
+      U[:,0,1]*(U[:,1,2]*U[:,2,0] - U[:,1,0]*U[:,2,2] + U[:,1,0]*shifts[:,2])
+    tmp1 = -U[:,1,2]*U[:,2,1] + (U[:,1,1] - shifts[:,1])*(U[:,2,2] - shifts[:,2])
+    shifts[:,0] = tmp/tmp1
+    return np.log(shifts)/2.j
+
+def get_phaseshift(U, deltas, q):
+    """Solve for phase shifts using Dudek et al conventions.
+    Assumes that only 2 
+    """
+    shifts = np.zeros((U.shape[0],len(deltas)), dtype=complex)
+    # solve for phase shift using det[E-U] = 0
+    # with E=exp(2i\delta_k)\delta_{l,l}
+    # assume every delta apperas once, get info for higher momenta
+    for i, l in enumerate(deltas[1:], start=1):
+        shifts[:,i] = np.exp(2j*phaseshift_params(l, q))
+    if len(deltas) == 2:
+        return solve_U_2d(U, shifts)
+    elif len(deltas) == 1:
+        return np.log(U)/2.j
+    elif len(deltas) == 3:
+        return solve_U_3d_1(U, shifts)
+    return shifts
+
+def main():
+    # parse the input file
+    if len(sys.argv) < 2:
+        ens = ana.LatticeEnsemble.parse("A40.24.ini")
+    else:
+        ens = ana.LatticeEnsemble.parse(sys.argv[1])
+
+    lat = ens.name()
+    L = ens.L()
+    datadir = "/".join((ens.get_data("datadir"), lat))
+    plotdir = "/".join((ens.get_data("plotdir"), lat))
+    d2 = ens.get_data("d2")
+    d = ens.get_data("d")
+    try:
+        debug = ens.get_data("debug")
+    except KeyError:
+        debug = 0
+    try:
+        irrep = ens.get_data("irrep")
+    except KeyError:
+        irrep = "A1"
+    if irrep == "A1":
+        suffix = "TP%d.npz" % d2
+    else:
+        suffix = "TP%d_%s.npz" % (d2, irrep)
+
+    ## single particle correlator
+    #print("read single particle corrs")
+    #print(datadir)
+    #picorr = ana.Correlators.read("%s/corr_pi.npy" % (datadir))
+    ##picorr = ana.Correlators.read("%s/corr_pi.npz" % (datadir))
+    #pifit = ana.FitResult.read("%s/fit_pi.npz" % (datadir))
+    #pifit.print_data(1)
+
+    ## two particle correlator
+    #print("\n\nread four point function")
+    #pipifit = ana.FitResult.read("%s/fit_pipi_%s" % (datadir, suffix))
+    #pipifit.print_data(1)
+
+    #calcEcm = True
+    #calcq2 = True
+
+    #if calcEcm:
+    #    Ecm = pipifit.to_CM(1, L=L, d=d)
+    #    Ecm.save("%s/Ecm_%s" % (datadir, suffix))
+    #else:
+    #    Ecm = ana.FitResult.read("%s/Ecm_%s" % (datadir, suffix))
+    #Ecm.print_data()
+    ##Ecm.print_details()
+    ## get Lorentz boost
+    #g_all = ana.sys_error_der(Ecm.chi2, Ecm.pval)
+    #gamma = g_all[0][0]
+    ##print(gamma)
+
+    #if calcq2:
+    #    if d2 != 0:
+    #        q2 = Ecm.calc_momentum(pifit, parmass=1, L=L,
+    #            uselattice=False, isdependend=True)
+    #    else:
+    #        q2 = Ecm.calc_momentum(pifit, parmass=1, L=L,
+    #            uselattice=False)
+    #    q2.save("%s/q2_%s" % (datadir, suffix))
+    #else:
+    #    q2 = ana.FitResult.read("%s/q2_%s" % (datadir, suffix))
+    #q2.print_data()
+    #q2.print_details()
+    # get the M matrix for the problem
+    mat, deltas = get_matrix(irrep, 0)
+    print(mat)
+    # calculate U according to Dudek's paper
+    #_q2 = q2.error[0][0][0]
+    #q = np.sqrt(_q2)
+    #qmean, qstd = ana.mean_std(q)
+    #U = get_U(mat, _q2, gamma)
+    #shifts = get_phaseshift(U, deltas, q)
+    #smean, sstd = ana.mean_std(shifts)
+    #print("at q^2 = %.3e +- %.3e" % (_q2[0], q2.error[0][1][0]))
+    #print("phase shift \delta_%d: %.3e +- %.3e" % (deltas[0], smean[0].real, sstd[0].real))
+    #print(shifts.shape)
+
+    ## analytic check for the A1 irrep with p^2=1
+    #w00 = ana.omega(_q2, gamma=gamma, l=0, m=0)
+    #w20 = ana.omega(_q2, gamma=gamma, l=2, m=0)
+    #w40 = ana.omega(_q2, gamma=gamma, l=4, m=0)
+    #sw20 = 5.*np.square(w20)
+    #c = 1./((w00 -1.j)*(w00+10./7.*w20+18./7.*w40-1.j) - sw20)
+    #tmp1 = c*((w00 +1.j)*(w00+10./7.*w20+18./7.*w40-1.j) - sw20)
+    #tmp2 = c*((w00 -1.j)*(w00+10./7.*w20+18./7.*w40+1.j) - sw20)
+    ##print(c)
+    ##print(tmp1)
+    ##print(tmp2)
+    ##print(np.exp(2.j*phaseshift_params(0, q)))
+    ##print(np.exp(2.j*phaseshift_params(2, q)))
+    #res = tmp1 - 4*sw20/(np.exp(2.j*phaseshift_params(2, q))-tmp2)
+    ##res = tmp1 - 4*sw20/(1.-tmp2)
+    #res = np.log(res/2.j)
+    #print("delta_0")
+    #print(np.mean(res)*180/np.pi)
+    ##print(np.std(res))
+    #res = tmp2 - 4*sw20/(np.exp(2.j*phaseshift_params(0, q))-tmp1)
+    ##res = tmp2 - 4*sw20/(1.-tmp1)
+    #res = np.log(res/2.j)
+    #print("delta_2")
+    #print(np.mean(res)*180/np.pi)
+    ##print(np.std(res))
+    
+    #if d2 == 0:
+    #    print("CMF")
+    #    tmp1 = ana.mean_std(_q2)
+    #    tmp2 = ana.mean_std(np.arctan2(1, w00.real)*180/np.pi-180.)
+    #    print("q2: %.3f +- %.3f" % (tmp1[0][0], tmp1[1]))
+    #    print("d0: %.3f +- %.3f" % (tmp2[0][0], tmp2[1]))
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass

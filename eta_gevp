@@ -15,9 +15,9 @@ def main():
 
     # read settings
     readdata = False
-    readfit = False
-    plotdata = True
-    exrm = False
+    readfit = True
+    plotdata = False
+    exrm = True
     d2 = 0
 
     # get data from input file
