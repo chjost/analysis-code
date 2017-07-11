@@ -36,6 +36,7 @@ class LatticePlot(object):
         self.legend=True
         self.join=join
         self.title=None
+        self.filename=filename
         if join:
             self.cycol = itertools.cycle('bgrcmk').next
             self.cyfmt = itertools.cycle('^vsd>o').next
@@ -134,6 +135,10 @@ class LatticePlot(object):
             plt.text(vconst[0],Y[0],label[6])
             plt.axvspan(vconst[0]+vconst[1],vconst[0]-vconst[1],alpha=0.35,color='gray')
 
+    def _save_data_ascii(self,x,y,dy,label):
+        _head = label[1]+"\t"+label[2]+"\td"+label[2]
+        _dat = np.column_stack((x,y,dy))
+        np.savetxt(self.filename+".dat",_dat,delimiter='\t', header=_head)
 
     def _genplot_single(self, corr, label, fitresult=None, fitfunc=None,
             add=None, xshift=0., ploterror=False, rel=False, debug=0,
@@ -197,6 +202,9 @@ class LatticePlot(object):
                         np.zeros_like(ddata), label=_datlabel,
                         plotrange=[0,T],col=self.cycol(),fmt=self.cyfmt())
                 else:
+                    # print data to screen
+                    if debug > 3:
+                      self._save_data_ascii(X, corr.data[0,:,n], ddata, label)
                     plot_data(X, corr.data[0,:,n], ddata, _datlabel,
                         plotrange=[0,T],col=self.cycol(),fmt=self.cyfmt())
                 plt.legend()

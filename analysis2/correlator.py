@@ -322,7 +322,7 @@ class Correlators(object):
         self.shape = self.data.shape
         self.matrix = False
 
-    def mass(self, usecosh=True, weight=None, shift=None):
+    def mass(self, usecosh=True, exp=False, weight=None, shift=None):
         """Computes the effective mass.
 
         Three formulae are implemented. The standard formula is based on the
@@ -334,7 +334,7 @@ class Correlators(object):
         usecosh : bool
             Toggle between the two implemented methods.
         """
-        self.data = func.compute_eff_mass(self.data, usecosh, weight, shift)
+        self.data = func.compute_eff_mass(self.data, usecosh, exp, weight, shift)
         self.shape = self.data.shape
 
     def get_data(self):

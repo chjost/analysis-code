@@ -46,7 +46,7 @@ def main():
     inputlist = []
     cfg_rng = [501,1541,40]
     #omit = [20, 164, 416, 540, 568, 596, 668, 1000]
-    omit=[]
+    omit=[1101]
     print(omit)
     missing = miss_confs(rawdir,cfg_rng)
     missing.extend(omit)
