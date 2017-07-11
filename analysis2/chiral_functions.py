@@ -40,7 +40,8 @@ def calc_x_plot(x):
 def pik_I32_chipt_plot(args, x):
     """ Wrapper for plotfunction"""
     _x = x.reshape((len(x),1))
-    return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], args[0,3], args[0,0:3])
+    #return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], args[0,3], args[0,0:3])
+    return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], args[0,-1], args[0,0:3])
 
 def pik_I32_chipt_lo_plot(args, x):
     """ Wrapper for plotfunction"""
@@ -64,16 +65,18 @@ def pik_I32_chipt_nlo(mpi, mk, fpi, r0, p, lambda_x=None):
     -------
     _mua32 : 1d-array, the calculated values of _mua32
     """
+    #check inputs
     if lambda_x is None:
         lambda_x = fpi
+    _p=p
     # Term with L_piK, a collection of Lower LECs
-    _sum1 = p[0]*32.*mpi*mk/fpi**2
+    _sum1 = _p[0]*32.*mpi*mk/fpi**2
     # Term with L5
-    _sum2 = p[1]*16.*mpi**2/fpi**2
+    _sum2 = _p[1]*16.*mpi**2/fpi**2
     # Term with NLO function (does not take eta mass at the moment)
-    _sum3 = chi_I32_nlo(lambda_x, mpi, mk)
+    _sum3 = chi_I32_nlo(lambda_x, mpi, mk)/(16.*np.pi**2*fpi**2)
     _mua32 = (reduced_mass(mpi,mk)/fpi)**2/(4.*np.pi)*(-1.+_sum1-_sum2+_sum3)
-    #+p[2]/(r0**2)
+    #+_p[2]/(r0**2)
     return _mua32
 
 def pik_I32_chipt_lo(mpi, mk, fpi, r0, p):
@@ -189,6 +192,5 @@ def mua0_I12_from_fit(pars,x):
 
 def mua0_I32_nlo_from_fit(pars,x):
     _x = np.atleast_2d(x)
-    print(_x)
     _mua0 = pik_I32_chipt_nlo(_x[:,1], _x[:,2], _x[:,3], _x[:,4], pars, lambda_x=None) 
     return _mua0

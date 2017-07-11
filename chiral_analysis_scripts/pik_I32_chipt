@@ -137,7 +137,7 @@ def main():
                 print("0th Bootstrapsample for fpi: %f" %fpi[0])
                 extrapol.x_data[i][j,k,2] = fpi
                 extrapol.x_data[i][j,k,3] = ext_data.get(a,'r0')
-    extrapol.fit_mu_a32(LO=False)
+    extrapol.fit_mu_a32(plotdir=plotdir,LO=False)
     plotargs = extrapol.fitres.data[0]
     # LO-arguments
     #args = np.asarray([np.vstack((plotargs[:,0,0],
@@ -159,7 +159,7 @@ def main():
                                 [0.01,0.3],[0.04,0.08],
                                 [5.,8.]],ylim=[-0.25,0.],
                                 func=ana.pik_I32_chipt_plot, args=args,
-                                calc_x = ana.calc_x_plot, ploterror=True,
+                                calc_x = ana.calc_x_plot, ploterror=False,
                                 kk=False, gamma=False, x_phys=0.814,plotlim=[0.5,1.8])
     chiral_plot.save()
     del chiral_plot

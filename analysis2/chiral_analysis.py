@@ -1466,7 +1466,7 @@ class ChirAna(object):
       _chi = np.dot(cov,_res)
       return _chi
  
-  def fit_mu_a32(self,LO=False,xcut=None,debug=2):
+  def fit_mu_a32(self,plotdir=None,LO=False,xcut=None,debug=2):
       """ Fit the NLO chiPT formula to the data of self
       """
 
@@ -1484,6 +1484,10 @@ class ChirAna(object):
       _y = chut.concatenate_data(self.y_data)
       print(_x.shape)
       print(_y.shape)
+      #plot correlation of yvalues
+      corrmat = ana.LatticePlot(plotdir+"/corr_mat_nlo.pdf")
+      corrmat.plot_correlation(_y,["mu_a32_correlation","mu_a32"])
+      del corrmat
       # The data for the fit should be just two arrays containing the
       # bootstrapsamples
       #if debug > 3:

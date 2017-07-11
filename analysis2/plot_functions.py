@@ -138,6 +138,7 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
                 # every x is four values
                 #print(x)
                 y1.append(func(np.atleast_2d(_args[0]), x))
+                #y1.append(func(_args[0], x))
                 if ploterror:
                     tmp = func(_args, x)
                     mean, std = compute_error(np.asarray(tmp))

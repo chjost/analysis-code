@@ -77,7 +77,7 @@ def evaluate_phys(x, args, args_w ,func, isdependend):
   needed = np.zeros((nsam,))
   result = np.full(nsam,np.nan)
   # loop over samples
-  print x.shape
+  print args[0], x[0]
   for b in range(nsam):
     y = func(args[b],x[b])
     if y.shape[0] == 2:
