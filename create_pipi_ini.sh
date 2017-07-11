@@ -1,15 +1,15 @@
 #!/bin/bash
 
-L=32
-T=64
-lat=cA2a.60.32
-path="/hiskp2/correlators/${lat}/I2/"
+L=24
+T=48
+lat=A40.24
+path="/hiskp2/jost/correlationfunctions/pipi_chris/data/${lat}/3_gevp-data/"
+#path="/hiskp2/correlators/${lat}/I2/"
 path1=$(echo ${path} | sed -e 's/[\/&]/\\&/g')
 
 echo TP0
-for ir in "A1g"; do
-#for ir in "A1g" "A2u" "T1u" "T2g" "T2u" "Ep1g"; do
-#for ir in "A1+" "E+" "T2+"; do
+#for ir in "A1g"; do
+for ir in "A1g" "T1u" "T2g" "T2u" "Ep1g"; do
   sed -e "s/=LAT=/${lat}/;s/=PATH=/${path1}/;s/=P=/0/;s/=T=/${T}/;s/=L=/${L}/;s/=IR=/${ir}/" ini/pipi_template.ini > ini/pipi_TP0_${lat}_${ir}.ini
 done
 

@@ -1,5 +1,4 @@
-#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
-##!/usr/bin/python2
+#!/hiskp2/jost/code/Enthought/System/bin/python
 
 import sys
 import numpy as np
@@ -43,7 +42,9 @@ def main():
     dtf = ens.get_data("dtf")
     dt = ens.get_data("dt")
 
-    files = ["%s/pipi_pipi_%s_corr_TP%d_%d%d.dat" % (prefix, irrep, d2, i, j) for i in range(gmax) for j in range(gmax)]
+    fsuff = ["%d.%d.dat" % (i, j) for i in range(gmax) for j in range(gmax)]
+    files = ["%s/p%d/A1g/%s/Pipi_Gevp_p%d_%s.%s" % (prefix, d2, irrep, d2, irrep, s) for s in fsuff]
+    #files = ["%s/pipi_pipi_%s_corr_TP%d_%d%d.dat" % (prefix, irrep, d2, i, j) for i in range(gmax) for j in range(gmax)]
     addT = np.ones((nboot,)) * ens.T()
     if irrep == "A1":
         suffix = "TP%d.npy" % d2

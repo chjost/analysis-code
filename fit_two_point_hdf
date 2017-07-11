@@ -45,7 +45,7 @@ def main():
         hasvev = False
     #debug = 5
 
-    files = ["%s/C2_p%d_%s_avg.h5" % (prefix, d, irrep) for d in range(pmax)]
+    files = ["%s/../2_contracted-data/C2_p%d_%s_avg.h5" % (prefix, d, irrep) for d in range(pmax)]
     addT = np.ones((nboot,)) * T
 
     xshift = 0.
