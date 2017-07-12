@@ -1038,6 +1038,9 @@ class FitResult(object):
         
         self.calc_error()
         _pars = self.data[0]
+        # Last parameter is the lattice artefact, want to suppress that for
+        # continuum
+        _pars[-1] = np.zeros_like(_pars[0])
         _pars_w = self.weight[:][0]
         _nsam = self.data[0].shape[0]
         _mua0_phys = FitResult("mua0_phys",True)

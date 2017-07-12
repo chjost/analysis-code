@@ -37,6 +37,87 @@ def x_linspace(X,samples):
         _x1[:,i] = np.linspace(x[0],x[1],samples)
     return _x1
 
+def plot_function_multiarg(func, X, args, label, plotrange=None, ploterror=False,
+        fmt="k", col="black", samples=300, calc_x=None, debug=0):
+    """A function that plots a function.
+
+    Parameters
+    ----------
+    func : callable
+        The function to plot.
+    X : tuple or list or ndarray
+        The start and end x range of function plot.
+    args : ndarray
+        The arguments to the function.
+    label : list of str
+        A label for the function.
+    plotrange : list of ints, optional -- deprecated
+        The lower and upper range of the plot.
+    ploterror : bool, optional
+        Plot the error of the fit function.
+    fmt : string, optional
+        The format of the line.
+    col : string, optional
+        The color of the line and errorband.
+    samples : int
+        The number of points between the min and max x values.
+    calc_x : callable
+        a function that calculates the values for the x-axis
+    debug : int
+        The level of verboseness.
+    """
+    if hasattr(X[0],"__iter__"):
+        x1 = x_linspace(X, samples) 
+    else:
+        print(" xlimits not correct, consider using plot_function instead") 
+    if debug > 2:
+        print("option summary:")
+        print("function name is %s" % func)
+        print("shape of arguments (nb_samples, nb_parameters):")
+        print(args.shape)
+        print("Plot an errorband: %s" % ploterror)
+    # check dimensions of args, if more than one,
+    # iterate over first dimension
+    _args = np.asarray(args)
+    if debug > 2:
+        print("the arguments have shape:")
+        print(_args.shape)
+    if _args.ndim > 1:
+        # the first sample contains original data,
+        # also save min and max at each x
+        y1, ymin, ymax = [], [], []
+        # check for dimensions of add
+        # no additional arguments, iterate over args
+        #iterate over x
+        #print("using function")
+        print("Shape for parameters:")
+        print(_args.shape)
+        print("Shape for x1:")
+        print(x1.shape)
+        for j,x in enumerate(x1):
+            # value that gets plotted is 0th sample
+            y1.append(func(_args[0], x))
+            if ploterror:
+                # function values for the bootstrap samples
+                tmp = np.zeros((_args.shape[0]))
+                # fill tmp values
+                for i,d in enumerate(_args):
+                    tmp[i] = func(d, x)
+                mean, std = compute_error(np.asarray(tmp))
+                ymin.append(float(mean-std))
+                ymax.append(float(mean+std))
+        print("y-values are:")
+        print(y1[-1])
+    # If given, calculate x-values of plot
+    if calc_x is not None:
+        _x1  = calc_x(x1)
+    else: 
+        _x1 = x1
+    plt.plot(_x1, y1, fmt, label=label)
+    if ymax and ymin:
+        plt.fill_between(_x1, ymin, ymax, facecolor=col, edgecolor=col,
+            alpha=0.2)
+
 def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=False,
         fmt="k", col="black", samples=300, calc_x=None, debug=0):
     """A function that plots a function.
@@ -78,7 +159,7 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
     if hasattr(X[0],"__iter__"):
         x1 = x_linspace(X, samples) 
     else:
-        x1 = np.linspace(_X[0], _X[1], samples) 
+        x1 = np.linspace(_X[0], _X[1], samples)
     if debug > 2:
         print("option summary:")
         print("function name is %s" % func)
@@ -137,7 +218,8 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
                 # ATM _args[0] has to be dimension of fit parameters
                 # every x is four values
                 #print(x)
-                y1.append(func(np.atleast_2d(_args[0]), x))
+                #print("in plot_function: arguments to func are: %r" %_args[0])
+                y1.append(func(np.atleast_2d(_args), x))
                 #y1.append(func(_args[0], x))
                 if ploterror:
                     tmp = func(_args, x)

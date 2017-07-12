@@ -12,7 +12,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 from fit import LatticeFit, FitResult
 from correlator import Correlators
 from statistics import compute_error, draw_gauss_distributed, acf
-from plot_functions import plot_data, plot_function, plot_histogram
+from plot_functions import plot_data, plot_function, plot_function_multiarg, plot_histogram
 from in_out import check_write
 from chiral_functions import *
 
@@ -876,7 +876,8 @@ class LatticePlot(object):
 
     def plot_chiral_ext(self, chirana, beta, label, xlim, ylim=None, func=None,
                        args=None,calc_x=None, ploterror=True, kk=True,
-                       gamma=False, x_phys=None,xcut=None,plotlim=None):
+                       gamma=False,
+                       x_phys=None,xcut=None,plotlim=None,argct=None):
         """ Function to plot a chiral extrapolation fit.
         
         This function sets up a plotter object, puts in the data in the right
@@ -885,11 +886,17 @@ class LatticePlot(object):
         """
         # Plot the data for the given lattice spacings
         # Initialize symbols and colors for lattice spacings
-        col = ['r','b','g']
-        fmt_pts = ['^','v','o']
-        fmt_ls = ['--',':','-.']
-        dat_label = [r'$a=0.0885$fm',r'$a=0.0815$fm',r'$a=0.0619$fm']
+        if args.shape[0] == 1:
+            col = ['r','b','g']
+            fmt_pts = ['^','v','o']
+            fmt_ls = ['--',':','-.']
+            dat_label = [r'NLO $\chi$-PT']
 
+        else:
+            col = ['r','b','g']
+            fmt_pts = ['^','v','o']
+            fmt_ls = ['--',':','-.']
+            dat_label = [r'$a=0.0885$fm',r'$a=0.0815$fm',r'$a=0.0619$fm'] 
         for i,a in enumerate(beta):
             #TOD: DAC is too specialized, leave that to another function
             # get data for beta, the data passed should be 3 arrays (X,Y,dy)
@@ -904,13 +911,36 @@ class LatticePlot(object):
             print(_dy.shape)
             plot_data(_X,_Y,_dy,label=a,col=col[i],fmt=fmt_pts[i])
             # Check if we want to plot a function in addition to the data
-            if func is not None:
-                # xlim  
-                plot_function(func,xlim,args[i],calc_x=calc_x,label=dat_label[i],
-                              ploterror=ploterror,fmt=col[i]+fmt_ls[i],col=col[i],
-                              debug=3)
-            plt.xlabel(label[0],fontsize=24)
-            plt.ylabel(label[1],fontsize=24)
+            # check for lattice spacing dependence
+            if func is not None and args.shape[0] > 1:
+                # check for lattice spacing dependence
+                    if argct is "multiarg":
+                        plot_function_multiarg(func,xlim,args[i],calc_x=calc_x,
+                                            label=dat_label[i],
+                                            ploterror=ploterror,
+                                            fmt=col[i]+fmt_ls[i],col=col[i],
+                                            debug=3)
+                    else:
+                        plot_function(func,xlim,args[i],calc_x=calc_x,
+                                  label=dat_label[i], ploterror=ploterror,
+                                  fmt=col[i]+fmt_ls[i],col=col[i], debug=3)
+        if func is not None and args.shape[0] ==1:
+            col='k'
+            fmt_ls ='-'
+            if argct is "multiarg":
+                plot_function_multiarg(func,xlim,args[0],calc_x=calc_x,
+                                    label=dat_label[0],
+                                    ploterror=ploterror,
+                                    fmt=col+fmt_ls,col=col,
+                                    debug=3)
+            else:
+                plot_function(func,xlim,args[0],calc_x=calc_x,
+                          label=dat_label[0], ploterror=ploterror,
+                          fmt=col+fmt_ls,col=col, debug=3)
+
+
+        plt.xlabel(label[0],fontsize=24)
+        plt.ylabel(label[1],fontsize=24)
             #self.save()
         if x_phys is not None:
             plt.axvline(x=x_phys, color='k', ls='--', label=label[0]+'_phys.')
