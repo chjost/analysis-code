@@ -97,7 +97,7 @@ def main():
     print(fpi_raw)
     chipt_tree = lambda p,x : -x**2/(4.*np.pi) 
     #------------------------- Setup objects -----------------------------------
-    extrapol = ana.ChirAna("pi-K I-3_2")
+    extrapol = ana.ChirAna("pi-K I-3_2",correlated=True)
     # have four x-values: mk,mpi,fpi,a
     ens_shape_chirana = (len(latA),len(latB),len(latD))
     print(ens_shape_chirana)

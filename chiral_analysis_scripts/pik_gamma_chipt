@@ -99,7 +99,7 @@ def main():
     print(fpi_raw)
     chipt_tree = lambda p,x : -x**2/(4.*np.pi) 
     #------------------------- Setup objects -----------------------------------
-    extrapol = ana.ChirAna("pi-K I-3_2")
+    extrapol = ana.ChirAna("pi-K I-3_2",correlated=True)
     # have two x-values: mk/mpi, a/r0
     # determine size of objects from ensemble dictionary
     #TODO: write as function
@@ -140,15 +140,15 @@ def main():
                 tmp_y = ana.gamma_pik(mpi, mk, mu_a0, fpi)
                 extrapol.add_data(tmp_y,(i,j,k,0),dim='y')
     cut = [1.5,2.1]
-    extrapol.fit_mu_a32(xcut=cut)
+    extrapol.fit_mu_a32(plotdir=plotdir,xcut=cut)
     plotargs = extrapol.fitres.data[0]
-    args = np.asarray([plotargs[:,slice(0,2),0] for i in range(3)])
+    args = np.asarray([plotargs[:,slice(0,2),0] for i in range(1)])
     # Plot the data the given function
     label=[r'$M_{K}/M_{\pi}$',r'$\Gamma$',r' ',
            r'$(M_{K}/M_{\pi}_phys$']
     filename = plotdir+'/gamma_pik.pdf'
     print("args have shape")
-    print(args[1].shape)
+    print(args[0].shape)
     line = lambda p,x: p[:,0]-2*x*p[:,1]
     chiral_plot = ana.LatticePlot(filename, join = False)
     chiral_plot.plot_chiral_ext(extrapol,space,label,xlim=[0,2.2], args=args,

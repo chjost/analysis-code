@@ -219,7 +219,7 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
                 # every x is four values
                 #print(x)
                 #print("in plot_function: arguments to func are: %r" %_args[0])
-                y1.append(func(np.atleast_2d(_args), x))
+                y1.append(func(np.atleast_2d(_args[0]), x))
                 #y1.append(func(_args[0], x))
                 if ploterror:
                     tmp = func(_args, x)
