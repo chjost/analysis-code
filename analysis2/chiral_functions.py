@@ -71,8 +71,8 @@ def pik_I32_chipt_nlo(mpi, mk, fpi, r0, p, lambda_x=None):
     if lambda_x is None:
         lambda_x = fpi
     _p=p
-    # Term with L_piK, a collection of Lower LECs
-    _sum1 = _p[0]*32.*mpi*mk/fpi**2
+    # Term with L_piK, a collection of Lower LECs, dependent on L_5
+    _sum1 = (_p[0]-0.5*p[1])*32.*mpi*mk/fpi**2
     # Term with L5
     _sum2 = _p[1]*16.*mpi**2/fpi**2
     # Term with NLO function (does not take eta mass at the moment)

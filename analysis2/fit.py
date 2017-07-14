@@ -1732,6 +1732,58 @@ class FitResult(object):
             _mu.pval[0][:,i] = np.ones((nboot,))*fitres[0].weight[par][0][item[0]]*fitres[1].weight[par][0][item[1]]
         return _mu
 
+    def summ_int(self, pars, fac, fac_par):
+        """add different parameters of the same fitresult
+
+        The function takes one additional fitresult argument and calculates mu. It
+        takes care of several fitrange combinations and correlators
+
+        Parameters
+        ----------
+        Returns
+        ----------
+        _mu : FitRes, the reduced mass returned as a fitresult
+        """
+
+        # Calculate errors and weights on all observables
+        self.calc_error()
+        #print mass.weight[0][0]
+        # Gather necessary data from list of fitresults
+        # data have to have the same number of bootstrapsamples
+        nboot = self.data[0].shape[0] 
+        npars = 1
+        # calculate the number of fitranges
+        nbranges = 1
+        nbranges = self.data[0].shape[2]
+        print("number of fitranges is %d" % nbranges)
+        shape1 = (nboot,npars,nbranges)
+        ncorr=1
+        # Initialize an empty fitresult
+        _sum = FitResult("mass_sum",True)
+        _sum.create_empty(shape1,shape1,ncorr)
+        # FitResult weights are a double list of (nboot,fitrange) arrays. first
+        # list index is for parameters, secon is for correlator
+        #_sum.pval = [[np.zeros((nbranges)) for c in range(ncorr)]for n
+        #    in range(npars)]
+        _sum.set_ranges([[[10,15] for r in range(nbranges)]],[[nbranges,]])
+        # loop over combinations of fitranges, i is index of fitrange, item is
+        # array of fitrange indices from single masses
+        # loop over fitrange combination j is fitres entry, r is
+        # fitrange index
+        # calculate sum of masses for each fitrange combination
+        # determine array for factor
+        _fac = np.ones_like(self.data[0],dtype='float')
+        _fac[:,fac_par]=fac
+        print(_fac[0,1,0])
+        _tmp = self.data[0]*_fac
+        for fr in range(nbranges):
+            for p in pars:
+                print("summ_int: par")
+                print(_tmp[0])
+                _sum.data[0][:,0,fr] += _tmp[:,p,fr]
+                _sum.pval[0][:,fr] = np.ones((nboot,1))*np.square(self.weight[p][0][fr])
+        return _sum
+
     def add_mass(self, mass, par=1):
         """add one mass to the mass of self m += m1 for different particles
 

@@ -152,17 +152,17 @@ def main():
     label=[r'$\mu_{\pi K}/f_{\pi}$',r'$\mu_{\pi K}\,a_{3/2}$',r' ',
            r'$(\mu_{\pi K}/f_{\pi})_{phys}$']
     filename = plotdir+'/mua0_decay_nlo.pdf'
-    chiral_plot = ana.LatticePlot(filename, join = False)
+    #chiral_plot = ana.LatticePlot(filename, join = False)
     #limits for x values in plot
-    lim_x = [[120.,560.], [330.,780.],[180.,90.], [5.,8.]] 
-    chiral_plot.plot_chiral_ext(extrapol,space,label, xlim= lim_x,ylim=[-0.25,0.],
-                                func=ana.pik_I32_chipt_plot, args=args,
-                                calc_x = ana.calc_x_plot, ploterror=True,
-                                kk=False, gamma=False,
-                                x_phys=0.814,plotlim=[0.5,1.8],
-                                argct="multiarg")
-    chiral_plot.save()
-    del chiral_plot
+    #lim_x = [[120.,560.], [330.,780.],[180.,90.], [5.,8.]] 
+    #chiral_plot.plot_chiral_ext(extrapol,space,label, xlim= lim_x,ylim=[-0.25,0.],
+    #                            func=ana.pik_I32_chipt_plot, args=args,
+    #                            calc_x = ana.calc_x_plot, ploterror=True,
+    #                            kk=False, gamma=False,
+    #                            x_phys=0.814,plotlim=[0.5,1.8],
+    #                            argct="multiarg")
+    #chiral_plot.save()
+    #del chiral_plot
     #chiral_plot = ana.LatticePlot(filename, join = False)
     ##chiral_plot.plot_comparison(fix_ms,space,label,[0.,0.13],dep=1)
     #chiral_plot.plot_chiral_fit(extrapol,space,label,[0.5,1.6],ylim=[-0.2,0],
@@ -171,6 +171,8 @@ def main():
     extrapol.mu_a0_pik_phys(cont_dat.get('mpi_0'),cont_dat.get('mk'),
                                      cont_dat.get('fpi'),cont_dat.get('r0'),
                                      iso_32=True,gamma=False)
+    extrapol.calc_L_piK()
+    extrapol.fitres.print_data(1)
 
 if __name__ == '__main__':
     try:

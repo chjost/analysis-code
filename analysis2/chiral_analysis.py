@@ -1449,11 +1449,11 @@ class ChirAna(object):
 ################# Scratch region for trying out functions ######################
 ################################################################################
   # TODO: implement gamma better
-  def mu_a32_errfunc(self,p,x,y,cov,gamma=True):
+  def mu_a32_errfunc(self,p,x,y,cov,gamma=False):
       if gamma is not True:
         _res = pik_I32_chipt_nlo(x[:,0],x[:,1],x[:,2],x[:,3],p)-y
       else:
-        _res = p[0]-2.*x.ravel()*p[1]-y
+        _res = (p[0]-0.5*p[1])-2.*x.ravel()*p[1]-y
       # calculate the chi values weighted with inverse covariance matrix
       _chi = np.dot(cov,_res)
       return _chi
@@ -1539,4 +1539,9 @@ class ChirAna(object):
               self.phys_point_fitres = self.fitres.calc_mua0_pik_phys(_x,
                                                               mua0_I32_nlo_from_fit)
       self.phys_point_fitres.print_data()
+ 
+  def calc_L_piK(self):
+      _lpik = self.fitres.summ_int((0,1),fac=-0.5,fac_par=1)
+      _lpik.print_data()
+      
 
