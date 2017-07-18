@@ -158,7 +158,7 @@ def main():
     del chiral_plot
     
     extrapol.mu_a0_pik_phys( cont_dat.get("mpi_0"),cont_dat.get("mk"),
-                                     cont_dat.get("fpi"),iso_32=True,gamma=True)
+                                     cont_dat.get("fpi"),iso_32=False,gamma=True)
     print(mua32_phys[0])
 if __name__ == '__main__':
     try:
