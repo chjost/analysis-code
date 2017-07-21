@@ -660,26 +660,26 @@ class ChirAna(object):
       #_func = lambda r, z, p, x,: p[0]*r*x[:,0]/z*(1 + p[3]*(r*x[:,0]/z)) + p[1]/r**2 + p[2]
       # residuals for
       # With A40.24
-      # Try out an additional term mu_ell^2
-      # TODO: Automate the array shapes, otherwise very errorprone
+      ## Try out an additional term mu_ell^2
+      ## TODO: Automate the array shapes, otherwise very errorprone
       #_res_a = _func(p[0],p[3],p[6:10],x[0:6])-y[0:6]
       #_res_b = _func(p[1],p[4],p[6:10],x[6:9])-y[6:9]
       #_res_d = _func(p[2],p[5],p[6:10],x[9:11])-y[9:11]
-      ## TODO: Automate the array shapes, otherwise very errorprone
-      #_res_a = _func(p[0],p[3],p[6:9],x[0:6])-y[0:6]
-      #_res_b = _func(p[1],p[4],p[6:9],x[6:9])-y[6:9]
-      #_res_d = _func(p[2],p[5],p[6:9],x[9:11])-y[9:11]
-      # residuals of r0 and zp are stored separately at the moment
-      #_res_r0 = np.r_[(y[11]-p[0]),(y[12]-p[1]),(y[13]-p[2])]
-      #_res_zp = np.r_[(y[14]-p[3]),(y[15]-p[4]),(y[16]-p[5])]
-      # Without A40.24
       # TODO: Automate the array shapes, otherwise very errorprone
-      _res_a = _func(p[0],p[3],p[6:9],x[0:5])-y[0:5]
-      _res_b = _func(p[1],p[4],p[6:9],x[5:8])-y[5:8]
-      _res_d = _func(p[2],p[5],p[6:9],x[8:10])-y[8:10]
+      _res_a = _func(p[0],p[3],p[6:9],x[0:6])-y[0:6]
+      _res_b = _func(p[1],p[4],p[6:9],x[6:10])-y[6:10]
+      _res_d = _func(p[2],p[5],p[6:9],x[10:12])-y[10:12]
       # residuals of r0 and zp are stored separately at the moment
-      _res_r0 = np.r_[(y[10]-p[0]),(y[11]-p[1]),(y[12]-p[2])]
-      _res_zp = np.r_[(y[13]-p[3]),(y[14]-p[4]),(y[15]-p[5])]
+      _res_r0 = np.r_[(y[12]-p[0]),(y[13]-p[1]),(y[14]-p[2])]
+      _res_zp = np.r_[(y[15]-p[3]),(y[16]-p[4]),(y[17]-p[5])]
+      ## Without A40.24
+      ## TODO: Automate the array shapes, otherwise very errorprone
+      #_res_a = _func(p[0],p[3],p[6:9],x[0:5])-y[0:5]
+      #_res_b = _func(p[1],p[4],p[6:9],x[5:8])-y[5:8]
+      #_res_d = _func(p[2],p[5],p[6:9],x[8:10])-y[8:10]
+      ## residuals of r0 and zp are stored separately at the moment
+      #_res_r0 = np.r_[(y[10]-p[0]),(y[11]-p[1]),(y[12]-p[2])]
+      #_res_zp = np.r_[(y[13]-p[3]),(y[14]-p[4]),(y[15]-p[5])]
       # collect residuals as one array
       _residuals = np.r_[_res_a,_res_b,_res_d,_res_r0,_res_zp ]
 
@@ -1449,7 +1449,9 @@ class ChirAna(object):
 ################# Scratch region for trying out functions ######################
 ################################################################################
   # TODO: implement gamma better
-  def mu_a32_errfunc(self,p,x,y,cov,gamma=True):
+  def mu_a32_errfunc(self,p,x,y,cov,gamma=False):
+      #print("In NLO-Errfunc shape of x-values is:")
+      #print(x.shape)
       if gamma is not True:
         _res = pik_I32_chipt_nlo(x[:,0],x[:,1],x[:,2],x[:,3],p)-y
       else:
@@ -1460,8 +1462,8 @@ class ChirAna(object):
 
   def mu_a32_lo_errfunc(self,p,x,y,cov):
       # pik_I32_chipt_lo includes an a^2 term
-      #print("In LO-Errfunc shape of x-values is:")
-      #print(x.shape)
+      print("In LO-Errfunc shape of x-values is:")
+      print(x.shape)
       _res = pik_I32_chipt_lo(x[:,0],x[:,1],x[:,2],x[:,3],p)-y
       _chi = np.dot(cov,_res)
       return _chi
@@ -1494,7 +1496,7 @@ class ChirAna(object):
       ## Fit the data
       ## invoke a chiral fit, yielding a fitresult
       if LO is False:
-          start=[1.,1.,0.]
+          start=[0.1,0.1,0.1]
           mu_a32 = ChiralFit("mu_a32",self.mu_a32_errfunc)
       else:
           start=[1.]
@@ -1506,6 +1508,8 @@ class ChirAna(object):
                                       debug=debug)
       self.fitres.set_ranges(np.array([[[0,_x.shape[0]]]]),[[1,]])
       self.fitres.print_details()
+      self.fitres.print_data(2)
+      print(self.fitres.data[0][0,2,0])
       ## Save the fitresult data
       #if dat is not None:
       #  self.fitres.save(dat+self.proc_id+'.npz')
@@ -1535,13 +1539,56 @@ class ChirAna(object):
                                                                   mua0_I12_from_fit)
       else:
           if iso_32 is True:
-              _x = np.column_stack((ren,mpi,mk,fpi,r0))
+              _x = np.column_stack((mpi,mk,fpi,r0))
               self.phys_point_fitres = self.fitres.calc_mua0_pik_phys(_x,
-                                                              mua0_I32_nlo_from_fit)
+                                                              pik_I32_chipt_cont)
       self.phys_point_fitres.print_data()
+      self.phys_point[0]=ana.compute_error(ana.calc_x_plot(_x))
+      self.phys_point[1]=ana.compute_error(self.phys_point_fitres.data[0])
  
   def calc_L_piK(self):
       _lpik = self.fitres.summ_int((0,1),fac=-0.5,fac_par=1)
       _lpik.print_data()
-      
+  
+  # This should be a general fitfunction just taking the fitfunction as an
+  # argument
+  def fit(self,fitfunc,start,plotdir=None,add=None,xcut=None,debug=2):
+      """ Fit fitfunc to the data of self
+      """
+
+      # Look at the shapes first
+      print(self.x_shape)
+      print(self.y_shape)
+      # stack all lattice spacings together
+      # determine dimensions for array
+      #nb_ensembles
+      _x = chut.concatenate_data(self.x_data,par=slice(0,4))
+      _y = chut.concatenate_data(self.y_data)
+      print(_x.shape)
+      print(_y.shape)
+      #plot correlation of yvalues
+      corrmat = ana.LatticePlot(plotdir+"/corr_mat_fit.pdf")
+      corrmat.plot_correlation(_y,["y_correlation","y"])
+      del corrmat
+      # The data for the fit should be just two arrays containing the
+      # bootstrapsamples
+      #if debug > 3:
+      ## Fit the data
+      ## invoke a chiral fit, yielding a fitresult
+      # define the error function
+      if add is None:
+          _errfunc = lambda p, x, y, error: np.dot(error, (y-fitfunc(p,x)).T)
+      else:
+          _errfunc = lambda p, x, y, e, error: np.dot(error, (y-fitfunc(p,x,e)).T)
+      _fit = ChiralFit("fit",_errfunc)
+      self.fitres = _fit.chiral_fit(_x,_y,start,xcut=xcut,parlim=None,
+                                      correlated=self.correlated,cov=None,
+                                      debug=debug)
+      self.fitres.set_ranges(np.array([[[0,_x.shape[0]]]]),[[1,]])
+      self.fitres.print_details()
+      ## Save the fitresult data
+      #if dat is not None:
+      #  self.fitres.save(dat+self.proc_id+'.npz')
+      ## Calculate check of the data for original data
+      #args = self.fitres.data[0]
 

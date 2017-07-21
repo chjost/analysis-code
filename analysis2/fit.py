@@ -1034,10 +1034,9 @@ class FitResult(object):
     #TODO:  Think about placing this somewhere else
     def calc_mua0_pik_phys(self, x, func):
         """Calculate m0ua0 for pi-K from fitted LECs and continuum input
-        """
-        
+        """ 
         self.calc_error()
-        _pars = self.data[0]
+        _pars = np.copy(self.data[0])
         # Last parameter is the lattice artefact, want to suppress that for
         # continuum
         _pars[-1] = np.zeros_like(_pars[0])
@@ -1049,9 +1048,9 @@ class FitResult(object):
         #print("physical x-values:")
         #print(np.asarray((x[0,0],x[0,1],x[0,2],x[0,3],x[0,4])))
         print("parameters")
-        print(_pars[0])
+        print(_pars.shape)
         #print(func(_pars[0],np.asarray((x[0,0],x[0,1],x[0,2],x[0,3],x[0,4]))))
-        for res in evaluate_phys(x, _pars, _pars_w, func, False):
+        for res in evaluate_phys(x, _pars[...,0], _pars_w, func, False):
             _mua0_phys.add_data(*res)
         return _mua0_phys
 

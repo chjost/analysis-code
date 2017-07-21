@@ -92,6 +92,8 @@ def plot_function_multiarg(func, X, args, label, plotrange=None, ploterror=False
         #print("using function")
         print("Shape for parameters:")
         print(_args.shape)
+        print("Parameter set is:")
+        print(_args[0])
         print("Shape for x1:")
         print(x1.shape)
         for j,x in enumerate(x1):
@@ -101,8 +103,9 @@ def plot_function_multiarg(func, X, args, label, plotrange=None, ploterror=False
                 # function values for the bootstrap samples
                 tmp = np.zeros((_args.shape[0]))
                 # fill tmp values
-                for i,d in enumerate(_args):
-                    tmp[i] = func(d, x)
+                tmp = func(_args,x)
+                #for i,d in enumerate(_args):
+                #    tmp[i] = func(d, x)
                 mean, std = compute_error(np.asarray(tmp))
                 ymin.append(float(mean-std))
                 ymax.append(float(mean+std))
@@ -304,7 +307,8 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
 #    plt.legend()
 
 # Tryout from devel_branch
-def plot_data(X, Y, dY, label, plotrange=None, dX=None, fmt="x", col='b'):
+def plot_data(X, Y, dY, label, plotrange=None, dX=None, fmt="x", col='b',
+    alpha=None):
     """A function that plots data.
 
     Parameters
@@ -339,11 +343,12 @@ def plot_data(X, Y, dY, label, plotrange=None, dX=None, fmt="x", col='b'):
             _dX = None
         else:
             _dX = dX[l:u]
-        plt.errorbar(X[l:u], Y[l:u], dY[l:u], xerr=_dX, fmt=fmt, label=label, c=col)
+        plt.errorbar(X[l:u], Y[l:u], dY[l:u], xerr=_dX, fmt=fmt, label=label,
+            c=col, alpha=alpha)
     else:
         # plot the data
         _dX=dX
-        plt.errorbar(X, Y, dY, xerr=_dX, fmt=fmt, label=label,c=col)
+        plt.errorbar(X, Y, dY, xerr=_dX, fmt=fmt, label=label,c=col, alpha=alpha)
 
 def plot_data_with_fit(X, Y, dY, fitfunc, args, label, plotrange=None,
                    fitrange=None, addpars=None, pval=None,col='b'):

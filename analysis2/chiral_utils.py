@@ -77,6 +77,7 @@ def evaluate_phys(x, args, args_w ,func, isdependend):
   needed = np.zeros((nsam,))
   result = np.full(nsam,np.nan)
   # loop over samples
+  print("evaluate_phys:")
   print args[0], x[0]
   for b in range(nsam):
     y = func(args[b],x[b])
@@ -682,5 +683,8 @@ def concatenate_data(lst,par=0):
                 _n[i*d.shape[1]+j] = d[i,j,par]
         _b.append(_n)
     # Take all three lattice spacings
-    _c = np.concatenate((_b[0],_b[1],_b[2]))
+    if len(_b) == 3:
+        _c = np.concatenate((_b[0],_b[1],_b[2]))
+    if len(_b) == 2:
+        _c = np.concatenate((_b[0],_b[1]))
     return _c

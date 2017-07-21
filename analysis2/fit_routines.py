@@ -529,12 +529,12 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
           _cov = cov
       else:
           #_cov = np.zeros((y.shape[0],y.shape[0]))
-          #for i in range(11):
+          #for i in range(12):
           #    _tmp = np.cov(y[3*i:3*i+3])
           #    #print("\nCovariance submatrix %d" %i)
           #    #print(_tmp)
           #    _cov[3*i:3*i+3,3*i:3*i+3]=_tmp
-          #for k in range(33,39):
+          #for k in range(36,42):
           #    _cov[k,k] = np.cov(y[k])
           _cov = np.cov(y)
     print(_cov.diagonal())  
@@ -543,7 +543,7 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
     print("vector of x-values: %r" % x[...,0])
     print("vector of y-values: %r" % y[...,0])
     print("shape of y-values:")
-    print(y[...,0].shape)
+    print(y.shape)
     print("shape of x-values:")
     print(x.shape)
     print("shape of err-values:")
@@ -565,7 +565,7 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
           print(_cov)
         if b == (samples-1):
           print("arguments:")
-          print(res[b-1])
+          print(res[0])
         #print("data for fit %d" %b)
         #print(err,x[...,b],y[...,b]) 
         p,cov1,infodict,mesg,ier = leastsq(errfunc, start,
@@ -577,8 +577,8 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
     print(chi)
     print("Chi_squared manually")
     print(np.sum(np.square(chi)))
-        #print("Fit %d converged with reason %d, %s" %(b,ier,mesg))
-        #print(chisquare[b])
+    print("Fit %d converged with reason %d, %s" %(b,ier,mesg))
+    print(chisquare[0])
     # calculate mean and standard deviation
     res_mean, res_std = compute_error(res)
     # p-value calculated

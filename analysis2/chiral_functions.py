@@ -39,11 +39,40 @@ def calc_x_plot(x):
 
 def pik_I32_chipt_plot(args, x):
     """ Wrapper for plotfunction"""
-    #x and args need to have the same number of entries in last dimension
-    _x = x.reshape((len(x),1))
-    #check argument shapes
+    # x and args need to have the same number of entries in last dimension
+    # (bootstrapsamples)
+    # broadcast _x values to same shape as arguments
+    if hasattr(x,'__iter__') is not True:
+        _x = np.zeros((len(x),args.shape[0]))
+        for i,d in enumerate(np.asarray(x)):
+            _x[i] = np.full((1500,),d)
+    else:
+        _x = x.reshape(len(x),1)
+    if args.ndim == 2 and args.shape[0]> args.shape[1]:
+        _args = args.T
+    else:
+        _args=args
     #return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], args[0,3], args[0,0:3])
-    return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], args[-1], args[0:3])
+    return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], _args[-1], _args[0:3])
+
+def pik_I32_chipt_cont(args, x):
+    """ Wrapper for plotfunction"""
+    # x and args need to have the same number of entries in last dimension
+    # (bootstrapsamples)
+    # broadcast _x values to same shape as arguments
+    if hasattr(x,'__iter__') is not True:
+        _x = np.zeros((len(x),args.shape[0]))
+        for i,d in enumerate(np.asarray(x)):
+            _x[i] = np.full((1500,),d)
+    else:
+        _x = x.reshape(len(x),1)
+    if args.ndim == 2 and args.shape[0]> args.shape[1]:
+        _args = args.T
+    else:
+        _args=args
+    _args[2]=np.zeros_like(args[2])
+    #return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], args[0,3], args[0,0:3])
+    return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], _x[3], _args[0:3])
 
 def pik_I32_chipt_lo_plot(args, x):
     """ Wrapper for plotfunction"""
@@ -77,8 +106,8 @@ def pik_I32_chipt_nlo(mpi, mk, fpi, r0, p, lambda_x=None):
     _sum2 = _p[1]*16.*mpi**2/fpi**2
     # Term with NLO function (does not take eta mass at the moment)
     _sum3 = chi_I32_nlo(lambda_x, mpi, mk)/(16.*np.pi**2*fpi**2)
-    _mua32 = (reduced_mass(mpi,mk)/fpi)**2/(4.*np.pi)*(-1.+_sum1-_sum2+_sum3) 
-    #+_p[2]/(r0**2)
+    #_mua32 = (reduced_mass(mpi,mk)/fpi)**2/(4.*np.pi)*(-1.+_sum1-_sum2+_sum3)+_p[2]/(r0**2)
+    _mua32 = (reduced_mass(mpi,mk)/fpi)**2/(4.*np.pi)*(-1.+_sum1-_sum2+_sum3)+1.33/(r0**2)
     return _mua32
 
 def pik_I32_chipt_lo(mpi, mk, fpi, r0, p):

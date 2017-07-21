@@ -61,9 +61,10 @@ def main():
     strangeA = ens.get_data("strangea")
     strangeB = ens.get_data("strangeb")
     strangeD = ens.get_data("stranged")
-    #space=['A','B','D']
     space=['A','B','D']
+    #space=['B','D']
     #seeds = [1772, 2741, 8807]
+    #seeds = [5859, 5672, 4104, 5382, 8439, 6186]
     seeds = [5859, 5672, 4104, 5382, 8439, 6186]
     seeds2 = [9042, 9280, 2219, 4911, 2506]
     #seeds = [1772, 2741]
@@ -97,12 +98,15 @@ def main():
     print(fpi_raw)
     chipt_tree = lambda p,x : -x**2/(4.*np.pi) 
     #------------------------- Setup objects -----------------------------------
-    extrapol = ana.ChirAna("pi-K I-3_2",correlated=True)
+    extrapol = ana.ChirAna("pi-K I-3_2",correlated=False)
     # have four x-values: mk,mpi,fpi,a
     ens_shape_chirana = (len(latA),len(latB),len(latD))
+    #ens_shape_chirana = (len(latB),len(latD))
     print(ens_shape_chirana)
     lyt_xvals = (3,ens_shape_chirana,3,4,1500)
     lyt_yvals = (3,ens_shape_chirana,3,1,1500)
+    #lyt_xvals = (2,ens_shape_chirana,3,4,1500)
+    #lyt_yvals = (2,ens_shape_chirana,3,1,1500)
     extrapol.create_empty(lyt_xvals,lyt_yvals,lat_dict=lat_dict)
     print("\nSetup complete, begin chiral analysis")
     #------------------------- Get x-values --------------------------------
@@ -144,34 +148,51 @@ def main():
     #                                   extrapol.x_data[i][0,0,3])).T
     #                                   for i in range(len(space))])
     # NLO arguments need to have bootstrapsamples as first argument
+    extrapol.mu_a0_pik_phys(cont_dat.get('mpi_0'),cont_dat.get('mk'),
+                                     cont_dat.get('fpi'),cont_dat.get('r0'),
+                                     iso_32=True,gamma=False)
+    #args = np.asarray([np.vstack((plotargs[:,0,0], plotargs[:,1,0],
+    #  plotargs[:,2,0],extrapol.x_data[r][0,0,3])).T for r in range(len(space))])
     args = np.asarray([np.vstack((plotargs[:,0,0], plotargs[:,1,0],
-      plotargs[:,2,0],extrapol.x_data[0][0,0,3])).T for r in range(1)])
+      np.full_like(plotargs[:,0,0],1.33),extrapol.x_data[r][0,0,3])).T for r in range(len(space))])
     print("Argument shape after stacking")
-    print(args.shape)
+    print("Lattice artifact:")
+    print(plotargs[0,2,0])
     # Plot the data the given function
     label=[r'$\mu_{\pi K}/f_{\pi}$',r'$\mu_{\pi K}\,a_{3/2}$',r' ',
            r'$(\mu_{\pi K}/f_{\pi})_{phys}$']
     filename = plotdir+'/mua0_decay_nlo.pdf'
-    #chiral_plot = ana.LatticePlot(filename, join = False)
+    chiral_plot = ana.LatticePlot(filename, join = False)
     #limits for x values in plot
-    #lim_x = [[120.,560.], [330.,780.],[180.,90.], [5.,8.]] 
-    #chiral_plot.plot_chiral_ext(extrapol,space,label, xlim= lim_x,ylim=[-0.25,0.],
-    #                            func=ana.pik_I32_chipt_plot, args=args,
-    #                            calc_x = ana.calc_x_plot, ploterror=True,
-    #                            kk=False, gamma=False,
-    #                            x_phys=0.814,plotlim=[0.5,1.8],
-    #                            argct="multiarg")
-    #chiral_plot.save()
-    #del chiral_plot
+    lim_x = [[120.,560.], [330.,780.],[180.,90.], [0.,0.]] 
+    chiral_plot.plot_chiral_ext(extrapol,space,label, xlim= lim_x,ylim=[-0.35,0.],
+                                func=ana.pik_I32_chipt_plot, args=args,
+                                calc_x = ana.calc_x_plot, ploterror=False,
+                                kk=False, gamma=False,
+                                x_phys=0.814,plotlim=[0.5,2.],
+                                argct="multiarg")
+    # Plot NPLQCD Data
+    # TODO: Dirty Hack at the moment
+    #
+    x_cmp = np.asarray([[1.332,0.01],[1.469,0.007],[1.731,0.007],
+                        [1.869,0.005]])  
+    y_cmp = np.asarray([[-0.1263,0.0075],[-0.155,0.04],[-0.213,0.012],
+                        [-0.267,0.012]])
+    plt.errorbar(x_cmp[:,0],y_cmp[:,0],y_cmp[:,1],xerr=x_cmp[:,1],fmt='ko',
+                     label=r'NPLQCD, $a=0.125$fm')
+    # Prepare arguments for continuum curve
+    args = np.vstack((plotargs[:,0,0], plotargs[:,1,0],
+      np.zeros_like(plotargs[:,0,0]),np.ones_like(plotargs[:,0,0]))).T
+    chiral_plot.plot_cont(extrapol,ana.pik_I32_chipt_plot,
+                          lim_x,args,argct='multiarg',calc_x=ana.calc_x_plot)
+    chiral_plot.save()
+    del chiral_plot
     #chiral_plot = ana.LatticePlot(filename, join = False)
     ##chiral_plot.plot_comparison(fix_ms,space,label,[0.,0.13],dep=1)
     #chiral_plot.plot_chiral_fit(extrapol,space,label,[0.5,1.6],ylim=[-0.2,0],
     #                            func=chipt_tree,x_phys=0.835)
     #del chiral_plot
-    extrapol.mu_a0_pik_phys(cont_dat.get('mpi_0'),cont_dat.get('mk'),
-                                     cont_dat.get('fpi'),cont_dat.get('r0'),
-                                     iso_32=True,gamma=False)
-    extrapol.calc_L_piK()
+    #extrapol.calc_L_piK()
     extrapol.fitres.print_data(1)
 
 if __name__ == '__main__':

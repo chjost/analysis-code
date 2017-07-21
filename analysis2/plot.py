@@ -886,7 +886,7 @@ class LatticePlot(object):
         """
         # Plot the data for the given lattice spacings
         # Initialize symbols and colors for lattice spacings
-        if args.shape[0] == 1:
+        if args is not None and args.shape[0] == 1:
             col = ['r','b','g']
             fmt_pts = ['^','v','o']
             fmt_ls = ['--',':','-.']
@@ -909,11 +909,13 @@ class LatticePlot(object):
                                                 chirana.y_data[i],gamma=gamma)
             _mean, _dy = compute_error(_dy,axis=1)
             print(_dy.shape)
-            plot_data(_X,_Y,_dy,label=a,col=col[i],fmt=fmt_pts[i])
+            plot_data(_X,_Y,_dy,label=a,col=col[i],fmt=fmt_pts[i],alpha=1.)
             # Check if we want to plot a function in addition to the data
             # check for lattice spacing dependence
-            if func is not None and args.shape[0] > 1:
-                # check for lattice spacing dependence
+        if func is not None:
+            if args.shape[0] > 1:
+                for i,a in enumerate(beta):
+                    # check for lattice spacing dependence
                     if argct is "multiarg":
                         plot_function_multiarg(func,xlim,args[i],calc_x=calc_x,
                                             label=dat_label[i],
@@ -924,19 +926,20 @@ class LatticePlot(object):
                         plot_function(func,xlim,args[i],calc_x=calc_x,
                                   label=dat_label[i], ploterror=ploterror,
                                   fmt=col[i]+fmt_ls[i],col=col[i], debug=3)
-        if func is not None and args.shape[0] ==1:
-            col='k'
-            fmt_ls ='-'
-            if argct is "multiarg":
-                plot_function_multiarg(func,xlim,args[0],calc_x=calc_x,
-                                    label=dat_label[0],
-                                    ploterror=ploterror,
-                                    fmt=col+fmt_ls,col=col,
-                                    debug=3)
-            else:
-                plot_function(func,xlim,args[0],calc_x=calc_x,
-                          label=dat_label[0], ploterror=ploterror,
-                          fmt=col+fmt_ls,col=col, debug=3)
+        elif func is not None:
+            if args.shape[0] ==1:
+                col='k'
+                fmt_ls ='-'
+                if argct is "multiarg":
+                    plot_function_multiarg(func,xlim,args[0],calc_x=calc_x,
+                                        label=dat_label[0],
+                                        ploterror=ploterror,
+                                        fmt=col+fmt_ls,col=col,
+                                        debug=3)
+                else:
+                    plot_function(func,xlim,args[0],calc_x=calc_x,
+                              label=dat_label[0], ploterror=ploterror,
+                              fmt=col+fmt_ls,col=col, debug=3)
 
 
         plt.xlabel(label[0],fontsize=24)
@@ -966,15 +969,25 @@ class LatticePlot(object):
         #  self.save()
         #  plt.clf()
 
-    def plot_cont(self,chirana,func,phys_x,xlim,args):
+    def plot_cont(self,chirana,func,xlim,args,par=None,argct=None,calc_x=None,
+                  phys=True):
       """ Plot the continuum curve of a chiral analysis and the physical point
       result
       """
+      #if par is not None:
+      #    #TODO: Generalize to arbitrary long lists
+      #    args[0][par] = np.zeros_like(args[0][0])
       # Plot the continuum curve
-      plot_function(func, xlim, args, 'cont.', fmt='k--', ploterror=True)
-      plt.errorbar(chirana.phys_point[0,0],chirana.phys_point[1,0],
-                   chirana.phys_point[1,1],xerr=chirana.phys_point[0,1],
-                   fmt='d', color='darkorange', label='phys.')
+      if argct == 'multiarg':
+          plot_function_multiarg(func, xlim, args, 'cont.',
+              fmt='k--',calc_x=calc_x, ploterror=True)
+      else:
+          print(args.shape)
+          plot_function(func, xlim, args, 'cont.', fmt='k--', ploterror=True)
+      if phys ==True:
+          plt.errorbar(chirana.phys_point[0,0],chirana.phys_point[1,0],
+                       chirana.phys_point[1,1],xerr=chirana.phys_point[0,1],
+                       fmt='d', color='darkorange', label='phys.')
       plt.legend(loc='best',ncol=2,numpoints=1,fontsize=16)
     
 def plot_brace(args, xcut, func, xpos=None):

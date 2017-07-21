@@ -192,6 +192,11 @@ class MatchResult(object):
 
       Parameters
       ----------
+      fitreslst: list, folder and datanames of fitresult
+      par: which parameter to take from fitresult
+      amu: float,set strange quarkmass accordingly
+      square: bool, should data be squared?
+      mult, ndarray, if shape is right factor to multiply fitres with
       """
       # Check lengths
       if len(fitreslst) != amu.shape[0]:
@@ -238,6 +243,7 @@ class MatchResult(object):
       op : string, should existent data at index and dimension be operated
              with data to add?
       obs : Bool whether to add to observable or evaluated observables
+      fac : float, optional factor to multiply data with beforehand
       """
       #print("xdata to add has shape")
       #print(data.shape)
@@ -317,7 +323,7 @@ class MatchResult(object):
           data=_data 
 
       if read is 'fit_mpi':
-        if len(filename) > 1: 
+        if len(filename) == 2: 
         # Instead of pseudosamples provide real fit results
           _mpi = fit.FitResult.read(filename[0])
           _mpi_data = _mpi.singularize().data[0][:,1,0] 
@@ -341,7 +347,7 @@ class MatchResult(object):
         if isinstance(fac,float):
           data *= fac
         plot = compute_error(data)
-        print("M_pi**2")
+        #print("%f M_pi**2" %fac)
         print(plot)
 
       if read is 'mpi':
