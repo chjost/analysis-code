@@ -687,4 +687,6 @@ def concatenate_data(lst,par=0):
         _c = np.concatenate((_b[0],_b[1],_b[2]))
     if len(_b) == 2:
         _c = np.concatenate((_b[0],_b[1]))
+    if len(_b) == 1:
+        _c = np.concatenate((_b[0],))
     return _c

@@ -525,8 +525,8 @@ class MatchResult(object):
       -----------
       observable : the observables to evaluate
       meth: How to match: 0: linear interpolation (only two values)
-                          1: linear fit
-                          2: quadratic interpolation      
+                          1: quadratic interpolation       
+                          2: linear fit 
       amu_s_match: amu_s to evaluate at (lattice units)
       amu_x: ndarray, The x-values used in matching, if none use the predefined
            amu values
@@ -664,9 +664,9 @@ class MatchResult(object):
         plot_function(line,(x_plot[0,0],x_plot[-1,0]),self.coeffs[meth],'lin.  ipol',
             ploterror = True, fmt='k--',debug =3 )
         if proc == 'match':
-          plot_single_line(self.amu_match[meth],obs,label[0:2],col='g')
+          plot_single_line(self.amu_match[meth],obs,label[2],col='g')
         else:
-          plot_single_line(self.amu_match[meth],self.eval_obs[meth],label[0:2],col='g')
+          plot_single_line(self.amu_match[meth],self.eval_obs[meth],label[2],col='g')
       elif meth == 1:
         plot_data(x_plot[:,0],y_plot[:,0],y_plot[:,1],label='data',dX=x_plot[:,1],col='k')
         #plot_function(para,x_plot[:,0],self.coeffs[meth],'quad.  ipol',
@@ -674,9 +674,9 @@ class MatchResult(object):
         plot_function(line,(x_plot[0,0],x_plot[-1,0]),self.coeffs[meth],'quad.  ipol',
             ploterror = True, fmt='r--', col='red',debug =3 )
         if proc == 'match':
-          plot_single_line(self.amu_match[meth],obs,label[0:2],col='g')
+          plot_single_line(self.amu_match[meth],obs,label[2],col='g')
         else:
-          plot_single_line(self.amu_match[meth],self.eval_obs[meth],label[0:2],col='g')
+          plot_single_line(self.amu_match[meth],self.eval_obs[meth],label[2],col='g')
       elif meth == 2:
         plot_data(x_plot[:,0],y_plot[:,0],y_plot[:,1],label='data',dX=x_plot[:,1],col='b')
         #plot_function(line,x_plot[:,0],self.coeffs[meth],'lin. fit',

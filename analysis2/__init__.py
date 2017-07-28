@@ -20,4 +20,7 @@ from .chiral_functions import *
 from .extern_bootstrap import *
 from .chiral_analysis import ChirAna
 from .externaldata import ExtDat, ContDat
+from .nplqcddat import NPLDat
 from .globalfit import ChiralFit
+from .debug import *
+from .gamma_pik_nplqcd import *

@@ -99,7 +99,7 @@ def main():
     print(fpi_raw)
     chipt_tree = lambda p,x : -x**2/(4.*np.pi) 
     #------------------------- Setup objects -----------------------------------
-    extrapol = ana.ChirAna("pi-K I-3_2",correlated=True)
+    extrapol = ana.ChirAna("pi-K I-3_2",correlated=True,gamma=True)
     # have two x-values: mk/mpi, a/r0
     # determine size of objects from ensemble dictionary
     #TODO: write as function
@@ -140,7 +140,9 @@ def main():
                 tmp_y = ana.gamma_pik(mpi, mk, mu_a0, fpi)
                 extrapol.add_data(tmp_y,(i,j,k,0),dim='y')
     cut = [1.5,2.1]
-    extrapol.fit_mu_a32(plotdir=plotdir,xcut=cut)
+    # Include bootstrapped L_piK as a prior value taken from NPLQCD 
+    l_5 = ana.draw_gauss_distributed(5.65e-3,2e-5,(1500,),origin=True)
+    extrapol.fit_mu_a32(plotdir=plotdir,xcut=cut,prior=l_5)
     plotargs = extrapol.fitres.data[0]
     args = np.asarray([plotargs[:,slice(0,2),0] for i in range(1)])
     # Plot the data the given function
@@ -158,8 +160,7 @@ def main():
     del chiral_plot
     
     extrapol.mu_a0_pik_phys( cont_dat.get("mpi_0"),cont_dat.get("mk"),
-                                     cont_dat.get("fpi"),iso_32=False,gamma=True)
-    print(mua32_phys[0])
+                                     cont_dat.get("fpi"),iso_32=True)
 if __name__ == '__main__':
     try:
         main()

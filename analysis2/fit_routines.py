@@ -386,6 +386,8 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, mute=None, debug=0)
           #print(cov)
     cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
     corr = np.corrcoef(Y.T)
+    print("In fitting correlation matrix is:")
+    print(corr)
     #print("Correlation matrix for fit is:\n %r" %corr)
     # Eigendecomposition of covariance matrix with screen output
     # eig_decomp(cov)
@@ -572,12 +574,12 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
             args=(x[...,b],y[...,b],_cov), full_output=1, factor=.1)
         chisquare[b] = float(sum(infodict['fvec']**2.))
         res[b] = np.array(p)
+        #print("Fit %d converged with reason %d, %s" %(b,ier,mesg))
     chi = errfunc(res[0],x[...,0],y[...,0],_cov)
     print("Check of errorfunction:")
     print(chi)
     print("Chi_squared manually")
     print(np.sum(np.square(chi)))
-    print("Fit %d converged with reason %d, %s" %(b,ier,mesg))
     print(chisquare[0])
     # calculate mean and standard deviation
     res_mean, res_std = compute_error(res)

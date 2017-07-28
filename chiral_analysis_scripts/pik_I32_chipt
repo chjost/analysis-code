@@ -141,7 +141,12 @@ def main():
                 print("0th Bootstrapsample for fpi: %f" %fpi[0])
                 extrapol.x_data[i][j,k,2] = fpi
                 extrapol.x_data[i][j,k,3] = ext_data.get(a,'r0')
-    extrapol.fit_mu_a32(plotdir=plotdir,LO=False)
+    header = ["#amu_l", "amu_s", "mpi", "dmpi", "mk", "dmk", "fpi", "dfpi",
+              "r0/a", "d(r0/a)", "mu a0", "d(mu a0)"]
+    # Include bootstrapped L_piK as a prior value taken from NPLQCD 
+    l_5 = ana.draw_gauss_distributed(5.65e-3,2e-5,(1500,),origin=True)
+    ana.print_summary(extrapol,header,amu_l_dict,amu_s_dict)
+    extrapol.fit_mu_a32(plotdir=plotdir,LO=False,prior=l_5)
     plotargs = extrapol.fitres.data[0]
     # LO-arguments
     #args = np.asarray([np.vstack((plotargs[:,0,0],
@@ -150,14 +155,14 @@ def main():
     # NLO arguments need to have bootstrapsamples as first argument
     extrapol.mu_a0_pik_phys(cont_dat.get('mpi_0'),cont_dat.get('mk'),
                                      cont_dat.get('fpi'),cont_dat.get('r0'),
-                                     iso_32=True,gamma=False)
+                                     iso_32=True)
     #args = np.asarray([np.vstack((plotargs[:,0,0], plotargs[:,1,0],
     #  plotargs[:,2,0],extrapol.x_data[r][0,0,3])).T for r in range(len(space))])
     args = np.asarray([np.vstack((plotargs[:,0,0], plotargs[:,1,0],
-      np.full_like(plotargs[:,0,0],1.33),extrapol.x_data[r][0,0,3])).T for r in range(len(space))])
+      plotargs[:,2,0],extrapol.x_data[r][0,0,3])).T for r in range(len(space))])
     print("Argument shape after stacking")
     print("Lattice artifact:")
-    print(plotargs[0,2,0])
+    print(args[2,0,3])
     # Plot the data the given function
     label=[r'$\mu_{\pi K}/f_{\pi}$',r'$\mu_{\pi K}\,a_{3/2}$',r' ',
            r'$(\mu_{\pi K}/f_{\pi})_{phys}$']
@@ -168,8 +173,7 @@ def main():
     chiral_plot.plot_chiral_ext(extrapol,space,label, xlim= lim_x,ylim=[-0.35,0.],
                                 func=ana.pik_I32_chipt_plot, args=args,
                                 calc_x = ana.calc_x_plot, ploterror=False,
-                                kk=False, gamma=False,
-                                x_phys=0.814,plotlim=[0.5,2.],
+                                kk=False, x_phys=0.814,plotlim=[0.5,2.],
                                 argct="multiarg")
     # Plot NPLQCD Data
     # TODO: Dirty Hack at the moment
@@ -184,7 +188,7 @@ def main():
     args = np.vstack((plotargs[:,0,0], plotargs[:,1,0],
       np.zeros_like(plotargs[:,0,0]),np.ones_like(plotargs[:,0,0]))).T
     chiral_plot.plot_cont(extrapol,ana.pik_I32_chipt_plot,
-                          lim_x,args,argct='multiarg',calc_x=ana.calc_x_plot)
+          lim_x,args,argct='multiarg',calc_x=ana.calc_x_plot)
     chiral_plot.save()
     del chiral_plot
     #chiral_plot = ana.LatticePlot(filename, join = False)

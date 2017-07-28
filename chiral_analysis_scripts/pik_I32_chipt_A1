@@ -1,0 +1,296 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+
+################################################################################
+#
+# Author: Christopher Helmes (helmes@hiskp.uni-bonn.de)
+# Date:   May 2017
+#
+# Copyright (C) 2017 Christopher Helmes
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Fit mu*a_32 in NLO-chipt at fixed strange quark mass
+# 
+# The fitfunction reads:
+# mu*a_3/2 = mu^2/(4*pi f^2_pi)(-1 + L_piK(Lambda) * 32*m_pi*m_K/f^2_pi
+#                               -L_5(Lambda) * 16*m^2_pi/f^2_pi
+#                               +Chi^I32_piK(Lambda,m_pi,m_K)/(16*pi^2*f^2_pi))
+# Chi^I32_piK(Lambda,m_pi,m_K) is a NLO-function including chiral logarithms
+################################################################################
+# system imports
+import sys
+from scipy import stats
+from scipy import interpolate as ip
+import numpy as np
+from numpy.polynomial import polynomial as P
+import math
+import matplotlib
+matplotlib.use('Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+from matplotlib.backends.backend_pdf import PdfPages
+
+# Christian's packages
+sys.path.append('/hiskp2/helmes/projects/analysis-code/')
+import analysis2 as ana
+
+def main():
+    # Get parameters from initfile
+    if len(sys.argv) < 2:
+        ens = ana.LatticeEnsemble.parse("A40.24.ini")
+    else:
+        ens = ana.LatticeEnsemble.parse(sys.argv[1])
+
+    # get data from input file
+    lat = ens.name()
+    latA = ens.get_data("namea")
+    latB = ens.get_data("nameb")
+    latD = ens.get_data("named")
+    strangeA = ens.get_data("strangea")
+    strangeB = ens.get_data("strangeb")
+    strangeD = ens.get_data("stranged")
+    space=['A','B','D']
+    #space=['B','D']
+    #seeds = [1772, 2741, 8807]
+    #seeds = [5859, 5672, 4104, 5382, 8439, 6186]
+    seeds = [5859, 5672, 4104, 5382, 8439, 6186]
+    seeds2 = [9042, 9280, 2219, 4911, 2506]
+    #seeds = [1772, 2741]
+    #seeds = [1772,]
+    lat_dict = {'A':latA,'B':latB,'D':latD}
+    #lat_dict = {'A':latA,'B':latB}
+    #print("\nDicitonary for ensemble names:")
+    #print(lat_dict)
+    #dicitionary of light quark masses
+    amulA = ens.get_data("amu_l_a")
+    amulB = ens.get_data("amu_l_b")
+    amulD = ens.get_data("amu_l_d")
+    amu_l_dict = {'A': amulA,'B': amulB, 'D': amulD}
+
+    #dictionary of strange quark masses
+    mu_s_dict = {'A': strangeA,'B': strangeB, 'D': strangeD}
+    amusA = ens.get_data("amu_s_a")
+    amusB = ens.get_data("amu_s_b")
+    amusD = ens.get_data("amu_s_d")
+    amu_s_dict = {'A': amusA,'B': amusB, 'D': amusD}
+    print(amu_s_dict)
+    #quark = ens.get_data("quark")
+    datadir = ens.get_data("datadir") 
+    plotdir = ens.get_data("plotdir") 
+    resdir = ens.get_data("resultdir") 
+    nboot = ens.get_data("nboot")
+    # Prepare inputs
+    ext_data = ana.ExtDat(seeds,space,1)
+    cont_data = ana.ContDat(seeds2,zp_meth="phys")
+    fpi_raw = ana.read_extern("../plots2/data/fpi.dat",(1,2))
+    print(fpi_raw)
+    chipt_tree = lambda p,x : -x**2/(4.*np.pi) 
+    #------------------------- Setup objects -----------------------------------
+    extrapol = ana.ChirAna("pi-K I-3_2",correlated=False,gamma=False)
+    # have four x-values: mk,mpi,fpi,a
+    ens_shape_chirana = (len(latA),len(latB),len(latD))
+    #ens_shape_chirana = (len(latB),len(latD))
+    print(ens_shape_chirana)
+    lyt_xvals = (3,ens_shape_chirana,1,4,1500)
+    lyt_yvals = (3,ens_shape_chirana,1,1,1500)
+    #lyt_xvals = (2,ens_shape_chirana,3,4,1500)
+    #lyt_yvals = (2,ens_shape_chirana,3,1,1500)
+    extrapol.create_empty(lyt_xvals,lyt_yvals,lat_dict=lat_dict)
+    print("\nSetup complete, begin chiral analysis")
+    #------------------------- Get x-values --------------------------------
+    for i,a in enumerate(space):
+        print("\nWorking at lattice spacing %s" %a)
+        for j,e in enumerate(lat_dict[a]):
+            # if using D30.48 modify lowest amus to 0.0115
+            if e == 'D30.48':
+                print("modifying lowest mu_s values")
+                mu_s_dict[a][0] ='amu_s_115' 
+                amu_s_dict[a][0]=0.0115
+  #-------------------------- Evaluate at x-values -----------------------------
+      
+            # Evaluation works with mu_pik a_32 as y-data and a^2 (M^2_K - 0.5 M^2_\pi) as
+            # x-data
+            # TODO: Only Workaround feasible, use two match results, then copy over
+            # y-data of one to x-data of other
+            print("\nEvaluate ensemble %s" %e)
+            # initialize a match result object for evaluating MK a0
+  #-------------------------- Evaluate mu a32 -----------------------------
+
+            mk_diff = ana.MatchResult("mua32_chpt_M1A_%s" % e,save = datadir+'%s/'%e)
+            ana.MatchResult.create_empty(mk_diff,1500,3)
+            # Load data to match each ensemble
+            dat_names = [datadir+'%s/' % (e) +s+'/fit_k_unit_%s.npz' % (e) for s in mu_s_dict[a]]
+            mk_meas = ana.init_fitreslst(dat_names)
+            # load squared kaon mass as y-data
+            mk_diff.load_data(mk_meas,1,amu_s_dict[a],square=True,mult=None)
+            # Apply finite size corrections
+            #fse_k = '../plots2/data/k_fse_mk.dat'
+            #mk_diff.add_extern_data(fse_k,e,idx=None,square=True,read='fse_mk',op='mult')
+            print("squared M_K added: %f" % mk_diff.obs[0,0])
+            # append squared pion mass from extern data multiplied by 0.5 
+            #mpi_help = ('../plots2/data/mpi.dat','../plots2/data/k_fse_mpi.dat')
+            # Done: need FSE corrections for pion here as well
+            #read in pion mass from fitresult
+            mpi = "%s/%s/%s/fit_pi_unit_%s.npz"%(datadir,e,s,e)
+            # subtract -0.5 M_pi from kaon mass
+            mk_diff.add_extern_data(mpi,e,idx=None,square=True,read='fit_mpi',
+                                    op='min',fse=False,r0=False,fac=0.5)
+            print("... after subtraction of 1/2 M_pi: %f" % mk_diff.obs[0,0])
+            
+            # get MK a0 for all strange quark masses at once
+            mk_akk = ana.MatchResult("mua32_M1A_%s" %e,save=datadir+'%s/'%e)
+            ana.MatchResult.create_empty(mk_akk,1500,3)
+            dat_names = [datadir+'%s/' % (e) +s+'/mu_a0_TP0_%s.npz' % (e) for s in mu_s_dict[a]]
+            mk_akk_meas = ana.init_fitreslst(dat_names)
+            mk_akk.load_data(mk_akk_meas,0,amu_s_dict[a],square=False)
+            #mpi = [mpi,"../plots2/data/k_fse_mpi.dat"]
+            #mk_akk.add_extern_data(mpi,e,idx=None,square=False,read='fit_mpi',
+            #                        op='mult',fse=True,r0=False,fac=None)
+            # Apply finite size corrections
+            #mk_akk.add_extern_data(fse_k,e,idx=None,square=False,read='fse_mk',op='mult')
+            
+            # Copy over y-data from mk_diff as new x-data
+            mk_akk.amu = mk_diff.obs
+            
+            # Evaluate MK a0 at matched amu_s value, we are still in the amu_s
+            # interval which allows interpolation
+            #label = [r'$a\mu_s$',r'$M_K a_0$']
+            label = [r'$a^2(M_K^2-0.5M^2_{\pi})$',r'$\mu_{\pi K} a_{3/2}$',
+                     r'$a^2(M_K^2-0.5M^2_{\pi}) = (aM_s^{\mathrm{ref}})^2$']
+            #evl_x = ana.mk_mpi_diff_phys(a, nboot, lat=True)
+            evl_x = ana.mk_mpi_diff_phys(a, nboot, cont_data, ext_data)
+            print(ana.compute_error(evl_x))
+            #amu_s = ana.amuq_from_r0mq(mk_diff.amu_match[2], a, nboot)
+            #amu_s = mk_diff.amu_match[2]
+            mk_akk.eval_at(evl_x,plotdir=plotdir,
+                           ens=e,plot=True,label=label, meth=2)
+  #-------------------------- Evaluate M_K -----------------------------
+            # Also interpolate the reduced mass
+            mk_ipol = ana.MatchResult("mk_ipol_M1A_%s" %e,save=datadir+'%s/'%e)
+            ana.MatchResult.create_empty(mk_ipol,1500,3)
+            dat_names = [datadir+'%s/' % (e) +s+'/fit_k_unit_%s.npz' % (e) for s in mu_s_dict[a]]
+            mk_ipol_meas = ana.init_fitreslst(dat_names)
+            mk_ipol.load_data(mk_ipol_meas,1,amu_s_dict[a],square=True)
+            #mpi = [mpi,"../plots2/data/k_fse_mpi.dat"]
+            #mk_ipol.add_extern_data(mpi,e,idx=None,square=False,read='fit_mpi',
+            #                        op='mult',fse=True,r0=False,fac=None)
+            # Apply finite size corrections
+            #mk_ipol.add_extern_data(fse_k,e,idx=None,square=False,read='fse_mk',op='mult')
+            
+            # Copy over y-data from mk_diff as new x-data
+            mk_ipol.amu = mk_diff.obs
+            
+            # Evaluate MK a0 at matched amu_s value, we are still in the amu_s
+            # interval which allows interpolation
+            #label = [r'$a\mu_s$',r'$M_K a_0$']
+            label = [r'$a^2(M_K^2-0.5M^2_{\pi})$',r'$M_{K}^2$',
+                     r'$a^2(M_K^2-0.5M^2_{\pi}) = (aM_s^{\mathrm{ref}})^2$']
+            #evl_x = ana.mk_mpi_diff_phys(a, nboot, lat=True)
+            evl_x = ana.mk_mpi_diff_phys(a, nboot, cont_data, ext_data)
+            print(ana.compute_error(evl_x))
+            #amu_s = ana.amuq_from_r0mq(mk_diff.amu_match[2], a, nboot)
+            #amu_s = mk_diff.amu_match[2]
+            mk_ipol.eval_at(evl_x,plotdir=plotdir,
+                           ens=e,plot=True,label=label, meth=2)
+            # Add mu_s values from matching
+            #extrapol.add_data(mk_akk.amu_match[2],(i,j,0,0),'mu')
+            # Add MK a0 data to chiral analysis object 
+            extrapol.add_data(mk_akk.eval_obs[2],(i,j,0,0),'y')
+            # Add MK a0 data to chiral analysis object 
+            extrapol.add_data(np.sqrt(mk_ipol.eval_obs[2]),(i,j,0,1),'x')
+            print("strange quark mass is: %s" %s)
+            print("Read in data for %s" %e)
+            _tmp_x = ana.FitResult.read("%s/%s/%s/fit_pi_unit_%s.npz"% (datadir,e,s,e))
+            #_tmp_x.print_data(1)
+            # select only one fitrange
+            #TODO: needs to be implemented properly
+            tmp_x = _tmp_x.data[0][:,1,0]
+            extrapol.add_data(tmp_x,(i,j,0,0),dim='x')
+            # Divide reduced mass by according value of f_pi
+            dummy, fpi = ana.prepare_fk(fpi_raw,e,1500)
+            print("0th Bootstrapsample for fpi: %f" %fpi[0])
+            extrapol.x_data[i][j,0,2] = fpi
+            extrapol.x_data[i][j,0,3] = ext_data.get(a,'r0')
+    extrapol.fit_mu_a32(plotdir=plotdir,LO=False)
+    plotargs = extrapol.fitres.data[0]
+    # LO-arguments
+    #args = np.asarray([np.vstack((plotargs[:,0,0],
+    #                                   extrapol.x_data[i][0,0,3])).T
+    #                                   for i in range(len(space))])
+    # NLO arguments need to have bootstrapsamples as first argument
+    extrapol.mu_a0_pik_phys(cont_data.get('mpi_0'),cont_data.get('mk'),
+                                     cont_data.get('fpi'),cont_data.get('r0'),
+                                     iso_32=True)
+    #args = np.asarray([np.vstack((plotargs[:,0,0], plotargs[:,1,0],
+    #  plotargs[:,2,0],extrapol.x_data[r][0,0,3])).T for r in range(len(space))])
+    args = np.asarray([np.vstack((plotargs[:,0,0], plotargs[:,1,0],
+      plotargs[:,2,0],extrapol.x_data[r][0,0,3])).T for r in range(len(space))])
+    print("Argument shape after stacking")
+    print("Lattice artifact:")
+    print(plotargs[0,2,0])
+    # Plot the data the given function
+    label=[r'$\mu_{\pi K}/f_{\pi}$',r'$\mu_{\pi K}\,a_{3/2}$',r' ',
+           r'$(\mu_{\pi K}/f_{\pi})_{phys}$']
+    filename = plotdir+'/mua0_decay_nlo.pdf'
+    chiral_plot = ana.LatticePlot(filename, join = False)
+    #limits for x values in plot
+    lim_x = [[120.,560.], [330.,780.],[180.,90.], [0.,0.]] 
+    chiral_plot.plot_chiral_ext(extrapol,space,label, xlim= lim_x,ylim=[-0.35,0.],
+                                func=ana.pik_I32_chipt_plot, args=args,
+                                calc_x = ana.calc_x_plot, ploterror=False,
+                                kk=False,
+                                x_phys=0.8128,plotlim=[0.5,2.],
+                                argct="multiarg")
+    # Plot NPLQCD Data
+    # TODO: Dirty Hack at the moment
+    #
+    x_cmp = np.asarray([[1.332,0.01],[1.469,0.007],[1.731,0.007],
+                        [1.869,0.005]])  
+    y_cmp = np.asarray([[-0.1263,0.0075],[-0.155,0.04],[-0.213,0.012],
+                        [-0.267,0.012]])
+    plt.errorbar(x_cmp[:,0],y_cmp[:,0],y_cmp[:,1],xerr=x_cmp[:,1],fmt='ko',
+                     label=r'NPLQCD, $a=0.125$fm')
+    # Prepare arguments for continuum curve
+    args = np.vstack((plotargs[:,0,0], plotargs[:,1,0],
+      np.zeros_like(plotargs[:,0,0]),np.ones_like(plotargs[:,0,0]))).T
+    chiral_plot.plot_cont(extrapol,ana.pik_I32_chipt_plot,
+                          lim_x,args,argct='multiarg',calc_x=ana.calc_x_plot)
+    chiral_plot.save()
+    del chiral_plot
+    #chiral_plot = ana.LatticePlot(filename, join = False)
+    ##chiral_plot.plot_comparison(fix_ms,space,label,[0.,0.13],dep=1)
+    #chiral_plot.plot_chiral_fit(extrapol,space,label,[0.5,1.6],ylim=[-0.2,0],
+    #                            func=chipt_tree,x_phys=0.835)
+    #del chiral_plot
+    #extrapol.calc_L_piK()
+    extrapol.fitres.print_data(1)
+    # calculate factor for converting to mpi_a0
+    fac = cont_data.get('mpi_0')/ana.reduced_mass(cont_data.get('mpi_0'),
+                                                  cont_data.get('mk'))
+    print(fac.shape)
+    #print("mpi a0 phys:")
+    #print(extrapol.phys_point_fitres.data[0].shape)
+    #mu_a0 = np.copy(extrapol.phys_point_fitres)
+    #mu_a0.data[0] = mu_a0.data[0]*fac
+    #mu_a0.print_data()
+    extrapol.print_summary(None,0,space,lat_dict,amu_s_dict,xcut=15)
+    
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Keyboard Interrupt")
+

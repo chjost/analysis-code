@@ -36,7 +36,7 @@ class ChirAna(object):
   In addition it is possible to fit the data to a given function
   """
   def __init__(self,proc_id=None,match=False,correlated=True,combined=False,
-               fit_ms=False):
+               fit_ms=False,gamma=False):
     """ Initialize Chiral Analysis object
 
     Parameters
@@ -46,6 +46,7 @@ class ChirAna(object):
     correlated : Boolean if fit is Correlated
     combined : Boolean to decide if combined fit is done
     fit_ms : is the strange quark mass fitted
+    gamma: Boolean, should the definition for gamma be used?
     
     Datatypes
     ---------
@@ -89,6 +90,8 @@ class ChirAna(object):
     self.plot_cont_ext = None
     # This is the function for continuum plotting
     self.plot_cont_func = None
+    # Boolean for using Gamma method
+    self.gamma=gamma
 
   def wipe_data(self, dim):
 
@@ -656,7 +659,7 @@ class ChirAna(object):
   def mka0_errfunc(self,p,x,y,cov):
 
       # define the fitfunction for a single beta
-      _func = lambda r, z, p, x,: p[0]*r*x[:,0]/z + p[1]/r**2 + p[2]
+      _func = lambda r, z, p, x,: (p[0]*r*x[:,0]/z)**2 + p[1]/r**2 + p[2]
       #_func = lambda r, z, p, x,: p[0]*r*x[:,0]/z*(1 + p[3]*(r*x[:,0]/z)) + p[1]/r**2 + p[2]
       # residuals for
       # With A40.24
@@ -867,6 +870,78 @@ class ChirAna(object):
 #                    savedir=datadir,loc=loc,xlim=xlim,ylim=ylim,ploterr=ploterr)
 
   def print_summary(self,dim,index,lat_space,ens_dict,
+                    mu_s_dict=None,xcut=2,head=None):
+    """This function should print a summary of the whole chiral analysis,
+    preferably in latex format
+    """
+    # Load data
+    _x_summ, _y_summ = self.get_data_plot(mev=False)
+    print("summary data:")
+    print(_x_summ.shape)
+    if self.match is True:
+      _mu_summ = self.get_mu_plot(dim=0,debug=2)
+    if head is None:
+      header=['Ens','$a\mu_s$','$(r_0M_{\pi})^2$','$(a/r_0)^2$', '$M_Ka_0$']
+    else:
+      header=head
+    chut.print_table_header(header)
+
+    print('\midrule')
+    l = 0
+    for i,a in enumerate(lat_space):
+      #if i > 0:
+      #  l = len(ens_dict[lat_space[i-1]])
+      #if i > 1:
+      #  l = len(ens_dict[lat_space[i-1]])+ len(ens_dict[lat_space[i-2]])
+      #else:
+      #  l = 0
+      # number of ensembles for each lattice spacing
+      if i == 0:
+        l = 0
+      if i == 1:
+        l = len(ens_dict[lat_space[i-1]])
+      if i == 2:
+        l += len(ens_dict[lat_space[i-1]])
+      for j,e in enumerate(ens_dict[a]):
+        # format for
+        if self.match:
+            # this is printing two dimensions
+            if hasattr(_mu_summ,"__iter__"):
+              chut.print_line_latex(e,_x_summ[l+j],_y_summ[l+j],_mu_summ[l+j])
+            else:
+              chut.print_line_latex(e,_x_summ[l+j],_y_summ[l+j])
+        else:
+          for k,s in enumerate(mu_s_dict[a]):
+              #chut.print_line_latex(e,_x_summ[i*l*3+j*3+k],_y_summ[i*l*3+j*3+k])
+              chut.print_line_latex(e,_x_summ[l*3+j*3+k],_y_summ[l*3+j*3+k])
+    # TODO: Automate that
+    if hasattr(self.fitres,"__iter__"):
+      dof =  _x_summ.shape[0] - self.fitres[0].data[0].shape[1]
+      if self.combined:
+        dof = 2*_x_summ.shape[0] - self.fitres[0].data[0].shape[1]
+      print("%10s & $%.1f$ & $%.4f(%1.0f)$ & $%.2f/%d$ & $%.2e $" %
+          (self.proc_id, xcut, self.phys_point[0,1,0], self.phys_point[0,1,1]*1e4,
+           self.fitres[0].chi2[0][0], dof, self.fitres[0].pval[0][0]))
+
+      #dof =  _x_summ.shape[0] - self.fitres[1].data[0].shape[1]
+      #print("%10s & $%.1f$ & $%.4f(%1.0f)$ & $%.2f/%d$ & $%.2e $" %
+      #    (self.proc_id, xcut, self.phys_point[1,1,0], self.phys_point[1,1,1]*1e4,
+      #     self.fitres[1].chi2[0][0], dof, self.fitres[1].pval[0][0]))
+    else:
+      dof = _x_summ.shape[0] - self.fitres.data[0].shape[1]
+      if self.combined:
+        print(_x_summ.shape[0])
+        print(self.fitres[0].data[0].shape[1])
+        dof = 2*_x_summ.shape[0] - self.fitres[0].data[0].shape[1]
+      print("Phsyical point result:")
+      if xcut is None:
+        xcut = 2.
+      print("%10s & $%.1f$ & %.2e %.2e & $%.4f(%1.0f)$ & $%.2f/%d$ & $%.2e $" %
+          (self.proc_id, xcut, self.phys_point[0,0],self.phys_point[0,1],
+           self.phys_point[1,0], self.phys_point[1,1]*1e4,
+           self.fitres.chi2[0][0], dof, self.fitres.pval[0][0]))
+
+  def print_summary_pik(self,dim,index,lat_space,ens_dict,
                     mu_s_dict=None,xcut=2,head=None):
     """This function should print a summary of the whole chiral analysis,
     preferably in latex format
@@ -1449,13 +1524,21 @@ class ChirAna(object):
 ################# Scratch region for trying out functions ######################
 ################################################################################
   # TODO: implement gamma better
-  def mu_a32_errfunc(self,p,x,y,cov,gamma=False):
+  def mu_a32_errfunc(self,p,x,y,cov):
       #print("In NLO-Errfunc shape of x-values is:")
       #print(x.shape)
-      if gamma is not True:
-        _res = pik_I32_chipt_nlo(x[:,0],x[:,1],x[:,2],x[:,3],p)-y
+      if self.gamma is not True:
+          if y.shape[0] > x.shape[0]:
+              _res = pik_I32_chipt_nlo(x[:,0],x[:,1],x[:,2],x[:,3],p)-y[:-1]
+              _res = np.r_[_res,p[1]-y[-1]]
+          else: 
+              _res = pik_I32_chipt_nlo(x[:,0],x[:,1],x[:,2],x[:,3],p)-y
       else:
-        _res = (p[0]-0.5*p[1])-2.*x.ravel()*p[1]-y
+          if y.shape[0] > x.shape[0]:
+              _res = p[0]-2.*x.ravel()*p[1]-y[:-1]
+              _res = np.r_[_res,p[0]-y[-1]]
+          else: 
+              _res = p[0]-2.*x.ravel()*p[1]-y
       # calculate the chi values weighted with inverse covariance matrix
       _chi = np.dot(cov,_res)
       return _chi
@@ -1467,8 +1550,52 @@ class ChirAna(object):
       _res = pik_I32_chipt_lo(x[:,0],x[:,1],x[:,2],x[:,3],p)-y
       _chi = np.dot(cov,_res)
       return _chi
- 
-  def fit_mu_a32(self,plotdir=None,LO=False,xcut=None,debug=2):
+#TODO: Code doubling with globalfit.py Outsource data cut 
+  def cut_data(self,x,y,interval):
+      """ cut data of chiral fit object according to given interval
+      Parameters
+      ----------
+      interval: tuple or float, interval where to cut
+      
+      Returns
+      -------
+      _data: cutted data with same shape as input except for 0th axis
+      """
+      # determine shapes
+      _x_shape = x.shape
+      _y_shape = y.shape
+
+      #cut the xdata if necessary
+      # implement a cut on the data if given, negative means everything above
+      # that x-value
+      print("interval is: %r" %interval)
+      # only interested in first range
+      if hasattr(interval,"__iter__"):
+          sub = (0,)*len(_x_shape[1:])
+          select = (slice(None),)+sub
+          print(x[select])
+          lo = x[select] > interval[0]
+          hi = x[select] < interval[1]
+          tmp = np.logical_and(lo,hi)
+          print("Shape for cutting:")
+          # should be a 1d array
+          print(tmp)
+      elif interval >= 0.:
+          tmp = x[:,0] < interval
+      elif interval < 0.:
+          tmp = x[:,0] > -interval
+      print("y-shape before cut:")
+      print(y.shape)
+      _x = x[tmp,...]
+      _y = y[tmp,...]
+      print("y-data after cut:")
+      print(_y[:,0])
+      print("y-shape after cut:")
+      print(_y.shape)
+      
+      return _x, _y
+
+  def fit_mu_a32(self,plotdir=None,LO=False,xcut=None,debug=2,prior=None):
       """ Fit the NLO chiPT formula to the data of self
       """
 
@@ -1484,6 +1611,13 @@ class ChirAna(object):
       else:
         _x = chut.concatenate_data(self.x_data,par=slice(0,4))
       _y = chut.concatenate_data(self.y_data)
+      if xcut is not None:
+          print("cutting x-values at: %r" %xcut)
+          _x,_y = self.cut_data(_x,_y,xcut)
+      if prior is not None:
+          print(_y.shape)
+          print(prior.shape)
+          _y = np.r_[_y,np.atleast_2d(prior)]
       print(_x.shape)
       print(_y.shape)
       #plot correlation of yvalues
@@ -1502,14 +1636,13 @@ class ChirAna(object):
           start=[1.]
           mu_a32 = ChiralFit("mu_a32_lo",self.mu_a32_lo_errfunc)
       print(_y[:,0:4])
-      print("cutting x-values at: %r" %xcut)
-      self.fitres = mu_a32.chiral_fit(_x,_y,start,xcut=xcut,parlim=None,
+      self.fitres = mu_a32.chiral_fit(_x,_y,start,xcut=None,parlim=None,
                                       correlated=self.correlated,cov=None,
                                       debug=debug)
       self.fitres.set_ranges(np.array([[[0,_x.shape[0]]]]),[[1,]])
       self.fitres.print_details()
-      self.fitres.print_data(2)
-      print(self.fitres.data[0][0,2,0])
+      #self.fitres.print_data(2)
+      #print(self.fitres.data[0][0,2,0])
       ## Save the fitresult data
       #if dat is not None:
       #  self.fitres.save(dat+self.proc_id+'.npz')
@@ -1517,7 +1650,7 @@ class ChirAna(object):
       #args = self.fitres.data[0]
 
   #TODO:  Think about placing this somewhere else
-  def mu_a0_pik_phys(self, mpi, mk, fpi, r0=None, ren=None, iso_32=True, gamma=True):
+  def mu_a0_pik_phys(self, mpi, mk, fpi, r0=None, ren=None, iso_32=True):
       """Calculate m0ua0 for pi-K from fitted LECs and continuum input
 
       Parameters
@@ -1529,10 +1662,10 @@ class ChirAna(object):
       # build x-data array, at moment nsamples,nx
       if ren is None:
           ren = fpi
-      if gamma is True:
+      if self.gamma is True:
           _x = np.column_stack((ren,mpi,mk,fpi))
           if iso_32 is True:
-                  self.phys_point_fitres = self.fitres.calc_mua0_pik_phys(_x,
+              self.phys_point_fitres = self.fitres.calc_mua0_pik_phys(_x,
                                                                   mua0_I32_from_fit)
           else:
               self.phys_point_fitres = self.fitres.calc_mua0_pik_phys(_x,
@@ -1545,6 +1678,7 @@ class ChirAna(object):
       self.phys_point_fitres.print_data()
       self.phys_point[0]=ana.compute_error(ana.calc_x_plot(_x))
       self.phys_point[1]=ana.compute_error(self.phys_point_fitres.data[0])
+      print(self.phys_point)
  
   def calc_L_piK(self):
       _lpik = self.fitres.summ_int((0,1),fac=-0.5,fac_par=1)

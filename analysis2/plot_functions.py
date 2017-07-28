@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import itertools
 
+import debug as dbg
 from statistics import compute_error
 from functions import (func_single_corr, func_ratio, func_const, func_two_corr,
     func_single_corr2, compute_eff_mass)
@@ -308,7 +309,7 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
 
 # Tryout from devel_branch
 def plot_data(X, Y, dY, label, plotrange=None, dX=None, fmt="x", col='b',
-    alpha=None):
+    alpha=None, debug=2):
     """A function that plots data.
 
     Parameters
@@ -349,6 +350,8 @@ def plot_data(X, Y, dY, label, plotrange=None, dX=None, fmt="x", col='b',
         # plot the data
         _dX=dX
         plt.errorbar(X, Y, dY, xerr=_dX, fmt=fmt, label=label,c=col, alpha=alpha)
+    if debug > 1:
+        dbg.print_info_data(X,Y,dY,_dX)
 
 def plot_data_with_fit(X, Y, dY, fitfunc, args, label, plotrange=None,
                    fitrange=None, addpars=None, pval=None,col='b'):

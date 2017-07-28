@@ -101,13 +101,13 @@ def pik_I32_chipt_nlo(mpi, mk, fpi, r0, p, lambda_x=None):
         lambda_x = fpi
     _p=p
     # Term with L_piK, a collection of Lower LECs, dependent on L_5
-    _sum1 = (_p[0]-0.5*p[1])*32.*mpi*mk/fpi**2
+    _sum1 = _p[0]*32.*mpi*mk/fpi**2
     # Term with L5
+    #_sum2 = _p[1]*16.*mpi**2/fpi**2
     _sum2 = _p[1]*16.*mpi**2/fpi**2
     # Term with NLO function (does not take eta mass at the moment)
     _sum3 = chi_I32_nlo(lambda_x, mpi, mk)/(16.*np.pi**2*fpi**2)
-    #_mua32 = (reduced_mass(mpi,mk)/fpi)**2/(4.*np.pi)*(-1.+_sum1-_sum2+_sum3)+_p[2]/(r0**2)
-    _mua32 = (reduced_mass(mpi,mk)/fpi)**2/(4.*np.pi)*(-1.+_sum1-_sum2+_sum3)+1.33/(r0**2)
+    _mua32 = (reduced_mass(mpi,mk)/fpi)**2/(4.*np.pi)*(-1.+_sum1-_sum2+_sum3)+_p[2]/(r0**2)
     return _mua32
 
 def pik_I32_chipt_lo(mpi, mk, fpi, r0, p):
@@ -127,8 +127,8 @@ def chi_nlo_neg(ren,mpi,mk,fpi):
     _chi[0] = (8.*mk_sq-5.*mpi_sq)/(2.*sq_dif) * np.log(mpi/ren)
     _chi[1] = -23.*mk_sq/(9.*sq_dif) * np.log(mk/ren)
     _chi[2] = (28.*mk_sq-9.*mpi_sq)/(18.*(sq_dif)) * np.log(np.sqrt(m_eta_sq(mpi,mk))/ren)
-    _chi[3] = 4.*mk/(9.*mpi)*np.sqrt(2.*mk**2-mk*mpi-mpi_sq)/(mk+mpi)*nlo_atan_opp(mpi,mk)
-    _chi[4] = -4.*mk/(9.*mpi)*np.sqrt(2.*mk**2+mk*mpi-mpi_sq)/(mk-mpi)*nlo_arctan(mpi,mk) 
+    _chi[3] = 4.*mk/(9.*mpi)*np.sqrt(2.*mk_sq-mk*mpi-mpi_sq)/(mk+mpi)*nlo_atan_opp(mpi,mk)
+    _chi[4] = -4.*mk/(9.*mpi)*np.sqrt(2.*mk_sq+mk*mpi-mpi_sq)/(mk-mpi)*nlo_arctan(mpi,mk) 
     return -mpi_sq/(8.*np.pi**2*fpi**2) *np.sum(_chi,axis=0)
 
 def chi_nlo_pos(ren,mpi,mk):
@@ -140,10 +140,11 @@ def chi_nlo_pos(ren,mpi,mk):
     _chi = np.zeros((5,mpi.shape[-1]))
     _chi[0] = 11.*mpi_sq/(2.*sq_dif)*np.log(mpi/ren) 
     _chi[1] = -(67.*mk_sq-8.*mpi_sq)/(9.*sq_dif)*np.log(mk/ren)
-    _chi[2] = (24.*mk_sq-5.*mpi_sq)/(18.*sq_dif)*np.log(np.sqrt(m_eta_sq(mpi,mk)))
-    _chi[3] = -4./9.*np.sqrt(2.*mk**2-mk*mpi-mpi_sq)/(mk+mpi)*nlo_atan_opp(mpi,mk) 
-    _chi[4] = -4./9.*np.sqrt(2.*mk**2+mk*mpi-mpi_sq)/(mk-mpi)*nlo_arctan(mpi,mk)
+    _chi[2] = (24.*mk_sq-5.*mpi_sq)/(18.*sq_dif)*np.log(np.sqrt(m_eta_sq(mpi,mk))/ren)
+    _chi[3] = -4./9.*np.sqrt(2.*mk_sq-mk*mpi-mpi_sq)/(mk+mpi)*nlo_atan_opp(mpi,mk) 
+    _chi[4] = -4./9.*np.sqrt(2.*mk_sq+mk*mpi-mpi_sq)/(mk-mpi)*nlo_arctan(mpi,mk)
     return 1./(16.*np.pi**2) *(np.sum(_chi,axis=0)+43./9.)
+
 
 def gamma_pik(mpi, mk, mu_a0, fpi, ren=None):
     if ren is None:
@@ -203,6 +204,13 @@ def a_I12(ren,mpi,mk,fpi,l_5,l_pik):
     return a_pik_pos(ren,mpi,mk,fpi,l_pik) + 2 * a_pik_neg(ren,mpi,mk,fpi,l_5)
 
 def mu_aI32(ren,mpi,mk,fpi,l_5,l_pik):
+    #print("In mu_aI32:")
+    #print("L_5 = %f" %l_5)
+    #print("L_pik = %f" %l_pik)
+    #print("ren = %f" %ren)
+    #print("mpi = %f" %mpi)
+    #print("mk = %f" %mk)
+    #print("fpi = %f" %fpi)
     return reduced_mass(mpi,mk) * a_I32(ren,mpi,mk,fpi,l_5,l_pik)
 
 def mu_aI12(ren,mpi,mk,fpi,l_5,l_pik):

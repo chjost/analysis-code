@@ -876,8 +876,8 @@ class LatticePlot(object):
 
     def plot_chiral_ext(self, chirana, beta, label, xlim, ylim=None, func=None,
                        args=None,calc_x=None, ploterror=True, kk=True,
-                       gamma=False,
-                       x_phys=None,xcut=None,plotlim=None,argct=None):
+                       gamma=False, x_phys=None,xcut=None,plotlim=None,
+                       argct=None,debug=0):
         """ Function to plot a chiral extrapolation fit.
         
         This function sets up a plotter object, puts in the data in the right
@@ -896,7 +896,7 @@ class LatticePlot(object):
             col = ['r','b','g']
             fmt_pts = ['^','v','o']
             fmt_ls = ['--',':','-.']
-            dat_label = [r'$a=0.0885$fm',r'$a=0.0815$fm',r'$a=0.0619$fm'] 
+            dat_label = [r'$a=0.0885$fm',r'$a=0.0815$fm',r'$a=0.0619$fm']
         for i,a in enumerate(beta):
             #TOD: DAC is too specialized, leave that to another function
             # get data for beta, the data passed should be 3 arrays (X,Y,dy)
@@ -926,8 +926,8 @@ class LatticePlot(object):
                         plot_function(func,xlim,args[i],calc_x=calc_x,
                                   label=dat_label[i], ploterror=ploterror,
                                   fmt=col[i]+fmt_ls[i],col=col[i], debug=3)
-        elif func is not None:
-            if args.shape[0] ==1:
+
+            if args.shape[0]==1:
                 col='k'
                 fmt_ls ='-'
                 if argct is "multiarg":
