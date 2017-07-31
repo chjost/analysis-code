@@ -223,7 +223,12 @@ def main():
             print("0th Bootstrapsample for fpi: %f" %fpi[0])
             extrapol.x_data[i][j,0,2] = fpi
             extrapol.x_data[i][j,0,3] = ext_data.get(a,'r0')
-    extrapol.fit_mu_a32(plotdir=plotdir,LO=False)
+    header = ["#amu_l", "amu_s", "mpi", "dmpi", "mk", "dmk", "fpi", "dfpi",
+              "r0/a", "d(r0/a)", "mu a0", "d(mu a0)"]
+    ana.print_summary(extrapol,header,amu_l_dict,amu_s_dict)
+    # Include bootstrapped L_piK as a prior value taken from NPLQCD 
+    l_5 = ana.draw_gauss_distributed(5.65e-3,2e-5,(1500,),origin=True)
+    extrapol.fit_mu_a32(plotdir=plotdir,LO=False,prior=l_5)
     plotargs = extrapol.fitres.data[0]
     # LO-arguments
     #args = np.asarray([np.vstack((plotargs[:,0,0],
@@ -243,7 +248,7 @@ def main():
     # Plot the data the given function
     label=[r'$\mu_{\pi K}/f_{\pi}$',r'$\mu_{\pi K}\,a_{3/2}$',r' ',
            r'$(\mu_{\pi K}/f_{\pi})_{phys}$']
-    filename = plotdir+'/mua0_decay_nlo.pdf'
+    filename = plotdir+'/mua0_decay_nlo_msfix.pdf'
     chiral_plot = ana.LatticePlot(filename, join = False)
     #limits for x values in plot
     lim_x = [[120.,560.], [330.,780.],[180.,90.], [0.,0.]] 

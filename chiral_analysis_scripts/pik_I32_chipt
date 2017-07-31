@@ -143,9 +143,10 @@ def main():
                 extrapol.x_data[i][j,k,3] = ext_data.get(a,'r0')
     header = ["#amu_l", "amu_s", "mpi", "dmpi", "mk", "dmk", "fpi", "dfpi",
               "r0/a", "d(r0/a)", "mu a0", "d(mu a0)"]
+    ana.print_summary(extrapol,header,amu_l_dict,amu_s_dict)
     # Include bootstrapped L_piK as a prior value taken from NPLQCD 
     l_5 = ana.draw_gauss_distributed(5.65e-3,2e-5,(1500,),origin=True)
-    ana.print_summary(extrapol,header,amu_l_dict,amu_s_dict)
+    #q1 = ana.draw_gauss_distributed(1.1,0.1,(1500,),origin=True)
     extrapol.fit_mu_a32(plotdir=plotdir,LO=False,prior=l_5)
     plotargs = extrapol.fitres.data[0]
     # LO-arguments
@@ -191,13 +192,16 @@ def main():
           lim_x,args,argct='multiarg',calc_x=ana.calc_x_plot)
     chiral_plot.save()
     del chiral_plot
-    #chiral_plot = ana.LatticePlot(filename, join = False)
-    ##chiral_plot.plot_comparison(fix_ms,space,label,[0.,0.13],dep=1)
-    #chiral_plot.plot_chiral_fit(extrapol,space,label,[0.5,1.6],ylim=[-0.2,0],
-    #                            func=chipt_tree,x_phys=0.835)
-    #del chiral_plot
-    #extrapol.calc_L_piK()
-    extrapol.fitres.print_data(1)
+
+    mupik_phys =ana.reduced_mass(cont_dat.get("mpi_0"),cont_dat.get("mk")) 
+    mpi_by_mupik = cont_dat.get("mpi_0")/mupik_phys
+    print("mpi a_{3/2}:")
+    print(ana.compute_error(extrapol.phys_point_fitres.data[0][:,0]*mpi_by_mupik))
+    # TODO: does not work well with plotting
+    extrapol.mu_a0_pik_phys( cont_dat.get("mpi_0"),cont_dat.get("mk"),
+                                     cont_dat.get("fpi"),iso_32=False)
+    print("mpi a_{1/2}:")
+    print(ana.compute_error(extrapol.phys_point_fitres.data[0][:,0]*mpi_by_mupik))
 
 if __name__ == '__main__':
     try:

@@ -1528,8 +1528,11 @@ class ChirAna(object):
       #print("In NLO-Errfunc shape of x-values is:")
       #print(x.shape)
       if self.gamma is not True:
+          # expect two priors
           if y.shape[0] > x.shape[0]:
+              #_res = pik_I32_chipt_nlo(x[:,0],x[:,1],x[:,2],x[:,3],p)-y[:-2]
               _res = pik_I32_chipt_nlo(x[:,0],x[:,1],x[:,2],x[:,3],p)-y[:-1]
+              #_res = np.r_[_res,p[1]-y[-2],p[2]-y[-1]]
               _res = np.r_[_res,p[1]-y[-1]]
           else: 
               _res = pik_I32_chipt_nlo(x[:,0],x[:,1],x[:,2],x[:,3],p)-y
@@ -1615,8 +1618,7 @@ class ChirAna(object):
           print("cutting x-values at: %r" %xcut)
           _x,_y = self.cut_data(_x,_y,xcut)
       if prior is not None:
-          print(_y.shape)
-          print(prior.shape)
+          #print(_y.shape)
           _y = np.r_[_y,np.atleast_2d(prior)]
       print(_x.shape)
       print(_y.shape)
@@ -1630,7 +1632,7 @@ class ChirAna(object):
       ## Fit the data
       ## invoke a chiral fit, yielding a fitresult
       if LO is False:
-          start=[0.1,0.1,0.1]
+          start=[0.1,0.1,1.4]
           mu_a32 = ChiralFit("mu_a32",self.mu_a32_errfunc)
       else:
           start=[1.]
@@ -1649,7 +1651,8 @@ class ChirAna(object):
       ## Calculate check of the data for original data
       #args = self.fitres.data[0]
 
-  #TODO:  Think about placing this somewhere else
+  #TODO:  Think about placing this somewhere else, save both isospin channels in
+  #one fitresult as different correlators
   def mu_a0_pik_phys(self, mpi, mk, fpi, r0=None, ren=None, iso_32=True):
       """Calculate m0ua0 for pi-K from fitted LECs and continuum input
 
@@ -1675,10 +1678,12 @@ class ChirAna(object):
               _x = np.column_stack((mpi,mk,fpi,r0))
               self.phys_point_fitres = self.fitres.calc_mua0_pik_phys(_x,
                                                               pik_I32_chipt_cont)
-      self.phys_point_fitres.print_data()
+          else:
+              _x = np.column_stack((ren,mpi,mk,fpi))
+              self.phys_point_fitres = self.fitres.calc_mua0_pik_phys(_x,
+                                                              mua0_I12_from_fit)
       self.phys_point[0]=ana.compute_error(ana.calc_x_plot(_x))
       self.phys_point[1]=ana.compute_error(self.phys_point_fitres.data[0])
-      print(self.phys_point)
  
   def calc_L_piK(self):
       _lpik = self.fitres.summ_int((0,1),fac=-0.5,fac_par=1)

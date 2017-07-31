@@ -139,7 +139,8 @@ def main():
                 mu_a0 = np.copy(mu_a0.data[0][:,0,0])
                 tmp_y = ana.gamma_pik(mpi, mk, mu_a0, fpi)
                 extrapol.add_data(tmp_y,(i,j,k,0),dim='y')
-    cut = [1.5,2.1]
+    #cut = [1.5,2.1]
+    cut = None 
     # Include bootstrapped L_piK as a prior value taken from NPLQCD 
     l_5 = ana.draw_gauss_distributed(5.65e-3,2e-5,(1500,),origin=True)
     extrapol.fit_mu_a32(plotdir=plotdir,xcut=cut,prior=l_5)
@@ -154,13 +155,21 @@ def main():
     line = lambda p,x: p[:,0]-2*x*p[:,1]
     chiral_plot = ana.LatticePlot(filename, join = False)
     chiral_plot.plot_chiral_ext(extrapol,space,label,xlim=[0,2.2], args=args,
-                                func=line, ploterror=True,kk=False,xcut=cut,
-                                gamma=True,plotlim=[0.,2.2])
+                                ylim=[-0.015,0.010], func=line, ploterror=True,
+                                kk=False,xcut=cut, gamma=True,plotlim=[0.,2.2])
     chiral_plot.save()
     del chiral_plot
     
     extrapol.mu_a0_pik_phys( cont_dat.get("mpi_0"),cont_dat.get("mk"),
                                      cont_dat.get("fpi"),iso_32=True)
+    mupik_phys =ana.reduced_mass(cont_dat.get("mpi_0"),cont_dat.get("mk")) 
+    mpi_by_mupik = cont_dat.get("mpi_0")/mupik_phys
+    print("mpi a_{3/2}:")
+    print(ana.compute_error(extrapol.phys_point_fitres.data[0][:,0]*mpi_by_mupik))
+    extrapol.mu_a0_pik_phys( cont_dat.get("mpi_0"),cont_dat.get("mk"),
+                                     cont_dat.get("fpi"),iso_32=False)
+    print("mpi a_{1/2}:")
+    print(ana.compute_error(extrapol.phys_point_fitres.data[0][:,0]*mpi_by_mupik))
 if __name__ == '__main__':
     try:
         main()
