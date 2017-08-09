@@ -145,7 +145,7 @@ def main():
               "r0/a", "d(r0/a)", "mu a0", "d(mu a0)"]
     ana.print_summary(extrapol,header,amu_l_dict,amu_s_dict)
     # Include bootstrapped L_piK as a prior value taken from NPLQCD 
-    l_5 = ana.draw_gauss_distributed(5.65e-3,2e-5,(1500,),origin=True)
+    l_5 = ana.draw_gauss_distributed(5.41e-3,3e-5,(1500,),origin=True)
     #q1 = ana.draw_gauss_distributed(1.1,0.1,(1500,),origin=True)
     extrapol.fit_mu_a32(plotdir=plotdir,LO=False,prior=l_5)
     plotargs = extrapol.fitres.data[0]

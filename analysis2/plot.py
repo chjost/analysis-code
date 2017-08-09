@@ -877,7 +877,7 @@ class LatticePlot(object):
     def plot_chiral_ext(self, chirana, beta, label, xlim, ylim=None, func=None,
                        args=None,calc_x=None, ploterror=True, kk=True,
                        gamma=False, x_phys=None,xcut=None,plotlim=None,
-                       argct=None,debug=0):
+                       argct=None,sublo=False,debug=0):
         """ Function to plot a chiral extrapolation fit.
         
         This function sets up a plotter object, puts in the data in the right
@@ -898,17 +898,24 @@ class LatticePlot(object):
             fmt_ls = ['--',':','-.']
             dat_label = [r'$a=0.0885$fm',r'$a=0.0815$fm',r'$a=0.0619$fm']
         for i,a in enumerate(beta):
-            #TOD: DAC is too specialized, leave that to another function
+            #TODO: DAC is too specialized, leave that to another function
             # get data for beta, the data passed should be 3 arrays (X,Y,dy)
             # the light quark mass values
             if kk is True:
                 _X,_Y,_dy = self.shape_data_kk(chirana.x_data[i],
                                                chirana.y_data[i],args[i])
             else:
+                if sublo is True:
+                    lo = -(reduced_mass(chirana.x_data[i][:,:,0],
+                                     chirana.x_data[i][:,:,1])/chirana.x_data[i][:,:,2])**2/(4.*np.pi)
+                    _lo = np.zeros_like(chirana.y_data[i])
+                    _lo[:,:,0] = lo
+                    y_in = chirana.y_data[i]-_lo
+                else:
+                    y_in = chirana.y_data[i]
                 _X,_Y,_dy = self.shape_data_pik(chirana.x_data[i],
-                                                chirana.y_data[i],gamma=gamma)
+                                                y_in,gamma=gamma)
             _mean, _dy = compute_error(_dy,axis=1)
-            print(_dy.shape)
             plot_data(_X,_Y,_dy,label=a,col=col[i],fmt=fmt_pts[i],alpha=1.)
             # Check if we want to plot a function in addition to the data
             # check for lattice spacing dependence

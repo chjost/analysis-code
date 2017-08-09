@@ -96,7 +96,6 @@ def main():
     cont_data = ana.ContDat(seeds2,zp_meth="phys")
     fpi_raw = ana.read_extern("../plots2/data/fpi.dat",(1,2))
     print(fpi_raw)
-    chipt_tree = lambda p,x : -x**2/(4.*np.pi) 
     #------------------------- Setup objects -----------------------------------
     extrapol = ana.ChirAna("pi-K I-3_2",correlated=False,gamma=False)
     # have four x-values: mk,mpi,fpi,a
@@ -226,8 +225,10 @@ def main():
     header = ["#amu_l", "amu_s", "mpi", "dmpi", "mk", "dmk", "fpi", "dfpi",
               "r0/a", "d(r0/a)", "mu a0", "d(mu a0)"]
     ana.print_summary(extrapol,header,amu_l_dict,amu_s_dict)
-    # Include bootstrapped L_piK as a prior value taken from NPLQCD 
-    l_5 = ana.draw_gauss_distributed(5.65e-3,2e-5,(1500,),origin=True)
+    # Include bootstrapped L_piK as a prior value taken from HPQCD
+    #(array(0.005406798907794857), 0.0002517563840199253)
+
+    l_5 = ana.draw_gauss_distributed(5.41e-3,3e-5,(1500,),origin=True)
     extrapol.fit_mu_a32(plotdir=plotdir,LO=False,prior=l_5)
     plotargs = extrapol.fitres.data[0]
     # LO-arguments
@@ -258,6 +259,7 @@ def main():
                                 kk=False,
                                 x_phys=0.8128,plotlim=[0.5,2.],
                                 argct="multiarg")
+
     # Plot NPLQCD Data
     # TODO: Dirty Hack at the moment
     #
@@ -273,11 +275,29 @@ def main():
     chiral_plot.plot_cont(extrapol,ana.pik_I32_chipt_plot,
                           lim_x,args,argct='multiarg',calc_x=ana.calc_x_plot)
     chiral_plot.save()
+
+    filename = plotdir+'/mua0_decay_nlo_only_msfix.pdf'
+    chiral_plot.new_file(filename)
+    label=[r'$\mu_{\pi K}/f_{\pi}$',
+           r'$\mu_{\pi K}\,a_{3/2}-\mu_{\pi K}\,a_{3/2}|_{LO}$',r' ',
+           r'$(\mu_{\pi K}/f_{\pi})_{phys}$']
+    args = np.asarray([np.vstack((plotargs[:,0,0], plotargs[:,1,0],
+      plotargs[:,2,0],extrapol.x_data[r][0,0,3])).T for r in range(len(space))])
+    chiral_plot.plot_chiral_ext(extrapol,space,label, xlim= lim_x,ylim=[-0.04,0.04],
+                                func=ana.pik_I32_chipt_nlo_plot, args=args,
+                                calc_x = ana.calc_x_plot, ploterror=False,
+                                kk=False, x_phys=0.8128,plotlim=[0.5,2.],
+                                argct="multiarg",sublo=True)
+
+    # Prepare arguments for continuum curve
+    args = np.vstack((plotargs[:,0,0], plotargs[:,1,0],
+      np.zeros_like(plotargs[:,0,0]),np.ones_like(plotargs[:,0,0]))).T
+    chiral_plot.plot_cont(extrapol,ana.pik_I32_chipt_nlo_plot,
+                          lim_x,args,argct='multiarg',phys=False,calc_x=ana.calc_x_plot)
+    chiral_plot.save()
     del chiral_plot
     #chiral_plot = ana.LatticePlot(filename, join = False)
     ##chiral_plot.plot_comparison(fix_ms,space,label,[0.,0.13],dep=1)
-    #chiral_plot.plot_chiral_fit(extrapol,space,label,[0.5,1.6],ylim=[-0.2,0],
-    #                            func=chipt_tree,x_phys=0.835)
     #del chiral_plot
     #extrapol.calc_L_piK()
     extrapol.fitres.print_data(1)
@@ -290,7 +310,7 @@ def main():
     #mu_a0 = np.copy(extrapol.phys_point_fitres)
     #mu_a0.data[0] = mu_a0.data[0]*fac
     #mu_a0.print_data()
-    extrapol.print_summary(None,0,space,lat_dict,amu_s_dict,xcut=15)
+    #extrapol.print_summary(None,0,space,lat_dict,amu_s_dict,xcut=15)
     
 
 if __name__ == '__main__':

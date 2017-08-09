@@ -659,7 +659,7 @@ class ChirAna(object):
   def mka0_errfunc(self,p,x,y,cov):
 
       # define the fitfunction for a single beta
-      _func = lambda r, z, p, x,: (p[0]*r*x[:,0]/z)**2 + p[1]/r**2 + p[2]
+      _func = lambda r, z, p, x,: (p[0]*r*x[:,0]/z) + p[1]/r**2 + p[2]
       #_func = lambda r, z, p, x,: p[0]*r*x[:,0]/z*(1 + p[3]*(r*x[:,0]/z)) + p[1]/r**2 + p[2]
       # residuals for
       # With A40.24
@@ -671,10 +671,10 @@ class ChirAna(object):
       # TODO: Automate the array shapes, otherwise very errorprone
       _res_a = _func(p[0],p[3],p[6:9],x[0:6])-y[0:6]
       _res_b = _func(p[1],p[4],p[6:9],x[6:10])-y[6:10]
-      _res_d = _func(p[2],p[5],p[6:9],x[10:12])-y[10:12]
+      _res_d = _func(p[2],p[5],p[6:9],x[10:11])-y[10:11]
       # residuals of r0 and zp are stored separately at the moment
-      _res_r0 = np.r_[(y[12]-p[0]),(y[13]-p[1]),(y[14]-p[2])]
-      _res_zp = np.r_[(y[15]-p[3]),(y[16]-p[4]),(y[17]-p[5])]
+      _res_r0 = np.r_[(y[11]-p[0]),(y[12]-p[1]),(y[13]-p[2])]
+      _res_zp = np.r_[(y[14]-p[3]),(y[15]-p[4]),(y[16]-p[5])]
       ## Without A40.24
       ## TODO: Automate the array shapes, otherwise very errorprone
       #_res_a = _func(p[0],p[3],p[6:9],x[0:5])-y[0:5]
@@ -736,8 +736,8 @@ class ChirAna(object):
     # Fit the data
     # invoke a chiral fit, yielding a fitresult
     mk_phys = ChiralFit("ms_phys",self.mka0_errfunc)
-    cov=np.cov(y)
-    self.fitres = mk_phys.chiral_fit(x,y,start,parlim=None,correlated=False,
+    #cov=custom_cov(y)
+    self.fitres = mk_phys.chiral_fit(x,y,start,parlim=None,correlated=self.correlated,
                                       cov=None,debug=debug)
     # Save the fitresult data
     if dat is not None:
@@ -1632,7 +1632,10 @@ class ChirAna(object):
       ## Fit the data
       ## invoke a chiral fit, yielding a fitresult
       if LO is False:
-          start=[0.1,0.1,1.4]
+          if self.gamma is True:
+            start=[0.1,0.1]
+          else:
+            start=[0.1,0.1,1.4]
           mu_a32 = ChiralFit("mu_a32",self.mu_a32_errfunc)
       else:
           start=[1.]
@@ -1684,6 +1687,10 @@ class ChirAna(object):
                                                               mua0_I12_from_fit)
       self.phys_point[0]=ana.compute_error(ana.calc_x_plot(_x))
       self.phys_point[1]=ana.compute_error(self.phys_point_fitres.data[0])
+
+      print("\nPhysical point result:")
+      print("x: %f +/- %f" %(self.phys_point[0][0],self.phys_point[0][1]))
+      print("y %f +/- %f\n" %(self.phys_point[1][0],self.phys_point[1][1]))
  
   def calc_L_piK(self):
       _lpik = self.fitres.summ_int((0,1),fac=-0.5,fac_par=1)
