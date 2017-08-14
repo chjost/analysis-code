@@ -689,6 +689,7 @@ class FitResult(object):
                 # set weights accordingly
                 singular.weight = [[np.array([1.])] for d in range(2)]
                 singular.error = None
+        singular.derived = self.derived
         return singular
 
     def create_empty(self, shape1, shape2, corr_num):

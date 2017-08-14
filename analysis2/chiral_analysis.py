@@ -669,12 +669,12 @@ class ChirAna(object):
       #_res_b = _func(p[1],p[4],p[6:10],x[6:9])-y[6:9]
       #_res_d = _func(p[2],p[5],p[6:10],x[9:11])-y[9:11]
       # TODO: Automate the array shapes, otherwise very errorprone
-      _res_a = _func(p[0],p[3],p[6:9],x[0:6])-y[0:6]
-      _res_b = _func(p[1],p[4],p[6:9],x[6:10])-y[6:10]
-      _res_d = _func(p[2],p[5],p[6:9],x[10:11])-y[10:11]
+      _res_a = _func(p[0],p[3],p[6:9],x[0:4])-y[0:4]
+      _res_b = _func(p[1],p[4],p[6:9],x[4:7])-y[4:7]
+      _res_d = _func(p[2],p[5],p[6:9],x[7:8])-y[7:8]
       # residuals of r0 and zp are stored separately at the moment
-      _res_r0 = np.r_[(y[11]-p[0]),(y[12]-p[1]),(y[13]-p[2])]
-      _res_zp = np.r_[(y[14]-p[3]),(y[15]-p[4]),(y[16]-p[5])]
+      _res_r0 = np.r_[(y[8]-p[0]),(y[9]-p[1]),(y[10]-p[2])]
+      _res_zp = np.r_[(y[11]-p[3]),(y[12]-p[4]),(y[13]-p[5])]
       ## Without A40.24
       ## TODO: Automate the array shapes, otherwise very errorprone
       #_res_a = _func(p[0],p[3],p[6:9],x[0:5])-y[0:5]
@@ -690,7 +690,7 @@ class ChirAna(object):
       _chi = np.dot(cov,_residuals)
       return _chi
 
-  def fit_mka0(self,pr_1,pr_2,dat=None,debug=4):
+  def fit_mka0(self,pr_1,pr_2,dat=None,xcut=None,debug=4):
     """ Global fit of evaluated data of M_K a_0 adapting Parameters for r_0/a
     and Z_P for each lattice spacing
 
@@ -738,7 +738,7 @@ class ChirAna(object):
     mk_phys = ChiralFit("ms_phys",self.mka0_errfunc)
     #cov=custom_cov(y)
     self.fitres = mk_phys.chiral_fit(x,y,start,parlim=None,correlated=self.correlated,
-                                      cov=None,debug=debug)
+                                      cov=None,xcut=xcut,debug=debug)
     # Save the fitresult data
     if dat is not None:
       self.fitres.save(dat+self.proc_id+'.npz')
@@ -1531,11 +1531,11 @@ class ChirAna(object):
           # expect two priors
           if y.shape[0] > x.shape[0]:
               #_res = pik_I32_chipt_nlo(x[:,0],x[:,1],x[:,2],x[:,3],p)-y[:-2]
-              _res = pik_I32_chipt_nlo(x[:,0],x[:,1],x[:,2],x[:,3],p)-y[:-1]
+              _res = pik_I32_chipt_nlo(x[:,0],x[:,1],x[:,2],x[:,3],p,meta=x[:,4])-y[:-1]
               #_res = np.r_[_res,p[1]-y[-2],p[2]-y[-1]]
               _res = np.r_[_res,p[1]-y[-1]]
           else: 
-              _res = pik_I32_chipt_nlo(x[:,0],x[:,1],x[:,2],x[:,3],p)-y
+            _res = pik_I32_chipt_nlo(x[:,0],x[:,1],x[:,2],x[:,3],p,meta=x[:,4])-y
       else:
           if y.shape[0] > x.shape[0]:
               _res = p[0]-2.*x.ravel()*p[1]-y[:-1]
@@ -1609,7 +1609,7 @@ class ChirAna(object):
       # determine dimensions for array
       #nb_ensembles
       if LO is False:
-        _x = chut.concatenate_data(self.x_data,par=slice(0,4))
+        _x = chut.concatenate_data(self.x_data,par=slice(0,5))
         #_x = chut.concatenate_data(self.x_data,par=0)
       else:
         _x = chut.concatenate_data(self.x_data,par=slice(0,4))
@@ -1656,7 +1656,7 @@ class ChirAna(object):
 
   #TODO:  Think about placing this somewhere else, save both isospin channels in
   #one fitresult as different correlators
-  def mu_a0_pik_phys(self, mpi, mk, fpi, r0=None, ren=None, iso_32=True):
+  def mu_a0_pik_phys(self, mpi, mk, fpi, r0=None, ren=None, meta=None, iso_32=True):
       """Calculate m0ua0 for pi-K from fitted LECs and continuum input
 
       Parameters
@@ -1669,7 +1669,7 @@ class ChirAna(object):
       if ren is None:
           ren = fpi
       if self.gamma is True:
-          _x = np.column_stack((ren,mpi,mk,fpi))
+          _x = np.column_stack((ren,mpi,mk,fpi,meta))
           if iso_32 is True:
               self.phys_point_fitres = self.fitres.calc_mua0_pik_phys(_x,
                                                                   mua0_I32_from_fit)
@@ -1678,7 +1678,7 @@ class ChirAna(object):
                                                                   mua0_I12_from_fit)
       else:
           if iso_32 is True:
-              _x = np.column_stack((mpi,mk,fpi,r0))
+              _x = np.column_stack((mpi,mk,fpi,r0,meta))
               self.phys_point_fitres = self.fitres.calc_mua0_pik_phys(_x,
                                                               pik_I32_chipt_cont)
           else:
