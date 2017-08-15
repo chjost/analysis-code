@@ -205,7 +205,7 @@ class MatchResult(object):
       for i,r in enumerate(fitreslst):
         r = r.singularize()
         self.obs[i] = r.data[0][:,par,0]
-        print(r.data[0][:,0,0])
+        #print(r.data[0][:,0,0])
         if debug > 0:
           print("Read in %s: %.4e" %(r,self.obs[i][0]))
         # square first
@@ -230,10 +230,10 @@ class MatchResult(object):
     def set_data(self,obs,amu):
       """Set observable data and amu for all observables
       """
-      self.obs = obs
-      self.amu = amu
+      self.obs = np.copy(obs)
+      self.amu = np.copy(amu)
 
-    def add_data(self,data,idx,op=False,amu=None,obs=True):
+    def add_data(self,data,idx,op=False,amu=None,obs=True,fac=None):
       """Add x- or y-data at aspecific index
 
       Parameters
@@ -248,6 +248,8 @@ class MatchResult(object):
       #print("xdata to add has shape")
       #print(data.shape)
       if data is not None:
+          if fac is not None:
+            data *= fac
           if obs == True:
             #print("xdata to add to has shape")
             #print(self.obs[idx].shape)
@@ -331,24 +333,24 @@ class MatchResult(object):
           # Data gets squared afterwards
           _fse_plot,_fse_data = extboot.prepare_fse(ext_help,ens,self.obs.shape[-1],
                                         square=False,had='pi')
-          print("mpi and error:")
-          print(compute_error(_mpi_data))
+          #print("mpi and error:")
+          #print(compute_error(_mpi_data))
           data = _mpi_data/_fse_data
           
         else:
           _mpi = fit.FitResult.read(filename)
           data = _mpi.singularize().data[0][:,1,0]
-          print("mpi data has shape:")
-          print(data.shape)
-          print("mpi and error:")
-          print(compute_error(data))
+          #print("mpi data has shape:")
+          #print(data.shape)
+          #print("mpi and error:")
+          #print(compute_error(data))
         if square is True:
           data = data**2
         if isinstance(fac,float):
           data *= fac
         plot = compute_error(data)
         #print("%f M_pi**2" %fac)
-        print(plot)
+        #print(plot)
 
       if read is 'mpi':
         #print("indexto insert extern data:")
@@ -398,8 +400,8 @@ class MatchResult(object):
                           self.obs.shape[-1], square=square,physical=physical)
         data = 0.5*_data
         plot = compute_error(data)
-        print("0.5*M_pi^FSE**2")
-        print(plot)
+        #print("0.5*M_pi^FSE**2")
+        #print(plot)
 
       if read is 'fse_pi':
         if len(filename) != 2:

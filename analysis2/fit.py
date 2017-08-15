@@ -613,7 +613,8 @@ class FitResult(object):
         singular = FitResult("singular", False)
         ncorr = len(self.data)
         nboot = self.data[0].shape[0]
-        print("fitresult is derived: %s" % self.derived)
+        if debug > 0:
+          print("fitresult is derived: %s" % self.derived)
         if self.derived:
           npars = 1
           shape1 = self.data[0].shape
@@ -637,7 +638,8 @@ class FitResult(object):
             if self.derived is False:
                 
                 for n in range(npars):
-                    print("FitRes parameter is %d." % n)
+                    if debug > 0:
+                      print("FitRes parameter is %d." % n)
                     res, res_std, res_sys, n_fits = self.error[n]
                     singular.data[0][:,n,0] = res[0]
                 #res, res_std, res_sys, n_fits = self.error[0]
