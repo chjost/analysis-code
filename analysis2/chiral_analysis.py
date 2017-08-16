@@ -1477,12 +1477,15 @@ class ChirAna(object):
           print(tmp)
       elif interval >= 0.:
           tmp = x[:,0] < interval
+          print("bools for cut:")
+          print(tmp.shape)
       elif interval < 0.:
           tmp = x[:,0] > -interval
       print("y-shape before cut:")
       print(y.shape)
-      _x = x[tmp,...]
-      _y = y[tmp,...]
+      print(x.shape)
+      _x = x[tmp]
+      _y = y[tmp]
       print("y-data after cut:")
       print(_y[:,0])
       print("y-shape after cut:")
@@ -1561,7 +1564,10 @@ class ChirAna(object):
       if ren is None:
           ren = fpi
       if self.gamma is True:
-          _x = np.column_stack((ren,mpi,mk,fpi,meta))
+          if meta is not None:
+              _x = np.column_stack((ren,mpi,mk,fpi,meta))
+          else:
+              _x = np.column_stack((ren,mpi,mk,fpi))
           if iso_32 is True:
               self.phys_point_fitres = self.fitres.calc_mua0_pik_phys(_x,
                                                                   mua0_I32_from_fit)

@@ -174,13 +174,13 @@ def chi_nlo_pos(ren,mpi,mk,meta=None):
     return 1./(16.*np.pi**2) *(np.sum(_chi,axis=0)+43./9.)
 
 
-def gamma_pik(mpi, mk, mu_a0, fpi, ren=None):
+def gamma_pik(mpi, mk, mu_a0, fpi, meta=None, ren=None):
     if ren is None:
         ren = fpi 
     _res = np.zeros((3,mpi.shape[-1]))
     _res[0] = 4.*np.pi*fpi**2/reduced_mass(mpi,mk)**2*mu_a0
-    _res[1] = 1.+chi_nlo_neg(ren,mpi,mk,fpi)
-    _res[2] = -2.*mk*mpi/fpi**2*chi_nlo_pos(ren,mpi,mk)
+    _res[1] = 1.+chi_nlo_neg(ren,mpi,mk,fpi,meta)
+    _res[2] = -2.*mk*mpi/fpi**2*chi_nlo_pos(ren,mpi,mk,meta)
     _sum = np.sum(_res,axis=0)
     _gamma = -fpi**2/(16.*mpi**2)*_sum 
     return _gamma
