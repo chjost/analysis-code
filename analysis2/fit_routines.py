@@ -8,6 +8,7 @@ from scipy.optimize import leastsq
 import scipy.stats
 import numpy as np
 
+from covariance import custom_cov
 from statistics import compute_error
 from functions import compute_eff_mass
 from utils import loop_iterator, eig_decomp
@@ -523,6 +524,7 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
     ndarray
         The p-values of the fit
     """
+    #_cov = custom_cov(y,correlated,debug =3) 
     if not correlated:
       _cov = np.diag(np.diagonal(np.cov(y)))
         #print cov
@@ -539,22 +541,24 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
           #for k in range(36,42):
           #    _cov[k,k] = np.cov(y[k])
           _cov = np.cov(y)
-    print(_cov.diagonal())  
     _cov = (np.linalg.cholesky(np.linalg.inv(_cov))).T
-    print("vector of inverse errors: %r" % _cov)
-    print("vector of x-values: %r" % x[...,0])
-    print("vector of y-values: %r" % y[...,0])
-    print("shape of y-values:")
-    print(y.shape)
-    print("shape of x-values:")
-    print(x.shape)
-    print("shape of err-values:")
-    print(_cov.shape)
+    if debug > 0:
+        print("vector of inverse errors: %r" % cov)
+        print("vector of x-values: %r" % x[...,0])
+        print("vector of y-values: %r" % y[...,0])
+        print("shape of y-values:")
+        print(y.shape)
+        print("shape of x-values:")
+        print(x.shape)
+        print("shape of err-values:")
+        print(_cov.shape)
     #TODO: Get samplesize from elsewhere
     samples=x.shape[-1]
+    #samples=len(x)
     chisquare=np.zeros((samples,))
     res = np.zeros((samples,len(start)))
-    dof = float(y.shape[0]-len(start))
+    #dof = float(y.shape[0]-len(start))
+    dof = float(_cov.shape[0]-len(start))
     #diag = np.ones(len(start))
     for b in range(samples):
         if b == 0:
@@ -564,7 +568,7 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
           print("y-data for fit")
           print(y[...,b])
           print("inverse covariance matrix used:")
-          print(_cov)
+          print(cov)
         if b == (samples-1):
           print("arguments:")
           print(res[0])
@@ -572,10 +576,13 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
         #print(err,x[...,b],y[...,b]) 
         p,cov1,infodict,mesg,ier = leastsq(errfunc, start,
             args=(x[...,b],y[...,b],_cov), full_output=1, factor=.1)
+        #p,cov1,infodict,mesg,ier = leastsq(errfunc, start,
+        #    args=(x[b],y[b],cov), full_output=1, factor=.1)
         chisquare[b] = float(sum(infodict['fvec']**2.))
         res[b] = np.array(p)
         #print("Fit %d converged with reason %d, %s" %(b,ier,mesg))
     chi = errfunc(res[0],x[...,0],y[...,0],_cov)
+    #chi = errfunc(res[0],x[0],y[0],cov)
     print("Check of errorfunction:")
     print(chi)
     print("Chi_squared manually")

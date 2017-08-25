@@ -910,7 +910,7 @@ class LatticePlot(object):
                                      chirana.x_data[i][:,:,1])/chirana.x_data[i][:,:,2])**2/(4.*np.pi)
                     _lo = np.zeros_like(chirana.y_data[i])
                     _lo[:,:,0] = lo
-                    y_in = chirana.y_data[i]-_lo
+                    y_in = (chirana.y_data[i]-_lo)/chirana.y_data[i]
                 else:
                     y_in = chirana.y_data[i]
                 _X,_Y,_dy = self.shape_data_pik(chirana.x_data[i],

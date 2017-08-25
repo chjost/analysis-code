@@ -63,8 +63,8 @@ class ChiralFit(fit.LatticeFit):
             tmp = x[:,0] > -interval
         print("y-shape before cut:")
         print(y.shape)
-        _x = x[tmp,...]
-        _y = y[tmp,...]
+        _x = x[tmp]
+        _y = y[tmp]
         print("y-data after cut:")
         print(_y[:,0])
         print("y-shape after cut:")
@@ -73,7 +73,7 @@ class ChiralFit(fit.LatticeFit):
         return _x, _y
 
     def chiral_fit(self, X, Y, start=None, xcut=None, ncorr=1,
-        parlim=None,correlated=False,cov=None, debug=3):
+        parlim=None,correlated=False,cov=None,add=None, debug=3):
         """Fit function to data.
         
         Parameters
@@ -109,6 +109,9 @@ class ChiralFit(fit.LatticeFit):
         #shape1 = (_X.shape[0], 1, _X.shape[0])
         #shape1 = (_X.shape[0], len(start), _Y.shape[0])
         #shape2 = (_X.shape[0], _Y.shape[0])
+        #TODO: Get array shapes for fitresult, perhaps a member variable
+        #shape1 = (1500, len(start), 1)
+        #shape2 = (1500, 1)
         shape1 = (_Y.shape[-1], len(start), 1)
         shape2 = (_Y.shape[-1], 1)
         if ncorr is None:
@@ -119,10 +122,11 @@ class ChiralFit(fit.LatticeFit):
           raise ValueError("ncorr needs to be integer")
         # fit the data
         dof = _X.shape[0] - len(_start)
+        #dof = 11 - len(_start)
         print("In global fit, dof are: %d" %dof)
          #fit every bootstrap sample
         tmpres, tmpchi2, tmppval = globalfitting(self.errfunc, _X, _Y, _start,
-            parlim=parlim, debug=debug,correlated=correlated,cov=cov)
+            parlim=parlim, debug=debug,correlated=correlated,cov=cov, add=add)
         fitres.add_data((0,0), tmpres, tmpchi2, tmppval)
         #timing = []
         #for i in range(ncorr): 

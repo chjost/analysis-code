@@ -8,9 +8,12 @@ import matplotlib.cm as cm
 from matplotlib.backends.backend_pdf import PdfPages
 matplotlib.rcParams['font.size'] = 14
 matplotlib.rcParams['axes.labelsize'] = 'large'
+import pickle
 
 import chiral_utils as chut
-from chiral_functions import *
+#from chiral_functions import *
+import chiral_wraps as chwrap
+import chiral_errfuncs as cherr
 import extern_bootstrap as extboot
 import plot as plot
 from fit import FitResult
@@ -189,10 +192,14 @@ class ChirAna(object):
     self.plot_cont_func = plot_cont_func
     # Ensemble names as dictionary sorted by lattice spacing
     self.lat_dict = lat_dict
-  #def save()
+
+  def save(self,savedir):
+    pickle.dump(self,open(savedir+'/'+self.proc_id,"wb"))
   #
-  #@classmethod
-  #def read(cls,):
+  @classmethod
+  def read(cls,savename):
+    obj = pickle.load((open(savename,"rb"))) 
+    return cls
 
   def extend_data(self,obs=['None',],dim='x'):
     """Extend data in the givene dimension for different values
@@ -650,47 +657,8 @@ class ChirAna(object):
       #print(y[:,0])
       #print("chisquared is: %.2f" %chisq)
 
-  def mka0_func(self,r,z,p,x):
 
-      # define the fitfunction for a single beta
-      #_func = lambda r, z, p, x,: p[0]*r*x[:,0]/z + p[1]/r**2 + p[2]
-      return p[0]*r*x[:,0]/z + p[3]*(r*x[:,0]/z)**2 + p[1]/r**2 + p[2] 
-
-  def mka0_errfunc(self,p,x,y,cov):
-
-      # define the fitfunction for a single beta
-      _func = lambda r, z, p, x,: (p[0]*r*x[:,0]/z) + p[1]/r**2 + p[2]
-      #_func = lambda r, z, p, x,: p[0]*r*x[:,0]/z*(1 + p[3]*(r*x[:,0]/z)) + p[1]/r**2 + p[2]
-      # residuals for
-      # With A40.24
-      ## Try out an additional term mu_ell^2
-      ## TODO: Automate the array shapes, otherwise very errorprone
-      #_res_a = _func(p[0],p[3],p[6:10],x[0:6])-y[0:6]
-      #_res_b = _func(p[1],p[4],p[6:10],x[6:9])-y[6:9]
-      #_res_d = _func(p[2],p[5],p[6:10],x[9:11])-y[9:11]
-      # TODO: Automate the array shapes, otherwise very errorprone
-      _res_a = _func(p[0],p[3],p[6:9],x[0:4])-y[0:4]
-      _res_b = _func(p[1],p[4],p[6:9],x[4:7])-y[4:7]
-      _res_d = _func(p[2],p[5],p[6:9],x[7:8])-y[7:8]
-      # residuals of r0 and zp are stored separately at the moment
-      _res_r0 = np.r_[(y[8]-p[0]),(y[9]-p[1]),(y[10]-p[2])]
-      _res_zp = np.r_[(y[11]-p[3]),(y[12]-p[4]),(y[13]-p[5])]
-      ## Without A40.24
-      ## TODO: Automate the array shapes, otherwise very errorprone
-      #_res_a = _func(p[0],p[3],p[6:9],x[0:5])-y[0:5]
-      #_res_b = _func(p[1],p[4],p[6:9],x[5:8])-y[5:8]
-      #_res_d = _func(p[2],p[5],p[6:9],x[8:10])-y[8:10]
-      ## residuals of r0 and zp are stored separately at the moment
-      #_res_r0 = np.r_[(y[10]-p[0]),(y[11]-p[1]),(y[12]-p[2])]
-      #_res_zp = np.r_[(y[13]-p[3]),(y[14]-p[4]),(y[15]-p[5])]
-      # collect residuals as one array
-      _residuals = np.r_[_res_a,_res_b,_res_d,_res_r0,_res_zp ]
-
-      # calculate the chi values weighted with inverse covariance matrix
-      _chi = np.dot(cov,_residuals)
-      return _chi
-
-  def fit_mka0(self,pr_1,pr_2,dat=None,xcut=None,debug=4):
+  def fit_mka0(self,pr_1,pr_2,dat=None,xcut=None,debug=2):
     """ Global fit of evaluated data of M_K a_0 adapting Parameters for r_0/a
     and Z_P for each lattice spacing
 
@@ -700,8 +668,10 @@ class ChirAna(object):
     """
     # The data for the fit should be just two arrays containing the
     # bootstrapsamples
-    r = np.r_[1.,1.,1.]
-    z = np.r_[1.,1.,1.]
+    #r = np.r_[1.,1.,1.]
+    #z = np.r_[1.,1.,1.]
+    r = np.r_[1.,1.]
+    z = np.r_[1.,1.]
     # Fit an additional quadratic dependency
     #p = np.r_[1.,1.,1.,1.]
     p = np.r_[1.,1.,1.]
@@ -719,13 +689,15 @@ class ChirAna(object):
     x1 = self.x_data[1].reshape(x_shape_new)
     y1 = self.y_data[1].reshape(y_shape_new)
     # x,y values for beta = 2.1
-    x_shape_new = (self.x_shape[1][2]*self.x_shape[2],self.x_shape[3],self.x_shape[4])
-    y_shape_new = (self.y_shape[1][2]*self.y_shape[2],self.y_shape[4])
-    x2 = self.x_data[2].reshape(x_shape_new)
-    y2 = self.y_data[2].reshape(y_shape_new)
-    x = np.r_[x0,x1,x2]
+    #x_shape_new = (self.x_shape[1][2]*self.x_shape[2],self.x_shape[3],self.x_shape[4])
+    #y_shape_new = (self.y_shape[1][2]*self.y_shape[2],self.y_shape[4])
+    #x2 = self.x_data[2].reshape(x_shape_new)
+    #y2 = self.y_data[2].reshape(y_shape_new)
+    #x = np.r_[x0,x1,x2]
+    x = np.r_[x0,x1]
     # Add the priors to the y-values
-    y = np.r_[y0,y1,y2,pr_1,pr_2]
+    #y = np.r_[y0,y1,y2,pr_1,pr_2]
+    y = np.r_[y0,y1,pr_1,pr_2]
     if debug > 3:
       print("shape of x-data (n_ens,n_ind,n_boot):")
       print(x0.shape,x1.shape,x2.shape)
@@ -735,7 +707,7 @@ class ChirAna(object):
       print(y0[...,0],y1[...,0],y2[...,0])
     # Fit the data
     # invoke a chiral fit, yielding a fitresult
-    mk_phys = ChiralFit("ms_phys",self.mka0_errfunc)
+    mk_phys = ChiralFit("ms_phys",cherr.mka0_errfunc)
     #cov=custom_cov(y)
     self.fitres = mk_phys.chiral_fit(x,y,start,parlim=None,correlated=self.correlated,
                                       cov=None,xcut=xcut,debug=debug)
@@ -762,78 +734,6 @@ class ChirAna(object):
         self.phys_point_fitres.save(path+self.proc_id+'phys_pt.npz')
 
   def print_summary(self,dim,index,lat_space,ens_dict,
-                    mu_s_dict=None,xcut=2,head=None):
-    """This function should print a summary of the whole chiral analysis,
-    preferably in latex format
-    """
-    # Load data
-    _x_summ, _y_summ = self.get_data_plot(mev=False)
-    print("summary data:")
-    print(_x_summ.shape)
-    if self.match is True:
-      _mu_summ = self.get_mu_plot(dim=0,debug=2)
-    if head is None:
-      header=['Ens','$a\mu_s$','$(r_0M_{\pi})^2$','$(a/r_0)^2$', '$M_Ka_0$']
-    else:
-      header=head
-    chut.print_table_header(header)
-
-    print('\midrule')
-    l = 0
-    for i,a in enumerate(lat_space):
-      #if i > 0:
-      #  l = len(ens_dict[lat_space[i-1]])
-      #if i > 1:
-      #  l = len(ens_dict[lat_space[i-1]])+ len(ens_dict[lat_space[i-2]])
-      #else:
-      #  l = 0
-      # number of ensembles for each lattice spacing
-      if i == 0:
-        l = 0
-      if i == 1:
-        l = len(ens_dict[lat_space[i-1]])
-      if i == 2:
-        l += len(ens_dict[lat_space[i-1]])
-      for j,e in enumerate(ens_dict[a]):
-        # format for
-        if self.match:
-            # this is printing two dimensions
-            if hasattr(_mu_summ,"__iter__"):
-              chut.print_line_latex(e,_x_summ[l+j],_y_summ[l+j],_mu_summ[l+j])
-            else:
-              chut.print_line_latex(e,_x_summ[l+j],_y_summ[l+j])
-        else:
-          for k,s in enumerate(mu_s_dict[a]):
-              #chut.print_line_latex(e,_x_summ[i*l*3+j*3+k],_y_summ[i*l*3+j*3+k])
-              chut.print_line_latex(e,_x_summ[l*3+j*3+k],_y_summ[l*3+j*3+k])
-    # TODO: Automate that
-    if hasattr(self.fitres,"__iter__"):
-      dof =  _x_summ.shape[0] - self.fitres[0].data[0].shape[1]
-      if self.combined:
-        dof = 2*_x_summ.shape[0] - self.fitres[0].data[0].shape[1]
-      print("%10s & $%.1f$ & $%.4f(%1.0f)$ & $%.2f/%d$ & $%.2e $" %
-          (self.proc_id, xcut, self.phys_point[0,1,0], self.phys_point[0,1,1]*1e4,
-           self.fitres[0].chi2[0][0], dof, self.fitres[0].pval[0][0]))
-
-      #dof =  _x_summ.shape[0] - self.fitres[1].data[0].shape[1]
-      #print("%10s & $%.1f$ & $%.4f(%1.0f)$ & $%.2f/%d$ & $%.2e $" %
-      #    (self.proc_id, xcut, self.phys_point[1,1,0], self.phys_point[1,1,1]*1e4,
-      #     self.fitres[1].chi2[0][0], dof, self.fitres[1].pval[0][0]))
-    else:
-      dof = _x_summ.shape[0] - self.fitres.data[0].shape[1]
-      if self.combined:
-        print(_x_summ.shape[0])
-        print(self.fitres[0].data[0].shape[1])
-        dof = 2*_x_summ.shape[0] - self.fitres[0].data[0].shape[1]
-      print("Phsyical point result:")
-      if xcut is None:
-        xcut = 2.
-      print("%10s & $%.1f$ & %.2e %.2e & $%.4f(%1.0f)$ & $%.2f/%d$ & $%.2e $" %
-          (self.proc_id, xcut, self.phys_point[0,0],self.phys_point[0,1],
-           self.phys_point[1,0], self.phys_point[1,1]*1e4,
-           self.fitres.chi2[0][0], dof, self.fitres.pval[0][0]))
-
-  def print_summary_pik(self,dim,index,lat_space,ens_dict,
                     mu_s_dict=None,xcut=2,head=None):
     """This function should print a summary of the whole chiral analysis,
     preferably in latex format
@@ -975,330 +875,6 @@ class ChirAna(object):
     else:
       return None,None,None
 
-  def calc_plot_ranges(self):
-    """ Return the plot ranges for the different lattice spacings
-    """
-    if self.match is True:
-      _a_range = (0,self.x_shape[1][0]*self.x_shape[2])
-      _b_range = (_a_range[1],_a_range[1]+self.x_shape[1][1]*self.x_shape[2])
-      _d_range = (_b_range[1],_b_range[1]+self.x_shape[1][2]*self.x_shape[2])
-
-    else:
-      _a_range = (0,self.x_shape[1][0]*self.x_shape[2])
-      _b_range = (_a_range[1],_a_range[1]+self.x_shape[1][1]*self.x_shape[2])
-      _d_range = (_b_range[1],_b_range[1]+self.x_shape[1][2]*self.x_shape[2])
-    #print(_a_range)
-    #print(_b_range)
-    #print(_d_range)
-
-    return _a_range, _b_range, _d_range
-
-# TODO: Make the chiral plots interface more with the actual LatticePlot class
-  def plot_plain(self,label,ens,savedir=None,xcut=None,xdim=0,debug=0):
-    x_plot,y_plot = self.get_data_plot(dim=0,debug=0)
-    if debug > 3:
-        print("Do we use matched data? %s" %self.match)
-
-        print("\nData used for plot: ")
-        print("x-data:")
-        print(x_plot)
-        print(x_plot.shape)
-
-        print("y-data")
-        print(y_plot)
-
-    if savedir is not None:
-      path = savedir
-    else:
-      path = "./plots2/pdf"
-    pfit = PdfPages(path+"/%s.pdf" % self.proc_id)
-    if xcut:
-        pfit = PdfPages(path+"/%s_xcut_%d.pdf" % (self.proc_id,xcut))
-    else:
-        pfit = PdfPages(path+"/%s.pdf" % self.proc_id)
-    print('saving plot in: %s' %path)
-    #calc xid's
-    a_range, b_range, d_range = self.calc_plot_ranges()
-    print(d_range)
-    chut.plot_ensemble(x_plot[:,xdim],y_plot,'^vspho','red',ens['A'],
-                       xid = a_range,match=self.match)
-    chut.plot_ensemble(x_plot[:,xdim],y_plot,'vso','blue',ens['B'],
-                       xid = b_range,match=self.match)
-    chut.plot_ensemble(x_plot[:,xdim],y_plot,'^d','green',ens['D'],
-                       xid = d_range,match=self.match)
-
-    plt.grid(False)
-    plt.xlim(0.002,0.011)
-    #plt.ylim(-0.45,-0.28)
-    plt.legend(loc='best',numpoints=1, ncol=2,fontsize=12)
-    plt.ylabel(label[1])
-    plt.xlabel(label[0])
-    pfit.savefig()
-    pfit.close()
-    plt.clf()
-
-  def plot_comp(self,cmp_name,savedir,savename,
-                cont_func=None,dim=0,label=None,func=None,xlim=None,ylim=None):
-    """Plot a continuum extrapolated curve and comparison data
-
-    The arguments to the continuum function are taken from the chiral analysis
-    object
-
-    Parameters
-    ----------
-    cont_func : callable, the continuum function
-    cmp_name : data name of the file for comparison
-    savename : string of filename
-    """
-    
-    # comparison data is assumed to be a textfile, this will be pretty much hard
-    # coded
-    # get the data and with plot function plot the continuum curve
-    mka0_comp = np.loadtxt(cmp_name[0])
-    mka0_comp2 = np.loadtxt(cmp_name[1])
-
-    #plt.axvline(self.phys_point[0,0],color='gray',ls='dashed',label='physical point')
-    # Set up a pdfPages object
-    pfit = PdfPages(savedir+"/%s.pdf" % savename)
-    # convert nplqcd pion masses to GeV^2 
-    x_comp =np.square(mka0_comp[:,1]*197.37/(mka0_comp[:,3]*1.e3)) 
-    print("NPLQCD to plot:")
-    print(x_comp)
-    # Plot the NPLQCD Data
-    plt.errorbar(x_comp[:-1],mka0_comp[:-1,4],mka0_comp[:-1,5],
-           color='black',fmt='s',label='NPLQCD, coarse')
-    plt.errorbar(x_comp[-1],mka0_comp[-1,4],mka0_comp[-1,5],
-           color='blue',fmt='s',label='NPLQCD, fine')
-
-    # Plot the PACS-CS Data
-    plt.errorbar(np.square(mka0_comp2[:,0]),mka0_comp2[:,2],mka0_comp2[:,3],
-          color='tomato',fmt='o',label='PACS-CS')
-    x_cont = np.linspace(0,50,1000)
-    x_plot,y_plot = self.get_data_plot(dim=dim,mev=True)
-    a_range, b_range, d_range = self.calc_plot_ranges()
-    # Plot the continuum curve
-    # Convention: if dim is 1 take argument 0,3,2 instead of 0,1,2,
-    if dim == 0:
-      args = self.fitres.data[0]
-    if dim == 1:
-      arg_shape = self.fitres.data[0].shape
-      args = np.column_stack((self.fitres.data[0][:,0],self.fitres.data[0][:,3],
-                       self.fitres.data[0][:,2])).reshape(arg_shape[0],3,arg_shape[-1])
-    #Multiply second parameter with second x-variable
-    _args_a = np.copy(args)
-    _args_a[:,1,:] *= x_plot[a_range[0],1,0] 
-    plot_function(func,xlim,_args_a[:,:,0],
-            label=r'$a=0.0885$fm',ploterror=ploterr,fmt='r--', col='red')
-    _args_b = np.copy(args)
-    _args_b[:,1,:] *= x_plot[b_range[0],1,0] 
-    plot_function(func,xlim,_args_b[:,:,0],
-            label=r'$a=0.0815$fm',ploterror=ploterr,fmt='b:', col='blue')
-    _args_d = np.copy(args)
-    _args_d[:,1,:] *= x_plot[d_range[0],1,0] 
-    plot_function(func,xlim,args[:,:,0],
-            label=r'$a=0.0619$fm',ploterror=ploterr,fmt='g-.', col='green')
-
-    #cont_curve = lambda p,x : p[0]*x+p[2]
-    cont_curve = self.cont_func
-    plot_function(cont_curve, x_cont,args[:,:,0],fmt='k--',
-            label='Cont. Ext. B',ploterror=ploterr)
-    phys_pt = []
-    l1,a,b = plt.errorbar(self.phys_point[0,0],mka0_comp[0,6],mka0_comp[0,7],
-                 color='darkorange',fmt='s')
-    l2,a,b = plt.errorbar(self.phys_point[0,0],mka0_comp2[0,4],mka0_comp2[0,5],
-                 color='darkorange',fmt='o')
-    try:
-      for a in self.phys_point:
-        print("%f +/- %f" %(a[1,0],a[1,1]))
-      l3,a,b = plt.errorbar(self.phys_point[:,0,0],self.phys_point[:,1,0],self.phys_point[:,1,1], fmt='d', color='darkorange', label='Physical Point')
-    except:
-      print("%f +/- %f" %(self.phys_point[1,0],self.phys_point[1,1]))
-      l3,a,b = plt.errorbar(self.phys_point[0,0],self.phys_point[1,0],self.phys_point[1,1], fmt='d', color='darkorange')
-      pass
-    # Collect legends
-    phys_pt.append([l1,l2,l3])
-    #limits mka0
-    plt.xlim(0,0.52)
-    plt.ylim(-0.65,-0.28)
-    #plt.vlines(self.phys_point[0,0],y_lim[0],y_lim[1],color="k",label=label[3])
-    loc=None
-    if loc==None:
-      legend1=plt.legend(phys_pt[0],[r'NPLQCD $(M_K/f_K)^2$',
-              r'PACS-CS $(M_K/f_K)^2$','ETMC'], title='Extrapolated',
-              numpoints=1, ncol=1, fontsize=12,loc='lower left')
-      plt.legend(loc='best',numpoints=1,ncol=2,fontsize=12)
-      plt.gca().add_artist(legend1)
-    else:
-      legend1=plt.legend(phys_pt[0],ncol=1,fontsize=12,loc='lower left')
-      plt.legend(loc=loc,numpoints=1,ncol=2,fontsize=12)
-      plt.gca().add_artist(legend1)
-    plt.title('Comparison')
-    plt.ylabel(label[1])
-    plt.xlabel(label[0])
-    pfit.savefig()
-    pfit.close()
-    plt.clf()
-    
-  def plot(self,label,xcut=False,ens=None,plotfunc=None,ploterr=True,
-           savedir=None,loc=None,suffix=None,dim=0,pfit=None,xlim=None,ylim=None):
-    """Plot the chiral analysis data and the fitted function
-       for the fitfunction the arguments are retrieved from the analysis object 
-    Parameters
-    ---------
-    x_data : ndarray, The x_data considered in this plot, atm 2d with
-             statistical errors is possible
-    y_data : nd_array, The y data for the plot and the fit.
-    label : a label for the plot
-    xcut : should the data be cut to a smaller x-range?
-    ens : label for the ensemble
-    plotfunc : The function used for plotting 
-    """
-    #limits for plotting
-    try:
-        plt.xlim(xlim[0],xlim[1])
-        plt.ylim(ylim[0],ylim[1])
-    except:
-        print("No plotting limits set, using default values.")
-    x_plot,y_plot = self.get_data_plot(dim=dim,mev=False)
-    print("\nData used for plot: ")
-    print("x-data:")
-    print(x_plot)
-    print("y-data")
-    print(y_plot)
-    if self.combined is False:
-        if savedir is not None:
-          path = savedir
-        else:
-          path = "./plots2/pdf"
-        if xcut:
-          if suffix is not None:
-            pfit = PdfPages(path+"/%s_%s_xcut_%d.pdf" % (self.proc_id,suffix,xcut))
-          else:
-            pfit = PdfPages(path+"/%s_xcut_%d.pdf" % (self.proc_id,xcut))
-        else:
-          if suffix is not None:
-            pfit = PdfPages(path+"/%s_%s_%d.pdf" % (self.proc_id,suffix))
-          else:
-            pfit = PdfPages(path+"/%s.pdf" % (self.proc_id))
-
-    else:
-        if savedir is not None:
-          path = savedir
-        else:
-          path = "./plots2/pdf"
-        if suffix is not None:
-          pfit = PdfPages(path+"/%s_%s.pdf" % (self.proc_id,suffix))
-        else:
-          pfit = PdfPages(path+"/%s.pdf" % self.proc_id)
-
-    x = np.linspace(0,np.amax(x_plot),1000)
-    #print("arguments for plotting are:")
-    #print(args)
-    a_range, b_range, d_range = self.calc_plot_ranges()
-    #print("x-data for function plot:")
-    #print(x_plot[a_range[0]:a_range[1],:,0])
-    #print(x_plot[b_range[0]:b_range[1]])
-    #print(x_plot[d_range[0]:d_range[1]])
-
-    # check if several fits are made:
-    if hasattr(self.fitres,"__iter__"):
-      # D-Ensembles not taken into account!
-      args = []
-      for i in range(2):
-        args.append(self.fitres[i].data[0])
-
-      plot_function(plotfunc,x_plot[a_range[0]:a_range[1],:,0],
-                    args[0][:,:,0],label=r'NLO-fit A',ploterror=True,col='red')
-      chut.plot_ensemble(x_plot[:,0],y_plot,'^vspho','red',ens['A'],
-                         xid = a_range,match=self.match)
-
-      plot_function(plotfunc,x_plot[b_range[0]:b_range[1],:,0],
-                    args[1][:,:,0],label=r'NLO-fit B',ploterror=True,col='blue')
-      chut.plot_ensemble(x_plot[:,0],y_plot,'^vso','blue',ens['B'],
-                         xid = b_range,match=self.match)
-
-    else:
-      # Convention: if dim is 1 take argument 0,3,2 instead of 0,1,2,
-      if dim == 0:
-        args = self.fitres.data[0]
-      if dim == 1:
-        arg_shape = self.fitres.data[0].shape
-        args = np.column_stack((self.fitres.data[0][:,0],self.fitres.data[0][:,3],
-                         self.fitres.data[0][:,2])).reshape(arg_shape[0],3,arg_shape[-1])
-      print("Using Arguments")
-      print(args.shape)
-      print(args)
-      # Modify plotting parameter for strange quark mass variable r0ms
-      # modify arguments such that plot_function can handle them
-      # For that to work, the second slice of arguments must be the inverse
-      # lattice parameter spacing
-      _args_a = np.copy(args)
-      _args_b = np.copy(args)
-      _args_d = np.copy(args)
-      _args_a[:,1,:] *= x_plot[a_range[0],1,0] 
-      _args_b[:,1,:] *= x_plot[b_range[0],1,0]
-      _args_d[:,1,:] *= x_plot[d_range[0],1,0]
-      if self.fit_ms:
-          _add = np.copy(args[:,0])
-          print("physical x-value for r0ms is:")
-          print(self.amu_matched_to[0])
-          _add *= 0.223479
-          print(_add[0])
-          _add = _add.flatten()
-          print("Added argument has shape:")
-          print(_add)
-      else:
-          _add = None
-      # Plot function can only plot in one dimension.
-      plot_function(plotfunc, xlim, _args_a[:,:,0],add=_add,
-                    label=r'$a=0.0885\,$fm', ploterror=ploterr, fmt='r--', col='red')
-      chut.plot_ensemble(x_plot[:,0], y_plot, '^', 'red', [r'$a=0.0885\,$fm',],
-                        xid = a_range, match=self.match)
-
-      plot_function(plotfunc, xlim, _args_b[:,:,0],add=_add,
-                    label=r'$a=0.0815\,$fm', ploterror=ploterr, fmt='b:', col='blue')
-      chut.plot_ensemble(x_plot[:,0], y_plot,'v', 'blue', [r'$a=0.0815\,$fm',],
-                         xid = b_range, match=self.match)
-      plot_function(plotfunc, xlim, _args_d[:,:,0],add=_add,
-                    label=r'$a=0.0619\,$fm', ploterror=ploterr, fmt='g-.', col='green')
-      chut.plot_ensemble(x_plot[:,0], y_plot,'o','green',[r'$a=0.0619\,$fm',],
-                           xid = d_range,match=self.match)
-      # Plot the continuum curve
-      x_cont = np.linspace(0,50,1000)
-      cont_curve = self.plot_cont_func 
-      plot_function(cont_curve, [x_cont[0],x_cont[-1]],args[:,:,0],fmt='k--',add=_add,
-                    label='continuum',ploterror=True)
-    if xcut:
-      y = plotfunc(args[0,:,0], xcut)
-      plt.vlines(xcut, 0.95*y, 1.05*y, colors="k", label="")
-      plt.hlines(0.95*y, xcut*0.98, xcut, colors="k", label="")
-      plt.hlines(1.05*y, xcut*0.98, xcut, colors="k", label="")
-    print("Physical point is:")
-    try:
-      for a in self.phys_point:
-        print("%f +/- %f" %(a[1,0],a[1,1]))
-      plt.errorbar(self.phys_point[:,0,0],self.phys_point[:,1,0],
-                   self.phys_point[:,1,1],xerr=self.phys_point[:,0,1],
-                   fmt='d', color='darkorange', label='Physical Point')
-    except:
-      print("%f +/- %f" %(self.phys_point[1,0],self.phys_point[1,1]))
-      plt.errorbar(self.phys_point[0,0],self.phys_point[1,0],
-                   self.phys_point[1,1],xerr=self.phys_point[0,1],
-                   fmt='d', color='darkorange', label='Physical Point')
-      pass
-    plt.grid(False)
-    #plt.vlines(self.phys_point[0,0],y_lim[0],y_lim[1],color="k",label=label[3])
-    if loc==None:
-      plt.legend(loc='best',numpoints=1,ncol=2,fontsize=12)
-    else:
-      plt.legend(loc=loc,numpoints=1,ncol=2,fontsize=12)
-    #switch off title for publishing
-    #plt.title(label[2])
-    plt.ylabel(label[1])
-    plt.xlabel(label[0])
-    pfit.savefig()
-    pfit.close()
-    plt.clf()
 
   def calc_ms(self, mk_phys, r0_phys, ml_phys):
     """Calculate the strange quark mass from the fit parameters
@@ -1415,83 +991,6 @@ class ChirAna(object):
 ################################################################################
 ################# Scratch region for trying out functions ######################
 ################################################################################
-  # TODO: implement gamma better
-  def mu_a32_errfunc(self,p,x,y,cov):
-      #print("In NLO-Errfunc shape of x-values is:")
-      #print(x.shape)
-      if self.gamma is not True:
-          # expect two priors
-          if y.shape[0] > x.shape[0]:
-              #_res = pik_I32_chipt_nlo(x[:,0],x[:,1],x[:,2],x[:,3],p)-y[:-2]
-              _res = pik_I32_chipt_nlo(x[:,0],x[:,1],x[:,2],x[:,3],p,meta=x[:,4])-y[:-1]
-              #_res = np.r_[_res,p[1]-y[-2],p[2]-y[-1]]
-              _res = np.r_[_res,p[1]-y[-1]]
-          else: 
-            _res = pik_I32_chipt_nlo(x[:,0],x[:,1],x[:,2],x[:,3],p,meta=x[:,4])-y
-      else:
-          if y.shape[0] > x.shape[0]:
-              _res = p[0]-2.*x.ravel()*p[1]-y[:-1]
-              _res = np.r_[_res,p[0]-y[-1]]
-          else: 
-              _res = p[0]-2.*x.ravel()*p[1]-y
-      # calculate the chi values weighted with inverse covariance matrix
-      _chi = np.dot(cov,_res)
-      return _chi
-
-  def mu_a32_lo_errfunc(self,p,x,y,cov):
-      # pik_I32_chipt_lo includes an a^2 term
-      print("In LO-Errfunc shape of x-values is:")
-      print(x.shape)
-      _res = pik_I32_chipt_lo(x[:,0],x[:,1],x[:,2],x[:,3],p)-y
-      _chi = np.dot(cov,_res)
-      return _chi
-#TODO: Code doubling with globalfit.py Outsource data cut 
-  def cut_data(self,x,y,interval):
-      """ cut data of chiral fit object according to given interval
-      Parameters
-      ----------
-      interval: tuple or float, interval where to cut
-      
-      Returns
-      -------
-      _data: cutted data with same shape as input except for 0th axis
-      """
-      # determine shapes
-      _x_shape = x.shape
-      _y_shape = y.shape
-
-      #cut the xdata if necessary
-      # implement a cut on the data if given, negative means everything above
-      # that x-value
-      print("interval is: %r" %interval)
-      # only interested in first range
-      if hasattr(interval,"__iter__"):
-          sub = (0,)*len(_x_shape[1:])
-          select = (slice(None),)+sub
-          print(x[select])
-          lo = x[select] > interval[0]
-          hi = x[select] < interval[1]
-          tmp = np.logical_and(lo,hi)
-          print("Shape for cutting:")
-          # should be a 1d array
-          print(tmp)
-      elif interval >= 0.:
-          tmp = x[:,0] < interval
-          print("bools for cut:")
-          print(tmp.shape)
-      elif interval < 0.:
-          tmp = x[:,0] > -interval
-      print("y-shape before cut:")
-      print(y.shape)
-      print(x.shape)
-      _x = x[tmp]
-      _y = y[tmp]
-      print("y-data after cut:")
-      print(_y[:,0])
-      print("y-shape after cut:")
-      print(_y.shape)
-      
-      return _x, _y
 
   def fit_mu_a32(self,plotdir=None,LO=False,xcut=None,debug=2,prior=None):
       """ Fit the NLO chiPT formula to the data of self
@@ -1509,16 +1008,17 @@ class ChirAna(object):
       else:
         _x = chut.concatenate_data(self.x_data,par=slice(0,4))
       _y = chut.concatenate_data(self.y_data)
+      # data cuts need to be applied before priors are added
       if xcut is not None:
           print("cutting x-values at: %r" %xcut)
-          _x,_y = self.cut_data(_x,_y,xcut)
+          _x,_y = chut.cut_data(_x,_y,xcut)
       if prior is not None:
           #print(_y.shape)
           _y = np.r_[_y,np.atleast_2d(prior)]
       print(_x.shape)
       print(_y.shape)
       #plot correlation of yvalues
-      corrmat = ana.LatticePlot(plotdir+"/corr_mat_nlo.pdf")
+      corrmat = plot.LatticePlot(plotdir+"/corr_mat_nlo.pdf")
       corrmat.plot_correlation(_y,["mu_a32_correlation","mu_a32"])
       del corrmat
       # The data for the fit should be just two arrays containing the
@@ -1528,13 +1028,14 @@ class ChirAna(object):
       ## invoke a chiral fit, yielding a fitresult
       if LO is False:
           if self.gamma is True:
-            start=[0.1,0.1]
+              start=[0.1,0.1]
+              mu_a32 = ChiralFit("mu_a32",cherr.mu_a32_gamma_errfunc)
           else:
-            start=[0.1,0.1,1.4]
-          mu_a32 = ChiralFit("mu_a32",self.mu_a32_errfunc)
+              start=[0.1,0.1,1.4]
+              mu_a32 = ChiralFit("mu_a32",cherr.mu_a32_errfunc)
       else:
           start=[1.]
-          mu_a32 = ChiralFit("mu_a32_lo",self.mu_a32_lo_errfunc)
+          mu_a32 = ChiralFit("mu_a32_lo",cherr.mu_a32_lo_errfunc)
       print(_y[:,0:4])
       self.fitres = mu_a32.chiral_fit(_x,_y,start,xcut=None,parlim=None,
                                       correlated=self.correlated,cov=None,
@@ -1570,63 +1071,54 @@ class ChirAna(object):
               _x = np.column_stack((ren,mpi,mk,fpi))
           if iso_32 is True:
               self.phys_point_fitres = self.fitres.calc_mua0_pik_phys(_x,
-                                                                  mua0_I32_from_fit)
+                                                chwrap.mua0_I32_from_fit)
           else:
               self.phys_point_fitres = self.fitres.calc_mua0_pik_phys(_x,
-                                                                  mua0_I12_from_fit)
+                                                chwrap.mua0_I12_from_fit)
       else:
           if iso_32 is True:
               _x = np.column_stack((mpi,mk,fpi,r0,meta))
               self.phys_point_fitres = self.fitres.calc_mua0_pik_phys(_x,
-                                                              pik_I32_chipt_cont)
+                                               chwrap.pik_I32_chipt_cont)
           else:
               _x = np.column_stack((ren,mpi,mk,fpi))
               self.phys_point_fitres = self.fitres.calc_mua0_pik_phys(_x,
-                                                              mua0_I12_from_fit)
-      self.phys_point[0]=ana.compute_error(ana.calc_x_plot(_x))
-      self.phys_point[1]=ana.compute_error(self.phys_point_fitres.data[0])
+                                                chwrap.mua0_I12_from_fit)
+      self.phys_point[0]=compute_error(chwrap.calc_x_plot(_x))
+      self.phys_point[1]=compute_error(self.phys_point_fitres.data[0])
 
       print("\nPhysical point result:")
       print("x: %f +/- %f" %(self.phys_point[0][0],self.phys_point[0][1]))
       print("y %f +/- %f\n" %(self.phys_point[1][0],self.phys_point[1][1]))
  
-  def calc_L_piK(self):
-      _lpik = self.fitres.summ_int((0,1),fac=-0.5,fac_par=1)
-      _lpik.print_data()
-  
   # This should be a general fitfunction just taking the fitfunction as an
   # argument
-  def fit(self,fitfunc,start,plotdir=None,add=None,xcut=None,debug=2):
+  def fit(self,fitfunc,start,plotdir=None,add=None,prior=None,xcut=None,debug=2):
       """ Fit fitfunc to the data of self
+
+      Parameters
+      ----------
+      fitfunc: callable, function that gets fitted
       """
 
       # Look at the shapes first
       print(self.x_shape)
       print(self.y_shape)
-      # stack all lattice spacings together
-      # determine dimensions for array
-      #nb_ensembles
-      _x = chut.concatenate_data(self.x_data,par=slice(0,4))
-      _y = chut.concatenate_data(self.y_data)
-      print(_x.shape)
-      print(_y.shape)
-      #plot correlation of yvalues
-      corrmat = ana.LatticePlot(plotdir+"/corr_mat_fit.pdf")
-      corrmat.plot_correlation(_y,["y_correlation","y"])
-      del corrmat
-      # The data for the fit should be just two arrays containing the
-      # bootstrapsamples
-      #if debug > 3:
-      ## Fit the data
-      ## invoke a chiral fit, yielding a fitresult
-      # define the error function
-      if add is None:
-          _errfunc = lambda p, x, y, error: np.dot(error, (y-fitfunc(p,x)).T)
+
+      _x = chut.concat_data_fit(self.x_data,self.lat_dict.keys())
+      _y = chut.concat_data_fit(self.y_data,self.lat_dict.keys(),prior)
+      if add is not None:
+          _errfunc = lambda p, x, y, e, error: np.dot(error, (y-fitfunc(x,p,e)).T)
       else:
-          _errfunc = lambda p, x, y, e, error: np.dot(error, (y-fitfunc(p,x,e)).T)
-      _fit = ChiralFit("fit",_errfunc)
-      self.fitres = _fit.chiral_fit(_x,_y,start,xcut=xcut,parlim=None,
-                                      correlated=self.correlated,cov=None,
+          _errfunc = lambda p, x, y, error: np.dot(error, (y-fitfunc(x,p)).T)
+      _fit = ChiralFit("fit",chwrap.err_func)
+      # determine covariance matrix
+      _y_cov = chut.concat_data_cov(self.y_data)
+      _cov = np.cov(_y_cov)
+      if self.correlated is False:
+          _cov = np.diag(np.diagonal(_cov))
+      _cov = (np.linalg.cholesky(np.linalg.inv(_cov))).T
+      self.fitres = _fit.chiral_fit(_x,_y,start,xcut=xcut,parlim=None,cov=_cov,
                                       debug=debug)
       self.fitres.set_ranges(np.array([[[0,_x.shape[0]]]]),[[1,]])
       self.fitres.print_details()

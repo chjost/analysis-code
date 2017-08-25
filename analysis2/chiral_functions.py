@@ -34,74 +34,7 @@ def reduced_mass(m_1,m_2):
     """ reduced mass of a system of two different particles"""
     return m_1*m_2/(m_1+m_2)
 
-def calc_x_plot(x):
-    """ Function that calculates reduced mass divided by f_pi from mk,mpi and
-    fpi"""
-    xplot=reduced_mass(x[:,0],x[:,1])/x[:,2]
-    return xplot
-
-def pik_I32_chipt_plot(args, x):
-    """ Wrapper for plotfunction"""
-    # x and args need to have the same number of entries in last dimension
-    # (bootstrapsamples)
-    # broadcast _x values to same shape as arguments
-    if hasattr(x,'__iter__') is not True:
-        _x = np.zeros((len(x),args.shape[0]))
-        for i,d in enumerate(np.asarray(x)):
-            _x[i] = np.full((1500,),d)
-    else:
-        _x = x.reshape(len(x),1)
-    if args.ndim == 2 and args.shape[0]> args.shape[1]:
-        _args = args.T
-    else:
-        _args=args
-    #return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], args[0,3], args[0,0:3])
-    return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], _args[-1], _args[0:3],meta=_x[4])
-
-def pik_I32_chipt_nlo_plot(args, x):
-    """ Wrapper for plotfunction subtract LO before plotting"""
-    # x and args need to have the same number of entries in last dimension
-    # (bootstrapsamples)
-    # broadcast _x values to same shape as arguments
-    if hasattr(x,'__iter__') is not True:
-        _x = np.zeros((len(x),args.shape[0]))
-        for i,d in enumerate(np.asarray(x)):
-            _x[i] = np.full((1500,),d)
-    else:
-        _x = x.reshape(len(x),1)
-    if args.ndim == 2 and args.shape[0]> args.shape[1]:
-        _args = args.T
-    else:
-        _args=args
-    # LO contribution
-    lo = -(reduced_mass(_x[0],_x[1])/_x[2])**2/(4.*np.pi)
-    return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], _args[-1], _args[0:3])-lo
-
-def pik_I32_chipt_cont(args, x):
-    """ Wrapper for plotfunction"""
-    # x and args need to have the same number of entries in last dimension
-    # (bootstrapsamples)
-    # broadcast _x values to same shape as arguments
-    if hasattr(x,'__iter__') is not True:
-        _x = np.zeros((len(x),args.shape[0]))
-        for i,d in enumerate(np.asarray(x)):
-            _x[i] = np.full((1500,),d)
-    else:
-        _x = x.reshape(len(x),1)
-    if args.ndim == 2 and args.shape[0]> args.shape[1]:
-        _args = args.T
-    else:
-        _args=args
-    _args[2]=np.zeros_like(args[2])
-    #return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], args[0,3], args[0,0:3])
-    return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], _x[3], _args[0:3], meta=_x[4])
-
-def pik_I32_chipt_lo_plot(args, x):
-    """ Wrapper for plotfunction"""
-    _x = x.reshape((len(x),1))
-    return pik_I32_chipt_lo(_x[0],_x[1],_x[2], args[:,1], args[:,0])
-
-def pik_I32_chipt_nlo(mpi, mk, fpi, r0, p, lambda_x=None,meta=None):
+def pik_I32_chipt_nlo(mpi, mk, fpi, r0, p, lambda_x=None, meta=None):
     """ Calculate mu_{piK} a_3/2 in continuum chipt at NLO plus a lattice
     artifact
 
@@ -232,32 +165,9 @@ def a_I12(ren,mpi,mk,fpi,l_5,l_pik):
     return a_pik_pos(ren,mpi,mk,fpi,l_pik) + 2 * a_pik_neg(ren,mpi,mk,fpi,l_5)
 
 def mu_aI32(ren,mpi,mk,fpi,l_5,l_pik):
-    #print("In mu_aI32:")
-    #print("L_5 = %f" %l_5)
-    #print("L_pik = %f" %l_pik)
-    #print("ren = %f" %ren)
-    #print("mpi = %f" %mpi)
-    #print("mk = %f" %mk)
-    #print("fpi = %f" %fpi)
     return reduced_mass(mpi,mk) * a_I32(ren,mpi,mk,fpi,l_5,l_pik)
 
 def mu_aI12(ren,mpi,mk,fpi,l_5,l_pik):
     return reduced_mass(mpi,mk) * a_I12(ren,mpi,mk,fpi,l_5,l_pik)
   # Wrapper functions for evaluate_phys in chiral_utils.py
   # Operates bootstrapsample wise
-def mua0_I32_from_fit(pars,x):
-    # Ensure that x has at least 2 dimensions
-    _x = np.atleast_2d(x)
-    _mua0 = mu_aI32(_x[:,0],_x[:,1],_x[:,2],_x[:,3],pars[0],pars[1])
-    return _mua0
-
-def mua0_I12_from_fit(pars,x):
-    # Ensure that x has at least 2 dimensions
-    _x = np.atleast_2d(x)
-    _mua0 = mu_aI12(_x[:,0],_x[:,1],_x[:,2],_x[:,3],pars[0],pars[1])
-    return _mua0
-
-def mua0_I32_nlo_from_fit(pars,x):
-    _x = np.atleast_2d(x)
-    _mua0 = pik_I32_chipt_nlo(_x[:,1], _x[:,2], _x[:,3], _x[:,4], pars, lambda_x=None) 
-    return _mua0

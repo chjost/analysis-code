@@ -17,6 +17,7 @@ from .utils import mean_std, physical_mass, r0_mass
 #from .chiral_utils import lo_chipt, err_phys_pt, read_extern, prepare_mpi, prepare_mk, prepare_data, plot_ensemble
 from .chiral_utils import *
 from .chiral_functions import *
+from .chiral_wraps import *
 from .extern_bootstrap import *
 from .chiral_analysis import ChirAna
 from .externaldata import ExtDat, ContDat

@@ -216,11 +216,13 @@ def main():
                                   mua32_fse.eval_obs[2], fpi,
                                   np.sqrt(metasq.eval_obs[2]))
             extrapol.add_data(tmp_y,(i,j,0,0),dim='y')
-    cut = [0.,1.5]
+    cut = [1.5,2.5]
     #cut = None 
     # Include bootstrapped L_piK as a prior value taken from NPLQCD 
-    l_5 = ana.draw_gauss_distributed(5.65e-3,2e-5,(1500,),origin=True)
+    l_5 = ana.draw_gauss_distributed(5.41e-3,3e-5,(1500,),origin=True)
     extrapol.fit_mu_a32(plotdir=plotdir,xcut=cut,prior=l_5)
+    #For future use
+    #extrapol.fit(chwrap.gamma_errfunc,...)
     plotargs = extrapol.fitres.data[0]
     args = np.asarray([plotargs[:,slice(0,2),0] for i in range(1)])
     # Plot the data the given function

@@ -1,4 +1,6 @@
 #import sys
+
+import collections as coll
 from scipy import stats
 from scipy import interpolate as ip
 import time
@@ -669,7 +671,6 @@ def compute_bare_mu_s(r0,ml,mk,mul,args,disc_eff=False):
 ################################################################################
 ################# Scratch region for trying out functions ######################
 ################################################################################
-
 def concatenate_data(lst,par=0):
     _b=[]                                               
     for i, d in enumerate(lst):
@@ -690,3 +691,131 @@ def concatenate_data(lst,par=0):
     if len(_b) == 1:
         _c = np.concatenate((_b[0],))
     return _c
+
+def concat_data_cov(lst,prior=None,debug=1):
+    """ Change data layout for estimating covariance matrix
+
+    A covariance matrix is a 2d array of shape (nvar,nmeas)
+    data comes in as a list with layout of a ChirAna object
+    """
+    # get layout values
+    # last shape entry is number of bootstrapsamples
+    nmeas = lst[0].shape[-1]
+    nvar = 0
+    # at the moment only one y-observable is allowed 
+    for n in lst:
+        nvar += n.shape[0]*n.shape[1]
+    if prior is not None:
+        nvar += 1
+    # initialize data array
+    d = np.zeros((nvar,nmeas))
+    # fill array
+    offset = 0
+    for i,l in enumerate(lst):
+        # get number of ensembles for each lattice spacing
+        ens = l.shape[0]
+        mu = l.shape[1]
+        for _ens in range(ens):
+            for _mu in range(mu):
+                index = offset + _ens *mu +_mu
+                # choose 0th entry of y-values
+                d[index] = l[_ens,_mu,0]
+        offset += ens*mu
+    if prior is not None:
+        d[-1] = prior
+    return d
+
+def concat_data_fit(lst,space,prior=None,debug=1):
+    """ Function to reorganise read in data
+
+    The fit function loops over the bootstrapsamples, we would like to evaluate
+    the fit function for every lattice spacing separately. Hence this function
+    returns a list of the bootstrapsamples. Each bootstrapsample contains a
+    namedtuple over the Lattice spacings. Each namedtuple entry is a numpy array
+    of shape (nb_ens(beta), nb_dim). Optional a prior can be added as an
+    additional named tuple.
+    """
+
+    # set up data structures
+    # number of bootstrapsamples
+    nboot = lst[0].shape[-1]
+    # named tuple instance
+    # modify space if prior is given
+    # TODO: what happens with multiple priors?
+    if prior is not None:
+      space += 'p'
+    beta = coll.namedtuple('beta',space)
+    d = []
+    if prior is not None:
+        for b in range(nboot):
+            # compile list of lattice spacings
+            tmp = []
+            for i in range(len(space)-1):
+                # get shapes for reshape
+                ens = lst[i].shape[0]
+                mu = lst[i].shape[1]
+                dim = lst[i].shape[2]
+                tmp.append(lst[i][...,b].reshape((ens*mu,dim)))
+            tmp.append(prior[b])
+            tmpnt = beta(*tmp)
+            d.append(tmpnt)
+    # Code doubling in favour of faster for loop
+    else:
+        for b in range(nboot):
+            # compile list of lattice spacings
+            tmp = []
+            for i in range(len(space)):
+                # get shapes for reshape
+                ens = lst[i].shape[0]
+                mu = lst[i].shape[1]
+                dim = lst[i].shape[2]
+                tmp.append(lst[i][...,b].reshape((ens*mu,dim)))
+            # TODO: Bad style think of something else
+            tmpnt = beta(*tmp)
+            d.append(tmpnt)
+    return d
+
+# TODO: Fast hack ,does not belong here   
+def cut_data(x,y,interval):
+    """ cut data of chiral fit object according to given interval
+    Parameters
+    ----------
+    interval: tuple or float, interval where to cut
+    
+    Returns
+    -------
+    _data: cutted data with same shape as input except for 0th axis
+    """
+    # determine shapes
+    _x_shape = x.shape
+    _y_shape = y.shape
+ 
+    #cut the xdata if necessary
+    # implement a cut on the data if given, negative means everything above
+    # that x-value
+    print("interval is: %r" %interval)
+    # only interested in first range
+    if hasattr(interval,"__iter__"):
+        sub = (0,)*len(_x_shape[1:])
+        select = (slice(None),)+sub
+        print(x[select])
+        lo = x[select] > interval[0]
+        hi = x[select] < interval[1]
+        tmp = np.logical_and(lo,hi)
+        print("Shape for cutting:")
+        # should be a 1d array
+        print(tmp)
+    elif interval >= 0.:
+        tmp = x[:,0] < interval
+    elif interval < 0.:
+        tmp = x[:,0] > -interval
+    print("y-shape before cut:")
+    print(y.shape)
+    _x = x[tmp]
+    _y = y[tmp]
+    print("y-data after cut:")
+    print(_y[:,0])
+    print("y-shape after cut:")
+    print(_y.shape)
+    
+    return _x, _y

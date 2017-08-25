@@ -27,7 +27,7 @@
 
 import ConfigParser as cp
 
-def inputnames(conf_file, corr_string):
+def inputnames(conf_file, corr_string, h5=True):
     """ Function to build Correlator input names conformal with B. Knippschilds
     naming scheme
         
@@ -71,7 +71,10 @@ def inputnames(conf_file, corr_string):
             join_q = ''.join(q_list)
             join_op = '.'.join(op_list)
             # build the filename
-            corrname = c0[0]+"/"+c0[0]+"_"+join_q+"_"+join_op+".dat" 
+            if h5 is True:
+                corrname = +c0[0]+"_"+join_q+"_"+join_op
+            else:
+                corrname = c0[0]+"/"+c0[0]+"_"+join_q+"_"+join_op+".dat"
             inputnames.append(corrname)
     return inputnames
 
