@@ -96,18 +96,18 @@ def main():
     print(fpi_raw)
 
     read = False
-    if read is True:
-        extrapol = ana.ChirAna.read(resdir+'/'+'pi-K I-3_2')
-    else:
 ################### Setup chiral analysis ######################################
-        extrapol = ana.ChirAna("pi-K I-3_2",correlated=False,gamma=False,match=True)
-        # have five x-values: mk,mpi,meta,fpi,r0/a
-        ens_shape_chirana = (len(latA),len(latB),len(latD))
-        print(ens_shape_chirana)
-        lyt_xvals = (3,ens_shape_chirana,1,5,1500)
-        lyt_yvals = (3,ens_shape_chirana,1,1,1500)
-        extrapol.create_empty(lyt_xvals,lyt_yvals,lat_dict=lat_dict)
-        print("\nSetup complete, begin chiral analysis")
+    extrapol = ana.ChirAna("pi-K_I32_chipt_A1",correlated=False,gamma=False,match=True)
+    # have five x-values: mk,mpi,meta,fpi,r0/a
+    ens_shape_chirana = (len(latA),len(latB),len(latD))
+    print(ens_shape_chirana)
+    lyt_xvals = (3,ens_shape_chirana,1,5,1500)
+    lyt_yvals = (3,ens_shape_chirana,1,1,1500)
+    extrapol.create_empty(lyt_xvals,lyt_yvals,lat_dict=lat_dict)
+    print("\nSetup complete, begin chiral analysis")
+    if read is True:
+        extrapol.load(resdir)
+    else:
 
 ################################################################################
 #                   input data                                                 #
@@ -237,7 +237,7 @@ def main():
     l_5 = ana.draw_gauss_distributed(5.41e-3,3e-5,(1500,),origin=True)
     #extrapol.fit_mu_a32(plotdir=plotdir,LO=False,prior=l_5)
     start = [0.1,0.1,0.1]
-    extrapol.fit(ana.pik_I32_chipt_fit,start,plotdir=plotdir,prior=l_5,add=start[1])
+    extrapol.fit(ana.pik_I32_chipt_fit,start,plotdir=plotdir,prior=l_5,add=start[1],debug=0)
     plotargs = extrapol.fitres.data[0]
     # NLO arguments need to have bootstrapsamples as first argument
     extrapol.mu_a0_pik_phys(cont_data.get('mpi_0'),cont_data.get('mk'),
@@ -255,7 +255,7 @@ def main():
     # Plot the data the given function
     label=[r'$\mu_{\pi K}/f_{\pi}$',r'$\mu_{\pi K}\,a_{3/2}$',r' ',
            r'$(\mu_{\pi K}/f_{\pi})_{phys}$']
-    filename = plotdir+'/mua0_decay_nlo_msfix_fse.pdf'
+    filename = plotdir+'/mua0_decay_nlo_msfix_fse_M1A.pdf'
     chiral_plot = ana.LatticePlot(filename, join = False)
     #limits for x values in plot
     lim_x = [[120.,560.], [330.,780.],[180.,90.], [0.,0.],[625.,738.]] 

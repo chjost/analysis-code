@@ -110,10 +110,11 @@ class ChiralFit(fit.LatticeFit):
         #shape1 = (_X.shape[0], len(start), _Y.shape[0])
         #shape2 = (_X.shape[0], _Y.shape[0])
         #TODO: Get array shapes for fitresult, perhaps a member variable
-        #shape1 = (1500, len(start), 1)
-        #shape2 = (1500, 1)
-        shape1 = (_Y.shape[-1], len(start), 1)
-        shape2 = (_Y.shape[-1], 1)
+        shape1 = (1500, len(start), 1)
+        shape2 = (1500, 1)
+        #print(_Y)
+        #shape1 = (_Y.shape[-1], len(start), 1)
+        #shape2 = (_Y.shape[-1], 1)
         if ncorr is None:
           fitres.create_empty(shape1, shape2, 1)
         elif isinstance(ncorr, int):
@@ -121,8 +122,8 @@ class ChiralFit(fit.LatticeFit):
         else:
           raise ValueError("ncorr needs to be integer")
         # fit the data
-        dof = _X.shape[0] - len(_start)
-        #dof = 11 - len(_start)
+        #dof = _X.shape[0] - len(_start)
+        dof = 11 - len(_start)
         print("In global fit, dof are: %d" %dof)
          #fit every bootstrap sample
         tmpres, tmpchi2, tmppval = globalfitting(self.errfunc, _X, _Y, _start,

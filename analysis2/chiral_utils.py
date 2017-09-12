@@ -755,7 +755,10 @@ def concat_data_fit(lst,space,prior=None,debug=1):
                 ens = lst[i].shape[0]
                 mu = lst[i].shape[1]
                 dim = lst[i].shape[2]
-                tmp.append(lst[i][...,b].reshape((ens*mu,dim)))
+                if dim==1:
+                  tmp.append(lst[i][...,b].reshape((ens*mu)))
+                else:
+                  tmp.append(lst[i][...,b].reshape((ens*mu,dim)))
             tmp.append(prior[b])
             tmpnt = beta(*tmp)
             d.append(tmpnt)

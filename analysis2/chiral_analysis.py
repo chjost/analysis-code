@@ -194,11 +194,38 @@ class ChirAna(object):
     self.lat_dict = lat_dict
 
   def save(self,savedir):
-    pickle.dump(self,open(savedir+'/'+self.proc_id,"wb"))
+    """ Function to save data as numpy arrays.
+      
+    """
+    # store matched x and y data
+    # The data shape can be inferred from the data
+    x_a = self.x_data[0]
+    x_b = self.x_data[1]
+    x_d = self.x_data[2]
+    y_a = self.y_data[0]
+    y_b = self.y_data[1]
+    y_d = self.y_data[2]
+    match = self.amu_matched_to
+    name = savedir+"/"+self.proc_id
+    np.savez(name,x_a=x_a,x_b=x_b,x_d=x_d,y_a=y_a,y_b=y_b,y_d=y_d,match=match)
   #
+  def load(self,savedir):
+    """ Function to load data
+
+    """
+    name = savedir+"/"+self.proc_id+".npz"
+    data = np.load(name)
+    self.x_data[0] = data['x_a']
+    self.x_data[1] = data['x_b']
+    self.x_data[2] = data['x_d']
+    self.y_data[0] = data['y_a']
+    self.y_data[1] = data['y_b']
+    self.y_data[2] = data['y_d']
+    self.amu_matched_to = data['match']
+
   @classmethod
   def read(cls,savename):
-    obj = pickle.load((open(savename,"rb"))) 
+    data = pickle.load((open(savename,"rb"))) 
     return cls
 
   def extend_data(self,obs=['None',],dim='x'):
@@ -1112,15 +1139,15 @@ class ChirAna(object):
       else:
           _errfunc = lambda p, x, y, error: np.dot(error, (y-fitfunc(x,p)).T)
       _fit = ChiralFit("fit",chwrap.err_func)
-      # determine covariance matrix
-      _y_cov = chut.concat_data_cov(self.y_data)
+      # determine covariance matrix, including prior
+      _y_cov = chut.concat_data_cov(self.y_data,prior=prior)
       _cov = np.cov(_y_cov)
       if self.correlated is False:
           _cov = np.diag(np.diagonal(_cov))
       _cov = (np.linalg.cholesky(np.linalg.inv(_cov))).T
       self.fitres = _fit.chiral_fit(_x,_y,start,xcut=xcut,parlim=None,cov=_cov,
                                       debug=debug)
-      self.fitres.set_ranges(np.array([[[0,_x.shape[0]]]]),[[1,]])
+      self.fitres.set_ranges(np.array([[[0,len(_x)]]]),[[1,]])
       self.fitres.print_details()
       ## Save the fitresult data
       #if dat is not None:
