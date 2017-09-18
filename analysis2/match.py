@@ -24,7 +24,7 @@ class MatchResult(object):
 
     The data has a similar layout to FitResult
     """
-    def __init__(self, obs_id=None, save=None):
+    def __init__(self, obs_id=None, save=None, debug=0):
 
       """Allocate objects for initiated instance
       Parameters
@@ -58,6 +58,8 @@ class MatchResult(object):
       self.obs_id = obs_id
       # Save results to
       self.savedir = save
+      # Debug flag
+      self.debug=debug
     
     @classmethod
     def read(cls, filename, debug=0):
@@ -121,10 +123,11 @@ class MatchResult(object):
         # place data in numpy array
         # 3 evaluation methods or strange quarkmasses, 1 "fitrange", samples
         tmp = np.zeros((4,3,1,1500))
-        print(self.amu.shape)
-        print(self.obs.shape)
-        print(self.amu_match.shape)
-        print(self.eval_obs.shape)
+        if self.debug > 0:
+            print(self.amu.shape)
+            print(self.obs.shape)
+            print(self.amu_match.shape)
+            print(self.eval_obs.shape)
         # shape of one data element
         el_shape = tmp[0].shape
         ## save x_data used in matching
@@ -155,13 +158,14 @@ class MatchResult(object):
       idx = np.zeros((1,nboot))
       idx[0] = smp
       _data = np.atleast_2d(data)
-      print("Shape of idx:")
-      print(idx.shape)
-      print("Shape of data:")
-      print(_data.shape)
       _to_save = np.concatenate((idx,_data)).T
-      print("Data will be saved with shape:")
-      print(_to_save.shape)
+      if self.debug > 0:
+          print("Shape of idx:")
+          print(idx.shape)
+          print("Shape of data:")
+          print(_data.shape)
+          print("Data will be saved with shape:")
+          print(_to_save.shape)
       np.savetxt(name,_to_save,header=head,fmt = fmt)
 
 
@@ -549,7 +553,8 @@ class MatchResult(object):
       if len(dshape) < 2:
         amu_match=np.full((3,dshape[0]),amu_match)
       self.amu_match=amu_match
-      print("matched value shape %r" % dshape)
+      if self.debug > 0:
+          print("matched value shape %r" % dshape)
       # Set the x-values in the evaluation procedure
       if amu_x is None:
         amu = self.amu
@@ -565,7 +570,8 @@ class MatchResult(object):
         if meth > 2:
           raise ValueError("Method not implemented yet, meth < 3")
         
-        print("\nEvaluate %s" %self.obs_id)
+        if self.debug > 0:
+            print("\nEvaluate %s" %self.obs_id)
         # Depending on the method "meth" calculate coefficients first and evaluate
         # the root of the function to find obs_match
         # Method 0 only applicable for 2 observables
@@ -591,7 +597,8 @@ class MatchResult(object):
           self.eval_obs[2], self.coeffs[2] = calc_y_fit(obs[0],obs[1],obs[2],amu,amu_match[2])
         # print summary to screen
         orig, std = compute_error(self.eval_obs[meth])
-        print("%s = %f +/- %f:" %(self.obs_id, orig, std))
+        if self.debug > 0:
+            print("%s = %f +/- %f:" %(self.obs_id, orig, std))
       # Do all methods  
       else:
         print("Using linear interpolation")
@@ -609,7 +616,8 @@ class MatchResult(object):
         meths = ['lin. ipol','quad. ipol.','lin fit']
         for i,m in enumerate(meths):
           orig, std = compute_error(self.eval_obs[i])
-          print("%s: %s = %f +/- %f:" %(m,self.obs_id, orig, std))
+          if self.debug > 0:
+              print("%s: %s = %f +/- %f:" %(m,self.obs_id, orig, std))
       if plot:
         self.plot_match(self.eval_obs,plotdir,ens,meth=meth,proc='eval',label=label)
 
@@ -625,8 +633,9 @@ class MatchResult(object):
       return y 
 
     def plot_match(self,obs,plotdir,ens, proc=None, meth=None, label=None):
-      print("match/eval amu_s value for plot:")
-      print(compute_error(self.amu_match[meth]))
+      if self.debug > 0:
+          print("match/eval amu_s value for plot:")
+          print(compute_error(self.amu_match[meth]))
       if meth == 0:
         _meth = '_lipol'
       elif meth == 1:
@@ -644,12 +653,13 @@ class MatchResult(object):
       y_plot = self.get_plot_error()
       x_plot = self.get_plot_error(dim='x')
       # Data points to plot
-      print("x-data for match:")
-      print(x_plot)
-      print("y-data for match:")
-      print(y_plot)
-      print("parameters to function:")
-      print(self.coeffs[meth])
+      if self.debug > 0:
+          print("x-data for match:")
+          print(x_plot)
+          print("y-data for match:")
+          print(y_plot)
+          print("parameters to function:")
+          print(self.coeffs[meth])
       if meth is None:
         # plot data
         plot_data(x_plot[:,0],y_plot[:,0],y_plot[:,1],label='data',dX=x_plot[:,1],col='k')
@@ -664,7 +674,7 @@ class MatchResult(object):
         #plot_function(line,x_plot[:,0],self.coeffs[meth],'lin. ipol',fmt='k--',
         #              ploterror=True)
         plot_function(line,(x_plot[0,0],x_plot[-1,0]),self.coeffs[meth],'lin.  ipol',
-            ploterror = True, fmt='k--',debug =3 )
+            ploterror = True, fmt='k--',debug =self.debug )
         if proc == 'match':
           plot_single_line(self.amu_match[meth],obs,label[2],col='g')
         else:
@@ -674,7 +684,7 @@ class MatchResult(object):
         #plot_function(para,x_plot[:,0],self.coeffs[meth],'quad.  ipol',
         #              ploterror=True,fmt='r--',col='red')
         plot_function(line,(x_plot[0,0],x_plot[-1,0]),self.coeffs[meth],'quad.  ipol',
-            ploterror = True, fmt='r--', col='red',debug =3 )
+            ploterror = True, fmt='r--', col='red',debug =self.debug )
         if proc == 'match':
           plot_single_line(self.amu_match[meth],obs,label[2],col='g')
         else:
@@ -684,7 +694,7 @@ class MatchResult(object):
         #plot_function(line,x_plot[:,0],self.coeffs[meth],'lin. fit',
         #    ploterror = True, fmt='b--', col='blue')
         plot_function(line,(x_plot[0,0],x_plot[-1,0]),self.coeffs[meth],'lin. fit',
-            ploterror = True, fmt='b--', col='blue',debug =3 )
+            ploterror = True, fmt='b--', col='blue',debug =self.debug )
         if proc == 'match':
           plot_single_line(self.amu_match[meth],obs,label[2],col='r')
         else:

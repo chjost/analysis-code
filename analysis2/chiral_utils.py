@@ -697,7 +697,13 @@ def concat_data_cov(lst,prior=None,debug=1):
 
     A covariance matrix is a 2d array of shape (nvar,nmeas)
     data comes in as a list with layout of a ChirAna object
+
+    Parameters
+    ----------
+    lst: data of a chirana object
+    prior: possible array of priors, needs to be at least 2d with shape[1]=nboot
     """
+    
     # get layout values
     # last shape entry is number of bootstrapsamples
     nmeas = lst[0].shape[-1]
@@ -706,7 +712,7 @@ def concat_data_cov(lst,prior=None,debug=1):
     for n in lst:
         nvar += n.shape[0]*n.shape[1]
     if prior is not None:
-        nvar += 1
+        nvar += prior.shape[0]
     # initialize data array
     d = np.zeros((nvar,nmeas))
     # fill array
@@ -722,7 +728,7 @@ def concat_data_cov(lst,prior=None,debug=1):
                 d[index] = l[_ens,_mu,0]
         offset += ens*mu
     if prior is not None:
-        d[-1] = prior
+        d[offset:] = prior
     return d
 
 def concat_data_fit(lst,space,prior=None,debug=1):
@@ -759,7 +765,13 @@ def concat_data_fit(lst,space,prior=None,debug=1):
                   tmp.append(lst[i][...,b].reshape((ens*mu)))
                 else:
                   tmp.append(lst[i][...,b].reshape((ens*mu,dim)))
-            tmp.append(prior[b])
+            if len(prior) < nboot:
+                _p = []
+                for p in prior:
+                    _p.append(p[b])
+                tmp.append(_p)  
+            else:
+                tmp.append(prior[b])
             tmpnt = beta(*tmp)
             d.append(tmpnt)
     # Code doubling in favour of faster for loop
@@ -772,7 +784,10 @@ def concat_data_fit(lst,space,prior=None,debug=1):
                 ens = lst[i].shape[0]
                 mu = lst[i].shape[1]
                 dim = lst[i].shape[2]
-                tmp.append(lst[i][...,b].reshape((ens*mu,dim)))
+                if dim==1:
+                  tmp.append(lst[i][...,b].reshape((ens*mu)))
+                else:
+                  tmp.append(lst[i][...,b].reshape((ens*mu,dim)))
             # TODO: Bad style think of something else
             tmpnt = beta(*tmp)
             d.append(tmpnt)
@@ -812,13 +827,31 @@ def cut_data(x,y,interval):
         tmp = x[:,0] < interval
     elif interval < 0.:
         tmp = x[:,0] > -interval
-    print("y-shape before cut:")
-    print(y.shape)
+    print("x-shape before cut:")
+    print(x.shape)
     _x = x[tmp]
     _y = y[tmp]
-    print("y-data after cut:")
-    print(_y[:,0])
-    print("y-shape after cut:")
-    print(_y.shape)
+    print("x-data after cut:")
+    print(_x[:,0])
+    print("x-shape after cut:")
+    print(_x.shape)
     
     return _x, _y
+ 
+def update_shapes(x,y):
+    _new_x_shape = ()
+    _new_y_shape = ()
+    nb_x_ens = []
+    nb_y_ens = []
+    for d in zip(x,y):
+        if d[0].shape[0] > 0:
+            nb_x_ens.append(d[0].shape[0])
+            nb_y_ens.append(d[1].shape[0])
+    #TODO: Think about something more elegant
+    _new_x_shape = (len(nb_x_ens), tuple(nb_x_ens),
+                    x[0].shape[1], x[0].shape[2], x[0].shape[3]) 
+    _new_y_shape = (len(nb_y_ens), tuple(nb_y_ens),
+                    y[0].shape[1], y[0].shape[2], y[0].shape[3])
+    print(_new_x_shape)
+    print(_new_y_shape)
+    return _new_x_shape, _new_y_shape

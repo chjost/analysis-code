@@ -17,7 +17,7 @@ from in_out import check_write
 from chiral_functions import *
 
 class LatticePlot(object):
-    def __init__(self, filename, join=False):
+    def __init__(self, filename, join=False, debug=0):
         """Initialize a plot.
 
         Parameters
@@ -37,6 +37,8 @@ class LatticePlot(object):
         self.join=join
         self.title=None
         self.filename=filename
+        # set debug level for depending funtions default is no debug (0)
+        self.debug=debug
         if join:
             self.cycol = itertools.cycle('bgrcmk').next
             self.cyfmt = itertools.cycle('^vsd>o').next
@@ -798,39 +800,35 @@ class LatticePlot(object):
             _X = chirana.x_data[i][:,:,0,0].flatten()
             _Y = chirana.y_data[i][:,:,0,0].flatten()
             _dy = chirana.y_data[i][:,:,0,:].reshape((chirana.y_data[i].shape[0]*chirana.y_data[i].shape[1],chirana.y_data[i].shape[-1]))
-            print("yerror shape is:")
-            print(_dy.shape)
             _mean, _dy = compute_error(_dy,axis=1)
-            print(_dy.shape)
-            plot_data(_X,_Y,_dy,label=a,col=col[i],fmt=fmt_pts[i])
+            plot_data(_X,_Y,_dy,label=a,col=col[i],fmt=fmt_pts[i],debug=self.debug)
             # Check if we want to plot a function in addition to the data
-            #if func is not None:
-                #print("Arguments for plotting function")
-                #print(args[i])
-                #for s in chirana.x_data[i][0,:,1,0]: 
-                  # Check for numbers of lattice spacings, if > 1 loop over args
-                  #if len(beta)==1:
-                  #    plotargs = np.hstack((args,s,r))
-                  #else:
-                  # adapt shape for errorbands in plot_function
-                  #_mus = np.full((args.shape[1],1),s) 
-                  #plotargs = np.hstack((args[i],_mus))
+            if func is not None:
+                if self.debug > 0:
+                    print("Arguments for plotting function")
+                    print(args[i])
+                for s in chirana.x_data[i][0,:,1,0]: 
+                   #Check for numbers of lattice spacings, if > 1 loop over args
+                  if len(beta)==1:
+                      plotargs = np.hstack((args,s,r))
+                  else:
+                   #adapt shape for errorbands in plot_function
+                      _mus = np.full((args.shape[1],1),s) 
+                      plotargs = np.hstack((args[i],_mus))
                   #plotargs=None
-                  #print("Arguments to plotting function")
-                  #print(plotargs)
-                  #plot_function(func,xlim,plotargs,label=None,ploterror=True)
+                  plot_function(func,xlim,plotargs[i],label=None,ploterror=True)
             plt.xlim(xlim[0],xlim[1])
             plt.locator_params(nbins=4)
             plt.xlabel(label[0],fontsize=24)
             plt.ylabel(label[1],fontsize=24)
-            #self.save()
+            self.save()
         # plot a vertical dashed line at physical x_value
-        if func is not None:
-            plot_function(func,xlim,args,label=r'LO $\chi$-pt',ploterror=True)
+        #if func is not None:
+        #    plot_function(func,xlim,args,label=r'LO $\chi$-pt',ploterror=True)
         if x_phys is not None:
             plt.axvline(x=x_phys, color='k', ls='--', label=label[0]+'_phys.')
         plt.xlim(xlim[0],xlim[1])
-        plt.ylim(ylim[0],ylim[1])
+        #plt.ylim(ylim[0],ylim[1])
         plt.locator_params(nbins=4)
         plt.xlabel(label[0],fontsize=24)
         plt.ylabel(label[1],fontsize=24)
@@ -843,15 +841,16 @@ class LatticePlot(object):
 
     # Dirty helper function to abbreviate plot_chiral_ext
     def shape_data_kk(self,x,y,args):
-        print("argument shape:")
-        print(args.shape)
         _X = x[:,:,0,0].flatten()*args[0,0]/args[0,1]
-        print("x-data:")
-        print(_X)
         _Y = y[:,:,0,0].flatten()
         _dy = y[:,:,0,:].reshape((y.shape[0]*y.shape[1],y.shape[-1]))
-        print("yerror shape is:")
-        print(_dy.shape)
+        if self.debug > 0:
+            print("argument shape:")
+            print(args.shape)
+            print("yerror shape is:")
+            print(_dy.shape)
+            print("x-data:")
+            print(_X)
         return _X,_Y,_dy
 
     # Dirty helper function to abbreviate plot_chiral_ext
@@ -866,18 +865,19 @@ class LatticePlot(object):
         else:
             _X = x[:,:,0,0].flatten()
        
-        print("x-data:")
-        print(_X)
         _Y = y[:,:,0,0].flatten()
         _dy = y[:,:,0,:].reshape((y.shape[0]*y.shape[1],y.shape[-1]))
-        print("yerror shape is:")
-        print(_dy.shape)
+        if self.debug > 0:
+            print("x-data:")
+            print(_X)
+            print("yerror shape is:")
+            print(_dy.shape)
         return _X,_Y,_dy
 
     def plot_chiral_ext(self, chirana, beta, label, xlim, ylim=None, func=None,
                        args=None,calc_x=None, ploterror=True, kk=True,
                        gamma=False, x_phys=None,xcut=None,plotlim=None,
-                       argct=None,sublo=False,debug=0):
+                       argct=None,sublo=False):
         """ Function to plot a chiral extrapolation fit.
         
         This function sets up a plotter object, puts in the data in the right
@@ -916,7 +916,8 @@ class LatticePlot(object):
                 _X,_Y,_dy = self.shape_data_pik(chirana.x_data[i],
                                                 y_in,gamma=gamma)
             _mean, _dy = compute_error(_dy,axis=1)
-            plot_data(_X,_Y,_dy,label=a,col=col[i],fmt=fmt_pts[i],alpha=1.)
+            plot_data(_X,_Y,_dy,label=a,col=col[i],fmt=fmt_pts[i],alpha=1.,
+                      debug=self.debug)
             # Check if we want to plot a function in addition to the data
             # check for lattice spacing dependence
         if func is not None:
@@ -928,11 +929,12 @@ class LatticePlot(object):
                                             label=dat_label[i],
                                             ploterror=ploterror,
                                             fmt=col[i]+fmt_ls[i],col=col[i],
-                                            debug=3)
+                                            debug=self.debug)
                     else:
                         plot_function(func,xlim,args[i],calc_x=calc_x,
                                   label=dat_label[i], ploterror=ploterror,
-                                  fmt=col[i]+fmt_ls[i],col=col[i], debug=3)
+                                  fmt=col[i]+fmt_ls[i],col=col[i],
+                                  debug=self.debug)
 
             if args.shape[0]==1:
                 col='k'
@@ -942,11 +944,11 @@ class LatticePlot(object):
                                         label=dat_label[0],
                                         ploterror=ploterror,
                                         fmt=col+fmt_ls,col=col,
-                                        debug=3)
+                                        debug=self.debug)
                 else:
                     plot_function(func,xlim,args[0],calc_x=calc_x,
                               label=dat_label[0], ploterror=ploterror,
-                              fmt=col+fmt_ls,col=col, debug=3)
+                              fmt=col+fmt_ls,col=col, debug=self.debug)
 
 
         plt.xlabel(label[0],fontsize=24)
@@ -990,7 +992,8 @@ class LatticePlot(object):
               fmt='k--',calc_x=calc_x, ploterror=True)
       else:
           print(args.shape)
-          plot_function(func, xlim, args, 'cont.', fmt='k--', ploterror=True)
+          plot_function(func, xlim, args, 'cont.', fmt='k--',
+              ploterror=True,debug=self.debug)
       if phys ==True:
           plt.errorbar(chirana.phys_point[0,0],chirana.phys_point[1,0],
                        chirana.phys_point[1,1],xerr=chirana.phys_point[0,1],

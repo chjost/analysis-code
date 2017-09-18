@@ -309,7 +309,7 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
 
 # Tryout from devel_branch
 def plot_data(X, Y, dY, label, plotrange=None, dX=None, fmt="x", col='b',
-    alpha=None, debug=2):
+    alpha=None, debug=0):
     """A function that plots data.
 
     Parameters

@@ -387,8 +387,9 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, mute=None, debug=0)
           #print(cov)
     cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
     corr = np.corrcoef(Y.T)
-    print("In fitting correlation matrix is:")
-    print(corr)
+    if debug > 0:
+        print("In fitting correlation matrix is:")
+        print(corr)
     #print("Correlation matrix for fit is:\n %r" %corr)
     # Eigendecomposition of covariance matrix with screen output
     # eig_decomp(cov)
@@ -444,10 +445,11 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, mute=None, debug=0)
                 res[b] = np.array(p)
                 # check the results with original data
             chi = errfunc(res[0],X,Y[0],cov)
-            print("Check of errorfunction:")
-            print(chi)
-            print("Chi_squared manually")
-            print(np.sum(np.square(chi)))
+            if debug > 0:
+                print("Check of errorfunction:")
+                print(chi)
+                print("Chi_squared manually")
+                print(np.sum(np.square(chi)))
     else:
         for b in range(samples):
             #if b == 0:
@@ -524,71 +526,51 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
     ndarray
         The p-values of the fit
     """
-    #_cov = custom_cov(y,correlated,debug =3) 
     if cov is not None:
         _cov = cov
     else:
         _cov = np.cov(y)
-    if not correlated:
-      _cov = np.diag(np.diagonal(_cov))
-        #print cov
-    else:
-          #_cov = np.zeros((y.shape[0],y.shape[0]))
-          #for i in range(12):
-          #    _tmp = np.cov(y[3*i:3*i+3])
-          #    #print("\nCovariance submatrix %d" %i)
-          #    #print(_tmp)
-          #    _cov[3*i:3*i+3,3*i:3*i+3]=_tmp
-          #for k in range(36,42):
-          #    _cov[k,k] = np.cov(y[k])
-          _cov = np.cov(y)
-    _cov = (np.linalg.cholesky(np.linalg.inv(_cov))).T
     if debug > 0:
+        print("In chiral fit: fit correlated? %r" %correlated)
         print("vector of inverse errors: %r" % cov)
-        #print("vector of x-values: %r" % x[0])
-        #print("vector of y-values: %r" % y[0])
+        print("vector of x-values: %r" % x[0])
+        print("vector of y-values: %r" % y[0])
         print("shape of y-values:")
         print(y.shape)
         print("shape of x-values:")
         print(x.shape)
         print("shape of err-values:")
         print(_cov.shape)
-    #TODO: Get samplesize from elsewhere
-    #samples=x.shape[-1]
     samples=len(x)
     chisquare=np.zeros((samples,))
     res = np.zeros((samples,len(start)))
-    #dof = float(y.shape[0]-len(start))
     dof = float(_cov.shape[0]-len(start))
-    #diag = np.ones(len(start))
     for b in range(samples):
-        if b == 0:
+        # TODO: If clauses in for loop to slow?
+        if b == 0 and debug > 0:
           print("Overview over the data used:")
           print("x-data for fit")
           print(x[b])
           print("y-data for fit")
           print(y[b])
           print("inverse covariance matrix used:")
-          print(cov)
-        if b == (samples-1):
+          print(_cov)
+        if b == (samples-1) and debug > 0:
           print("arguments:")
           print(res[0])
-        #print("data for fit %d" %b)
-        #print(err,x[...,b],y[...,b]) 
-        #p,cov1,infodict,mesg,ier = leastsq(errfunc, start,
-        #    args=(x[...,b],y[...,b],_cov), full_output=1, factor=.1)
         p,cov1,infodict,mesg,ier = leastsq(errfunc, start,
-            args=(x[b],y[b],cov), full_output=1, factor=.1)
+            args=(x[b],y[b],_cov), full_output=1, factor=.1)
         chisquare[b] = float(sum(infodict['fvec']**2.))
         res[b] = np.array(p)
-        #print("Fit %d converged with reason %d, %s" %(b,ier,mesg))
-    #chi = errfunc(res[0],x[...,0],y[...,0],_cov)
-    chi = errfunc(res[0],x[0],y[0],cov)
-    print("Check of errorfunction:")
-    print(chi)
-    print("Chi_squared manually")
-    print(np.sum(np.square(chi)))
-    print(chisquare[0])
+        if debug > 0:
+            print("Fit %d converged with reason %d, %s" %(b,ier,mesg))
+    chi = errfunc(res[0],x[0],y[0],_cov)
+    if debug > 0:
+        print("Check of errorfunction:")
+        print(chi)
+        print("Chi_squared manually")
+        print(np.sum(np.square(chi)))
+        print(chisquare[0])
     # calculate mean and standard deviation
     res_mean, res_std = compute_error(res)
     # p-value calculated
@@ -607,64 +589,6 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
         print("p-value: %.3f" % pvals[0]) 
 
     return res, chisquare, pvals
-
-    ## degrees of freedom
-    #dof = float(Y.shape[1]-len(start)) 
-    #samples = Y.shape[0]
-    ## create results arrays
-    #res = np.zeros((samples, len(start)))
-    #chisquare = np.zeros(samples)
-    ## The FIT to the boostrap samples
-    #if debug > 1:
-    #    print("fitting the data")
-    #if add is None:
-    #    # Enable multiple bootstrapsamples for x-values pair samplewise
-    #    print("x-shape in fitting is:")
-    #    print(X.shape)
-    #    print(Y.shape)
-    #    # This is a nasty hack to enable fitting for several bootstrapsamples in
-    #    # the xdata
-    #    #TODO: Solve this another way, if possible, unify array layouts
-    #    if len(X.shape) == 2 and X.shape[-1]==Y.shape[0]: 
-    #        for b in range(samples):
-    #            p,cov1,infodict,mesg,ier = leastsq(errfunc, start, args=args,
-    #                                               full_output=1, factor=.1)
-    #            chisquare[b] = float(sum(infodict['fvec']**2.))
-    #            res[b] = np.array(p)
-    #    else:
-    #        for b in range(samples):
-    #            p,cov1,infodict,mesg,ier = leastsq(errfunc, start, args=args,
-    #                                               full_output=1, factor=.1)
-    #            chisquare[b] = float(sum(infodict['fvec']**2.))
-    #            res[b] = np.array(p)
-    #else:
-    #    for b in range(samples):
-    #        p,cov1,infodict,mesg,ier = leastsq(errfunc, start, args=args,
-    #                                           full_output=1, factor=.1)
-    #        chisquare[b] = float(sum(infodict['fvec']**2.))
-    #        res[b] = np.array(p)
-    ## calculate mean and standard deviation
-    #res_mean, res_std = compute_error(res)
-    ## p-value calculated
-    #pvals = 1. - scipy.stats.chi2.cdf(chisquare, dof)
-
-    ## writing summary to screen
-    #if debug > 3:
-    #    if correlated:
-    #        print("fit results for a correlated fit:")
-    #    else:
-    #        print("fit results for an uncorrelated fit:")
-    #    print("degrees of freedom: %f\n" % dof)
-    #    print("bootstrap samples: %d\n" % samples)
-    #    
-    #    print("fit results:")
-    #    for rm, rs in zip(res[0], res_std):
-    #        print("  %.6e +/- %.6e" % (rm, rs))
-    #    print("Chi^2/dof: %.6e +/- %.6e" % (chisquare[0]/dof, np.std(chisquare)
-    #          /dof))
-    #    print("p-value: %.3e" % pvals[0]) 
-
-    #return res, chisquare, pvals
 
 def compute_dE(mass, mass_w, energy, energy_w, isdependend=False, flv_diff=False):
     print("Compute dE flv_diff = %s" % flv_diff)

@@ -23,10 +23,11 @@ from chiral_utils import evaluate_phys
 
 class ChiralFit(fit.LatticeFit):
     
-    def __init__(self,fit_id, errfunc):
+    def __init__(self,fit_id, errfunc, debug=0):
         self.fit_id = fit_id
         self.fitfunc = None
         self.errfunc = errfunc
+        self.debug=debug
         
     def cut_data(self,x,y,interval):
         """ cut data of chiral fit object according to given interval
@@ -45,31 +46,27 @@ class ChiralFit(fit.LatticeFit):
         #cut the xdata if necessary
         # implement a cut on the data if given, negative means everything above
         # that x-value
-        print("interval is: %r" %interval)
+        if self.debug > 0:
+            print("interval is: %r" %interval)
         # only interested in first range
         if hasattr(interval,"__iter__"):
             sub = (0,)*len(_x_shape[1:])
             select = (slice(None),)+sub
-            print(x[select])
             lo = x[select] > interval[0]
             hi = x[select] < interval[1]
             tmp = np.logical_and(lo,hi)
-            print("Shape for cutting:")
             # should be a 1d array
-            print(tmp)
         elif interval >= 0.:
             tmp = x[:,0] < interval
         elif interval < 0.:
             tmp = x[:,0] > -interval
-        print("y-shape before cut:")
-        print(y.shape)
         _x = x[tmp]
         _y = y[tmp]
-        print("y-data after cut:")
-        print(_y[:,0])
-        print("y-shape after cut:")
-        print(_y.shape)
-        
+        if self.debug > 0:
+            print("y-data after cut:")
+            print(_y[:,0])
+            print("y-shape after cut:")
+            print(_y.shape)
         return _x, _y
 
     def chiral_fit(self, X, Y, start=None, xcut=None, ncorr=1,
@@ -110,8 +107,8 @@ class ChiralFit(fit.LatticeFit):
         #shape1 = (_X.shape[0], len(start), _Y.shape[0])
         #shape2 = (_X.shape[0], _Y.shape[0])
         #TODO: Get array shapes for fitresult, perhaps a member variable
-        shape1 = (1500, len(start), 1)
-        shape2 = (1500, 1)
+        shape1 = (len(_X), len(start), 1)
+        shape2 = (len(_X), 1)
         #print(_Y)
         #shape1 = (_Y.shape[-1], len(start), 1)
         #shape2 = (_Y.shape[-1], 1)
@@ -121,23 +118,11 @@ class ChiralFit(fit.LatticeFit):
           fitres.create_empty(shape1, shape2,ncorr)
         else:
           raise ValueError("ncorr needs to be integer")
-        # fit the data
-        #dof = _X.shape[0] - len(_start)
-        dof = 11 - len(_start)
-        print("In global fit, dof are: %d" %dof)
-         #fit every bootstrap sample
+        # fit the function
+        print("Doing global fit ...")
         tmpres, tmpchi2, tmppval = globalfitting(self.errfunc, _X, _Y, _start,
             parlim=parlim, debug=debug,correlated=correlated,cov=cov, add=add)
         fitres.add_data((0,0), tmpres, tmpchi2, tmppval)
-        #timing = []
-        #for i in range(ncorr): 
-        #    timing.append(time.clock())
-        #    #if i % 100:
-        #    #    print("%d of %d finished" % (i+1, _X.shape[0]))
-        #t1 = np.asarray(timing)
-        #print("total fit time %fs" % (t1[-1] - t1[0]))
-        #t2 = t1[1:] - t1[:-1]
-        #print("time per fit %f +- %fs" % (np.mean(t2), np.std(t2)))
         return fitres
 
 #class ChiralRes(FitResult):

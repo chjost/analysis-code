@@ -95,7 +95,7 @@ def main():
     fpi_raw = ana.read_extern("../plots2/data/fpi.dat",(1,2))
     print(fpi_raw)
 
-    read = False
+    read = True 
 ################### Setup chiral analysis ######################################
     extrapol = ana.ChirAna("pi-K_I32_chipt_A1",correlated=False,gamma=False,match=True)
     # have five x-values: mk,mpi,meta,fpi,r0/a
@@ -216,7 +216,6 @@ def main():
                 extrapol.add_data(np.sqrt(mksq_fse.eval_obs[2]),(i,j,0,1),'x')
                 # Add f_pi data
                 dummy, fpi = ana.prepare_fk(fpi_raw,e,1500)
-                print("0th Bootstrapsample for fpi: %f" %fpi[0])
                 extrapol.x_data[i][j,0,2] = fpi
                 extrapol.add_extern_data("../plots2/data/k_fse_fpi.dat",(i,j,0,2),e,
                                          dim='x',read='k_fse',square=False,
@@ -225,19 +224,17 @@ def main():
                 extrapol.x_data[i][j,0,3] = ext_data.get(a,'r0')
                 # Add M_eta data
                 extrapol.add_data(np.sqrt(metasq.eval_obs[2]),(i,j,0,4),'x')
-    header = ["#amu_l", "amu_s", "mpi", "dmpi", "mk", "dmk", "fpi", "dfpi",
-              "r0/a", "d(r0/a)", "m_eta","dm_eta","mu a0", "d(mu a0)"]
-    ana.print_summary(extrapol,header,amu_l_dict,amu_s_dict)
     extrapol.save(resdir)
 
 ################################################################################
 #                   do chiral extrapolation                                    #
 ################################################################################
     # Include bootstrapped L_piK as a prior value taken from HPQCD
-    l_5 = ana.draw_gauss_distributed(5.41e-3,3e-5,(1500,),origin=True)
+    l_5 = np.atleast_2d(ana.draw_gauss_distributed(5.41e-3,3e-5,(1500,),
+      origin=True))
     #extrapol.fit_mu_a32(plotdir=plotdir,LO=False,prior=l_5)
     start = [0.1,0.1,0.1]
-    extrapol.fit(ana.pik_I32_chipt_fit,start,plotdir=plotdir,prior=l_5,add=start[1],debug=0)
+    extrapol.fit(ana.err_func,start,plotdir=plotdir,prior=l_5)
     plotargs = extrapol.fitres.data[0]
     # NLO arguments need to have bootstrapsamples as first argument
     extrapol.mu_a0_pik_phys(cont_data.get('mpi_0'),cont_data.get('mk'),
@@ -249,9 +246,9 @@ def main():
 ################################################################################
     args = np.asarray([np.vstack((plotargs[:,0,0], plotargs[:,1,0],
       plotargs[:,2,0],extrapol.x_data[r][0,0,3])).T for r in range(len(space))])
-    print("Argument shape after stacking")
-    print("Lattice artifact:")
-    print(plotargs[0,2,0])
+    #print("Argument shape after stacking")
+    #print("Lattice artifact:")
+    #print(plotargs[0,2,0])
     # Plot the data the given function
     label=[r'$\mu_{\pi K}/f_{\pi}$',r'$\mu_{\pi K}\,a_{3/2}$',r' ',
            r'$(\mu_{\pi K}/f_{\pi})_{phys}$']
@@ -302,7 +299,6 @@ def main():
                           lim_x,args,argct='multiarg',phys=False,calc_x=ana.calc_x_plot)
     chiral_plot.save()
     del chiral_plot
-    extrapol.fitres.print_data(1)
     # calculate factor for converting to mpi_a0
     fac = cont_data.get('mpi_0')/ana.reduced_mass(cont_data.get('mpi_0'),
                                                   cont_data.get('mk'))

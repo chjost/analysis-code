@@ -39,7 +39,7 @@ class ChirAna(object):
   In addition it is possible to fit the data to a given function
   """
   def __init__(self,proc_id=None,match=False,correlated=True,combined=False,
-               fit_ms=False,gamma=False):
+               fit_ms=False,gamma=False,debug=0):
     """ Initialize Chiral Analysis object
 
     Parameters
@@ -93,8 +93,14 @@ class ChirAna(object):
     self.plot_cont_ext = None
     # This is the function for continuum plotting
     self.plot_cont_func = None
+    # Fit information of chiral extrapolations 2d array of chi^2 and possible
+    # p-value
+    self.fit_stats = None
+    # TODO: Does not belong here
     # Boolean for using Gamma method
     self.gamma=gamma
+    # Debug level (0 means no debug info)
+    self.debug=debug
 
   def wipe_data(self, dim):
 
@@ -1113,45 +1119,57 @@ class ChirAna(object):
                                                 chwrap.mua0_I12_from_fit)
       self.phys_point[0]=compute_error(chwrap.calc_x_plot(_x))
       self.phys_point[1]=compute_error(self.phys_point_fitres.data[0])
-
-      print("\nPhysical point result:")
-      print("x: %f +/- %f" %(self.phys_point[0][0],self.phys_point[0][1]))
-      print("y %f +/- %f\n" %(self.phys_point[1][0],self.phys_point[1][1]))
+      if self.debug > 0:
+          print("\nPhysical point result:")
+          print("x: %f +/- %f" %(self.phys_point[0][0],self.phys_point[0][1]))
+          print("y %f +/- %f\n" %(self.phys_point[1][0],self.phys_point[1][1]))
  
   # This should be a general fitfunction just taking the fitfunction as an
   # argument
-  def fit(self,fitfunc,start,plotdir=None,add=None,prior=None,xcut=None,debug=2):
+  def fit(self,err_func,start,plotdir=None,correlated=False,prior=None,
+          xcut=None):
       """ Fit fitfunc to the data of self
 
       Parameters
       ----------
       fitfunc: callable, function that gets fitted
       """
+      #cut data before conversion to named tuple
+      _x_data, _y_data = [], []
+      for d in zip(self.x_data,self.y_data):
+          if xcut is not None:
+              tmp_x, tmp_y = chut.cut_data(d[0],d[1],xcut)
+          else:
+              tmp_x, tmp_y = d[0],d[1]
+          _x_data.append(tmp_x)
+          _y_data.append(tmp_y)
+      if xcut is not None:
+          print("shapes before update")
+          print(self.x_shape)
+          print(self.y_shape)
+          self.x_shape, self.y_shape = chut.update_shapes(_x_data,_y_data)
+      _x = chut.concat_data_fit(_x_data,self.lat_dict.keys())
+      _y = chut.concat_data_fit(_y_data,self.lat_dict.keys(),prior)
 
-      # Look at the shapes first
-      print(self.x_shape)
-      print(self.y_shape)
-
-      _x = chut.concat_data_fit(self.x_data,self.lat_dict.keys())
-      _y = chut.concat_data_fit(self.y_data,self.lat_dict.keys(),prior)
-      if add is not None:
-          _errfunc = lambda p, x, y, e, error: np.dot(error, (y-fitfunc(x,p,e)).T)
-      else:
-          _errfunc = lambda p, x, y, error: np.dot(error, (y-fitfunc(x,p)).T)
-      _fit = ChiralFit("fit",chwrap.err_func)
+      _fit = ChiralFit("fit",err_func)
       # determine covariance matrix, including prior
-      _y_cov = chut.concat_data_cov(self.y_data,prior=prior)
+      _y_cov = chut.concat_data_cov(_y_data,prior=prior)
       _cov = np.cov(_y_cov)
       if self.correlated is False:
           _cov = np.diag(np.diagonal(_cov))
       _cov = (np.linalg.cholesky(np.linalg.inv(_cov))).T
-      self.fitres = _fit.chiral_fit(_x,_y,start,xcut=xcut,parlim=None,cov=_cov,
-                                      debug=debug)
+      if self.debug > 0:
+          print("in chiral fit: inverse covariance matrix:")
+          print(_cov)
+      self.fitres = _fit.chiral_fit(_x,_y,start,parlim=None,
+                                    correlated=correlated,cov=_cov,
+                                    debug=self.debug)
       self.fitres.set_ranges(np.array([[[0,len(_x)]]]),[[1,]])
-      self.fitres.print_details()
-      ## Save the fitresult data
-      #if dat is not None:
-      #  self.fitres.save(dat+self.proc_id+'.npz')
-      ## Calculate check of the data for original data
-      #args = self.fitres.data[0]
+      if self.debug > 0:
+          self.fitres.print_details()
+      # build fit_stats array
+      _chi2 = self.fitres.chi2[0][0,0]
+      _pval = self.fitres.pval[0][0,0]
+      _dof = _cov.shape[0]-len(start)
+      self.fit_stats = np.atleast_2d(np.asarray((_dof,_chi2,_pval)))
 

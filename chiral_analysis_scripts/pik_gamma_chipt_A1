@@ -102,6 +102,7 @@ def main():
     fpi_raw = ana.read_extern("../plots2/data/fpi.dat",(1,2))
     print(fpi_raw)
     chipt_tree = lambda p,x : -x**2/(4.*np.pi) 
+    read = True
     #------------------------- Setup objects -----------------------------------
     extrapol = ana.ChirAna("pi-K I-3_2_fse_A1",correlated=False,gamma=True)
     # have two x-values: mk/mpi, a/r0
@@ -113,116 +114,119 @@ def main():
     lyt_yvals = (3,ens_shape_chirana,1,1,1500)
     extrapol.create_empty(lyt_xvals,lyt_yvals,lat_dict=lat_dict)
     print("\nSetup complete, begin chiral analysis")
+    if read is True:
+        extrapol.load(resdir)
+    else:
     #------------------------- Get x-values --------------------------------
-    #for i,a in enumerate(space):
-    for i,a in enumerate(space):
-        print("\nWorking at lattice spacing %s" %a)
-        for j,e in enumerate(lat_dict[a]):
-            # if using D30.48 modify lowest amus to 0.0115
-            if e == 'D30.48':
-                print("modifying lowest mu_s values")
-                mu_s_dict[a][0] ='amu_s_115' 
-                amu_s_dict[a][0]=0.0115
-################### read in M_K^FSE ############################################
-            mksq_fse = ana.MatchResult("mksq_fse_M1A_%s"%e,save=datadir+'%s/'%e)
-            ana.MatchResult.create_empty(mksq_fse,1500,3)
-            mk_names = [datadir+'%s/' % (e) +s+'/fit_k_unit_%s.npz' % (e) for s in mu_s_dict[a]]
-            mksq_fse_meas = ana.init_fitreslst(mk_names)
-            mksq_fse.load_data(mksq_fse_meas,1,amu_s_dict[a],square=True)
-            mksq_fse.add_extern_data('../plots2/data/k_fse_mk.dat',e,square=True,
-                                   read='fse_mk',op='div')
-            print("\nM_K^2:")
-            print(mksq_fse.obs[:,0])
+        for i,a in enumerate(space):
+            print("\nWorking at lattice spacing %s" %a)
+            for j,e in enumerate(lat_dict[a]):
+                # if using D30.48 modify lowest amus to 0.0115
+                if e == 'D30.48':
+                    print("modifying lowest mu_s values")
+                    mu_s_dict[a][0] ='amu_s_115' 
+                    amu_s_dict[a][0]=0.0115
+####    ############### read in M_K^FSE ############################################
+                mksq_fse = ana.MatchResult("mksq_fse_M1A_%s"%e,save=datadir+'%s/'%e)
+                ana.MatchResult.create_empty(mksq_fse,1500,3)
+                mk_names = [datadir+'%s/' % (e) +s+'/fit_k_unit_%s.npz' % (e) for s in mu_s_dict[a]]
+                mksq_fse_meas = ana.init_fitreslst(mk_names)
+                mksq_fse.load_data(mksq_fse_meas,1,amu_s_dict[a],square=True)
+                mksq_fse.add_extern_data('../plots2/data/k_fse_mk.dat',e,square=True,
+                                       read='fse_mk',op='div')
+                print("\nM_K^2:")
+                print(mksq_fse.obs[:,0])
 
-################### read in M_pi^FSE ###########################################
-            mpi_fse = ana.MatchResult("mpi_fse_M1A_%s"%e,save=datadir+'%s/'%e)
-            ana.MatchResult.create_empty(mpi_fse,1500,3)
-            mpi_names = [datadir+'%s/' % (e) +s+'/fit_pi_unit_%s.npz' % (e) for s in mu_s_dict[a]]
-            mpi_fse_meas = ana.init_fitreslst(mpi_names)
-            mpi_fse.load_data(mpi_fse_meas,1,amu_s_dict[a],square=False)
-            mpi_fse.add_extern_data('../plots2/data/k_fse_mpi.dat',e,square=False,
-                                   read='fse_mk',op='div')
-            print("\nM_pi:")
-            print(mpi_fse.obs[:,0])
+####    ############### read in M_pi^FSE ###########################################
+                mpi_fse = ana.MatchResult("mpi_fse_M1A_%s"%e,save=datadir+'%s/'%e)
+                ana.MatchResult.create_empty(mpi_fse,1500,3)
+                mpi_names = [datadir+'%s/' % (e) +s+'/fit_pi_unit_%s.npz' % (e) for s in mu_s_dict[a]]
+                mpi_fse_meas = ana.init_fitreslst(mpi_names)
+                mpi_fse.load_data(mpi_fse_meas,1,amu_s_dict[a],square=False)
+                mpi_fse.add_extern_data('../plots2/data/k_fse_mpi.dat',e,square=False,
+                                       read='fse_mk',op='div')
+                print("\nM_pi:")
+                print(mpi_fse.obs[:,0])
 
-################### build M_s^{2,FSE} ##########################################
-            mssq_fse = ana.MatchResult("mssq_fse_M1A_%s" % e,save = datadir+'%s/'%e)
-            ana.MatchResult.create_empty(mssq_fse,1500,3)
-            mssq_fse.set_data(mksq_fse.obs,amu_s_dict[a])
-            mssq_fse.add_data(np.square(mpi_fse.obs),idx=slice(0,3),op='min',
-                          fac=0.5)
-            print("\nM_s^2:")
-            print(mssq_fse.obs[:,0])
-            
-################### read in M_eta ##############################################
-            metasq = ana.MatchResult("metasq_M1A_%s"%e,save=datadir+'%s/'%e)
-            ana.MatchResult.create_empty(metasq,1500,3)
-            meta_names = ['/hiskp2/jost/eta_data/'+'%s/' % (e) +s+'/fit_eta_rm_TP0.npz' for s in mu_s_eta_dict[a]]
-            meta_meas = ana.init_fitreslst(meta_names)
-            metasq.load_data(meta_meas,1,amu_s_dict[a],square=True)
-            print("\nM_eta^2:")
-            print(metasq.obs[:,0])
-################### read in a_3/2 ##############################################
-            mua32_fse = ana.MatchResult("mua32_M1A_%s" %e,save=datadir+'%s/'%e)
-            ana.MatchResult.create_empty(mua32_fse,1500,3)
-            a32_names = [datadir+'%s/' % (e) +s+'/scat_len_TP0_%s.npz' % (e) for s in mu_s_dict[a]]
-            mua32_meas = ana.init_fitreslst(a32_names)
-            mua32_fse.load_data(mua32_meas,0,amu_s_dict[a],square=False)
-            
-################### build mu_piK a_3/2 #########################################
-            for s in range(3):
-                mua32_fse.obs[s] *= ana.reduced_mass(np.sqrt(mksq_fse.obs[s]),
-                                                 mpi_fse.obs[s]) 
-            print("\nmu_piK_a32:")
-            print(mua32_fse.obs[:,0])
-################################################################################
-#                   fix strange quark mass                                     #
-################################################################################
-            
-            evl_x = ana.mk_mpi_diff_phys(a, nboot, cont_data, ext_data)
-            print("\n(M^2_k-0.5*M^2_pi):")
-            print(ana.compute_error(evl_x))
-################### interpolate M_K^FSE ########################################
-            mksq_fse.amu = mssq_fse.obs
-            print("\nM_K^2:")
-            print(mksq_fse.obs[:,0])
-            label = [r'$a^2(M_K^2-0.5M^2_{\pi})$',r'$M_{K}^2$',
-                     r'$a^2(M_K^2-0.5M^2_{\pi}) = (aM_s^{\mathrm{ref}})^2$']
-            mksq_fse.eval_at(evl_x,plotdir=plotdir,
-                           ens=e,plot=True,label=label, meth=2)
+####    ############### build M_s^{2,FSE} ##########################################
+                mssq_fse = ana.MatchResult("mssq_fse_M1A_%s" % e,save = datadir+'%s/'%e)
+                ana.MatchResult.create_empty(mssq_fse,1500,3)
+                mssq_fse.set_data(mksq_fse.obs,amu_s_dict[a])
+                mssq_fse.add_data(np.square(mpi_fse.obs),idx=slice(0,3),op='min',
+                              fac=0.5)
+                print("\nM_s^2:")
+                print(mssq_fse.obs[:,0])
+                
+####    ############### read in M_eta ##############################################
+                metasq = ana.MatchResult("metasq_M1A_%s"%e,save=datadir+'%s/'%e)
+                ana.MatchResult.create_empty(metasq,1500,3)
+                meta_names = ['/hiskp2/jost/eta_data/'+'%s/' % (e) +s+'/fit_eta_rm_TP0.npz' for s in mu_s_eta_dict[a]]
+                meta_meas = ana.init_fitreslst(meta_names)
+                metasq.load_data(meta_meas,1,amu_s_dict[a],square=True)
+                print("\nM_eta^2:")
+                print(metasq.obs[:,0])
+####    ############### read in a_3/2 ##############################################
+                mua32_fse = ana.MatchResult("mua32_M1A_%s" %e,save=datadir+'%s/'%e)
+                ana.MatchResult.create_empty(mua32_fse,1500,3)
+                a32_names = [datadir+'%s/' % (e) +s+'/scat_len_TP0_%s.npz' % (e) for s in mu_s_dict[a]]
+                mua32_meas = ana.init_fitreslst(a32_names)
+                mua32_fse.load_data(mua32_meas,0,amu_s_dict[a],square=False)
+                
+####    ############### build mu_piK a_3/2 #########################################
+                for s in range(3):
+                    mua32_fse.obs[s] *= ana.reduced_mass(np.sqrt(mksq_fse.obs[s]),
+                                                     mpi_fse.obs[s]) 
+                print("\nmu_piK_a32:")
+                print(mua32_fse.obs[:,0])
+####    ############################################################################
+#                       fix strange quark mass                                     #
+####    ############################################################################
+                
+                evl_x = ana.mk_mpi_diff_phys(a, nboot, cont_data, ext_data)
+                print("\n(M^2_k-0.5*M^2_pi):")
+                print(ana.compute_error(evl_x))
+####    ############### interpolate M_K^FSE ########################################
+                mksq_fse.amu = mssq_fse.obs
+                print("\nM_K^2:")
+                print(mksq_fse.obs[:,0])
+                label = [r'$a^2(M_K^2-0.5M^2_{\pi})$',r'$M_{K}^2$',
+                         r'$a^2(M_K^2-0.5M^2_{\pi}) = (aM_s^{\mathrm{ref}})^2$']
+                mksq_fse.eval_at(evl_x,plotdir=plotdir,
+                               ens=e,plot=True,label=label, meth=2)
 
-################### interpolate M_eta ##########################################
-            metasq.amu = mssq_fse.obs
-            label = [r'$a^2(M_K^2-0.5M^2_{\pi})$',r'$M_{\eta}^2$',
-                     r'$a^2(M_K^2-0.5M^2_{\pi}) = (aM_s^{\mathrm{ref}})^2$']
-            metasq.eval_at(evl_x,plotdir=plotdir,
-                           ens=e,plot=True,label=label, meth=2)
+####    ############### interpolate M_eta ##########################################
+                metasq.amu = mssq_fse.obs
+                label = [r'$a^2(M_K^2-0.5M^2_{\pi})$',r'$M_{\eta}^2$',
+                         r'$a^2(M_K^2-0.5M^2_{\pi}) = (aM_s^{\mathrm{ref}})^2$']
+                metasq.eval_at(evl_x,plotdir=plotdir,
+                               ens=e,plot=True,label=label, meth=2)
 
-################### interpolate mu_piK a_3/2 ###################################
-            mua32_fse.amu = mssq_fse.obs
-            label = [r'$a^2(M_K^2-0.5M^2_{\pi})$',r'$\mu_{\pi K}\, a_{3/2}$',
-                     r'$a^2(M_K^2-0.5M^2_{\pi}) = (aM_s^{\mathrm{ref}})^2$']
-            mua32_fse.eval_at(evl_x,plotdir=plotdir,
-                           ens=e,plot=True,label=label, meth=2)
+####    ############### interpolate mu_piK a_3/2 ###################################
+                mua32_fse.amu = mssq_fse.obs
+                label = [r'$a^2(M_K^2-0.5M^2_{\pi})$',r'$\mu_{\pi K}\, a_{3/2}$',
+                         r'$a^2(M_K^2-0.5M^2_{\pi}) = (aM_s^{\mathrm{ref}})^2$']
+                mua32_fse.eval_at(evl_x,plotdir=plotdir,
+                               ens=e,plot=True,label=label, meth=2)
 
-################################################################################
-#                   copy to chiral analysis                                    #
-################################################################################
-            extrapol.add_data(np.sqrt(mksq_fse.eval_obs[2])/mpi_fse.obs[1],
-                              (i,j,0,0),dim='x')
-            dummy, fpi = ana.prepare_fk(fpi_raw,e,1500)
-            print("0th Bootstrapsample for fpi: %f" %fpi[0])
-            tmp_y = ana.gamma_pik(mpi_fse.obs[1], np.sqrt(mksq_fse.eval_obs[2]),
-                                  mua32_fse.eval_obs[2], fpi,
-                                  np.sqrt(metasq.eval_obs[2]))
-            extrapol.add_data(tmp_y,(i,j,0,0),dim='y')
+####    ############################################################################
+#                       copy to chiral analysis                                    #
+####    ############################################################################
+                extrapol.add_data(np.sqrt(mksq_fse.eval_obs[2])/mpi_fse.obs[1],
+                                  (i,j,0,0),dim='x')
+                dummy, fpi = ana.prepare_fk(fpi_raw,e,1500)
+                print("0th Bootstrapsample for fpi: %f" %fpi[0])
+                tmp_y = ana.gamma_pik(mpi_fse.obs[1], np.sqrt(mksq_fse.eval_obs[2]),
+                                      mua32_fse.eval_obs[2], fpi,
+                                      np.sqrt(metasq.eval_obs[2]))
+                extrapol.add_data(tmp_y,(i,j,0,0),dim='y')
+        extrapol.save(resdir)
     cut = [1.5,2.5]
     #cut = None 
     # Include bootstrapped L_piK as a prior value taken from NPLQCD 
-    l_5 = ana.draw_gauss_distributed(5.41e-3,3e-5,(1500,),origin=True)
-    extrapol.fit_mu_a32(plotdir=plotdir,xcut=cut,prior=l_5)
+    l_5 = np.atleast_2d(ana.draw_gauss_distributed(5.41e-3,3e-5,(1500,),origin=True))
     #For future use
-    #extrapol.fit(chwrap.gamma_errfunc,...)
+    start = [0.1,0.1]
+    extrapol.fit(ana.gamma_errfunc,start,prior=l_5,xcut=cut)
     plotargs = extrapol.fitres.data[0]
     args = np.asarray([plotargs[:,slice(0,2),0] for i in range(1)])
     # Plot the data the given function
@@ -242,6 +246,9 @@ def main():
     extrapol.mu_a0_pik_phys(cont_data.get("mpi_0"),cont_data.get("mk"),
                                      cont_data.get("fpi"),
                                      meta=cont_data.get("meta"),iso_32=True)
+    header = ["#amu_l", "amu_s", "mpi", "dmpi", "mk", "dmk", "fpi", "dfpi",
+              "r0/a", "d(r0/a)", "m_eta","dm_eta","mu a0", "d(mu a0)"]
+    ana.print_summary(extrapol,header,amu_l_dict,amu_s_dict)
     mupik_phys =ana.reduced_mass(cont_data.get("mpi_0"),cont_data.get("mk")) 
     mpi_by_mupik = cont_data.get("mpi_0")/mupik_phys
     print("mpi a_{3/2}:")
