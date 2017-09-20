@@ -102,7 +102,7 @@ def main():
     fpi_raw = ana.read_extern("../plots2/data/fpi.dat",(1,2))
     print(fpi_raw)
     chipt_tree = lambda p,x : -x**2/(4.*np.pi) 
-    read = True
+    read = False
     #------------------------- Setup objects -----------------------------------
     extrapol = ana.ChirAna("pi-K I-3_2_fse_A1",correlated=False,gamma=True)
     # have two x-values: mk/mpi, a/r0
@@ -246,8 +246,8 @@ def main():
     extrapol.mu_a0_pik_phys(cont_data.get("mpi_0"),cont_data.get("mk"),
                                      cont_data.get("fpi"),
                                      meta=cont_data.get("meta"),iso_32=True)
-    header = ["#amu_l", "amu_s", "mpi", "dmpi", "mk", "dmk", "fpi", "dfpi",
-              "r0/a", "d(r0/a)", "m_eta","dm_eta","mu a0", "d(mu a0)"]
+    header = ["#amu_l", "mpi/mk", "d(mpi/mk)", "Gamma", "d(Gamma)", "mu_match",
+        "d(mu_match)"]
     ana.print_summary(extrapol,header,amu_l_dict,amu_s_dict)
     mupik_phys =ana.reduced_mass(cont_data.get("mpi_0"),cont_data.get("mk")) 
     mpi_by_mupik = cont_data.get("mpi_0")/mupik_phys

@@ -1035,7 +1035,7 @@ class FitResult(object):
         return mka0_phys
 
     #TODO:  Think about placing this somewhere else
-    def calc_mua0_pik_phys(self, x, func):
+    def calc_mua0_pik_phys(self, x, func,debug =0):
         """Calculate m0ua0 for pi-K from fitted LECs and continuum input
         """ 
         self.calc_error()
@@ -1050,8 +1050,9 @@ class FitResult(object):
         _mua0_phys.create_empty(_shape, _shape, len(self.data))
         #print("physical x-values:")
         #print(np.asarray((x[0,0],x[0,1],x[0,2],x[0,3],x[0,4])))
-        print("parameters")
-        print(_pars.shape)
+        if debug > 0:
+            print("parameters")
+            print(_pars.shape)
         #print(func(_pars[0],np.asarray((x[0,0],x[0,1],x[0,2],x[0,3],x[0,4]))))
         for res in evaluate_phys(x, _pars[...,0], _pars_w, func, False):
             _mua0_phys.add_data(*res)

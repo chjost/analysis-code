@@ -1143,11 +1143,8 @@ class ChirAna(object):
               tmp_x, tmp_y = d[0],d[1]
           _x_data.append(tmp_x)
           _y_data.append(tmp_y)
-      if xcut is not None:
-          print("shapes before update")
-          print(self.x_shape)
-          print(self.y_shape)
-          self.x_shape, self.y_shape = chut.update_shapes(_x_data,_y_data)
+          #if xcut is not None:
+          #self.x_shape, self.y_shape = chut.update_shapes(_x_data,_y_data)
       _x = chut.concat_data_fit(_x_data,self.lat_dict.keys())
       _y = chut.concat_data_fit(_y_data,self.lat_dict.keys(),prior)
 

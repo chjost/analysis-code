@@ -79,8 +79,8 @@ def evaluate_phys(x, args, args_w ,func, isdependend):
   needed = np.zeros((nsam,))
   result = np.full(nsam,np.nan)
   # loop over samples
-  print("evaluate_phys:")
-  print args[0], x[0]
+  #print("evaluate_phys:")
+  #print args[0], x[0]
   for b in range(nsam):
     y = func(args[b],x[b])
     if y.shape[0] == 2:
@@ -811,30 +811,19 @@ def cut_data(x,y,interval):
     #cut the xdata if necessary
     # implement a cut on the data if given, negative means everything above
     # that x-value
-    print("interval is: %r" %interval)
     # only interested in first range
     if hasattr(interval,"__iter__"):
         sub = (0,)*len(_x_shape[1:])
         select = (slice(None),)+sub
-        print(x[select])
         lo = x[select] > interval[0]
         hi = x[select] < interval[1]
         tmp = np.logical_and(lo,hi)
-        print("Shape for cutting:")
-        # should be a 1d array
-        print(tmp)
     elif interval >= 0.:
         tmp = x[:,0] < interval
     elif interval < 0.:
         tmp = x[:,0] > -interval
-    print("x-shape before cut:")
-    print(x.shape)
     _x = x[tmp]
     _y = y[tmp]
-    print("x-data after cut:")
-    print(_x[:,0])
-    print("x-shape after cut:")
-    print(_x.shape)
     
     return _x, _y
  
@@ -844,9 +833,8 @@ def update_shapes(x,y):
     nb_x_ens = []
     nb_y_ens = []
     for d in zip(x,y):
-        if d[0].shape[0] > 0:
-            nb_x_ens.append(d[0].shape[0])
-            nb_y_ens.append(d[1].shape[0])
+        nb_x_ens.append(d[0].shape[0])
+        nb_y_ens.append(d[1].shape[0])
     #TODO: Think about something more elegant
     _new_x_shape = (len(nb_x_ens), tuple(nb_x_ens),
                     x[0].shape[1], x[0].shape[2], x[0].shape[3]) 
