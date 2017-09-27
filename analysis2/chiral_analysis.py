@@ -20,6 +20,7 @@ from fit import FitResult
 from globalfit import ChiralFit
 from statistics import compute_error, draw_gaussian_correlated
 from plot_functions import plot_function
+from covariance import mute
 
 """A class used for chiral analyses of matched results, does fitting and
 plotting as well
@@ -612,19 +613,21 @@ class ChirAna(object):
       _chi = np.dot(cov,_residuals)
       return _chi
 
-  def fit_strange_mass(self, datadir='./', debug=4):
+  def fit_strange_mass(self, datadir='./',ext=None, debug=4):
       r = np.r_[1.,1.,1.]
       z = np.r_[1.,1.,1.]
       p = np.r_[6.,0.1,1.]
       start=np.r_[r,z,p]
       # Get the prior samples
-      pr_r0 = np.vstack((self.ext_dat_lat.get('A','r0'),
-                    self.ext_dat_lat.get('B','r0'),
-                    self.ext_dat_lat.get('D','r0')))
+      if ext is None:
+          ext=self.ext_dat_lat
+      pr_r0 = np.vstack((ext.get('A','r0'),
+                    ext.get('B','r0'),
+                    ext.get('D','r0')))
 
-      pr_zp = np.vstack((self.ext_dat_lat.get('A','zp'), 
-                    self.ext_dat_lat.get('B','zp'),
-                    self.ext_dat_lat.get('D','zp')))
+      pr_zp = np.vstack((ext.get('A','zp'), 
+                    ext.get('B','zp'),
+                    ext.get('D','zp')))
       print("0th zp-sample %r:" %(pr_zp[0]))
       print("0th r0-sample %r:" %(pr_r0[0]))
       print("shape zp-sample:")
@@ -1132,7 +1135,12 @@ class ChirAna(object):
 
       Parameters
       ----------
-      fitfunc: callable, function that gets fitted
+      err_func: callable, the error function returning the outer product of
+                inverse covariance matrix and chi-values
+      start: tuple of start values for the fit
+      plotdir: string, path to where plots are saved
+      correlated: bool, Toggle full covariance matrix on/off
+      prior: 2d array, bootstrapsamples of priors to the fit
       """
       #cut data before conversion to named tuple
       _x_data, _y_data = [], []
@@ -1152,6 +1160,15 @@ class ChirAna(object):
       # determine covariance matrix, including prior
       _y_cov = chut.concat_data_cov(_y_data,prior=prior)
       _cov = np.cov(_y_cov)
+      _cov = mute(_cov)
+      # plot correlation matrix
+      if plotdir is not None:
+          corr = plot.LatticePlot(plotdir+"/corr_%s.pdf"%self.proc_id)
+          #corr.plot_heatmap(np.corrcoef(_y_cov),
+          #                  ["Correlation",["data","data"]])
+          corr.plot_heatmap((np.linalg.cholesky(np.linalg.inv(_cov))).T,
+                            ["Correlation",["data","data"]])
+          del corr
       if self.correlated is False:
           _cov = np.diag(np.diagonal(_cov))
       _cov = (np.linalg.cholesky(np.linalg.inv(_cov))).T

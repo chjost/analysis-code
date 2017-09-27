@@ -14,6 +14,35 @@ from chipt_nlo import *
 # Christian's packages
 import analysis2 as ana
 
+# TODO: Own file?
+# gmor-stuff
+
+def mpi_sq(ml, b0=None):
+    if b0 is None:
+      #TODO: where to take B_0 from?
+      b0 = ana.draw_gauss_distributed(origin=True)
+    return 2.*b0*ml
+
+def mk_sq(ml, ms=None, b0=None):
+    if b0 is None:
+      #TODO: where to take B_0 from?
+      b0 = ana.draw_gauss_distributed(origin=True)
+    if ms is None:
+      ms = ana.draw_gauss_distributed(origin=True)
+    return b0*(ml+ms)
+
+# Gell-Mann-Okubo formula to calculate squared eta mass
+def m_eta_sq(mpi,mk):
+    return (4.*mk**2-mpi**2)/3.
+
+def f_pi(ml,f0=None,l4=None,b0=None):
+    if f0 is None:
+      #f0 = ana.draw_gauss_distributed(93.3,0,ml.shape[0],origin=True)
+      f0 = np.full_like(ml,93.3)
+    if l4 is None:
+      l4 = ana.draw_gauss_distributed(ml.shape[0],origin=True,seed=1337)
+    return f0 + mpi_sq(ml,b0)*l4/(16.np.pi**2*f0)
+
 # chipt functions for fitting, according to arXiv:1110.1422 
 
 def chi_I32_nlo(ren,mpi,mk,meta=None):

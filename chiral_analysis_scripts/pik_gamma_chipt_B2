@@ -98,7 +98,7 @@ def main():
     read_ms_fix = False 
     read_ext = False
 ################### Setup fixation of strange quark mass #############################
-    fixms = ana.ChirAna("pi-K_I32_chipt_fixms_M1B",correlated=True,gamma=False,
+    fixms = ana.ChirAna("pi-K_I32_chipt_fixms_M2B",correlated=True,gamma=False,
                            match=True, fit_ms = True)
     ens_shape_chirana = (len(latA),len(latB),len(latD))
     print(ens_shape_chirana)
@@ -279,7 +279,7 @@ def main():
     # Plot the data the given function
     label=[r'$M_{K}/M_{\pi}$',r'$\Gamma$',r' ',
            r'$(M_{K}/M_{\pi}_phys$']
-    filename = plotdir+'/gamma_pik_fse_B1.pdf'
+    filename = plotdir+'/gamma_pik_fse_B2.pdf'
     print("args have shape")
     print(args[0].shape)
     line = lambda p,x: p[:,0]-2*x*p[:,1]

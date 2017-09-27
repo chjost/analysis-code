@@ -90,23 +90,28 @@ def pik_I32_chipt_fit(p,x,add=None):
     #print(_ret)
     return _ret
 
+#def pik_I32_chipt_plot(args, x):
+#    """ Wrapper for plotfunction"""
+#    # x and args need to have the same number of entries in last dimension
+#    # (bootstrapsamples)
+#    # broadcast _x values to same shape as arguments
+#    if hasattr(x,'__iter__') is not True:
+#        _x = np.zeros((len(x),args.shape[0]))
+#        for i,d in enumerate(np.asarray(x)):
+#            _x[i] = np.full((1500,),d)
+#    else:
+#        _x = x.reshape(len(x),1)
+#    if args.ndim == 2 and args.shape[0]> args.shape[1]:
+#        _args = args.T
+#    else:
+#        _args=args
+#    #return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], args[0,3], args[0,0:3])
+#    return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], _args[-1], _args[0:3],meta=_x[4])
+
 def pik_I32_chipt_plot(args, x):
-    """ Wrapper for plotfunction"""
-    # x and args need to have the same number of entries in last dimension
-    # (bootstrapsamples)
-    # broadcast _x values to same shape as arguments
-    if hasattr(x,'__iter__') is not True:
-        _x = np.zeros((len(x),args.shape[0]))
-        for i,d in enumerate(np.asarray(x)):
-            _x[i] = np.full((1500,),d)
-    else:
-        _x = x.reshape(len(x),1)
-    if args.ndim == 2 and args.shape[0]> args.shape[1]:
-        _args = args.T
-    else:
-        _args=args
-    #return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], args[0,3], args[0,0:3])
-    return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], _args[-1], _args[0:3],meta=_x[4])
+    # B_0, F_0 and m_s fixed
+    # use GMOR relations for meson masses
+    return pik_I32_chipt_nlo(mpi(x[0]),mk(x[0],x[1]),fpi(x[0]),args[-1],args[0:3])
 
 def pik_I32_chipt_nlo_plot(args, x):
     """ Wrapper for plotfunction subtract LO before plotting"""

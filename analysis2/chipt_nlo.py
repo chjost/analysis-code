@@ -40,10 +40,10 @@ def kappa_tan(mpi,mk,i=32):
     else:
         raise ValueError("Isospin Value not known!")
     return _kappa
-
-# Gell-Mann-Okubo formula to calculate squared eta mass
-def m_eta_sq(mpi,mk):
-    return (4.*mk**2-mpi**2)/3.
+# Moved to chiral_functions.py
+## Gell-Mann-Okubo formula to calculate squared eta mass
+#def m_eta_sq(mpi,mk):
+#    return (4.*mk**2-mpi**2)/3.
 
 def nlo_arctan(mpi,mk):
     _prod1 = 2.*(mk-mpi)/(mk+2*mpi)

@@ -68,8 +68,10 @@ def main():
     strange_eta_B = ens.get_data("strange_alt_b")
     strange_eta_D = ens.get_data("strange_alt_d")
     space=['A','B','D']
-    seeds = [5859, 5672, 4104, 5382, 8439, 6186]
-    seeds2 = [9042, 9280, 2219, 4911, 2506,8479]
+    #seeds = [5859, 5672, 4104, 5382, 8439, 6186]
+    #seeds2 = [9042, 9280, 2219, 4911, 2506,8479]
+    seeds = [6368, 9456, 3805, 2355, 7727, 8525]
+    seeds2 = [3353, 8106,1519,5522, 2506,8479]
     lat_dict = {'A':latA,'B':latB,'D':latD}
     amulA = ens.get_data("amu_l_a")
     amulB = ens.get_data("amu_l_b")
@@ -91,7 +93,8 @@ def main():
     nboot = ens.get_data("nboot")
     # Prepare external data
     ext_data = ana.ExtDat(seeds,space,1)
-    cont_data = ana.ContDat(seeds2,zp_meth="phys")
+    #cont_data = ana.ContDat(seeds2,zp_meth="phys")
+    cont_data = ana.ContDat(seeds2,zp_meth=1)
     fpi_raw = ana.read_extern("../plots2/data/fpi.dat",(1,2))
     print(fpi_raw)
 
@@ -141,10 +144,7 @@ def main():
                 for k,s in enumerate(amu_s_dict[a]):
                     fixms.add_data(mksq_fse.obs[k],(i,j,k,0),'y')
             fixms.save(resdir)
-        label=[r'$r_0m_l$',r'$(r_0 M_K)^2$',r'Physical $m_s$ from physical $M_K^2$',
-               r'$(r_0M_{\pi})_{phys}^{2}$']
-         
-        #fixms.fit_strange_mass(datadir=datadir)
+        #fixms.fit_strange_mass(datadir=datadir,ext=ext_data)
         r = np.r_[1.,1.,1.]
         z = np.r_[1.,1.,1.]
         p = np.r_[6.,0.1,1.]
@@ -155,6 +155,9 @@ def main():
                            ext_data.get('B','zp'), ext_data.get('D','zp')))
         fixms.fit(ana.global_ms_errfunc,start,plotdir=plotdir,correlated=True,
                   prior=prior)
+        header=[r'$r_0m_l$',r'$(r_0 M_K)^2$',r'Physical $m_s$ from physical $M_K^2$',
+               r'$(r_0M_{\pi})_{phys}^{2}$']
+        ana.print_summary(fixms,header,amu_l_dict,amu_s_dict)
         label = [r'$a\mu_l$',r'$(aM_K)^2$']
         #pick the correct arguments
         args = fixms.fitres.data[0] 
