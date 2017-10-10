@@ -973,7 +973,7 @@ class LatticePlot(object):
         plt.ylabel(label[1])
         if len(label) > 2:
             plt.title(label[2])
-        plt.legend(loc='best',ncol=2,numpoints=1,fontsize=16)
+        plt.legend(loc='lower left',ncol=2,numpoints=1,fontsize=16)
         #if self.join is False:
         #  self.save()
         #  plt.clf()
@@ -998,7 +998,7 @@ class LatticePlot(object):
           plt.errorbar(chirana.phys_point[0,0],chirana.phys_point[1,0],
                        chirana.phys_point[1,1],xerr=chirana.phys_point[0,1],
                        fmt='d', color='darkorange', label='phys.')
-      plt.legend(loc='best',ncol=2,numpoints=1,fontsize=16)
+      plt.legend(loc='lower left',ncol=2,numpoints=1,fontsize=16)
     
 def plot_brace(args, xcut, func, xpos=None):
     """ internal function that plots vertical braces at xcut"""
