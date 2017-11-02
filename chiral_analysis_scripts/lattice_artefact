@@ -45,6 +45,29 @@ from matplotlib.backends.backend_pdf import PdfPages
 sys.path.append('/hiskp2/helmes/projects/analysis-code/')
 import analysis2 as ana
 
+def line_err(p, x, y, error):
+    chi_a = y.A - line(p,x.A)
+    chi_b = y.B - line(p,x.B)
+    chi_d = y.D - line(p,x.D)
+    # and append them to a vector
+    return np.dot(error,np.r_[chi_a,chi_b,chi_d])
+
+def line(p,x,add=None):
+    if p.ndim == 2 and p.shape[0]> p.shape[1]:
+        _args = p.T
+    else:
+        _args=p
+    _res = x[:,0]*_args[0]+_args[1]
+    if add is not None:
+        _ret = np.r_[_res,np.atleast_2d(add)]
+    else:
+        _ret = _res
+    return _ret
+
+def line_plot(p,x):
+    res = p[:,0]*x+p[:,1] 
+    return res
+
 def main():
     # Get parameters from initfile
     if len(sys.argv) < 2:
@@ -61,9 +84,9 @@ def main():
     strangeB = ens.get_data("strangeb")
     strangeD = ens.get_data("stranged")
     space=['A','B','D']
-    seeds = [5859, 5672, 4104, 5382, 8439, 6186]
-    seeds2 = [9042, 9280, 2219, 4911, 2506]
     lat_dict = {'A':latA,'B':latB,'D':latD}
+    seeds = [3250, 6086, 3765, 7285, 3754, 5526]
+    seeds2 = [6272, 1577, 4725, 2352, 4000, 4103, 3925, 7560]
     #dicitionary of light quark masses
     amulA = ens.get_data("amu_l_a")
     amulB = ens.get_data("amu_l_b")
@@ -86,15 +109,16 @@ def main():
     #cont_dat = ana.ContDat(seeds2,zp_meth="phys")
     fpi_raw = ana.read_extern("../plots2/data/fpi.dat",(1,2))
     print(fpi_raw)
-    zp_meth="phys"
+    #zp_meth="phys"
+    zp_meth=1
     #############################################################################
     #                    Matching 
     #############################################################################
     #------------------------- Setup objects -----------------------------------
-    line = lambda p, x : p[0]*x[:,0]+p[1]
-    line_plot = lambda p, x : p[:,0]*x+p[:,1]
+    #TODO: could that be generalized?
+
     disc_eff = ana.ChirAna("mu_a32_at_mk_mpi_diff_zp1",match=True,
-                            correlated=False,combined=False)
+                            correlated=False,combined=False,debug=0)
     # have two x-values: mpi,r0
     ens_shape_disc_eff = (len(latA),len(latB),len(latD))
     print(ens_shape_disc_eff)
@@ -117,71 +141,134 @@ def main():
                 amu_s_dict[a][0]=0.0115
             print("\nMatch ensemble %s" %e)
         #-------------------------- Evaluate at x-values -----------------------------
-            
-            # Evaluation works with mu_pik a_32 as y-data and a^2 (M^2_K - 0.5 M^2_\pi) as
-            # x-data
-            # TODO: Only Workaround feasible, use two match results, then copy over
-            # y-data of one to x-data of other
-            print("\nEvaluate ensemble %s" %e)
-            # initialize a match result object for evaluating MK a0
-            mk_diff = ana.MatchResult("mua32_M1A_%s" % e,save = datadir+'%s/'%e)
-            ana.MatchResult.create_empty(mk_diff,1500,3)
-            # Load data to match each ensemble
-            dat_names = [datadir+'%s/' % (e) +s+'/fit_k_unit_%s.npz' % (e) for s in mu_s_dict[a]]
-            mk_meas = ana.init_fitreslst(dat_names)
-            # load squared kaon mass as y-data
-            mk_diff.load_data(mk_meas,1,amu_s_dict[a],square=True,mult=None)
-            # Apply finite size corrections
-            print("squared M_K added: %f" % mk_diff.obs[0,0])
-            # append squared pion mass from extern data multiplied by 0.5 
-            #read in pion mass from fitresult
-            mpi = "%s/%s/%s/fit_pi_unit_%s.npz"%(datadir,e,s,e)
-            # subtract -0.5 M_pi from kaon mass
-            mk_diff.add_extern_data(mpi,e,idx=None,square=True,read='fit_mpi',
-                                    op='min',fse=False,r0=False,fac=0.5)
-            print("... after subtraction of 1/2 M_pi: %f" % mk_diff.obs[0,0])
+################### read in M_pi^FSE ###########################################
+            mpi_fse = ana.MatchResult("mpi_fse_M1A_%s"%e,save=datadir+'%s/'%e)
+            ana.MatchResult.create_empty(mpi_fse,1500,3)
+            mpi_names = [datadir+'%s/' % (e) +s+'/fit_pi_unit_%s.npz' % (e) for s in mu_s_dict[a]]
+            mpi_fse_meas = ana.init_fitreslst(mpi_names)
+            mpi_fse.load_data(mpi_fse_meas,1,amu_s_dict[a],square=False)
+            mpi_fse.add_extern_data('../plots2/data/k_fse_mpi.dat',e,square=False,
+                                   read='fse_mk',op='div')
+            print("\nM_pi:")
+            print(mpi_fse.obs[:,0])
 
-            # get MK a0 for all strange quark masses at once
-            mu_a0 = ana.MatchResult("mua32_M1A_%s" %e,save=datadir+'%s/'%e)
-            ana.MatchResult.create_empty(mu_a0,1500,3)
-            dat_names = [datadir+'%s/' % (e) +s+'/mu_a0_TP0_%s.npz' % (e) for s in mu_s_dict[a]]
-            mu_a0_meas = ana.init_fitreslst(dat_names)
-            mu_a0.load_data(mu_a0_meas,0,amu_s_dict[a],square=False)
-            
-            # Copy over y-data from mk_diff as new x-data
-            mu_a0.amu = mk_diff.obs
+################### read in M_K^FSE ############################################
+            mksq_fse = ana.MatchResult("mksq_fse_M1A_%s"%e,save=datadir+'%s/'%e)
+            ana.MatchResult.create_empty(mksq_fse,1500,3)
+            mk_names = [datadir+'%s/' % (e) +s+'/fit_k_unit_%s.npz' % (e) for s in mu_s_dict[a]]
+            mksq_fse_meas = ana.init_fitreslst(mk_names)
+            mksq_fse.load_data(mksq_fse_meas,1,amu_s_dict[a],square=True)
+            mksq_fse.add_extern_data('../plots2/data/k_fse_mk.dat',e,square=True,
+                                   read='fse_mk',op='div')
+            print("\nM_K^2:")
+            print(mksq_fse.obs[:,0])
+################### build M_s^{2,FSE} ##########################################
+            mssq_fse = ana.MatchResult("mssq_fse_M1A_%s" % e,save = datadir+'%s/'%e)
+            ana.MatchResult.create_empty(mssq_fse,1500,3)
+            mssq_fse.set_data(mksq_fse.obs,amu_s_dict[a])
+            mssq_fse.add_data(np.square(mpi_fse.obs),idx=slice(0,3),op='min',
+                          fac=0.5)
+            print("\nM_s^2:")
+            print(mssq_fse.obs[:,0])
 
-            # Evaluate MK a0 at matched amu_s value, we are still in the amu_s
-            # interval which allows interpolation
-            label = [r'$a^2(M_K^2-0.5M^2_{\pi})$',r'$\mu_{\pi K} a_{3/2}$',
-                     r'$a^2(M_K^2-0.5M^2_{\pi}) = (aM_s^{\mathrm{ref}})^2$']
+        
+################### read in a_3/2 ##############################################
+            mua32_fse = ana.MatchResult("mua32_M1A_%s" %e,save=datadir+'%s/'%e)
+            ana.MatchResult.create_empty(mua32_fse,1500,3)
+            a32_names = [datadir+'%s/' % (e) +s+'/scat_len_TP0_%s.npz' % (e) for s in mu_s_dict[a]]
+            mua32_meas = ana.init_fitreslst(a32_names)
+            mua32_fse.load_data(mua32_meas,0,amu_s_dict[a],square=False)
+
+################### build mu_piK a_3/2 #########################################
+            for s in range(3):
+                mua32_fse.obs[s] *= ana.reduced_mass(np.sqrt(mksq_fse.obs[s]),
+                                                 mpi_fse.obs[s]) 
+            print("\nmu_piK_a32:")
+            print(mua32_fse.obs[:,0])
+################################################################################
+#                   fix strange quark mass                                     #
+################################################################################
+            
             evl_x = ana.mk_mpi_diff_phys(a, nboot, cont_data, ext_data)
+            print("\n(M^2_k-0.5*M^2_pi):")
             print(ana.compute_error(evl_x))
-            mu_a0.eval_at(evl_x,plotdir=plotdir,
+################### interpolate M_K^FSE ########################################
+            mksq_fse.amu = mssq_fse.obs
+            print("\nM_K^2:")
+            print(mksq_fse.obs[:,0])
+            label = [r'$a^2(M_K^2-0.5M^2_{\pi})$',r'$M_{K}^2$',
+                     r'$a^2(M_K^2-0.5M^2_{\pi}) = (aM_s^{\mathrm{ref}})^2$']
+            mksq_fse.eval_at(evl_x,plotdir=plotdir,
                            ens=e,plot=True,label=label, meth=2)
+
+################### interpolate mu_piK a_3/2 ###################################
+            mua32_fse.amu = mssq_fse.obs
+            label = [r'$a^2(M_K^2-0.5M^2_{\pi})$',r'$\mu_{\pi K}\, a_{3/2}$',
+                     r'$a^2(M_K^2-0.5M^2_{\pi}) = (aM_s^{\mathrm{ref}})^2$']
+            mua32_fse.eval_at(evl_x,plotdir=plotdir,
+                               ens=e,plot=True,label=label, meth=2)
             # Add mu_s values from matching
-            disc_eff.add_data(mu_a0.amu_match[2],(i,j,0,0),'mu')
+            disc_eff.add_data(mua32_fse.amu_match[2],(i,j,0,0),'mu')
             # Add Mu a0 data to chiral analysis object 
-            disc_eff.add_data(mu_a0.eval_obs[2],(i,j,0,0),'y')
-            # Add r0mpi values
-            _tmp_x = ana.FitResult.read("%s/%s/%s/fit_pi_unit_%s.npz"% (datadir,e,s,e))
-            #disc_eff.add_data(_tmp_x.data[0][:,1,0],(i,j,0,0),dim='x')
+            disc_eff.add_data(mua32_fse.eval_obs[2],(i,j,0,0),'y')
+            # Add Mu/fpi data to chiral analysis object
+            mu_fse = ana.reduced_mass(np.sqrt(mksq_fse.eval_obs[2]),
+                                      mpi_fse.obs[0])
+            print("mu_piK:")
+            print(mu_fse[0])
+            # Add f_pi data
+            dummy, fpi = ana.prepare_fk(fpi_raw,e,1500)
+            mufpi= mu_fse/fpi
+            disc_eff.add_data(mufpi,(i,j,0,1),'x')
+            # Multiply finite size effects because f_pi is in denominator
+            disc_eff.add_extern_data("../plots2/data/k_fse_fpi.dat",(i,j,0,1),e,
+                                     dim='x',read='k_fse',square=False,
+                                     op='mult')
+            # Add 1/r0 values
             disc_eff.x_data[i][j,0,0] = 1/(ext_data.get(a,'r0'))**2
     start = [0.1,0.1]
-    disc_eff.fit(line,start,plotdir=plotdir)
+    disc_eff.fit(line_err,start,plotdir=plotdir)
+    
     label=[r'$(a/r_0)^2$',r'$\mu_{\pi K}\,a_{3/2}$',r' ',
            r'$(\mu_{\pi K}/f_{\pi})_{phys}$']
-    filename = plotdir+'/mu_a0_disc_eff.pdf'
+    filename = plotdir+'/mu_a0_disc_eff_set1.pdf'
     chiral_plot = ana.LatticePlot(filename, join = False)
     #limits for x values in plot
     chiral_plot.plot_chiral_ext(disc_eff,space,label,
                                 xlim=[0.,0.05],ylim=[-0.35,0.],func=None,
                                 kk=False,gamma=True, plotlim = [0.,0.05])
+    plotargs=np.vstack((disc_eff.fitres.data[0][:,0,0],disc_eff.fitres.data[0][:,1,0])).T
+    print(plotargs.shape)
     chiral_plot.plot_cont(disc_eff,line_plot,xlim=[0.,0.05],
-                          args=disc_eff.fitres.data[0][...,0],phys=False)
+                          args=plotargs,phys=False)
     chiral_plot.save()
     del chiral_plot
-
+    header=["#amu_l","amu_s","mua32","dmua32","(a/r_0)^2"]
+    ana.print_summary(disc_eff,header,amu_l_dict,amu_s_dict)
+    
+    for a in range(len(disc_eff.x_data)):
+        disc_eff.y_data[a][:,:,0] = disc_eff.x_data[a][:,:,1]  
+    header=["#amu_l","amu_s","mufpi","dmufpi","(a/r_0)^2"]
+    ana.print_summary(disc_eff,header,amu_l_dict,amu_s_dict)
+    start = [0.1,0.1]
+    disc_eff.fit(line_err,start,plotdir=plotdir)
+    
+    label=[r'$(a/r_0)^2$',r'$\mu_{\pi K}\,/f_{\pi}$',r' ',
+           r'$(\mu_{\pi K}/f_{\pi})_{phys}$']
+    filename = plotdir+'/mu_fpi_disc_eff_set1.pdf'
+    chiral_plot = ana.LatticePlot(filename, join = False)
+    #limits for x values in plot
+    chiral_plot.plot_chiral_ext(disc_eff,space,label,
+                                xlim=[0.,0.05],ylim=[1.35,1.6],func=None,
+                                kk=False,gamma=True, plotlim = [0.,0.05])
+    plotargs=np.vstack((disc_eff.fitres.data[0][:,0,0],disc_eff.fitres.data[0][:,1,0])).T
+    print(plotargs.shape)
+    chiral_plot.plot_cont(disc_eff,line_plot,xlim=[0.,1.5],
+                          args=plotargs,phys=False)
+    chiral_plot.save()
+    del chiral_plot
+    header=["#amu_l","amu_s","mufpi","dmufpi","(a/r_0)^2"]
+    ana.print_summary(disc_eff,header,amu_l_dict,amu_s_dict)
 if __name__ == '__main__':
     try:
         main()

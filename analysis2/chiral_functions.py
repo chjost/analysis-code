@@ -91,7 +91,8 @@ def pik_I32_chipt_nlo(mpi, mk, fpi, r0, p, lambda_x=None, meta=None):
     _sum2 = _p[1]*16.*mpi**2/fpi**2
     # Term with NLO function (does not take eta mass at the moment)
     _sum3 = chi_I32_nlo(lambda_x, mpi, mk, meta)/(16.*np.pi**2*fpi**2)
-    _mua32 = (reduced_mass(mpi,mk)/fpi)**2/(4.*np.pi)*(-1.+_sum1-_sum2+_sum3)+_p[2]/(r0**2)
+    _mua32 = (reduced_mass(mpi,mk)/fpi)**2/(4.*np.pi)*(-1.+_sum1-_sum2+_sum3)
+    #+_p[2]/(r0**2)
     return _mua32
 
 def pik_I32_chipt_lo(mpi, mk, fpi, r0, p):

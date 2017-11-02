@@ -173,7 +173,7 @@ class Correlators(object):
                 print("Saving configuration numbers")
                 in_out.write_data_ascii(self.data, filename, verbose, self.conf)
             else:
-                in_out.rite_data_ascii(self.data, filename, verbose)
+                in_out.write_data_ascii(self.data, filename, verbose)
         else:
             if self.conf is not None:
                 print("Saving configuration numbers")

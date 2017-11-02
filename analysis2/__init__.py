@@ -25,3 +25,4 @@ from .nplqcddat import NPLDat
 from .globalfit import ChiralFit
 from .debug import *
 from .gamma_pik_nplqcd import *
+from .phys_obs import *

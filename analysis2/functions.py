@@ -65,7 +65,8 @@ def compute_eff_mass(data, usecosh=True, exp=False, weight=None, shift=None):
        print(mass.shape)
        for b, row in enumerate(data):
            for t in range(len(row)-1):
-                mass[b, t] = fsolve(corr_exp,0.5,args=(row[t],row[t+1],t,T2))
+                #mass[b, t] = fsolve(corr_exp,0.5,args=(row[t],row[t+1],t,T2))
+                mass[b, t] = fsolve(corr_exp_mod,0.5,args=(row[t],weight[b],t,T2))
       
     elif (usecosh == True and weight is None):
         # creating mass array from data array
@@ -118,6 +119,16 @@ def corr_exp(m,r0,r1,t,T2):
     _den = np.exp(-m*t) + np.exp(-m*(2*T2-t))
     _num = np.exp(-m*(t+1)) + np.exp(-m*(2*T2-(t+1))) 
     _diff = r0/r1 - _den/_num 
+    return _diff
+
+def corr_exp_mod(m,r0,p,t,T2):
+    """
+    Parameters
+    ----------
+    p: tuple
+    """
+    _den = p[0]*np.exp(m*(t-T2)) + p[2]*np.exp(-m*(t-T2))
+    _diff = r0 - _den 
     return _diff
 
 def corr_shift_ratio(m,r0,r1,t,T2):
@@ -477,6 +488,27 @@ def func_corr_shift_therm(p, t, add):
     gs = p[0] * p[0] * (np.exp(-p[1]*t) + np.exp(-p[1]*(add[2]-t)) - np.exp(s*(add[1]-add[0]))*(np.exp(-p[1]*(t+s)) + np.exp(-p[1]*(add[2]-(t+s)))))
     ts = p[2] * np.exp(-add[1]*add[2]) * (1-np.exp(2*s*(add[1]-add[0]))) * np.exp((add[1]-add[0])*t) 
     return gs+ts
+
+def func_two_corr_dws(p,t,add):
+    """
+    Function for a doubly shifted and weighted correlation function
+
+    Parameters
+    ----------
+    p : sequence of float
+        The parameters of the function.
+    t : float
+        The variable of the function.
+    T2 : float
+        The time around which the function is symmetric.
+
+    Returns
+    -------
+    float
+        The result.
+    """
+    return p[0]*np.exp(p[1]*(t-add[0]))+p[2]*np.exp(-p[1]*(t-add[0]))
+
 
 def func_single_corr_bare(p, t, T2):
     """A function that describes two point correlation functions.

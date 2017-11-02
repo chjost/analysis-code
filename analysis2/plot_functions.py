@@ -215,7 +215,7 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
             #iterate over x
             #print("using function")
             print("Shape for parameters:")
-            print(_args.shape)
+            print(_args[0])
             print("Shape for x1:")
             print(x1.shape)
             for j,x in enumerate(x1):
@@ -223,6 +223,7 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
                 # every x is four values
                 #print(x)
                 #print("in plot_function: arguments to func are: %r" %_args[0])
+                #TODO: atleast_2d removed, should be taken care of elsewhere
                 y1.append(func(np.atleast_2d(_args[0]), x))
                 #y1.append(func(_args[0], x))
                 if ploterror:
@@ -309,7 +310,7 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
 
 # Tryout from devel_branch
 def plot_data(X, Y, dY, label, plotrange=None, dX=None, fmt="x", col='b',
-    alpha=None, debug=0):
+    alpha=None, debug=2):
     """A function that plots data.
 
     Parameters
@@ -344,14 +345,16 @@ def plot_data(X, Y, dY, label, plotrange=None, dX=None, fmt="x", col='b',
             _dX = None
         else:
             _dX = dX[l:u]
+        if debug > 1:
+            dbg.print_info_data(X,Y,dY,_dX)
         plt.errorbar(X[l:u], Y[l:u], dY[l:u], xerr=_dX, fmt=fmt, label=label,
             c=col, alpha=alpha)
     else:
         # plot the data
         _dX=dX
+        if debug > 1:
+            dbg.print_info_data(X,Y,dY,_dX)
         plt.errorbar(X, Y, dY, xerr=_dX, fmt=fmt, label=label,c=col, alpha=alpha)
-    if debug > 1:
-        dbg.print_info_data(X,Y,dY,_dX)
 
 def plot_data_with_fit(X, Y, dY, fitfunc, args, label, plotrange=None,
                    fitrange=None, addpars=None, pval=None,col='b'):

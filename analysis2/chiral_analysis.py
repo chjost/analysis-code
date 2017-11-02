@@ -958,7 +958,7 @@ class ChirAna(object):
     Parameters
     ----------
     """
-
+    _ms = 0.
     if self.eval_at is None:
       self.eval_at = {}
       print(self.eval_at)
@@ -1021,6 +1021,7 @@ class ChirAna(object):
             print("mus on Ensemble %s is : %.4f +- %.4f" %(e,_mus_m,_mus_err))
             print(" --> ms_phys = %.3f +- %.3f MeV" %(m_s,m_s_err))
           self.eval_at[e] = _mus
+      return _ms   
       #compute_bare_mu_s
     else:
       print("Prevented data override, nothing happened.")
@@ -1160,7 +1161,7 @@ class ChirAna(object):
       # determine covariance matrix, including prior
       _y_cov = chut.concat_data_cov(_y_data,prior=prior)
       _cov = np.cov(_y_cov)
-      _cov = mute(_cov)
+      #_cov = mute(_cov)
       # plot correlation matrix
       if plotdir is not None:
           corr = plot.LatticePlot(plotdir+"/corr_%s.pdf"%self.proc_id)

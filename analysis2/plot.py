@@ -44,7 +44,7 @@ class LatticePlot(object):
             self.cyfmt = itertools.cycle('^vsd>o').next
         else:
             self.cycol = itertools.cycle('b').next
-            self.cyfmt = itertools.cycle('x').next
+            self.cyfmt = itertools.cycle('^').next
 
     def __del__(self):
         self.plotfile.close()
@@ -991,7 +991,6 @@ class LatticePlot(object):
           plot_function_multiarg(func, xlim, args, 'cont.',
               fmt='k--',calc_x=calc_x, ploterror=True)
       else:
-          print(args.shape)
           plot_function(func, xlim, args, 'cont.', fmt='k--',
               ploterror=True,debug=self.debug)
       if phys ==True:

@@ -68,8 +68,12 @@ def main():
     strange_eta_B = ens.get_data("strange_alt_b")
     strange_eta_D = ens.get_data("strange_alt_d")
     space=['A','B','D']
-    seeds = [5859, 5672, 4104, 5382, 8439, 6186]
-    seeds2 = [9042, 9280, 2219, 4911, 2506, 8479, 7211, 9303]
+    # keep seeds per zp method fixed
+    seeds = [3250, 6086, 3765, 7285, 3754, 5526]
+    seeds2 = [6272, 1577, 4725, 2352, 4000, 4103, 3925, 7560]
+    #old seeds
+    #seeds = [5859, 5672, 4104, 5382, 8439, 6186]
+    #seeds2 = [9042, 9280, 2219, 4911, 2506, 8479, 7211, 9303]
     lat_dict = {'A':latA,'B':latB,'D':latD}
     amulA = ens.get_data("amu_l_a")
     amulB = ens.get_data("amu_l_b")
@@ -121,6 +125,7 @@ def main():
                     print("modifying lowest mu_s values")
                     mu_s_dict[a][0] ='amu_s_115' 
                     amu_s_dict[a][0]=0.0115
+                    mu_s_eta_dict[a][0]='strange_1150'
 
 ####    ############### read in M_K^FSE ############################################
                 mksq_fse = ana.MatchResult("mksq_fse_M1A_%s"%e,save=datadir+'%s/'%e)
@@ -233,8 +238,9 @@ def main():
     # Include bootstrapped L_piK as a prior value taken from HPQCD
     l_5 = np.atleast_2d(ana.draw_gauss_distributed(5.41e-3,3e-5,(1500,),
       origin=True))
-    #extrapol.fit_mu_a32(plotdir=plotdir,LO=False,prior=l_5)
-    start = [0.1,0.1,0.1]
+    #start = [0.1,0.1,0.1]
+    # Fit without lattice artefact
+    start = [0.1,0.1]
     if read is True:
         extrapol.fitres=ana.FitResult.read(resdir+'/'+extrapol.proc_id+'_fitres.npz')
     else:
@@ -259,8 +265,10 @@ def main():
     hist.save()
     del hist
 
+    #args = np.asarray([np.vstack((plotargs[:,0,0], plotargs[:,1,0],
+    #  plotargs[:,2,0],extrapol.x_data[r][0,0,3])).T for r in range(len(space))])
     args = np.asarray([np.vstack((plotargs[:,0,0], plotargs[:,1,0],
-      plotargs[:,2,0],extrapol.x_data[r][0,0,3])).T for r in range(len(space))])
+      extrapol.x_data[r][0,0,3])).T for r in range(len(space))])
     #print("Argument shape after stacking")
     #print("Lattice artifact:")
     #print(plotargs[0,2,0])
@@ -270,11 +278,10 @@ def main():
     filename = plotdir+'/mua0_decay_nlo_msfix_fse_M1A.pdf'
     chiral_plot = ana.LatticePlot(filename, join = False)
     #limits for x values in plot
-    lim_x = [[120.,560.], [330.,780.],[180.,90.], [0.,0.],[625.,738.]] 
-    chiral_plot.plot_chiral_ext(extrapol,space,label, xlim=lim_x,ylim=[-0.35,0.],
+    chiral_plot.plot_chiral_ext(extrapol,space,label, xlim=None,ylim=[-0.25,0.],
                                 func=None, args=args,
                                 calc_x = ana.calc_x_plot, ploterror=False,
-                                kk=False, x_phys=0.8128,plotlim=[0.5,2.],
+                                kk=False, x_phys=0.8128,plotlim=[0.7,1.6],
                                 argct="multiarg")
 
     # Plot NPLQCD Data
@@ -284,13 +291,12 @@ def main():
                         [1.869,0.005]])  
     y_cmp = np.asarray([[-0.1263,0.0075],[-0.155,0.04],[-0.213,0.012],
                         [-0.267,0.012]])
-    plt.errorbar(x_cmp[:,0],y_cmp[:,0],y_cmp[:,1],xerr=x_cmp[:,1],fmt='ko',
-                     label=r'NPLQCD, $a=0.125$fm')
-    # Prepare arguments for continuum curve
-    #args = np.vstack((plotargs[:,0,0], plotargs[:,1,0],
-    #  np.zeros_like(plotargs[:,0,0]),np.ones_like(plotargs[:,0,0]))).T
-    #chiral_plot.plot_cont(extrapol,ana.pik_I32_chipt_plot,
-    #                      lim_x,args,argct='multiarg',calc_x=ana.calc_x_plot)
+    #plot disc_eff points
+    x_cmp = np.asarray([[1.317,0.017],[1.532,0.021]])  
+    y_cmp = np.asarray([[-0.15,0.02],[-0.199,0.011]])
+
+    #plt.errorbar(x_cmp[:,0],y_cmp[:,0],y_cmp[:,1],xerr=x_cmp[:,1],fmt='ko',alpha=0.6,
+    #                 label=r'disc_eff')
     args = np.vstack((plotargs[:,0,0], plotargs[:,1,0],
       np.zeros_like(plotargs[:,0,0]),np.ones_like(plotargs[:,0,0]),cont_data.get('l4'),cont_data.get('b0'))).T
     ms = (cont_data.get('mk')**2-0.5*cont_data.get('mpi_0')**2)/cont_data.get('b0')

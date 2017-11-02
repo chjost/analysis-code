@@ -12,7 +12,7 @@ from in_out import read_fitresults, write_fitresults
 from interpol import match_lin, match_quad, evaluate_lin
 from functions import (func_single_corr,func_single_corr_bare, func_ratio, func_const, func_two_corr,
     func_two_corr_shifted, func_single_corr2, func_sinh, compute_eff_mass,
-    func_two_corr_therm, func_corr_shift_therm)
+    func_two_corr_therm, func_corr_shift_therm, func_two_corr_dws)
 from statistics import (compute_error, sys_error, sys_error_der, draw_weighted,
     freq_count, draw_gauss_distributed)
 from energies import calc_q2, calc_Ecm
@@ -28,7 +28,7 @@ class LatticeFit(object):
 
         Parameters
         ----------
-        fitfunc : {0, 1, 2, 3, 4, 5, 6, 7, 8 callable}
+        fitfunc : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9 callable}
             Choose between three predefined functions or an own
             fit function.
         dt_i, dt_f : ints, optional
@@ -46,7 +46,7 @@ class LatticeFit(object):
         self.debug = debug
         # chose the correct function if using predefined function
         if isinstance(fitfunc, int):
-            if fitfunc > 9:
+            if fitfunc > 10:
                 raise ValueError("No fit function choosen")
             if fitfunc == 2:
                 self.npar = 1
@@ -60,12 +60,15 @@ class LatticeFit(object):
                 self.npar = 3
             elif fitfunc == 9:
                 self.npar = 2
+            elif fitfunc == 10:
+                self.npar = 3
             else:
                 self.npar = 2
             functions = {0: func_single_corr, 1: func_ratio, 2: func_const,
                 3: func_two_corr, 4: func_single_corr2, 5: func_sinh,
                 6: func_two_corr_shifted, 7: func_two_corr_therm,
-                8: func_corr_shift_therm, 9: func_single_corr_bare}
+                8: func_corr_shift_therm, 9: func_single_corr_bare,
+                10: func_two_corr_dws}
             self.fitfunc = functions.get(fitfunc)
         else:
             self.npar = npar

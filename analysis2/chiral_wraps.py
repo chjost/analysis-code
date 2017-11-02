@@ -217,7 +217,7 @@ def pik_I32_chipt_cont(args, x):
         _args = args.T
     else:
         _args=args
-    _args[2]=np.zeros_like(args[2])
+    #_args[2]=np.zeros_like(args[2])
     #return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], args[0,3], args[0,0:3])
     return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], _x[3], _args[0:3], meta=_x[4])
 

@@ -92,7 +92,7 @@ def main():
     #files = ["%s/eta_charged_p0_old.dat" % datadir] 
     #files = ["%s/pi_corr_p0.dat" % datadir] 
     if readdata == False:
-        corr = ana.Correlators(files, matrix=False)
+        corr = ana.Correlators(files, matrix=False,conf_col=3)
         corr.sym_and_boot(nboot)
         #corr.bootstrap(nboot)
         print(corr.shape)
@@ -183,6 +183,7 @@ def main():
     plotter = ana.LatticePlot("%s/fit_c55_weight_%s.pdf"%(plotdir,lat))
     plotter.set_env(ylog=True,grid=False)
     label=["C_55 weighted", "t", "C(t)","fit"]
+    print("\n This is the weighted and shifted correlator:")
     plotter.plot(corr_ws,label,pi_k_fit,fit_pi_k,add=addT,oldfit=masses,oldfitpar=slice(0,2))
     del plotter
 
