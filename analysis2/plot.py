@@ -873,7 +873,7 @@ class LatticePlot(object):
             print("yerror shape is:")
             print(_dy.shape)
         return _X,_Y,_dy
-
+# TODO: Split this up into at least four functions
     def plot_chiral_ext(self, chirana, beta, label, xlim, ylim=None, func=None,
                        args=None,calc_x=None, ploterror=True, kk=True,
                        gamma=False, x_phys=None,xcut=None,plotlim=None,

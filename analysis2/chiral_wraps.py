@@ -175,7 +175,8 @@ def pik_I32_chipt_cont(args, x):
         _args=args
     _args[2]=np.zeros_like(args[2])
     #return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], args[0,3], args[0,0:3])
-    return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], _x[3], _args[0:3], meta=_x[4])
+    #return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], _x[3], _args[0:3], meta=_x[4])
+    return pik_I32_chipt_nlo_cont(_x[0],_x[1],_x[2], _x[3], _args[0:3], meta=_x[4])
 
 def pik_I32_chipt_lo_plot(args, x):
     """ Wrapper for plotfunction"""
@@ -202,24 +203,24 @@ def pik_I32_chipt_nlo_plot(args, x):
     _pik = pik_I32_chipt_nlo(_x[0],_x[1],_x[2], _args[-1], _args[0:3])
     return (_pik-lo)/_pik
 
-def pik_I32_chipt_cont(args, x):
-    """ Wrapper for plotfunction"""
-    # x and args need to have the same number of entries in last dimension
-    # (bootstrapsamples)
-    # broadcast _x values to same shape as arguments
-    if hasattr(x,'__iter__') is not True:
-        _x = np.zeros((len(x),args.shape[0]))
-        for i,d in enumerate(np.asarray(x)):
-            _x[i] = np.full((1500,),d)
-    else:
-        _x = x.reshape(len(x),1)
-    if args.ndim == 2 and args.shape[0]> args.shape[1]:
-        _args = args.T
-    else:
-        _args=args
-    #_args[2]=np.zeros_like(args[2])
-    #return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], args[0,3], args[0,0:3])
-    return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], _x[3], _args[0:3], meta=_x[4])
+#def pik_I32_chipt_cont(args, x):
+#    """ Wrapper for plotfunction"""
+#    # x and args need to have the same number of entries in last dimension
+#    # (bootstrapsamples)
+#    # broadcast _x values to same shape as arguments
+#    if hasattr(x,'__iter__') is not True:
+#        _x = np.zeros((len(x),args.shape[0]))
+#        for i,d in enumerate(np.asarray(x)):
+#            _x[i] = np.full((1500,),d)
+#    else:
+#        _x = x.reshape(len(x),1)
+#    if args.ndim == 2 and args.shape[0]> args.shape[1]:
+#        _args = args.T
+#    else:
+#        _args=args
+#    #_args[2]=np.zeros_like(args[2])
+#    #return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], args[0,3], args[0,0:3])
+#    return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], _x[3], _args[0:3], meta=_x[4])
 
 def pik_I32_chipt_lo_plot(args, x):
     """ Wrapper for plotfunction"""

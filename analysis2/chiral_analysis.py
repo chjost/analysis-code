@@ -1126,7 +1126,7 @@ class ChirAna(object):
       if self.debug > 0:
           print("\nPhysical point result:")
           print("x: %f +/- %f" %(self.phys_point[0][0],self.phys_point[0][1]))
-          print("y %f +/- %f\n" %(self.phys_point[1][0],self.phys_point[1][1]))
+          print("y: %f +/- %f\n" %(self.phys_point[1][0],self.phys_point[1][1]))
  
   # This should be a general fitfunction just taking the fitfunction as an
   # argument
