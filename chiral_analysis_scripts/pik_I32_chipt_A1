@@ -100,7 +100,7 @@ def main():
     fpi_raw = ana.read_extern("../plots2/data/fpi.dat",(1,2))
     print(fpi_raw)
 
-    read = False
+    read = True
 ################### Setup chiral analysis ######################################
     extrapol = ana.ChirAna("pi-K_I32_chipt_A1",correlated=False,gamma=False,match=True)
     # have five x-values: mk,mpi,meta,fpi,r0/a
@@ -231,12 +231,13 @@ def main():
                 # Add M_eta data
                 extrapol.add_data(np.sqrt(metasq.eval_obs[2]),(i,j,0,4),'x')
     extrapol.save(resdir)
-
 ################################################################################
 #                   do chiral extrapolation                                    #
 ################################################################################
     # Include bootstrapped L_piK as a prior value taken from HPQCD
-    l_5 = np.atleast_2d(ana.draw_gauss_distributed(5.41e-3,3e-5,(1500,),
+    #l_5 = np.atleast_2d(ana.draw_gauss_distributed(5.41e-3,3e-5,(1500,),
+    #  origin=True))
+    l_5 = np.atleast_2d(ana.draw_gauss_distributed(5.65e-3,2e-5,(1500,),
       origin=True))
     start = [0.1,0.1,0.1]
     # Fit without lattice artefact
@@ -244,7 +245,7 @@ def main():
     if read is True:
         extrapol.fitres=ana.FitResult.read(resdir+'/'+extrapol.proc_id+'_fitres.npz')
     else:
-        extrapol.fit(ana.err_func,start,plotdir=plotdir,prior=l_5)
+        extrapol.fit(ana.err_func,start,plotdir=plotdir,prior=None)
         extrapol.fitres.save(resdir+'/'+extrapol.proc_id+'_fitres.npz') 
     plotargs = extrapol.fitres.data[0]
     # NLO arguments need to have bootstrapsamples as first argument
@@ -267,21 +268,29 @@ def main():
 
     #args = np.asarray([np.vstack((plotargs[:,0,0], plotargs[:,1,0],
     #  plotargs[:,2,0],extrapol.x_data[r][0,0,3])).T for r in range(len(space))])
+    lat_space=[0.0885,0.0815,0.0619]
     args = np.asarray([np.vstack((plotargs[:,0,0],
       plotargs[:,1,0],plotargs[:,2,0],
-      extrapol.x_data[r][0,0,3])).T for r in range(len(space))])
-    #print("Argument shape after stacking")
-    #print("Lattice artifact:")
-    #print(plotargs[0,2,0])
+      np.full((1500),lat_space[r]),cont_data.get('l4'),
+      cont_data.get('b0'))).T for r in range(len(space))])
+    print("Argument shape after stacking")
+    print(args.shape)
+    print("Arguments:")
+    print(args[:,0])
     # Plot the data the given function
     label=[r'$\mu_{\pi K}/f_{\pi}$',r'$\mu_{\pi K}\,a_{3/2}$',r' ',
            r'$(\mu_{\pi K}/f_{\pi})_{phys}$']
     filename = plotdir+'/mua0_decay_nlo_msfix_fse_M1A.pdf'
-    chiral_plot = ana.LatticePlot(filename, join = False)
+    chiral_plot = ana.LatticePlot(filename, join = False,debug=4)
     #limits for x values in plot
-    chiral_plot.plot_chiral_ext(extrapol,space,label, xlim=None,ylim=[-0.25,0.],
-                                func=None, args=args,
-                                calc_x = ana.calc_x_plot, ploterror=False,
+    ms = (cont_data.get('mk')**2-0.5*cont_data.get('mpi_0')**2)/cont_data.get('b0')
+    print("\nms:")
+    print(ana.compute_error(ms))
+    lim_x = [[0.01,75.],[ms[0],ms[0]],[cont_data.get('l4')[0],cont_data.get('l4')[0]],
+        [cont_data.get('b0')[0],cont_data.get('b0')[0]]]
+    chiral_plot.plot_chiral_ext(extrapol,space,label, xlim=lim_x,ylim=[-0.25,0.],
+                                func=ana.pik_I32_chipt_plot_cont, args=args,
+                                calc_x = ana.calc_x_plot_cont, ploterror=False,
                                 kk=False, x_phys=0.8128,plotlim=[0.7,1.6],
                                 argct="multiarg")
 
@@ -300,11 +309,6 @@ def main():
     #                 label=r'disc_eff')
     args = np.vstack((plotargs[:,0,0], plotargs[:,1,0],
       np.zeros_like(plotargs[:,0,0]),np.ones_like(plotargs[:,0,0]),cont_data.get('l4'),cont_data.get('b0'))).T
-    ms = (cont_data.get('mk')**2-0.5*cont_data.get('mpi_0')**2)/cont_data.get('b0')
-    print("\nms:")
-    print(ana.compute_error(ms))
-    lim_x = [[0.01,75.],[ms[0],ms[0]],[cont_data.get('l4')[0],cont_data.get('l4')[0]],
-        [cont_data.get('b0')[0],cont_data.get('b0')[0]]]
     chiral_plot.plot_cont(extrapol,ana.pik_I32_chipt_plot_cont,
                           lim_x,args,argct='multiarg',calc_x=ana.calc_x_plot_cont)
     chiral_plot.save()

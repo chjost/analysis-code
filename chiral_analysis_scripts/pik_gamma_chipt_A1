@@ -229,6 +229,7 @@ def main():
     #cut = None 
     # Include bootstrapped L_piK as a prior value taken from NPLQCD 
     l_5 = np.atleast_2d(ana.draw_gauss_distributed(5.41e-3,3e-5,(1500,),origin=True))
+    #l_5 = np.atleast_2d(ana.draw_gauss_distributed(5.65e-3,2e-5,(1500,),origin=True))
     #For future use
     start = [0.1,0.1]
     extrapol.fit(ana.gamma_errfunc,start,prior=l_5,xcut=cut)

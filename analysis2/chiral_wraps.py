@@ -10,8 +10,9 @@ import matplotlib.lines as mlines
 import numpy as np
 from numpy.polynomial import polynomial as P
 from fit_routines import fitting
+from chipt_basic_observables import *
 from chipt_nlo import *
-from chiral_functions import *
+from pik_scat_len import *
 
 """Wrapper functions for fits and plots"""
 def calc_x_plot(x):
@@ -34,9 +35,12 @@ def err_func(p, x, y, error):
     chi_a = y.A - pik_I32_chipt_fit(p,x.A)
     chi_b = y.B - pik_I32_chipt_fit(p,x.B)
     chi_d = y.D - pik_I32_chipt_fit(p,x.D)
-    chi_p = y.p - p[1]
+    # TODO: find a runtime way to disable prior
+    #if y.p is not None:
+    #    chi_p = y.p - p[1]
     # and append them to a vector
-    return np.dot(error,np.r_[chi_a,chi_b,chi_d,chi_p])
+    #return np.dot(error,np.r_[chi_a,chi_b,chi_d,chi_p])
+    return np.dot(error,np.r_[chi_a,chi_b,chi_d])
 
 def gamma_errfunc(p,x,y,error):
     chi_a = y.A - line(p,x.A)
@@ -89,7 +93,7 @@ def pik_I32_chipt_fit(p,x,add=None):
         #_res = pik_I32_chipt_nlo(_x[0],_x[1],_x[2], _args[-1], _args[0:3],meta=_x[4])
         #print("In fitfunction: x_shapem, arguments_shape")
         #print(x.shape,_args.shape)
-        _res = pik_I32_chipt_nlo(x[:,0],x[:,1],x[:,2], _args[-1],
+        _res = pik_I32_chipt_nlo(x[:,0],x[:,1],x[:,2],
             _args[0:3],meta=x[:,4])
     if add is not None:
         _ret = np.r_[_res,np.atleast_2d(add)]
@@ -136,7 +140,8 @@ def pik_I32_chipt_plot_cont(args, x):
     mpi=np.sqrt(mpi_sq(_x[0],_args[-1]))
     mk=np.sqrt(mk_sq(_x[0],_x[1],_args[-1]))
     fpi=f_pi(_x[0],f0=None,l4=_args[-2],b0=_args[-1])
-    return pik_I32_chipt_nlo(mpi, mk, fpi, _args[-1], _args[0:3])
+    _lat = _args[3]**2*mpi**2/197.37**2
+    return pik_I32_chipt_nlo(mpi, mk, fpi, _args[0:3], lat=_lat)
 
 def pik_I32_chipt_nlo_plot(args, x):
     """ Wrapper for plotfunction subtract LO before plotting"""
@@ -159,7 +164,9 @@ def pik_I32_chipt_nlo_plot(args, x):
     return (_pik-lo)/_pik
 
 def pik_I32_chipt_cont(args, x):
-    """ Wrapper for plotfunction"""
+    """ Wrapper for plotfunction
+    ATM: last entry in arguments is lattice artefact.
+    """
     # x and args need to have the same number of entries in last dimension
     # (bootstrapsamples)
     # broadcast _x values to same shape as arguments
@@ -176,7 +183,8 @@ def pik_I32_chipt_cont(args, x):
     _args[2]=np.zeros_like(args[2])
     #return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], args[0,3], args[0,0:3])
     #return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], _x[3], _args[0:3], meta=_x[4])
-    return pik_I32_chipt_nlo_cont(_x[0],_x[1],_x[2], _x[3], _args[0:3], meta=_x[4])
+    return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], _args[0:3],
+            meta=_x[4], lat=args[-1])
 
 def pik_I32_chipt_lo_plot(args, x):
     """ Wrapper for plotfunction"""

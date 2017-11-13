@@ -213,8 +213,10 @@ class ChirAna(object):
     y_b = self.y_data[1]
     y_d = self.y_data[2]
     match = self.amu_matched_to
+    fit_info = self.fit_stats
     name = savedir+"/"+self.proc_id
-    np.savez(name,x_a=x_a,x_b=x_b,x_d=x_d,y_a=y_a,y_b=y_b,y_d=y_d,match=match)
+    np.savez(name,x_a=x_a,x_b=x_b,x_d=x_d,y_a=y_a,y_b=y_b,y_d=y_d,match=match,
+             fit_stats=fit_info)
   #
   def load(self,savedir):
     """ Function to load data
@@ -229,6 +231,7 @@ class ChirAna(object):
     self.y_data[1] = data['y_b']
     self.y_data[2] = data['y_d']
     self.amu_matched_to = data['match']
+    self.fit_stats = data['fit_stats']
 
   @classmethod
   def read(cls,savename):

@@ -81,7 +81,7 @@ def plot_function_multiarg(func, X, args, label, plotrange=None, ploterror=False
     # iterate over first dimension
     _args = np.asarray(args)
     if debug > 2:
-        print("the arguments have shape:")
+        print("\nthe arguments have shape:")
         print(_args.shape)
     if _args.ndim > 1:
         # the first sample contains original data,
@@ -110,8 +110,8 @@ def plot_function_multiarg(func, X, args, label, plotrange=None, ploterror=False
                 mean, std = compute_error(np.asarray(tmp))
                 ymin.append(float(mean-std))
                 ymax.append(float(mean+std))
-        print("y-values are:")
-        print(y1[-1])
+        #print("\n plot_function_multiarg: y-values are:")
+        #print(y1)
     # If given, calculate x-values of plot
     if calc_x is not None:
         _x1  = calc_x(x1)

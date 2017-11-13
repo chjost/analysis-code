@@ -925,6 +925,8 @@ class LatticePlot(object):
                 for i,a in enumerate(beta):
                     # check for lattice spacing dependence
                     if argct is "multiarg":
+                        print("\nIn plot_function args:")
+                        print(args[i][0])
                         plot_function_multiarg(func,xlim,args[i],calc_x=calc_x,
                                             label=dat_label[i],
                                             ploterror=ploterror,
@@ -953,7 +955,7 @@ class LatticePlot(object):
 
         plt.xlabel(label[0],fontsize=24)
         plt.ylabel(label[1],fontsize=24)
-            #self.save()
+        #self.save()
         if x_phys is not None:
             plt.axvline(x=x_phys, color='k', ls='--', label=label[0]+'_phys.')
         # Plot the physical point as well as the continuum function
@@ -974,9 +976,6 @@ class LatticePlot(object):
         if len(label) > 2:
             plt.title(label[2])
         plt.legend(loc='lower left',ncol=2,numpoints=1,fontsize=16)
-        #if self.join is False:
-        #  self.save()
-        #  plt.clf()
 
     def plot_cont(self,chirana,func,xlim,args,par=None,argct=None,calc_x=None,
                   phys=True):
@@ -989,7 +988,7 @@ class LatticePlot(object):
       # Plot the continuum curve
       if argct == 'multiarg':
           plot_function_multiarg(func, xlim, args, 'cont.',
-              fmt='k--',calc_x=calc_x, ploterror=True)
+              fmt='k--',calc_x=calc_x, ploterror=True, debug=self.debug)
       else:
           plot_function(func, xlim, args, 'cont.', fmt='k--',
               ploterror=True,debug=self.debug)

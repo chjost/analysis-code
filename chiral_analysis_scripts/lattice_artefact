@@ -122,7 +122,7 @@ def main():
     # have two x-values: mpi,r0
     ens_shape_disc_eff = (len(latA),len(latB),len(latD))
     print(ens_shape_disc_eff)
-    lyt_xvals = (3,ens_shape_disc_eff,1,2,1500)
+    lyt_xvals = (3,ens_shape_disc_eff,1,3,1500)
     lyt_yvals = (3,ens_shape_disc_eff,1,1,1500)
     disc_eff.create_empty(lyt_xvals,lyt_yvals,lat_dict=lat_dict)
     cont_data = ana.ContDat(seeds2, zp_meth)
@@ -218,12 +218,24 @@ def main():
             print(mu_fse[0])
             # Add f_pi data
             dummy, fpi = ana.prepare_fk(fpi_raw,e,1500)
-            mufpi= mu_fse/fpi
-            disc_eff.add_data(mufpi,(i,j,0,1),'x')
-            # Multiply finite size effects because f_pi is in denominator
-            disc_eff.add_extern_data("../plots2/data/k_fse_fpi.dat",(i,j,0,1),e,
+            print("Ensemble %s f_pi: " %e)
+            print(ana.compute_error(fpi))
+            disc_eff.add_data(fpi,(i,j,0,2),'x')
+            disc_eff.add_extern_data("../plots2/data/k_fse_fpi.dat",(i,j,0,2),e,
                                      dim='x',read='k_fse',square=False,
-                                     op='mult')
+                                     op='div')
+            #mufpi= mu_fse/fpi
+            #disc_eff.add_data(mufpi,(i,j,0,1),'x')
+            ## Multiply finite size effects because f_pi is in denominator
+            #disc_eff.add_extern_data("../plots2/data/k_fse_fpi.dat",(i,j,0,1),e,
+            #                         dim='x',read='k_fse',square=False,
+            #                         op='mult')
+            
+            disc_eff.add_data(mu_fse,(i,j,0,1),'x')
+            # Multiply finite size effects because f_pi is in denominator
+            #disc_eff.add_extern_data("../plots2/data/k_fse_fpi.dat",(i,j,0,1),e,
+            #                         dim='x',read='k_fse',square=False,
+            #                         op='mult')
             # Add 1/r0 values
             disc_eff.x_data[i][j,0,0] = 1/(ext_data.get(a,'r0'))**2
     start = [0.1,0.1]
@@ -247,19 +259,43 @@ def main():
     ana.print_summary(disc_eff,header,amu_l_dict,amu_s_dict)
     
     for a in range(len(disc_eff.x_data)):
-        disc_eff.y_data[a][:,:,0] = disc_eff.x_data[a][:,:,1]  
+        disc_eff.y_data[a][:,:,0] = ext_data.get(space[a],'r0')*disc_eff.x_data[a][:,:,1]  
     header=["#amu_l","amu_s","mufpi","dmufpi","(a/r_0)^2"]
     ana.print_summary(disc_eff,header,amu_l_dict,amu_s_dict)
     start = [0.1,0.1]
     disc_eff.fit(line_err,start,plotdir=plotdir)
     
-    label=[r'$(a/r_0)^2$',r'$\mu_{\pi K}\,/f_{\pi}$',r' ',
-           r'$(\mu_{\pi K}/f_{\pi})_{phys}$']
-    filename = plotdir+'/mu_fpi_disc_eff_set1.pdf'
+    label=[r'$(a/r_0)^2$',r'$r_0\mu_{\pi K}$',r' ',
+           r'$(\mu_{\pi K})_{phys}$']
+    filename = plotdir+'/mu_disc_eff_set1.pdf'
     chiral_plot = ana.LatticePlot(filename, join = False)
     #limits for x values in plot
     chiral_plot.plot_chiral_ext(disc_eff,space,label,
-                                xlim=[0.,0.05],ylim=[1.35,1.6],func=None,
+                                xlim=[0.,0.05],ylim=[0.5,0.6],func=None,
+                                kk=False,gamma=True, plotlim = [0.,0.05])
+    plotargs=np.vstack((disc_eff.fitres.data[0][:,0,0],disc_eff.fitres.data[0][:,1,0])).T
+    print(plotargs.shape)
+    chiral_plot.plot_cont(disc_eff,line_plot,xlim=[0.,1.5],
+                          args=plotargs,phys=False)
+    chiral_plot.save()
+    del chiral_plot
+    header=["#amu_l","amu_s","mufpi","dmufpi","(a/r_0)^2"]
+    ana.print_summary(disc_eff,header,amu_l_dict,amu_s_dict)
+
+    for a in range(len(disc_eff.x_data)): 
+        disc_eff.y_data[a][:,:,0] = ext_data.get(space[a],'r0')*disc_eff.x_data[a][:,:,2]  
+    header=["#amu_l","amu_s","mufpi","dmufpi","(a/r_0)^2"]
+    ana.print_summary(disc_eff,header,amu_l_dict,amu_s_dict)
+    start = [0.1,0.1]
+    disc_eff.fit(line_err,start,plotdir=plotdir)
+    
+    label=[r'$(a/r_0)^2$',r'$r_0f_{\pi}$',r' ',
+           r'$(f_{\pi})_{phys}$']
+    filename = plotdir+'/fpi_disc_eff_set1.pdf'
+    chiral_plot = ana.LatticePlot(filename, join = False)
+    #limits for x values in plot
+    chiral_plot.plot_chiral_ext(disc_eff,space,label,
+                                xlim=[0.,0.05],ylim=[0.3,0.4],func=None,
                                 kk=False,gamma=True, plotlim = [0.,0.05])
     plotargs=np.vstack((disc_eff.fitres.data[0][:,0,0],disc_eff.fitres.data[0][:,1,0])).T
     print(plotargs.shape)
