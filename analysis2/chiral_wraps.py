@@ -36,11 +36,10 @@ def err_func(p, x, y, error):
     chi_b = y.B - pik_I32_chipt_fit(p,x.B)
     chi_d = y.D - pik_I32_chipt_fit(p,x.D)
     # TODO: find a runtime way to disable prior
-    #if y.p is not None:
-    #    chi_p = y.p - p[1]
+    if y.p is not None:
+        chi_p = y.p - p[1]
     # and append them to a vector
-    #return np.dot(error,np.r_[chi_a,chi_b,chi_d,chi_p])
-    return np.dot(error,np.r_[chi_a,chi_b,chi_d])
+    return np.dot(error,np.r_[chi_a,chi_b,chi_d,chi_p])
 
 def gamma_errfunc(p,x,y,error):
     chi_a = y.A - line(p,x.A)

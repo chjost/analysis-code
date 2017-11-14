@@ -745,6 +745,8 @@ def concat_data_fit(lst,space,prior=None,debug=1):
     # set up data structures
     # number of bootstrapsamples
     nboot = lst[0].shape[-1]
+    print("In concat_data_fit: lst is:")
+    print(lst)
     # named tuple instance
     # modify space if prior is given
     # TODO: what happens with multiple priors?

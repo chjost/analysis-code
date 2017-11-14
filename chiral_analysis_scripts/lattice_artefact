@@ -243,7 +243,7 @@ def main():
     
     label=[r'$(a/r_0)^2$',r'$\mu_{\pi K}\,a_{3/2}$',r' ',
            r'$(\mu_{\pi K}/f_{\pi})_{phys}$']
-    filename = plotdir+'/mu_a0_disc_eff_set1.pdf'
+    filename = plotdir+'/mu_a0_disc_eff_set2.pdf'
     chiral_plot = ana.LatticePlot(filename, join = False)
     #limits for x values in plot
     chiral_plot.plot_chiral_ext(disc_eff,space,label,
@@ -267,7 +267,7 @@ def main():
     
     label=[r'$(a/r_0)^2$',r'$r_0\mu_{\pi K}$',r' ',
            r'$(\mu_{\pi K})_{phys}$']
-    filename = plotdir+'/mu_disc_eff_set1.pdf'
+    filename = plotdir+'/mu_disc_eff_set2.pdf'
     chiral_plot = ana.LatticePlot(filename, join = False)
     #limits for x values in plot
     chiral_plot.plot_chiral_ext(disc_eff,space,label,
@@ -291,11 +291,11 @@ def main():
     
     label=[r'$(a/r_0)^2$',r'$r_0f_{\pi}$',r' ',
            r'$(f_{\pi})_{phys}$']
-    filename = plotdir+'/fpi_disc_eff_set1.pdf'
+    filename = plotdir+'/fpi_disc_eff_set2.pdf'
     chiral_plot = ana.LatticePlot(filename, join = False)
     #limits for x values in plot
     chiral_plot.plot_chiral_ext(disc_eff,space,label,
-                                xlim=[0.,0.05],ylim=[0.3,0.4],func=None,
+                                xlim=[0.,0.05],ylim=[0.34,0.42],func=None,
                                 kk=False,gamma=True, plotlim = [0.,0.05])
     plotargs=np.vstack((disc_eff.fitres.data[0][:,0,0],disc_eff.fitres.data[0][:,1,0])).T
     print(plotargs.shape)

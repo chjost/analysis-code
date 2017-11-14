@@ -147,7 +147,6 @@ class ChirAna(object):
     # save layout for later use
     self.y_shape = lyt_y
     self.x_shape = lyt_x
-    
       
     if self.match is True:
       self.amu_matched_to = []
@@ -206,16 +205,34 @@ class ChirAna(object):
     """
     # store matched x and y data
     # The data shape can be inferred from the data
-    x_a = self.x_data[0]
-    x_b = self.x_data[1]
-    x_d = self.x_data[2]
-    y_a = self.y_data[0]
-    y_b = self.y_data[1]
-    y_d = self.y_data[2]
+    ens = self.x_shape[0]
+    # Support different numbers of lattice spacing
+    # TODO: is there a better way to do this?
+    if ens == 1:
+        x_a = self.x_data[0]
+        y_a = self.y_data[0]
+        x_b = None 
+        y_b = None 
+        x_d = None
+        y_d = None
+    if ens == 2:
+        x_a = self.x_data[0]
+        y_a = self.y_data[0]
+        x_b = self.x_data[1]
+        y_b = self.y_data[1]
+        x_d = None 
+        y_d = None 
+    if ens == 3:
+        x_a = self.x_data[0]
+        y_a = self.y_data[0]
+        x_b = self.x_data[1]
+        y_b = self.y_data[1]
+        x_d = self.x_data[2]
+        y_d = self.y_data[2]
     match = self.amu_matched_to
     fit_info = self.fit_stats
     name = savedir+"/"+self.proc_id
-    np.savez(name,x_a=x_a,x_b=x_b,x_d=x_d,y_a=y_a,y_b=y_b,y_d=y_d,match=match,
+    np.savez(name,ens=ens,x_a=x_a,x_b=x_b,x_d=x_d,y_a=y_a,y_b=y_b,y_d=y_d,match=match,
              fit_stats=fit_info)
   #
   def load(self,savedir):
@@ -224,12 +241,18 @@ class ChirAna(object):
     """
     name = savedir+"/"+self.proc_id+".npz"
     data = np.load(name)
-    self.x_data[0] = data['x_a']
-    self.x_data[1] = data['x_b']
-    self.x_data[2] = data['x_d']
-    self.y_data[0] = data['y_a']
-    self.y_data[1] = data['y_b']
-    self.y_data[2] = data['y_d']
+    self.x_shape[1] = data['ens']
+    # Support different numbers of lattice spacing
+    # TODO: is there a better way to do this?
+    if self.lyt_x[1].size >= 1:
+        self.x_data[0] = data['x_a']
+        self.y_data[0] = data['y_a']
+    if self.lyt_x[1].size >= 2:
+        self.x_data[1] = data['x_b']
+        self.y_data[1] = data['y_b']
+    if self.lyt_x[1].size == 3:
+        self.x_data[2] = data['x_d']
+        self.y_data[2] = data['y_d']
     self.amu_matched_to = data['match']
     self.fit_stats = data['fit_stats']
 
