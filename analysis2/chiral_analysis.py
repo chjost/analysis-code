@@ -13,6 +13,7 @@ import pickle
 import chiral_utils as chut
 #from chiral_functions import *
 import chiral_wraps as chwrap
+import mu_pik_a0_wraps as wrap_test
 import chiral_errfuncs as cherr
 import extern_bootstrap as extboot
 import plot as plot
@@ -241,16 +242,17 @@ class ChirAna(object):
     """
     name = savedir+"/"+self.proc_id+".npz"
     data = np.load(name)
-    self.x_shape[1] = data['ens']
+    #print(data['ens'])
+    #self.x_shape[0] = data['ens']
     # Support different numbers of lattice spacing
     # TODO: is there a better way to do this?
-    if self.lyt_x[1].size >= 1:
+    if self.x_shape[0]>= 1:
         self.x_data[0] = data['x_a']
         self.y_data[0] = data['y_a']
-    if self.lyt_x[1].size >= 2:
+    if self.x_shape[0]>= 2:
         self.x_data[1] = data['x_b']
         self.y_data[1] = data['y_b']
-    if self.lyt_x[1].size == 3:
+    if self.x_shape[0]== 3:
         self.x_data[2] = data['x_d']
         self.y_data[2] = data['y_d']
     self.amu_matched_to = data['match']
@@ -1141,8 +1143,11 @@ class ChirAna(object):
       else:
           if iso_32 is True:
               _x = np.column_stack((mpi,mk,fpi,r0,meta))
+              print(_x.shape)
+              #self.phys_point_fitres = self.fitres.calc_mua0_pik_phys(_x,
+              #                                 chwrap.pik_I32_chipt_cont)
               self.phys_point_fitres = self.fitres.calc_mua0_pik_phys(_x,
-                                               chwrap.pik_I32_chipt_cont)
+                                               wrap_test.mu_pik_a_32_fit)
           else:
               _x = np.column_stack((ren,mpi,mk,fpi))
               self.phys_point_fitres = self.fitres.calc_mua0_pik_phys(_x,

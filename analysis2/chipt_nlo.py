@@ -92,12 +92,16 @@ def chi_nlo_pos(ren,mpi,mk,meta=None):
 def chi_I32_nlo(ren,mpi,mk,meta=None):
     # initialize a 2d-array (5,nboot) for the terms
     # take sum afterwards
-    _chi = np.zeros((5,mpi.shape[-1]))
+    _chi = np.zeros((5,mpi.shape[0]))
+    print(_chi.shape)
+    print(mpi.shape)
+    print(mk.shape)
     _chi[0] = kappa_pi(mpi,mk)*np.log(mpi**2/ren**2) 
     _chi[1] = kappa_k(mpi,mk)*np.log(mk**2/ren**2)
     if meta is None:
         _chi[2] = kappa_eta(mpi,mk)*np.log(m_eta_sq(mpi,mk)/ren**2)
     else:
+        print(meta.shape)
         _chi[2] = kappa_eta(mpi,mk)*np.log(meta**2/ren**2)
     _chi[3] = 86./9.*mpi*mk
     _chi[4] = kappa_tan(mpi,mk)*nlo_arctan(mpi,mk)

@@ -860,8 +860,8 @@ class LatticePlot(object):
         if gamma is False:
             _X = reduced_mass(x[:,:,0,0].flatten(),
                               x[:,:,1,0].flatten())/x[:,:,2,0].flatten()
+            #_X = x[:,:,1,0].flatten()/x[:,:,0,0].flatten()
         
-        #_X = x[:,:,1,0].flatten()/x[:,:,0,0].flatten()
         else:
             _X = x[:,:,0,0].flatten()
        
@@ -978,7 +978,7 @@ class LatticePlot(object):
         plt.legend(loc='lower left',ncol=2,numpoints=1,fontsize=16)
 
     def plot_cont(self,chirana,func,xlim,args,par=None,argct=None,calc_x=None,
-                  phys=True):
+                  phys=True,ploterror=True):
       """ Plot the continuum curve of a chiral analysis and the physical point
       result
       """
@@ -988,10 +988,10 @@ class LatticePlot(object):
       # Plot the continuum curve
       if argct == 'multiarg':
           plot_function_multiarg(func, xlim, args, 'cont.',
-              fmt='k--',calc_x=calc_x, ploterror=True, debug=self.debug)
+              fmt='k--',calc_x=calc_x, ploterror=ploterror, debug=self.debug)
       else:
           plot_function(func, xlim, args, 'cont.', fmt='k--',
-              ploterror=True,debug=self.debug)
+              ploterror=ploterror,debug=self.debug)
       if phys ==True:
           plt.errorbar(chirana.phys_point[0,0],chirana.phys_point[1,0],
                        chirana.phys_point[1,1],xerr=chirana.phys_point[0,1],

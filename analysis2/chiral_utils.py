@@ -79,10 +79,10 @@ def evaluate_phys(x, args, args_w ,func, isdependend):
   needed = np.zeros((nsam,))
   result = np.full(nsam,np.nan)
   # loop over samples
-  #print("evaluate_phys:")
-  #print args[0], x[0]
   for b in range(nsam):
-    y = func(args[b],x[b])
+    #y = func(args[b],x[b])
+    _x=np.atleast_2d(x[b])
+    y = func(args[b],_x)
     if y.shape[0] == 2:
       y = y[0]
     result[b] = y
@@ -745,8 +745,6 @@ def concat_data_fit(lst,space,prior=None,debug=1):
     # set up data structures
     # number of bootstrapsamples
     nboot = lst[0].shape[-1]
-    print("In concat_data_fit: lst is:")
-    print(lst)
     # named tuple instance
     # modify space if prior is given
     # TODO: what happens with multiple priors?

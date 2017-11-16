@@ -100,7 +100,7 @@ def main():
     fpi_raw = ana.read_extern("../plots2/data/fpi.dat",(1,2))
     print(fpi_raw)
 
-    read = False
+    read = True
 ################### Setup chiral analysis ######################################
     extrapol = ana.ChirAna("pi-K_I32_chipt_A1",correlated=False,gamma=False,match=True)
     # have five x-values: mk,mpi,meta,fpi,r0/a
@@ -278,8 +278,10 @@ def main():
     print("Arguments:")
     print(args[:,0])
     # Plot the data the given function
-    label=[r'$\mu_{\pi K}/f_{\pi}$',r'$\mu_{\pi K}\,a_{3/2}$',r' ',
-           r'$(\mu_{\pi K}/f_{\pi})_{phys}$']
+    #label=[r'$\mu_{\pi K}/f_{\pi}$',r'$\mu_{\pi K}\,a_{3/2}$',r' ',
+    #       r'$(\mu_{\pi K}/f_{\pi})_{phys}$']
+    label=[r'$M_{K}/M_{\pi}$',r'$\mu_{\pi K}\,a_{3/2}$',r' ',
+           r'$(M_{K}/M_{\pi})_{phys}$']
     filename = plotdir+'/mua0_decay_nlo_msfix_fse_M1A.pdf'
     chiral_plot = ana.LatticePlot(filename, join = False,debug=4)
     #limits for x values in plot
@@ -291,7 +293,7 @@ def main():
     chiral_plot.plot_chiral_ext(extrapol,space,label, xlim=lim_x,ylim=[-0.25,0.],
                                 func=ana.pik_I32_chipt_plot_cont, args=args,
                                 calc_x = ana.calc_x_plot_cont, ploterror=False,
-                                kk=False, x_phys=0.8128,plotlim=[0.7,1.6],
+                                kk=False, x_phys=0.8128,plotlim=[0.7,4.],
                                 argct="multiarg")
 
     # Plot NPLQCD Data

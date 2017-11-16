@@ -99,12 +99,13 @@ def plot_function_multiarg(func, X, args, label, plotrange=None, ploterror=False
         print(x1.shape)
         for j,x in enumerate(x1):
             # value that gets plotted is 0th sample
-            y1.append(func(_args[0], x))
+            _x=np.atleast_2d(x)
+            y1.append(func(_args[0], _x))
             if ploterror:
                 # function values for the bootstrap samples
                 tmp = np.zeros((_args.shape[0]))
                 # fill tmp values
-                tmp = func(_args,x)
+                tmp = func(_args,_x)
                 #for i,d in enumerate(_args):
                 #    tmp[i] = func(d, x)
                 mean, std = compute_error(np.asarray(tmp))
@@ -118,6 +119,10 @@ def plot_function_multiarg(func, X, args, label, plotrange=None, ploterror=False
     else: 
         _x1 = x1
     plt.plot(_x1, y1, fmt, label=label)
+    print("In plot_funtion_multiarg: x-values:")
+    print(_x1)
+    print("In plot_funtion_multiarg: x-values:")
+    print(y1)
     if ymax and ymin:
         plt.fill_between(_x1, ymin, ymax, facecolor=col, edgecolor=col,
             alpha=0.2)

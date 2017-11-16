@@ -19,27 +19,30 @@ def calc_x_plot(x):
     """ Function that calculates reduced mass divided by f_pi from mk,mpi and
     fpi"""
     xplot=reduced_mass(x[:,0],x[:,1])/x[:,2]
+    #xplot=np.asarray((x[:,1]/x[:,0]))
     return xplot
 
 def calc_x_plot_cont(x):
     """ Function that calculates reduced mass divided by f_pi from ml, ms, b0 and
     l4"""
-    mpi=np.sqrt(mpi_sq(x[:,0],b0=x[:,3]))
-    mk=np.sqrt(mk_sq(x[:,0],ms=x[:,1],b0=x[:,3]))
-    fpi=f_pi(x[:,0],f0=None,l4=x[:,2],b0=x[:,3])
+    mpi=np.sqrt(mpi_sq(x[:,0],b0=x[:,2]))
+    mk=np.sqrt(mk_sq(x[:,0],ms=x[:,1],b0=x[:,2]))
+    fpi=f_pi(x[:,0],f0=None,l4=x[:,3],b0=x[:,2])
     xplot=reduced_mass(mpi,mk)/fpi
+    #xplot=mk/mpi
     return xplot
 
 def err_func(p, x, y, error):
     # for each lattice spacing and prior determine the dot product of the error
     chi_a = y.A - pik_I32_chipt_fit(p,x.A)
-    chi_b = y.B - pik_I32_chipt_fit(p,x.B)
-    chi_d = y.D - pik_I32_chipt_fit(p,x.D)
+    #chi_b = y.B - pik_I32_chipt_fit(p,x.B)
+    #chi_d = y.D - pik_I32_chipt_fit(p,x.D)
     # TODO: find a runtime way to disable prior
-    if y.p is not None:
-        chi_p = y.p - p[1]
+    #if y.p is not None:
+    #    chi_p = y.p - p[1]
     # and append them to a vector
-    return np.dot(error,np.r_[chi_a,chi_b,chi_d,chi_p])
+    #return np.dot(error,np.r_[chi_a,chi_b,chi_d,chi_p])
+    return np.dot(error,np.r_[chi_a])
 
 def gamma_errfunc(p,x,y,error):
     chi_a = y.A - line(p,x.A)
@@ -118,7 +121,8 @@ def pik_I32_chipt_plot(args, x):
     else:
         _args=args
     #return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], args[0,3], args[0,0:3])
-    return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], _args[-1], _args[0:3],meta=_x[4])
+    #return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], _args[-1], _args[0:3],meta=_x[4])
+    return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], _args[0:3],meta=None)
 
 def pik_I32_chipt_plot_cont(args, x):
     # x and args need to have the same number of entries in last dimension
@@ -137,9 +141,10 @@ def pik_I32_chipt_plot_cont(args, x):
     # B_0 (args[-1]), F_0 and m_s (x[1]) fixed
     # use GMOR relations for meson masses
     mpi=np.sqrt(mpi_sq(_x[0],_args[-1]))
+    print(_x[1])
     mk=np.sqrt(mk_sq(_x[0],_x[1],_args[-1]))
     fpi=f_pi(_x[0],f0=None,l4=_args[-2],b0=_args[-1])
-    _lat = _args[3]**2*mpi**2/197.37**2
+    _lat = _args[3]**2*mk**2/197.37**2
     return pik_I32_chipt_nlo(mpi, mk, fpi, _args[0:3], lat=_lat)
 
 def pik_I32_chipt_nlo_plot(args, x):
@@ -179,11 +184,11 @@ def pik_I32_chipt_cont(args, x):
         _args = args.T
     else:
         _args=args
-    _args[2]=np.zeros_like(args[2])
+    #_args[2]=np.zeros_like(args[2])
     #return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], args[0,3], args[0,0:3])
-    #return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], _x[3], _args[0:3], meta=_x[4])
-    return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], _args[0:3],
-            meta=_x[4], lat=args[-1])
+    return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], _args[0:3], meta=_x[4])
+    #return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], _args[0:3],
+    #        meta=_x[4], lat=args[-1])
 
 def pik_I32_chipt_lo_plot(args, x):
     """ Wrapper for plotfunction"""
@@ -209,25 +214,6 @@ def pik_I32_chipt_nlo_plot(args, x):
     lo = -(reduced_mass(_x[0],_x[1])/_x[2])**2/(4.*np.pi)
     _pik = pik_I32_chipt_nlo(_x[0],_x[1],_x[2], _args[-1], _args[0:3])
     return (_pik-lo)/_pik
-
-#def pik_I32_chipt_cont(args, x):
-#    """ Wrapper for plotfunction"""
-#    # x and args need to have the same number of entries in last dimension
-#    # (bootstrapsamples)
-#    # broadcast _x values to same shape as arguments
-#    if hasattr(x,'__iter__') is not True:
-#        _x = np.zeros((len(x),args.shape[0]))
-#        for i,d in enumerate(np.asarray(x)):
-#            _x[i] = np.full((1500,),d)
-#    else:
-#        _x = x.reshape(len(x),1)
-#    if args.ndim == 2 and args.shape[0]> args.shape[1]:
-#        _args = args.T
-#    else:
-#        _args=args
-#    #_args[2]=np.zeros_like(args[2])
-#    #return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], args[0,3], args[0,0:3])
-#    return pik_I32_chipt_nlo(_x[0],_x[1],_x[2], _x[3], _args[0:3], meta=_x[4])
 
 def pik_I32_chipt_lo_plot(args, x):
     """ Wrapper for plotfunction"""

@@ -1038,14 +1038,14 @@ class FitResult(object):
         return mka0_phys
 
     #TODO:  Think about placing this somewhere else
-    def calc_mua0_pik_phys(self, x, func,debug =0):
+    def calc_mua0_pik_phys(self, x, func,debug =2):
         """Calculate m0ua0 for pi-K from fitted LECs and continuum input
         """ 
         self.calc_error()
         _pars = np.copy(self.data[0])
         # Last parameter is the lattice artefact, want to suppress that for
         # continuum
-        _pars[-1] = np.zeros_like(_pars[0])
+        #_pars[-1] = np.zeros_like(_pars[0])
         _pars_w = self.weight[:][0]
         _nsam = self.data[0].shape[0]
         _mua0_phys = FitResult("mua0_phys",True)
@@ -1841,79 +1841,6 @@ class FitResult(object):
             _sum.data[0][:,i] = fitres[0].data[0][:,par,item[0]]+fitres[1].data[0][:,par,item[1]]
             _sum.pval[0][:,i] = np.ones((nboot,))*fitres[0].weight[par][0][item[0]]*fitres[1].weight[par][0][item[1]]
         return _sum
-
-#    def reduced_mass(self,mass, par=1):
-#        """Calculate reduced mass mu = m1*m2/(m1+m2) for different particles
-#
-#        The function takes one additional fitresult argument and calculates mu. It
-#        takes care of several fitrange combinations and correlators
-#
-#        Parameters
-#        ----------
-#        Returns
-#        ----------
-#        _mu : FitRes, the reduced mass returned as a fitresult
-#        """
-#        # Calculate errors and weights on all observables
-#        self.calc_error()
-#        mass.calc_error()
-#        # Gather necessary data from list of fitresults
-#        # data have to have the same number of bootstrapsamples
-#        nboot = self.data[0].shape[0] 
-#        npars = 1
-#        # calculate the number of fitranges
-#        _fr1 = self.data[0].shape[-1]
-#        _fr2 = mass.data[0].shape[-1]
-#        shape1 = (nboot, _fr1, _fr2)
-#        ncorr=1
-#        # Initialize an empty fitresult
-#        _sum = FitResult("mass_sum",True)
-#        _sum.create_empty(shape1,shape1,ncorr)
-#        _sum.weight = []
-#        _sum.weight.append(np.zeros((_fr1,_fr2)))
-#        # Loop over fitranges
-#        for i in range(_fr1):
-#            for j in range(_fr2):
-#                _sum.data[0][:,i,j] = self.data[0][:,par,i]*mass.data[0][:,par,j] /(self.data[0][:,par,i]+mass.data[0][:,par,j])
-#                _sum.weight[0][i,j] = self.weight[0][0][i]*self.weight[0][0][j]
-#        return _sum
-#
-#    def add_mass(self, mass, par=1):
-#        """add one mass to the mass of self m += m1 for different particles
-#
-#        The function takes one additional fitresult argument and calculates mu. It
-#        takes care of several fitrange combinations and correlators
-#
-#        Parameters
-#        ----------
-#        Returns
-#        ----------
-#        _mu : FitRes, the reduced mass returned as a fitresult
-#        """
-#
-#        # Calculate errors and weights on all observables
-#        self.calc_error()
-#        mass.calc_error()
-#        # Gather necessary data from list of fitresults
-#        # data have to have the same number of bootstrapsamples
-#        nboot = self.data[0].shape[0] 
-#        npars = 1
-#        # calculate the number of fitranges
-#        _fr1 = self.data[0].shape[-1]
-#        _fr2 = mass.data[0].shape[-1]
-#        shape1 = (nboot, _fr1, _fr2)
-#        ncorr=1
-#        # Initialize an empty fitresult
-#        _sum = FitResult("mass_sum",True)
-#        _sum.create_empty(shape1,shape1,ncorr)
-#        _sum.weight = []
-#        _sum.weight.append(np.zeros((_fr1,_fr2)))
-#        # Loop over fitranges
-#        for i in range(_fr1):
-#            for j in range(_fr2):
-#                _sum.data[0][:,i,j] = self.data[0][:,par,i]+mass.data[0][:,par,j]
-#                _sum.weight[0][i,j] = self.weight[0][0][i]*self.weight[0][0][j]
-#        return _sum
 
 def init_fitreslst(fnames):
   """Read fitresults from a list of filenames and return the list
