@@ -278,10 +278,8 @@ def main():
     print("Arguments:")
     print(args[:,0])
     # Plot the data the given function
-    #label=[r'$\mu_{\pi K}/f_{\pi}$',r'$\mu_{\pi K}\,a_{3/2}$',r' ',
-    #       r'$(\mu_{\pi K}/f_{\pi})_{phys}$']
-    label=[r'$M_{K}/M_{\pi}$',r'$\mu_{\pi K}\,a_{3/2}$',r' ',
-           r'$(M_{K}/M_{\pi})_{phys}$']
+    label=[r'$\mu_{\pi K}/f_{\pi}$',r'$\mu_{\pi K}\,a_{3/2}$',r' ',
+           r'$(\mu_{\pi K}/f_{\pi})_{phys}$']
     filename = plotdir+'/mua0_decay_nlo_msfix_fse_M1A.pdf'
     chiral_plot = ana.LatticePlot(filename, join = False,debug=4)
     #limits for x values in plot
@@ -291,10 +289,13 @@ def main():
     lim_x = [[0.01,75.],[ms[0],ms[0]],[cont_data.get('l4')[0],cont_data.get('l4')[0]],
         [cont_data.get('b0')[0],cont_data.get('b0')[0]]]
     chiral_plot.plot_chiral_ext(extrapol,space,label, xlim=lim_x,ylim=[-0.25,0.],
-                                func=ana.pik_I32_chipt_plot_cont, args=args,
+                                func=None, args=args,
                                 calc_x = ana.calc_x_plot_cont, ploterror=False,
-                                kk=False, x_phys=0.8128,plotlim=[0.7,4.],
+                                kk=False, x_phys=0.8128,plotlim=[0.7,1.8],
                                 argct="multiarg")
+
+    chiral_plot.plot_fit_proof(extrapol,space,xvalue_function=ana.calc_x_plot,
+                               fit_function=ana.test_wrap.mu_pik_a_32_fit,data_label='fit')
 
     # Plot NPLQCD Data
     # TODO: Dirty Hack at the moment
@@ -311,8 +312,8 @@ def main():
     #                 label=r'disc_eff')
     args = np.vstack((plotargs[:,0,0], plotargs[:,1,0],
       np.zeros_like(plotargs[:,0,0]),np.ones_like(plotargs[:,0,0]),cont_data.get('l4'),cont_data.get('b0'))).T
-    chiral_plot.plot_cont(extrapol,ana.pik_I32_chipt_plot_cont,
-                          lim_x,args,argct='multiarg',calc_x=ana.calc_x_plot_cont)
+    #chiral_plot.plot_cont(extrapol,ana.pik_I32_chipt_plot_cont,
+    #                      lim_x,args,argct='multiarg',calc_x=ana.calc_x_plot_cont)
     chiral_plot.save()
 
     #filename = plotdir+'/mua0_decay_nlo_only_msfix_fse.pdf'

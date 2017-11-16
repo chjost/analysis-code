@@ -35,14 +35,14 @@ def calc_x_plot_cont(x):
 def err_func(p, x, y, error):
     # for each lattice spacing and prior determine the dot product of the error
     chi_a = y.A - pik_I32_chipt_fit(p,x.A)
-    #chi_b = y.B - pik_I32_chipt_fit(p,x.B)
-    #chi_d = y.D - pik_I32_chipt_fit(p,x.D)
+    chi_b = y.B - pik_I32_chipt_fit(p,x.B)
+    chi_d = y.D - pik_I32_chipt_fit(p,x.D)
     # TODO: find a runtime way to disable prior
-    #if y.p is not None:
-    #    chi_p = y.p - p[1]
+    if y.p is not None:
+        chi_p = y.p - p[1]
     # and append them to a vector
-    #return np.dot(error,np.r_[chi_a,chi_b,chi_d,chi_p])
-    return np.dot(error,np.r_[chi_a])
+    return np.dot(error,np.r_[chi_a,chi_b,chi_d,chi_p])
+    #return np.dot(error,np.r_[chi_a])
 
 def gamma_errfunc(p,x,y,error):
     chi_a = y.A - line(p,x.A)

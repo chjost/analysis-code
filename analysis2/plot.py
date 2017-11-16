@@ -1,5 +1,5 @@
 """
-The class for fitting.
+The class for plotting.
 """
 
 import numpy as np
@@ -976,6 +976,20 @@ class LatticePlot(object):
         if len(label) > 2:
             plt.title(label[2])
         plt.legend(loc='lower left',ncol=2,numpoints=1,fontsize=16)
+
+    def plot_fit_proof(self, chirana, lattice_spacings,
+        fit_function, fit_arguments, xvalue_function=None, data_label="Fit evaluation"):
+        """Plot fit function evaluated at lattice input values
+
+        The x-data for the plot are taken from a chiral extrapolation object.
+        If given the actual x-axis points are calculated via xvalue_function and
+        the fit function is used for the evaluation.
+        """
+        col = ['r','b','g']
+        fmt_pts = ['^','v','o']
+        fmt_ls = ['--',':','-.']
+        dat_label = [r'$a=0.0885$fm',r'$a=0.0815$fm',r'$a=0.0619$fm']
+
 
     def plot_cont(self,chirana,func,xlim,args,par=None,argct=None,calc_x=None,
                   phys=True,ploterror=True):
