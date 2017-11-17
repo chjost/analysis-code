@@ -13,6 +13,7 @@ from fit import LatticeFit, FitResult
 from correlator import Correlators
 from statistics import compute_error, draw_gauss_distributed, acf
 from plot_functions import plot_data, plot_function, plot_function_multiarg, plot_histogram
+from plot_layout import set_plotstyles
 from in_out import check_write
 from chiral_functions import *
 
@@ -838,7 +839,7 @@ class LatticePlot(object):
         if self.join is False:
           self.save()
           plt.clf()
-
+# TODO: Move the shape_data functions to an own file
     # Dirty helper function to abbreviate plot_chiral_ext
     def shape_data_kk(self,x,y,args):
         _X = x[:,:,0,0].flatten()*args[0,0]/args[0,1]
@@ -916,8 +917,8 @@ class LatticePlot(object):
                 _X,_Y,_dy = self.shape_data_pik(chirana.x_data[i],
                                                 y_in,gamma=gamma)
             _mean, _dy = compute_error(_dy,axis=1)
-            plot_data(_X,_Y,_dy,label=a,col=col[i],fmt=fmt_pts[i],alpha=1.,
-                      debug=self.debug)
+            #plot_data(_X,_Y,_dy,label=a,col=col[i],fmt=fmt_pts[i],alpha=1.,
+            #          debug=self.debug)
             # Check if we want to plot a function in addition to the data
             # check for lattice spacing dependence
         if func is not None:
@@ -978,18 +979,31 @@ class LatticePlot(object):
         plt.legend(loc='lower left',ncol=2,numpoints=1,fontsize=16)
 
     def plot_fit_proof(self, chirana, lattice_spacings,
-        fit_function, fit_arguments, xvalue_function=None, data_label="Fit evaluation"):
+                       fit_function, xvalue_function=None,
+                       data_label="Fit evaluation"):
         """Plot fit function evaluated at lattice input values
 
         The x-data for the plot are taken from a chiral extrapolation object.
         If given the actual x-axis points are calculated via xvalue_function and
         the fit function is used for the evaluation.
         """
-        col = ['r','b','g']
-        fmt_pts = ['^','v','o']
-        fmt_ls = ['--',':','-.']
-        dat_label = [r'$a=0.0885$fm',r'$a=0.0815$fm',r'$a=0.0619$fm']
-
+        # In dependence of the lattice_spacings set layout options
+        colors, markerstyles, linestyles, data_labels = set_plotstyles(lattice_spacings)
+        # Treat every lattice spacing separately
+        for i,a in enumerate(lattice_spacings):
+            y_input = chirana.y_data[i]
+            xvalues_fit = chirana.x_data[i][:,0]
+            # Extract fit arguments from chirana instance, include lattice
+            # artefact..
+            fit_arguments = chirana.fitres.data[0][:,:,0]
+            yvalues_fit = fit_function(fit_arguments.T,xvalues_fit)
+            # TODO: compute_error seems not to work for 3d-arrays take 0-th
+            # bootstrapsamples for the time being
+            xvalues_plot,dummy1,dummy2 = self.shape_data_pik(chirana.x_data[i],chirana.y_data[i])
+            _ymean, _dy = compute_error(yvalues_fit,axis=1)
+            plot_data(xvalues_plot,_ymean,_dy,label=a,col=colors[i],
+                      fmt=markerstyles[i],alpha=0.7, debug=self.debug)
+        plt.legend(loc='lower left',ncol=2,numpoints=1,fontsize=16)
 
     def plot_cont(self,chirana,func,xlim,args,par=None,argct=None,calc_x=None,
                   phys=True,ploterror=True):
@@ -1003,6 +1017,8 @@ class LatticePlot(object):
       if argct == 'multiarg':
           plot_function_multiarg(func, xlim, args, 'cont.',
               fmt='k--',calc_x=calc_x, ploterror=ploterror, debug=self.debug)
+      elif argct == 'plain':
+          print("No continuum function plotted")
       else:
           plot_function(func, xlim, args, 'cont.', fmt='k--',
               ploterror=ploterror,debug=self.debug)

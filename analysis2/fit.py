@@ -1057,7 +1057,8 @@ class FitResult(object):
             print("parameters")
             print(_pars.shape)
         #print(func(_pars[0],np.asarray((x[0,0],x[0,1],x[0,2],x[0,3],x[0,4]))))
-        for res in evaluate_phys(x, _pars[...,0], _pars_w, func, False):
+        # Third _pars entry is the lattice artefact
+        for res in evaluate_phys(x, _pars[...,0:2,0], _pars_w, func, False):
             _mua0_phys.add_data(*res)
         return _mua0_phys
 

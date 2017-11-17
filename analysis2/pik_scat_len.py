@@ -28,8 +28,6 @@ def pik_I32_chipt_nlo(mpi, mk, fpi, p, lambda_x=None, meta=None, lat=None):
     -------
     _mua32 : 1d-array, the calculated values of _mua32
     """
-    print("in pik_I32_chipt_nlo: eta mass")
-    print(meta)
     #check inputs
     if lambda_x is None:
         lambda_x = fpi

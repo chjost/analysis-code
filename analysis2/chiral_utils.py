@@ -73,7 +73,15 @@ def evaluate_phys(x, args, args_w ,func, isdependend):
   args_w : the corresponding weights
   
   """
+  print("\nIn evaluate_phys: arguments shape:")
+  print("args shape:")
+  print(args.shape)
+  print(args[0])
+  print("x shape:")
+  print(x.shape)
+  print(x[0])
   nsam = args.shape[0]
+  print("Function name is: %s" %func)
   # loop over the fitrange of parameters
   weight = np.full(nsam, args_w)
   needed = np.zeros((nsam,))

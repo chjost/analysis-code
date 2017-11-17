@@ -90,18 +90,16 @@ def chi_nlo_pos(ren,mpi,mk,meta=None):
 # chipt functions for fitting, according to arXiv:1110.1422
 # TODO: Do that via linear combination of chi_pos and chi_neg?
 def chi_I32_nlo(ren,mpi,mk,meta=None):
-    # initialize a 2d-array (5,nboot) for the terms
+    # initialize a nd-array (5,mpi.shape) for the terms
     # take sum afterwards
-    _chi = np.zeros((5,mpi.shape[0]))
-    print(_chi.shape)
-    print(mpi.shape)
-    print(mk.shape)
+    # if we sum the tuples we can have any shape for _chi
+    _chi_shape = (5,)+mpi.shape
+    _chi = np.zeros(_chi_shape)
     _chi[0] = kappa_pi(mpi,mk)*np.log(mpi**2/ren**2) 
     _chi[1] = kappa_k(mpi,mk)*np.log(mk**2/ren**2)
     if meta is None:
         _chi[2] = kappa_eta(mpi,mk)*np.log(m_eta_sq(mpi,mk)/ren**2)
     else:
-        print(meta.shape)
         _chi[2] = kappa_eta(mpi,mk)*np.log(meta**2/ren**2)
     _chi[3] = 86./9.*mpi*mk
     _chi[4] = kappa_tan(mpi,mk)*nlo_arctan(mpi,mk)
