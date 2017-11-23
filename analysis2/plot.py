@@ -13,7 +13,7 @@ from fit import LatticeFit, FitResult
 from correlator import Correlators
 from statistics import compute_error, draw_gauss_distributed, acf
 from plot_functions import plot_data, plot_function, plot_function_multiarg, plot_histogram
-from plot_layout import set_plotstyles
+from plot_layout import set_plotstyles, set_layout
 from in_out import check_write
 from chiral_functions import *
 
@@ -125,6 +125,7 @@ class LatticePlot(object):
                fitrange=fitrange, addpars=addpars, pval=pval)
         self.decorate_plot(hconst=hconst, vconst=vconst)
         
+    # TODO: repair function
     def decorate_plot(self, hconst=None, vconst=None):
         """Decorate the plot with an optional horizontal and vertical constant
         """
@@ -917,8 +918,8 @@ class LatticePlot(object):
                 _X,_Y,_dy = self.shape_data_pik(chirana.x_data[i],
                                                 y_in,gamma=gamma)
             _mean, _dy = compute_error(_dy,axis=1)
-            #plot_data(_X,_Y,_dy,label=a,col=col[i],fmt=fmt_pts[i],alpha=1.,
-            #          debug=self.debug)
+            plot_data(_X,_Y,_dy,label=a,col=col[i],fmt=fmt_pts[i],alpha=1.,
+                      debug=self.debug)
             # Check if we want to plot a function in addition to the data
             # check for lattice spacing dependence
         if func is not None:
@@ -978,10 +979,13 @@ class LatticePlot(object):
             plt.title(label[2])
         plt.legend(loc='lower left',ncol=2,numpoints=1,fontsize=16)
 
+
     def plot_fit_proof(self, chirana, lattice_spacings,
                        fit_function, xvalue_function=None,
-                       data_label="Fit evaluation"):
-        """Plot fit function evaluated at lattice input values
+                       data_label="Fit evaluation",label=None,plotlim=None,
+                       ylim=None,x_phys=None,legend=None,xcut=None):
+        """Plot relative deviation of fit function evaluated at lattice input
+        values from measurements
 
         The x-data for the plot are taken from a chiral extrapolation object.
         If given the actual x-axis points are calculated via xvalue_function and
@@ -996,31 +1000,49 @@ class LatticePlot(object):
             # Extract fit arguments from chirana instance, include lattice
             # artefact..
             fit_arguments = chirana.fitres.data[0][:,:,0]
-            yvalues_fit = fit_function(fit_arguments.T,xvalues_fit)
+            y_fit = fit_function(fit_arguments.T,xvalues_fit)
+            print("\ny_fit has shape")
+            print(y_fit.shape)
             # TODO: compute_error seems not to work for 3d-arrays take 0-th
             # bootstrapsamples for the time being
-            xvalues_plot,dummy1,dummy2 = self.shape_data_pik(chirana.x_data[i],chirana.y_data[i])
-            _ymean, _dy = compute_error(yvalues_fit,axis=1)
+            xvalues_plot,dummy1,dummy2 = self.shape_data_pik(chirana.x_data[i],
+                                                   chirana.y_data[i])
+            y_measured=chirana.y_data[i][:,0,0]
+            relative_y_deviation = np.absolute((y_measured-y_fit)/y_measured)
+            _ymean, _dy = compute_error(relative_y_deviation,axis=1)
             plot_data(xvalues_plot,_ymean,_dy,label=a,col=colors[i],
-                      fmt=markerstyles[i],alpha=0.7, debug=self.debug)
-        plt.legend(loc='lower left',ncol=2,numpoints=1,fontsize=16)
+                      fmt=markerstyles[i], debug=self.debug)
+
+        if xcut is not None:
+            if len(xcut) > 1:
+                plot_brace(fit_arguments,xcut,fit_function,xpos="low")
+                plot_brace(fit_arguments,xcut,fit_function,xpos="up")
+            else:
+                plot_brace(fit_arguments,xcut,fit_function,xpos="up")
+        plt.axhline(color='k')
+        set_layout(physical_x=x_phys,xlimits=plotlim,ylimits=ylim,
+                   legend_array=legend,labels=label)
 
     def plot_cont(self,chirana,func,xlim,args,par=None,argct=None,calc_x=None,
-                  phys=True,ploterror=True):
+                  phys=True,ploterror=True,label=None):
       """ Plot the continuum curve of a chiral analysis and the physical point
       result
       """
       #if par is not None:
       #    #TODO: Generalize to arbitrary long lists
       #    args[0][par] = np.zeros_like(args[0][0])
+      if label is not None:
+        _label=label
+      else:
+        _label='cont'
       # Plot the continuum curve
       if argct == 'multiarg':
-          plot_function_multiarg(func, xlim, args, 'cont.',
-              fmt='k--',calc_x=calc_x, ploterror=ploterror, debug=self.debug)
+          plot_function_multiarg(func, xlim, args, _label,
+              fmt='k-',calc_x=calc_x, ploterror=ploterror, debug=self.debug)
       elif argct == 'plain':
           print("No continuum function plotted")
       else:
-          plot_function(func, xlim, args, 'cont.', fmt='k--',
+          plot_function(func, xlim, args, _label, fmt='k-',
               ploterror=ploterror,debug=self.debug)
       if phys ==True:
           plt.errorbar(chirana.phys_point[0,0],chirana.phys_point[1,0],

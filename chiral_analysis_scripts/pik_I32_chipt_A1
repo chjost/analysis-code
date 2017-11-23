@@ -100,7 +100,7 @@ def main():
     fpi_raw = ana.read_extern("../plots2/data/fpi.dat",(1,2))
     print(fpi_raw)
 
-    read = False
+    read = True
 ################### Setup chiral analysis ######################################
     extrapol = ana.ChirAna("pi-K_I32_chipt_A1",correlated=False,gamma=False,match=True)
     # have five x-values: mk,mpi,meta,fpi,r0/a
@@ -234,7 +234,7 @@ def main():
 ################################################################################
 #                   do chiral extrapolation                                    #
 ################################################################################
-    # Include bootstrapped L_piK as a prior value taken from HPQCD
+    # Include bootstrapped L_5 as a prior value taken from HPQCD
     l_5 = np.atleast_2d(ana.draw_gauss_distributed(5.41e-3,3e-5,(1500,),
       origin=True))
     #l_5 = np.atleast_2d(ana.draw_gauss_distributed(5.65e-3,2e-5,(1500,),
@@ -288,15 +288,24 @@ def main():
     print(ana.compute_error(ms))
     lim_x = [[0.01,75.],[ms[0],ms[0]],[cont_data.get('l4')[0],cont_data.get('l4')[0]],
         [cont_data.get('b0')[0],cont_data.get('b0')[0]]]
-    chiral_plot.plot_chiral_ext(extrapol,space,label, xlim=lim_x,ylim=[-0.25,0.],
+    chiral_plot.plot_chiral_ext(extrapol,space,label, xlim=[0.7,1.7],ylim=[-0.25,0.],
                                 func=None, args=args,
-                                calc_x = ana.calc_x_plot_cont, ploterror=False,
+                                calc_x = None, ploterror=False,
                                 kk=False, x_phys=0.8128,plotlim=[0.7,1.7],
-                                argct="multiarg")
-
+                                argct=None)
+    args = np.vstack((plotargs[:,0,0], plotargs[:,1,0],
+      np.zeros_like(plotargs[:,0,0]),np.ones_like(plotargs[:,0,0]),cont_data.get('l4'),cont_data.get('b0'))).T
+    chiral_plot.plot_cont(extrapol,ana.wrap_test.pik_I32_lo,
+                          [0.7,1.7],args,argct=None,calc_x=None,ploterror=False,
+                          label=r'LO-$\chi$-PT')
+    chiral_plot.save()
+    label[1]=r'rel. dev. $\mu_{\pi K}\,a_{3/2}$'
     chiral_plot.plot_fit_proof(extrapol,space,ana.wrap_test.mu_pik_a_32_fit,
                                 xvalue_function=ana.calc_x_plot,
-                                data_label='fit')
+                                data_label='fit',plotlim=[1.1,1.6],ylim=[-0.3,0.3],label=label,
+                                x_phys=None)
+    #chiral_plot.plot_cont(extrapol,ana.pik_I32_chipt_plot_cont,
+    #                      lim_x,args,argct='plain',calc_x=ana.calc_x_plot_cont)
 
     # Plot NPLQCD Data
     # TODO: Dirty Hack at the moment
@@ -311,10 +320,6 @@ def main():
 
     #plt.errorbar(x_cmp[:,0],y_cmp[:,0],y_cmp[:,1],xerr=x_cmp[:,1],fmt='ko',alpha=0.6,
     #                 label=r'disc_eff')
-    args = np.vstack((plotargs[:,0,0], plotargs[:,1,0],
-      np.zeros_like(plotargs[:,0,0]),np.ones_like(plotargs[:,0,0]),cont_data.get('l4'),cont_data.get('b0'))).T
-    chiral_plot.plot_cont(extrapol,ana.pik_I32_chipt_plot_cont,
-                          lim_x,args,argct='plain',calc_x=ana.calc_x_plot_cont)
     chiral_plot.save()
 
     #filename = plotdir+'/mua0_decay_nlo_only_msfix_fse.pdf'

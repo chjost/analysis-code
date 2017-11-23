@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 """
 Functions setting the plot layout
 """
@@ -26,3 +27,47 @@ def set_plotstyles(lattice_spacings):
     datalabels = lattice_spacings
     n_spaces = len(lattice_spacings)
     return colors[0:n_spaces], markerstyles[0:n_spaces], linestyles[0:n_spaces], datalabels[0:n_spaces]
+
+# TODO: document these functions
+def set_layout(physical_x=None,xlimits=None,ylimits=None,legend_array=None,
+              labels=None):
+    set_plotlimits(xlimits,ylimits)
+    if labels is not None:
+      plot_physical_x(physical_x,labels[0])
+    else:
+      plot_physical_x(physial_x,"x")
+    set_legend(legend_array)
+    set_labels(labels)
+    
+def set_legend(legend_array=None):
+    if legend_array is not None and len(legend_array == 4):
+        plt.legend(loc=legend_array[0],ncol=legend_array[1],
+                   numpoints=legendarray[2],fontsize=legend_array[3])
+    else:
+        plt.legend(loc='lower left',ncol=2,numpoints=1,fontsize=16)
+
+def plot_physical_x(physical_x,x_name):
+    if physical_x is not None:
+        plt.axvline(x=physical_x, color='k', ls='--', label=x_name+'_phys.')
+# TODO: Not finished yet, how to deal with arguments and stuff, perhaps not
+# in set_layout
+def plot_xcut():
+    if xcut is not None:
+        if len(xcut) > 1:
+            plot_brace(fit_arguments,xcut,fit_function,xpos="low")
+            plot_brace(fit_arguments,xcut,fit_function,xpos="up")
+        else:
+            plot_brace(fit_arguments,xcut,fit_function,xpos="up")
+
+def set_plotlimits(xlimits=None,ylimits=None):
+    if xlimits is not None:
+        plt.xlim(xlimits[0],xlimits[1])
+    if ylimits is not None:
+        plt.ylim(ylimits[0],ylimits[1])
+
+def set_labels(labels=None):
+    if labels is not None:
+         plt.xlabel(labels[0])
+         plt.ylabel(labels[1])
+         if len(labels) >= 3:
+            plt.title(labels[2])

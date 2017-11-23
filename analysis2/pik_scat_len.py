@@ -4,8 +4,8 @@ from chipt_nlo import *
 
 # collection of the pik scattering length formulae
 def pik_I32_chipt_lo(mpi, mk, fpi, r0, p):
-    
-    _mua32 = -(reduced_mass(mpi,mk)/fpi)**2/(4.*np.pi)+(p/(r0**2))
+    _mua32 = -x**2/(4*np.pi)
+    #_mua32 = -(reduced_mass(mpi,mk)/fpi)**2/(4.*np.pi)+(p/(r0**2))
     return _mua32
 def pik_I32_chipt_nlo(mpi, mk, fpi, p, lambda_x=None, meta=None, lat=None):
     """ Calculate mu_{piK} a_3/2 in continuum chipt at NLO plus a lattice
