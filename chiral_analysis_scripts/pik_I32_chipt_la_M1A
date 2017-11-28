@@ -124,9 +124,7 @@ def main():
             c=np.full_like(l_5_prior[0], np.nan)
         mu_a32_phys = extrapol.phys_point_fitres.data[0][:,0]
         value_list=[artefact_id,chisquared_reduced,l_5,l_pik,c,mu_a32_phys]
-        fitresults=dict()
-        for i,o in enumerate(observables):
-            fitresults[o]=value_list[i]
+        fitresults={ key:values for key, values in zip(observables,value_list) }
         fitresults_dataframe=pd.DataFrame(fitresults)
         print(fitresults_dataframe.info())
         results_lattice_artefact = results_lattice_artefact.append(fitresults_dataframe)
@@ -171,10 +169,7 @@ def main():
                                     x_phys=None)
         chiral_plot.save()
     print(results_lattice_artefact.info())
-    with open(resdir+'/pik_disc_eff_M1A.npy','wb') as store:
-        np.save(store, results_lattice_artefact)
-    #store = pd.HDFStore(resdir+'/pik_disc_eff_M1A.h5')
-    #store['lattice_results'] = results_lattice_artefact
+    results_lattice_artefact.to_pickle(resdir+'/pik_disc_eff_M1A.pkl')
 
 if __name__ == '__main__':
     try:

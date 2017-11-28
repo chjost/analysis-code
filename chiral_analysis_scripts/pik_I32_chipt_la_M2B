@@ -11,6 +11,7 @@ matplotlib.use('Agg') # has to be imported before the next lines
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from matplotlib.backends.backend_pdf import PdfPages
+import pandas as pd
 
 # Christian's packages
 sys.path.append('/hiskp2/helmes/projects/analysis-code/')
@@ -18,6 +19,7 @@ import analysis2 as ana
 ################################################################################
 #                   set up objects                                             #
 ################################################################################
+def main():
     # Get parameters from initfile
     if len(sys.argv) < 2:
         ens = ana.LatticeEnsemble.parse("A40.24.ini")
@@ -70,7 +72,6 @@ import analysis2 as ana
     read_ext = False
     # Physical strange quark mass
     ms = 0.
-def main():
     lattice_artefacts={'None'                  :0,
                        '(a M_pi)^2'            :1,
                        '(a M_K)^2'             :2,
@@ -95,6 +96,9 @@ def main():
         extrapol.load(resdir)
     except:
         print("Could not load chiral analysis!")
+    #header = ["#amu_l", "amu_s", "mpi", "dmpi", "mk", "dmk", "fpi", "dfpi",
+    #          "r0/a", "d(r0/a)", "m_eta","dm_eta","mu a0", "d(mu a0)"]
+    #ana.print_summary(extrapol, header, amu_l_dict,amu_s_dict)
     # initialize dataframe for storage
     # the columns are physical value, L_piK, L_5, c, artefact id
     observables=['Lattice Artefact','chi2 reduced','L_5','L_piK','c','mu_a32_phys']
@@ -103,6 +107,7 @@ def main():
     # Include bootstrapped L_5 as a prior value taken from HPQCD
     l_5_prior = np.atleast_2d(ana.draw_gauss_distributed(5.41e-3,3e-5,(1500,),
       origin=True))
+    print(extrapol.x_shape[0])
     start = [0.1,0.1,0.1]
     for la in lattice_artefacts: 
         # fit results
@@ -124,9 +129,7 @@ def main():
             c=np.full_like(l_5_prior[0], np.nan)
         mu_a32_phys = extrapol.phys_point_fitres.data[0][:,0]
         value_list=[artefact_id,chisquared_reduced,l_5,l_pik,c,mu_a32_phys]
-        fitresults=dict()
-        for i,o in enumerate(observables):
-            fitresults[o]=value_list[i]
+        fitresults={ key:values for key, values in zip(observables,value_list) }
         fitresults_dataframe=pd.DataFrame(fitresults)
         print(fitresults_dataframe.info())
         results_lattice_artefact = results_lattice_artefact.append(fitresults_dataframe)
@@ -171,8 +174,7 @@ def main():
                                     x_phys=None)
         chiral_plot.save()
     print(results_lattice_artefact.info())
-    with open(resdir+'/pik_disc_eff_M2B.npy','wb') as store:
-        np.save(store, results_lattice_artefact)
+    results_lattice_artefact.to_pickle(resdir+'/pik_disc_eff_M2B.pkl')
 
 if __name__ == '__main__':
     try:

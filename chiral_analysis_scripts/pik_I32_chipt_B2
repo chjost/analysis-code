@@ -180,7 +180,7 @@ def main():
     amu_s_dict['D'][0]=0.013
 
 ################### Setup chiral analysis ######################################
-    extrapol = ana.ChirAna("pi-K_I32_chipt_B1",correlated=False,gamma=False,match=True)
+    extrapol = ana.ChirAna("pi-K_I32_chipt_B2",correlated=False,gamma=False,match=True)
     # have five x-values: mk,mpi,meta,fpi,r0/a
     ens_shape_chirana = (len(latA),len(latB),len(latD))
     print(ens_shape_chirana)
@@ -296,7 +296,7 @@ def main():
     # Include bootstrapped L_piK as a prior value taken from HPQCD
     l_5 = np.atleast_2d(ana.draw_gauss_distributed(5.41e-3,3e-5,(1500,),
       origin=True))
-    start = [0.1,0.1]
+    start = [0.1,0.1,0.1]
     extrapol.fit(ana.err_func,start,plotdir=plotdir,prior=l_5)
     plotargs = extrapol.fitres.data[0]
     # NLO arguments need to have bootstrapsamples as first argument
@@ -337,8 +337,8 @@ def main():
     print(ana.compute_error(ms))
     lim_x = [[0.01,75.],[ms[0],ms[0]],[cont_data.get('l4')[0],cont_data.get('l4')[0]],
         [cont_data.get('b0')[0],cont_data.get('b0')[0]]]
-    chiral_plot.plot_cont(extrapol,ana.pik_I32_chipt_plot_cont,
-                          lim_x,args,argct='multiarg',calc_x=ana.calc_x_plot_cont)
+    #chiral_plot.plot_cont(extrapol,ana.pik_I32_chipt_plot_cont,
+    #                      lim_x,args,argct='multiarg',calc_x=ana.calc_x_plot_cont)
     chiral_plot.save()
 
     #filename = plotdir+'/mua0_decay_nlo_only_msfix_fse.pdf'

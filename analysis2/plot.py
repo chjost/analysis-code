@@ -1008,7 +1008,7 @@ class LatticePlot(object):
             xvalues_plot,dummy1,dummy2 = self.shape_data_pik(chirana.x_data[i],
                                                    chirana.y_data[i])
             y_measured=chirana.y_data[i][:,0,0]
-            relative_y_deviation = np.absolute((y_measured-y_fit)/y_measured)
+            relative_y_deviation = (y_measured-y_fit)/y_measured
             _ymean, _dy = compute_error(relative_y_deviation,axis=1)
             plot_data(xvalues_plot,_ymean,_dy,label=a,col=colors[i],
                       fmt=markerstyles[i], debug=self.debug)

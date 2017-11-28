@@ -11,11 +11,15 @@ matplotlib.use('Agg') # has to be imported before the next lines
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from matplotlib.backends.backend_pdf import PdfPages
+import pandas as pd
 
 # Christian's packages
 sys.path.append('/hiskp2/helmes/projects/analysis-code/')
 import analysis2 as ana
 def main():
+################################################################################
+#                   set up objects                                             #
+################################################################################
     # Get parameters from initfile
     if len(sys.argv) < 2:
         ens = ana.LatticeEnsemble.parse("A40.24.ini")
@@ -30,13 +34,17 @@ def main():
     strangeA = ens.get_data("strangea")
     strangeB = ens.get_data("strangeb")
     strangeD = ens.get_data("stranged")
+    strange_eta_A = ens.get_data("strange_alt_a")
+    strange_eta_B = ens.get_data("strange_alt_b")
+    strange_eta_D = ens.get_data("strange_alt_d")
     space=['A','B','D']
-    seeds1 = [6368, 9456, 3805, 2355, 7727, 8525]
-    seeds2 = [3353, 8106, 1519, 5522]
+    # keep seeds per zp method fixed
+    seeds = [3250, 6086, 3765, 7285, 3754, 5526]
+    seeds2 = [6272, 1577, 4725, 2352, 4000, 4103, 3925, 7560]
+    #OLD seeds
+    #seeds = [6368, 9456, 3805, 2355, 7727, 8525]
+    #seeds2 = [3353, 8106,1519,5522, 2506,8479]
     lat_dict = {'A':latA,'B':latB,'D':latD}
-    #print("\nDicitonary for ensemble names:")
-    #print(lat_dict)
-    #dicitionary of light quark masses
     amulA = ens.get_data("amu_l_a")
     amulB = ens.get_data("amu_l_b")
     amulD = ens.get_data("amu_l_d")
@@ -44,6 +52,7 @@ def main():
 
     #dictionary of strange quark masses
     mu_s_dict = {'A': strangeA,'B': strangeB, 'D': strangeD}
+    mu_s_eta_dict = {'A': strange_eta_A,'B': strange_eta_B, 'D': strange_eta_D}
     amusA = ens.get_data("amu_s_a")
     amusB = ens.get_data("amu_s_b")
     amusD = ens.get_data("amu_s_d")
@@ -54,7 +63,12 @@ def main():
     plotdir = ens.get_data("plotdir") 
     resdir = ens.get_data("resultdir") 
     nboot = ens.get_data("nboot")
-    zp_meth = 1
+    # Prepare external data
+    ext_data = ana.ExtDat(seeds,space,1)
+    #cont_data = ana.ContDat(seeds2,zp_meth="phys")
+    cont_data = ana.ContDat(seeds2,zp_meth=1)
+    fpi_raw = ana.read_extern("../plots2/data/fpi.dat",(1,2))
+    print(fpi_raw)
     lattice_artefacts={'None'                  :0,
                        '(a M_pi)^2'            :1,
                        '(a M_K)^2'             :2,
@@ -108,9 +122,7 @@ def main():
             c=np.full_like(l_5_prior[0], np.nan)
         mu_a32_phys = extrapol.phys_point_fitres.data[0][:,0]
         value_list=[artefact_id,chisquared_reduced,l_5,l_pik,c,mu_a32_phys]
-        fitresults=dict()
-        for i,o in enumerate(observables):
-            fitresults[o]=value_list[i]
+        fitresults={ key:values for key, values in zip(observables,value_list) }
         fitresults_dataframe=pd.DataFrame(fitresults)
         print(fitresults_dataframe.info())
         results_lattice_artefact = results_lattice_artefact.append(fitresults_dataframe)
@@ -155,8 +167,7 @@ def main():
                                     x_phys=None)
         chiral_plot.save()
     print(results_lattice_artefact.info())
-    with open(resdir+'/pik_disc_eff_M1B.npy','wb') as store:
-        np.save(store, results_lattice_artefact)
+    results_lattice_artefact.to_pickle(resdir+'/pik_disc_eff_M1B.pkl')
 
 if __name__ == '__main__':
     try:

@@ -302,7 +302,7 @@ def main():
     l_5 = np.atleast_2d(ana.draw_gauss_distributed(5.41e-3,3e-5,(1500,),
       origin=True))
     #extrapol.fit_mu_a32(plotdir=plotdir,LO=False,prior=l_5)
-    start = [0.1,0.1]
+    start = [0.1,0.1,0.1]
     if read_ext is True:
         extrapol.fitres=ana.FitResult.read(resdir+'/'+extrapol.proc_id+'_fitres.npz')
     else:
