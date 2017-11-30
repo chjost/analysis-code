@@ -20,14 +20,14 @@ def main():
     # get data from input file
     lat = ens.name()
     nboot = ens.get_data("nboot")
-    datadir = ens.get_data("datadir")
+    datadir = ens.get_data("datadir_pi")
     plotdir = ens.get_data("plotdir")
     gmax = ens.get_data("gmax")
     d2 = ens.get_data("d2")
-    t_mass = np.int_(ens.get_data("fitmass"))
+    t_mass = np.int_(ens.get_data("fitmass_pi"))
     if isinstance(t_mass[0],int):
       print(t_mass)
-    min_size_mass = ens.get_data("tmin_mass")
+    min_size_mass = ens.get_data("tmin_mass_pi")
     try:
         debug = ens.get_data("debug")
     except KeyError:
@@ -39,7 +39,7 @@ def main():
 
     # single particle correlator
     print("read single particle corrs")
-    files = ["%s/pi_unit.dat" % (datadir) ]
+    files = ["%s/pi_charged_p0.dat" % (datadir) ]
     #files = ["%s/eta_charged_p0_old.dat" % datadir] 
     #files = ["%s/pi_corr_p0.dat" % datadir] 
     if readsingledata == False:
@@ -47,7 +47,7 @@ def main():
         picorr.sym_and_boot(nboot)
         #picorr.symmetrize()
         print(picorr.shape)
-        picorr.save("%s/corr_pi_%s.npy" % (datadir, lat))
+        #picorr.save("%s/corr_pi_%s.npy" % (datadir, lat))
     else:
         picorr = ana.Correlators.read("%s/%s/corr_pi_%s.npz" % (datadir, lat, lat))
     print(picorr.data.shape)
@@ -58,7 +58,7 @@ def main():
         print("fitting")
         pifit = fit_single.fit(start_single, picorr, [t_mass],
             add=addT)
-        pifit.save("%s/fit_pi_%s.npz" % (datadir, lat))
+        #pifit.save("%s/fit_pi_%s.npz" % (datadir, lat))
     else:
         pifit = ana.FitResult.read("%s/fit_pi_%s.npz" % (datadir, lat))
     pifit.print_data(1)
@@ -73,6 +73,7 @@ def main():
         plotter = ana.LatticePlot("%s/fit_pi_%s.pdf" % (plotdir, lat))
         plotter.set_env(ylog=True)
         label = ["single particle", "t", "C(t)", "pion"]
+        plotter.set_env(ylim=[10,20],xlim=[30,35])
         plotter.plot(picorr, label, pifit, fit_single, add=addT, debug=4)
         plotter.new_file("%s/hist_fit_pi_%s.pdf" % (plotdir, lat))
         label = ["Pi energy", r'$E_\pi/a$', r'$E_\pi$']
@@ -80,6 +81,7 @@ def main():
         plotter.set_env(ylog=False)
         plotter.new_file("%s/m_eff_pi_%s.pdf" % (plotdir, lat))
         label = [r'$\Pi$ Effective Mass', r'$t/a$', r'$M_{eff}$',r'$cosh(C)$']
+        plotter.set_env(ylim=[0.122,0.1255],xlim=[10,33])
         picorr.mass()
         plotter.plot(picorr,label)
         del plotter
