@@ -35,6 +35,7 @@ from scipy import stats
 from scipy import interpolate as ip
 import numpy as np
 from numpy.polynomial import polynomial as P
+import pandas as pd
 import math
 import matplotlib
 matplotlib.use('Agg') # has to be imported before the next lines
@@ -104,7 +105,7 @@ def main():
     fpi_raw = ana.read_extern("../plots2/data/fpi.dat",(1,2))
     print(fpi_raw)
     chipt_tree = lambda p,x : -x**2/(4.*np.pi) 
-    read = False
+    read = True
     #------------------------- Setup objects -----------------------------------
     extrapol = ana.ChirAna("pi-K I-3_2_fse_A2",correlated=False,gamma=True)
     # have two x-values: mk/mpi, a/r0
@@ -223,55 +224,75 @@ def main():
                                       np.sqrt(metasq.eval_obs[2]))
                 extrapol.add_data(tmp_y,(i,j,0,0),dim='y')
         extrapol.save(resdir)
-    cut = [1.5,2.5]
-    #cut = None 
-    # Include bootstrapped L_piK as a prior value taken from NPLQCD 
-    l_5 = np.atleast_2d(ana.draw_gauss_distributed(5.41e-3,3e-5,(1500,),
-      origin=True))
-    #For future use
-    start = [0.1,0.1]
-    extrapol.fit(ana.gamma_errfunc,start,prior=l_5,xcut=cut)
-    plotargs = extrapol.fitres.data[0]
-    args = np.asarray([plotargs[:,slice(0,2),0] for i in range(1)])
-    # Plot the data the given function
-    label=[r'$M_{K}/M_{\pi}$',r'$\Gamma$',r' ',
-           r'$(M_{K}/M_{\pi}_phys$']
+    observables=['fit_start','fit_end','chi2 reduced','L_5','L_piK',
+                 'mu_a32_phys','Mpi_a32','Mpi_a12','tau']
+    fitresults_gamma = pd.DataFrame(columns=observables)
     filename = plotdir+'/gamma_pik_fse_A2.pdf'
-    print("args have shape")
-    print(args[0].shape)
-    line = lambda p,x: p[:,0]-2*x*p[:,1]
     chiral_plot = ana.LatticePlot(filename, join = False)
-    chiral_plot.plot_chiral_ext(extrapol,space,label,xlim=[0,2.2], args=args,
-                                ylim=[-0.015,0.010], func=line, ploterror=True,
-                                kk=False,xcut=cut, gamma=True,plotlim=[0.,2.2])
-    chiral_plot.save()
+    ranges=[[0,2.5],[1.4,2.5],[1.5,2.5]]
+    for cut in ranges:
+        # Include bootstrapped L_piK as a prior value taken from NPLQCD 
+        l_5 = np.atleast_2d(ana.draw_gauss_distributed(5.41e-3,3e-5,(1500,),origin=True))
+        #l_5 = np.atleast_2d(ana.draw_gauss_distributed(5.65e-3,2e-5,(1500,),origin=True))
+        #For future use
+        start = [0.1,0.1]
+        extrapol.fit(ana.gamma_errfunc,start,prior=l_5,xcut=cut)
+        l_5 = extrapol.fitres.data[0][:,0,0]
+        l_pik = extrapol.fitres.data[0][:,1,0]
+        chi_sq_reduced = np.full_like(l_5[0],
+                                      extrapol.fit_stats[0][1]/extrapol.fit_stats[0][0])
+        fitrange_start = np.full_like(l_5[0],cut[0])
+        fitrange_end = np.full_like(l_5[0],cut[1])
+        data_per_cut=[fitrange_start,fitrange_end,chi_sq_reduced,l_5,l_pik]
+        plotargs = extrapol.fitres.data[0]
+        args = np.asarray([plotargs[:,slice(0,2),0] for i in range(1)])
+        # Plot the data the given function
+        label=[r'$M_{K}/M_{\pi}$',r'$\Gamma$',r' ',
+               r'$(M_{K}/M_{\pi}_phys$']
+        print("args have shape")
+        print(args[0].shape)
+        line = lambda p,x: p[:,0]-2*x*p[:,1]
+        chiral_plot.plot_chiral_ext(extrapol,space,label,xlim=[0,2.2], args=args,
+                                    ylim=[-0.015,0.010], func=line, ploterror=True,
+                                    kk=False,xcut=cut, gamma=True,plotlim=[0.,2.2])
+        
+        extrapol.mu_a0_pik_phys(cont_data.get("mpi_0"),cont_data.get("mk"),
+                                         cont_data.get("fpi"),
+                                         meta=cont_data.get("meta"),iso_32=True)
+        mu_a32_phys = extrapol.phys_point_fitres.data[0][:,0]
+        data_per_cut.append(mu_a32_phys)
+        header = ["#amu_l", "mpi/mk", "d(mpi/mk)", "Gamma", "d(Gamma)", "mu_match",
+            "d(mu_match)"]
+        ana.print_summary(extrapol,header,amu_l_dict,amu_s_dict)
+        mupik_phys =ana.reduced_mass(cont_data.get("mpi_0"),cont_data.get("mk")) 
+        mpi_by_mupik = cont_data.get("mpi_0")/mupik_phys
+        print("mpi a_{3/2}:")
+        mpi_a32 = mu_a32_phys*mpi_by_mupik 
+        data_per_cut.append(mpi_a32)
+        print(ana.compute_error(mpi_a32))
+        extrapol.mu_a0_pik_phys( cont_data.get("mpi_0"),cont_data.get("mk"),
+                                         cont_data.get("fpi"),
+                                         meta=cont_data.get("meta"),iso_32=False)
+        print("mpi a_{1/2}:")
+        mpi_a12 =extrapol.phys_point_fitres.data[0][:,0]*mpi_by_mupik
+        data_per_cut.append(mpi_a12)
+        print(ana.compute_error(mpi_a12))
+        # calculate the isospin odd scattering length in units of mpi
+        a_odd = (mpi_a12-mpi_a32)/3.
+        print("mpi a^-:")
+        print(ana.compute_error(a_odd))
+        
+        tau = ana.pi_k_tau(mpi_a12,mpi_a32,cont_data)
+        data_per_cut.append(tau)
+        fitresult_dataframe=pd.DataFrame({key:value for key,
+                                          value in zip(observables,data_per_cut)})
+        fitresults_gamma=fitresults_gamma.append(fitresult_dataframe)
+        print("tau_1s in s:")
+        print(ana.compute_error(tau))
+        chiral_plot.save()
     del chiral_plot
-    
-    extrapol.mu_a0_pik_phys(cont_data.get("mpi_0"),cont_data.get("mk"),
-                                     cont_data.get("fpi"),
-                                     meta=cont_data.get("meta"),iso_32=True)
-    header = ["#amu_l", "mpi/mk", "d(mpi/mk)", "Gamma", "d(Gamma)", "mu_match",
-        "d(mu_match)"]
-    ana.print_summary(extrapol,header,amu_l_dict,amu_s_dict)
-    mupik_phys =ana.reduced_mass(cont_data.get("mpi_0"),cont_data.get("mk")) 
-    mpi_by_mupik = cont_data.get("mpi_0")/mupik_phys
-    print("mpi a_{3/2}:")
-    mpi_a32 = extrapol.phys_point_fitres.data[0][:,0]*mpi_by_mupik 
-    print(ana.compute_error(mpi_a32))
-    extrapol.mu_a0_pik_phys( cont_data.get("mpi_0"),cont_data.get("mk"),
-                                     cont_data.get("fpi"),
-                                     meta=cont_data.get("meta"),iso_32=False)
-    print("mpi a_{1/2}:")
-    mpi_a12 =extrapol.phys_point_fitres.data[0][:,0]*mpi_by_mupik 
-    print(ana.compute_error(mpi_a12))
-    # calculate the isospin odd scattering length in units of mpi
-    a_odd = (mpi_a12-mpi_a32)/3.
-    print("mpi a^-:")
-    print(ana.compute_error(a_odd))
-    
-    tau = ana.pi_k_tau(mpi_a12,mpi_a32,cont_data)
-    print("tau_1s in s:")
-    print(ana.compute_error(tau))
+    fitresults_gamma.info()
+    fitresults_gamma.to_pickle(resdir+'/pik_gamma_M2A.pkl')
 if __name__ == '__main__':
     try:
         main()
