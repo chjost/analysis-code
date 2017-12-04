@@ -143,7 +143,7 @@ def main():
                 mksq_fse_meas = ana.init_fitreslst(mk_names)
                 mksq_fse.load_data(mksq_fse_meas,1,amu_s_dict[a],square=True)
                 mksq_fse.add_extern_data('../plots2/data/k_fse_mk.dat',e,square=True,
-                                       read='fse_mk',op='div')
+                                       read='fse_mk',op='mult')
                 # Add data to chirana object
                 for k,s in enumerate(amu_s_dict[a]):
                     fixms.add_data(mksq_fse.obs[k],(i,j,k,0),'y')
@@ -169,7 +169,7 @@ def main():
           for i in range(3)])
         plotfunc = lambda p,x: p[2]/(p[0]*p[1]) * (x+p[5]) * (1+p[3]*p[0]/p[1]*x+p[4]/p[0]**2)
         filename = plotdir+'/'+ fixms.proc_id+'.pdf'
-        chiral_plot = ana.LatticePlot(filename, join = True)
+        chiral_plot = ana.LatticePlot(filename, join = True,debug=4)
         chiral_plot.plot_chiral_fit(fixms,space,label,xlim=[0.0,0.011],func=plotfunc,args=plot_args)
         chiral_plot._set_limits(marks=4)
         chiral_plot.save()
@@ -214,7 +214,7 @@ def main():
                 mksq_fse_meas = ana.init_fitreslst(mk_names)
                 mksq_fse.load_data(mksq_fse_meas,1,amu_s_dict[a],square=True)
                 mksq_fse.add_extern_data('../plots2/data/k_fse_mk.dat',e,square=True,
-                                       read='fse_mk',op='div')
+                                       read='fse_mk',op='mult')
 
 ####    ############### read in M_pi^FSE ###########################################
                 mpi_fse = ana.MatchResult("mpi_fse_M1B_%s"%e,save=datadir+'%s/'%e)
@@ -223,7 +223,7 @@ def main():
                 mpi_fse_meas = ana.init_fitreslst(mpi_names)
                 mpi_fse.load_data(mpi_fse_meas,1,amu_s_dict[a],square=False)
                 mpi_fse.add_extern_data('../plots2/data/k_fse_mpi.dat',e,square=False,
-                                       read='fse_mk',op='div')
+                                       read='fse_mpi',op='div')
 
 ####    ############### read in M_eta ##############################################
                 metasq = ana.MatchResult("metasq_M1B_%s"%e,save=datadir+'%s/'%e)

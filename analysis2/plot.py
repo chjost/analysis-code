@@ -802,8 +802,18 @@ class LatticePlot(object):
             _X = chirana.x_data[i][:,:,0,0].flatten()
             _Y = chirana.y_data[i][:,:,0,0].flatten()
             _dy = chirana.y_data[i][:,:,0,:].reshape((chirana.y_data[i].shape[0]*chirana.y_data[i].shape[1],chirana.y_data[i].shape[-1]))
-            _mean, _dy = compute_error(_dy,axis=1)
-            plot_data(_X,_Y,_dy,label=a,col=col[i],fmt=fmt_pts[i],debug=self.debug)
+            print("data for error calculation")
+            print(_dy.shape)
+            _mean, _yerr = compute_error(_dy,axis=1,mean=_Y)
+            plot_data(_X,_Y,_yerr,label=a,col=col[i],fmt=fmt_pts[i],debug=self.debug)
+            if self.debug > 3:
+                print("Data used for plotting chiral fit:")
+                print("x:")
+                print(_X)
+                print("y:")
+                print(_Y)
+                print("dy")
+                print(_yerr)
             # Check if we want to plot a function in addition to the data
             if func is not None:
                 if self.debug > 0:

@@ -78,7 +78,7 @@ def physical_mass(amps,ens):
   #dictionary of lattice spacings in fm (arxiv:1403.4504v3)
   a = {'A':0.0885, 'B':0.0815, 'D':0.0619}
   pre = hbar_c / a[ens]
-  print amps[0]
+  print(amps[0])
   phys_mass =np.multiply(pre,amps) 
   return phys_mass 
 
