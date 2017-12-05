@@ -81,6 +81,11 @@ class LatticeEnsemble(object):
             for opt in config.options("lists"):
                 li = config.get("lists", opt).split(",")
                 obj.data.update({opt: li}) 
+        if config.has_section("int_lists"):
+            for opt in config.options("int_lists"):
+                li = config.get("int_lists", opt).split(",")
+                _li=[int(d) for d in li]
+                obj.data.update({opt: _li}) 
         if config.has_section("ndarrays"):
             for opt in config.options("ndarrays"):
                 li = config.get("ndarrays", opt).split(",")

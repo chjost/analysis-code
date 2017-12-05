@@ -5,6 +5,7 @@ Functions for in and output
 from __future__ import with_statement
 
 import h5py
+import json
 import os
 import numpy as np
 import ConfigParser as cp
@@ -731,7 +732,30 @@ def read_confs(path,corrname,confs,_T=48,h5=False,verb=False):
       _C_tmp = _read_corr(_fname,_T)
       C[i] = _C_tmp
   return C
-
+# TODO: Come back to that
+#def save_dict(name,data):
+#    """Dump dictionary data to a json file at name with indent 4
+#    """
+#    # convert data to list
+#    for k in data.keys():
+#        print(data[k])
+#        for k1 in data[k].keys():
+#            if isinstance(data[k][k1],np.ndarray):
+#                print("Is Array")
+#                data[k][k1]=data[k][k1].tolist()
+#    with open(name,'w') as saver:
+#      json.dumps(data,saver,indent=4)
+#
+#def read_dict(name):
+#    """Read dictionary data from a json file at name
+#    """
+#    with open(name,'r') as saver:
+#        data=json.loads(name)
+#    # convert saved lists to data
+#    for k in data.keys():
+#        if isinstance(data[k],ndarray):
+#            data[k]=np.asarray(data[k])
+#    return data 
 
 def confs_subtr(Corr1, Corr2):
   """ function to subtract two diagrams columnwise 
