@@ -76,14 +76,8 @@ def main():
     space=['A','B','D']
     # read seeds from input files
     zp_meth=ens.get_data("zp_meth")
-    external_seeds = ens.get_data("external_seeds")
-    continuum_seeds = ens.get_data("continuum_seeds")
-    print(continuum_seeds)
-    #seeds = [3250, 6086, 3765, 7285, 3754, 5526]
-    #seeds2 = [6272, 1577, 4725, 2352, 4000, 4103, 3925, 7560]
-    #old seeds
-    #seeds = [5859, 5672, 4104, 5382, 8439, 6186]
-    #seeds2 = [9042, 9280, 2219, 4911, 2506, 8479, 7211, 9303]
+    external_seeds = ens.get_data("external_seeds_a")
+    continuum_seeds = ens.get_data("continuum_seeds_a")
     lat_dict = {'A':latA,'B':latB,'D':latD}
     amulA = ens.get_data("amu_l_a")
     amulB = ens.get_data("amu_l_b")
