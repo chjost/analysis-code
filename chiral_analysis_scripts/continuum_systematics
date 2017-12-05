@@ -1,0 +1,190 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+
+################################################################################
+#
+# Author: Christopher Helmes (helmes@hiskp.uni-bonn.de)
+# Date:   December 2017
+#
+# Copyright (C) 2017 Christopher Helmes
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Investigate several systematic effects on the continuum scattering length
+#
+################################################################################
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import format_val_err
+
+def own_std(series,level=None):
+    # 0th bootstrapsample poses mean value of measurement.
+    #if level is not None:
+    mean = series.iloc[0]
+    difference = np.diff(series-mean)
+    variance = np.nansum(np.square(difference))/series.size
+    std = np.sqrt(variance)
+    return std
+
+def own_mean(series):
+    return series.iloc[0]
+
+def systematic_average(series):
+    print(series.loc[0].size)
+    mean=np.sum(series.loc[0])/series.loc[0].size
+    return mean
+
+def own_weight(table):
+    """Compute the weight for the dataframe results
+    weighting function is given by
+    
+    """ 
+    # TODO: At the moment this is a dummy variable
+    # Get table length
+    length = len(table.index)
+    print("Table has %d rows" %length)
+    table['weight'] = pd.Series(np.ones((length,)), index=table.index)
+    
+
+def systematics_by_methods(results,keys,column):
+    system_list=[]
+    for k in keys:
+        sys=results[results['method'].isin(k)]
+        sys=keywise_mean(sys,column)
+        print(sys)
+        system_list.append(sys)
+    return system_list
+
+def keywise_mean(frame,keys):
+    key_mean=frame.groupby('nb').mean()[keys].agg([own_mean,own_std])
+    return key_mean
+
+def si_format(frame):
+    #print(frame)
+    formatted=[format_val_err.unitprint(a,b) for a,b in
+            zip(frame.own_mean,frame.own_std)]
+    return formatted
+
+splitter = lambda x: x.split('/')[1].split('.')[0].rsplit('_')[-1]
+
+def read_unfiltered_pickle(filenames,directory):
+    # get method names from list of filenames
+    fix_ms_methods=[splitter(f) for f in filenames]
+    results_list = [ pd.read_pickle(directory+f) for f in filenames ]
+    results_dict = { key:value for key,value in zip(fix_ms_methods,
+                     results_list) }
+    # New column for method used
+    for k,v in zip(results_dict.keys(),results_dict.values()):
+        v.loc[:,'method'] = pd.Series(k,index=v.index)
+    # make a great table with all data.
+    combined_methods = pd.concat(results_dict.values())
+    # set the weight (ATM tracer function)
+    #combined_methods.pipe(own_weight)
+    # Sooner or later we need the sample_number as variable
+    combined_methods['nb']=combined_methods.index
+    combined_methods.info()
+    return combined_methods
+
+def main():
+    # Get the 4 dataframes from before
+    pd.set_option('display.width',1000)
+    #delim = "\n--------------------------------------------------------------------------------\n"
+    delim = '\n'+'-'*80+'\n'
+    resdir="/hiskp2/helmes/analysis/scattering/test/pi_k/I_32/results/"
+    artefact_files=[
+        "/pik_disc_eff_M1A.pkl",
+        "/pik_disc_eff_M1B.pkl",
+        "/pik_disc_eff_M2A.pkl",
+        "/pik_disc_eff_M2B.pkl" 
+        ]
+    combined_methods=read_unfiltered_pickle(artefact_files,resdir)
+    # for each method get mean value and error on mu_a32_phys for each lattice
+    # artefact
+    # Take fix_ms as starting point
+    #combined_methods.reset_index(column=)
+    #print(combined_methods.sample(n=10))
+    method_means = combined_methods.groupby(['method',
+        'Lattice Artefact'])['L_5','L_piK','c','mu_a32_phys'].agg([own_mean,
+            own_std])
+    print("\nMean values and standard deviation per Method and Lattice Artefact:")
+    print(method_means)
+    print(delim)
+    # Do usual systematics without lattice artefact
+    systematics=combined_methods[combined_methods['Lattice Artefact'].isin(["None"])]
+    systematics.info()
+    #print(systematics.sample(n=5))
+    central_value=systematics.groupby('nb').mean()['mu_a32_phys'].agg([own_mean,own_std])
+    print(delim)
+    print("\nNeglecting Lattice artefact: Central result for 'mu_a32_phys': ")
+    print(central_value)
+    strange_mass_fixing=[['M1A','M2A'],['M1B','M2B']]
+    renormalization=[['M1A','M1B'],['M2A','M2B']]
+    sys_ms_fix=systematics_by_methods(systematics,strange_mass_fixing,'mu_a32_phys')
+    sys_zp=systematics_by_methods(systematics,renormalization,'mu_a32_phys')
+    # Would like to have the mean and standard deviation over all methods for
+    # each lattice artefact
+    tmp_means=combined_methods.groupby(['Lattice Artefact','nb']).mean()
+    test=tmp_means.reset_index(level='nb').reset_index(level='Lattice Artefact')
+    test.index=test['nb']
+    means_by_method=test.groupby('Lattice Artefact').agg([own_mean,own_std])
+    print(means_by_method)
+    print(means_by_method.mu_a32_phys.own_mean)
+    #agg([own_mean,own_std])
+    # Make a plot with the combined systematics for all lattice artefacts
+    #data=systematics_lattice_artefact.values
+    #plt.errorbar(means_by_method.mu_a32_phys.own_mean,[0,1,2,3,4],
+    #             xerr=means_by_method.mu_a32_phys.own_std, fmt='ro', capsize=4)
+    #plt.yticks([0,1,2,3,4],means_by_method.index)
+    #plt.title(r'Physical $\mu_{\pi K} a_0$')
+    #plt.xlabel(r'$\mu_{\pi K} a_0$')
+    #plt.ylabel(r'Lattice Artefact')
+    #plt.show()
+    # Systematic effects for gamma method
+    chipt_result_names=[
+        "/pik_gamma_M1A.pkl",
+        "/pik_gamma_M1B.pkl",
+        "/pik_gamma_M2A.pkl",
+        "/pik_gamma_M2B.pkl" 
+        ]
+    unfiltered_results = read_unfiltered_pickle(chipt_result_names,resdir)
+    #print(unfiltered_results.sample(n=10))
+    print(delim)
+    mean_over_fitranges=unfiltered_results.groupby(['method'])['mu_a32_phys',
+                            'Mpi_a32','Mpi_a12','tau'].agg([own_mean,own_std])
+    print(mean_over_fitranges)
+    print(delim)
+    mean_over_methods=unfiltered_results.groupby(['fit_start'])['mu_a32_phys', 
+                            'Mpi_a32','Mpi_a12','tau'].agg([own_mean,own_std])
+    print(mean_over_methods)
+    print(delim)
+    mean_per_method_range=unfiltered_results.groupby(['method','fit_start'])['L_piK','chi2 reduced','mu_a32_phys',
+                            'Mpi_a32','Mpi_a12','tau'].agg([own_mean,own_std])
+    print(mean_per_method_range)
+    print(delim)
+    #print(mean_per_method_range.columns.levels[0])
+    # new dataframe
+    formatted=pd.DataFrame(index=mean_per_method_range.index,
+                            columns=mean_per_method_range.columns.levels[0])
+    for k in mean_per_method_range.columns.levels[0]:
+        formatted[k]=si_format(mean_per_method_range[k])
+    print(formatted)
+    print(delim)
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Keyboard Interrupt")
+
