@@ -154,7 +154,7 @@ def main():
                 # Add data to chirana object
                 for k,s in enumerate(amu_s_dict[a]):
                     fixms.add_data(mksq_fse.obs[k],(i,j,k,0),'y')
-            fixms.save(resdir)
+        fixms.save(resdir)
         #fixms.fit_strange_mass(datadir=datadir,ext=ext_data)
         r = np.r_[1.,1.,1.]
         z = np.r_[1.,1.,1.]
@@ -294,6 +294,7 @@ def main():
     header = ["#amu_l", "amu_s", "mpi", "dmpi", "mk", "dmk", "fpi", "dfpi",
               "r0/a", "d(r0/a)", "m_eta","dm_eta","mu a0", "d(mu a0)"]
     ana.print_summary(extrapol,header,amu_l_dict,amu_s_dict)
+    print("Done ... Saving to %s" %resdir)
     extrapol.save(resdir)
 if __name__ == '__main__':
     try:
