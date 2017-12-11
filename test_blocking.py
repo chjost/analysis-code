@@ -41,10 +41,10 @@ def main():
 
     # set up fit ranges (t_m is for mass, t_r for ratio)
     # initialize as a list with numbers of correlators as length
-    t_mass = [np.int_(ens.get_data("fitmass")) for i in range(4)]
-    t_ratio = [np.int_(ens.get_data("fitratio")) for i in range(4)]
-    min_size_mass = ens.get_data("tmin_mass")
-    min_size_ratio = ens.get_data("tmin_ratio")
+    t_mass = [np.int_(ens.get_data("fitmass_k")) for i in range(4)]
+    #t_ratio = [np.int_(ens.get_data("fitratio")) for i in range(4)]
+    min_size_mass = ens.get_data("tmin_mass_k")
+    #min_size_ratio = ens.get_data("tmin_ratio")
 #######################################################################
 # Begin calculation
 #######################################################################
@@ -59,77 +59,84 @@ def main():
     picorr_b3 = ana.Correlators(files, matrix=False,conf_col = 2)
     print(picorr.data)
     picorr.sym_and_boot(nboot)
-    picorr_b1.sym_and_boot(nboot,blocking=True,bl=2)
-    picorr_b2.sym_and_boot(nboot,blocking=True,bl=3)
-    picorr_b3.sym_and_boot(nboot,blocking=True,bl=4)
+    picorr_b1.sym_and_boot(nboot,blocking=True,bl=1)
+    picorr_b2.sym_and_boot(nboot,blocking=True,bl=2)
+    picorr_b3.sym_and_boot(nboot,blocking=True,bl=3)
     data_arr = np.dstack((picorr.data,picorr_b1.data,picorr_b2.data,picorr_b3.data))
     twopoint = ana.Correlators.create(data_arr)
     print(twopoint.data.shape)
-    fit_single = ana.LatticeFit(0, dt_i=1, dt_f=-1, dt=min_size_mass, debug=0)
-    print("fitting")
-    start_single = [1.,0.3]
-    twofit = fit_single.fit(start_single, twopoint, t_mass, corrid="epi", add=addT)
-    twofit.print_data(1)
-
-    collapsed = twofit.singularize()
-    collapsed.print_data(1)
+    #fit_single = ana.LatticeFit(0, dt_i=1, dt_f=-1, dt=min_size_mass, debug=0)
+    #print("fitting")
+    #start_single = [1.,0.3]
+    #twofit = fit_single.fit(start_single, twopoint, t_mass, corrid="epi", add=addT)
+    #twofit.print_data(1)
+    #twofit.print_details()
+    #print("comparing data with blocklengths 0, 1, 2, 3")
+    #collapsed = twofit.singularize()
+    #collapsed.print_data(1)
 
     # plot the relative error of all correlation functions into one file
     print("plotting")
     plotter = ana.LatticePlot("%s/test_blocking_k_%s.pdf" % (plotdir,
       lat),join=True)
-    plotter.set_env(ylog=False)
-    datalbl = ["unblocked","blocklength=2","blocklength=3","blocklength=4"]
+    plotter.set_env(ylog=True,grid=False)
+    datalbl = ["unblocked","blocklength=1","blocklength=2","blocklength=3"]
     label = ["single particle", "t", "C(t)", datalbl]
     plotter.plot(twopoint, label, add=addT, debug=debug)
     plotter.save()
     # now plot the relative errors
-    label = ["single particle", "t", "C(t)", datalbl]
+    plotter.set_env(ylog=False,grid=False)
+    label = ["single particle", "t", "dC(t)/C(t)", datalbl]
     plotter.plot(twopoint, label, add=addT, debug=debug, rel=True)
+    plotter.save()
+    twopoint.mass()
+    label = ["single particle", "t", "M_eff(t)", datalbl]
+    plotter.set_env(ylog=False,grid=False,xlim=[9.5,30.5],ylim=[0.21,0.221])
+    plotter.plot(twopoint,label,add=addT,debug=debug)
     plotter.save()
     del plotter
     
     # two particle correlator
-    print("read two particle corrs")
-    #files = ["%s/pi_corr_p%d.dat" % (prefix, d) for d in range(4)]
-    files = ["%s/kk_charged_A1_TP0_00.dat" %datadir]
-    kkcorr = ana.Correlators(files, matrix=False,conf_col = 2)
-    kkcorr_b1 = ana.Correlators(files, matrix=False,conf_col = 2)
-    kkcorr_b2 = ana.Correlators(files, matrix=False,conf_col = 2)
-    kkcorr_b3 = ana.Correlators(files, matrix=False,conf_col = 2)
-    kkcorr.sym_and_boot(nboot)
-    kkcorr_b1.sym_and_boot(nboot,blocking=True,bl=2)
-    kkcorr_b2.sym_and_boot(nboot,blocking=True,bl=3)
-    kkcorr_b3.sym_and_boot(nboot,blocking=True,bl=4)
+    #print("read two particle corrs")
+    ##files = ["%s/pi_corr_p%d.dat" % (prefix, d) for d in range(4)]
+    #files = ["%s/kk_charged_A1_TP0_00.dat" %datadir]
+    #kkcorr = ana.Correlators(files, matrix=False,conf_col = 2)
+    #kkcorr_b1 = ana.Correlators(files, matrix=False,conf_col = 2)
+    #kkcorr_b2 = ana.Correlators(files, matrix=False,conf_col = 2)
+    #kkcorr_b3 = ana.Correlators(files, matrix=False,conf_col = 2)
+    #kkcorr.sym_and_boot(nboot)
+    #kkcorr_b1.sym_and_boot(nboot,blocking=True,bl=2)
+    #kkcorr_b2.sym_and_boot(nboot,blocking=True,bl=3)
+    #kkcorr_b3.sym_and_boot(nboot,blocking=True,bl=4)
 
-    data_arr = np.dstack((kkcorr.data,kkcorr_b1.data,kkcorr_b2.data,kkcorr_b3.data))
-    fourpoint = ana.Correlators.create(data_arr)
-    print(fourpoint.data.shape)
-    
-    # build ratio
-    ratio = fourpoint.ratio(twopoint, ratio=2 )
-    fit_ratio = ana.LatticeFit(1, dt=min_size_ratio, dt_i=1, dt_f=1, xshift=0.5,
-        debug=0)
-    start_ratio = [1.8, 0.002]
-    # ratiofit
-    print("fitting")
-    ratiofit = fit_ratio.fit(start_ratio, ratio, t_ratio,
-            corrid="R", add=addT, oldfit=collapsed, oldfitpar=1)
-    ratiofit.print_data(0)
-    ratiofit.print_data(1)
-    print("plotting")
-    plotter = ana.LatticePlot("%s/test_blocking_kk_%s.pdf" % (plotdir,
-      lat),join=True)
-    plotter.set_env(ylog=False)
-    datalbl = ["unblocked","blocklength=2","blocklength=3","blocklength=4"]
-    label = ["two particle", "t", "C(t)", datalbl]
-    plotter.plot(fourpoint, label, add=addT, debug=debug)
-    plotter.save()
-    # now plot the relative errors
-    label = ["two particle", "t", "C(t)", datalbl]
-    plotter.plot(fourpoint, label, add=addT, debug=debug, rel=True)
-    plotter.save()
-    del plotter
+    #data_arr = np.dstack((kkcorr.data,kkcorr_b1.data,kkcorr_b2.data,kkcorr_b3.data))
+    #fourpoint = ana.Correlators.create(data_arr)
+    #print(fourpoint.data.shape)
+    #
+    ## build ratio
+    #ratio = fourpoint.ratio(twopoint, ratio=2 )
+    #fit_ratio = ana.LatticeFit(1, dt=min_size_ratio, dt_i=1, dt_f=1, xshift=0.5,
+    #    debug=0)
+    #start_ratio = [1.8, 0.002]
+    ## ratiofit
+    #print("fitting")
+    #ratiofit = fit_ratio.fit(start_ratio, ratio, t_ratio,
+    #        corrid="R", add=addT, oldfit=collapsed, oldfitpar=1)
+    #ratiofit.print_data(0)
+    #ratiofit.print_data(1)
+    #print("plotting")
+    #plotter = ana.LatticePlot("%s/test_blocking_kk_%s.pdf" % (plotdir,
+    #  lat),join=True)
+    #plotter.set_env(ylog=False)
+    #datalbl = ["unblocked","blocklength=2","blocklength=3","blocklength=4"]
+    #label = ["two particle", "t", "C(t)", datalbl]
+    #plotter.plot(fourpoint, label, add=addT, debug=debug)
+    #plotter.save()
+    ## now plot the relative errors
+    #label = ["two particle", "t", "C(t)", datalbl]
+    #plotter.plot(fourpoint, label, add=addT, debug=debug, rel=True)
+    #plotter.save()
+    #del plotter
 if __name__ == '__main__':
     try:
         print("starting")

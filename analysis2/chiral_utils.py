@@ -802,7 +802,7 @@ def concat_data_fit(lst,space,prior=None,debug=1):
     return d
 
 # TODO: Fast hack ,does not belong here   
-def cut_data(x,y,interval):
+def cut_data(x,y,interval,pik=False):
     """ cut data of chiral fit object according to given interval
     Parameters
     ----------
@@ -823,8 +823,15 @@ def cut_data(x,y,interval):
     if hasattr(interval,"__iter__"):
         sub = (0,)*len(_x_shape[1:])
         select = (slice(None),)+sub
-        lo = x[select] > interval[0]
-        hi = x[select] < interval[1]
+        if pik is not False:
+            mupik_fpi = x[:,0,0,0]*x[:,0,1,0]/(x[:,0,0,0]+x[:,0,1,0])/x[:,0,2,0]
+            print("x-data for cut:")
+            print(mupik_fpi)
+            lo = mupik_fpi > interval[0]
+            hi = mupik_fpi < interval[1]
+        else:
+            lo = x[select] > interval[0]
+            hi = x[select] < interval[1]
         tmp = np.logical_and(lo,hi)
     elif interval >= 0.:
         tmp = x[:,0] < interval
@@ -832,7 +839,8 @@ def cut_data(x,y,interval):
         tmp = x[:,0] > -interval
     _x = x[tmp]
     _y = y[tmp]
-    
+    print("x-data after cut:")
+    print(_x[:,0,:,0])
     return _x, _y
  
 def update_shapes(x,y):

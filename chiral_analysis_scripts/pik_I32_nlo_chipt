@@ -96,72 +96,85 @@ def main():
         print("Could not load chiral analysis!")
     # initialize dataframe for storage
     # the columns are physical value, L_piK, L_5, c, artefact id
-    observables=['Lattice Artefact','chi2 reduced','L_5','L_piK','c','mu_a32_phys']
+    observables=['Lattice Artefact','fit_start','fit_end','chi2 reduced','L_5',
+                 'L_piK','c','mu_a32_phys']
     results_lattice_artefact = pd.DataFrame(columns=observables)
     print(results_lattice_artefact.info())
     # Include bootstrapped L_5 as a prior value taken from HPQCD
     l_5_prior = np.atleast_2d(ana.draw_gauss_distributed(5.41e-3,3e-5,(1500,),
       origin=True))
     start = [0.1,0.1,0.1]
-    for la in lattice_artefacts: 
-        # fit results
-        _error_function=error_functions[lattice_artefacts[la]] 
-        extrapol.fit(_error_function,start,plotdir=plotdir,prior=l_5_prior)
-        extrapol.mu_a0_pik_phys(cont_data.get('mpi_0'),cont_data.get('mk'),
-                                     cont_data.get('fpi'),cont_data.get('r0'),
-                                     meta=cont_data.get('meta'), iso_32=True)
-        # build resultsarray
-        st='|S%d'%len(la)
-        artefact_id = np.full(l_5_prior[0].shape, la, dtype=st)
-        chisquared_reduced = np.full_like(l_5_prior[0],
-                                          extrapol.fit_stats[0][1]/extrapol.fit_stats[0][0])
-        l_pik = extrapol.fitres.data[0][:,0,0]
-        l_5 = extrapol.fitres.data[0][:,1,0]
-        if lattice_artefacts[la] > 0:
-            c=extrapol.fitres.data[0][:,2,0]
-        else:
-            c=np.full_like(l_5_prior[0], np.nan)
-        mu_a32_phys = extrapol.phys_point_fitres.data[0][:,0]
-        value_list=[artefact_id,chisquared_reduced,l_5,l_pik,c,mu_a32_phys]
-        fitresults={ key:values for key, values in zip(observables,value_list) }
-        fitresults_dataframe=pd.DataFrame(fitresults)
-        print(fitresults_dataframe.info())
-        results_lattice_artefact = results_lattice_artefact.append(fitresults_dataframe)
-
-        #Plot
-        plotargs = extrapol.fitres.data[0]
-        lat_space=[0.0885,0.0815,0.0619]
-        args = np.asarray([np.vstack((plotargs[:,0,0],
-          plotargs[:,1,0],np.zeros_like(plotargs[:,1,0]),
-          np.full((1500),lat_space[r]),cont_data.get('l4'),
-          cont_data.get('b0'))).T for r in range(len(space))])
-        print("Argument shape after stacking")
-        print(args.shape)
-        print("Arguments:")
-        print(args[:,0])
-        # Plot the data the given function
-        label=[r'$\mu_{\pi K}/f_{\pi}$',r'$\mu_{\pi K}\,a_{3/2}$',r' ',
-               r'$(\mu_{\pi K}/f_{\pi})_{phys}$']
+    for la in lattice_artefacts:
+        print(80*'#')
+        print('lattice artefact is %s'%la)
+        print(80*'#')
+        ranges=[[0,1.3],[0,1.41],[0,2.5]]
         filename = plotdir+'/mu_a32_nlo_disc_eff_'+str(lattice_artefacts[la])+'_M%d%s.pdf'%(zp_meth,ms_fixing.upper())
         chiral_plot = ana.LatticePlot(filename, join = False,debug=4)
-        chiral_plot.plot_chiral_ext(extrapol,space,label, xlim=[0.7,1.7],ylim=[-0.25,0.],
-                                    func=None, args=args,
-                                    calc_x = None, ploterror=False,
-                                    kk=False, x_phys=0.8128,plotlim=[0.7,1.7],
-                                    argct=None)
-        args = np.vstack((plotargs[:,0,0], plotargs[:,1,0],
-          np.zeros_like(plotargs[:,0,0]),np.ones_like(plotargs[:,0,0]),cont_data.get('l4'),cont_data.get('b0'))).T
-        chiral_plot.plot_cont(extrapol,ana.wrap_test.pik_I32_lo,
-                              [0.7,1.7],args,argct=None,calc_x=None,ploterror=False,
-                              label=r'LO-$\chi$-PT')
-        chiral_plot.save()
-        label[1]=r'rel. dev. $\mu_{\pi K}\,a_{3/2}$'
-        chiral_plot.plot_fit_proof(extrapol,space,ana.wrap_test.mu_pik_a_32_fit,
-                                    xvalue_function=ana.calc_x_plot,
-                                    data_label='fit',plotlim=[1.1,1.6],ylim=[-0.3,0.3],label=label,
-                                    x_phys=None)
-        chiral_plot.save()
-    print(results_lattice_artefact.info())
+        for cut in ranges:
+            print(80*'#')
+            print('fit range is %r'%cut)
+            print(80*'#')
+            # fit results
+            _error_function=error_functions[lattice_artefacts[la]] 
+            extrapol.fit(_error_function,start,plotdir=plotdir,prior=l_5_prior,
+                         xcut=cut,pik=True)
+            extrapol.mu_a0_pik_phys(cont_data.get('mpi_0'),cont_data.get('mk'),
+                                         cont_data.get('fpi'),cont_data.get('r0'),
+                                         meta=cont_data.get('meta'), iso_32=True)
+            # build resultsarray
+            st='|S%d'%len(la)
+            artefact_id = np.full(l_5_prior[0].shape, la, dtype=st)
+            chisquared_reduced = np.full_like(l_5_prior[0],
+                                              extrapol.fit_stats[0][1]/extrapol.fit_stats[0][0])
+            l_pik = extrapol.fitres.data[0][:,0,0]
+            l_5 = extrapol.fitres.data[0][:,1,0]
+            if lattice_artefacts[la] > 0:
+                c=extrapol.fitres.data[0][:,2,0]
+            else:
+                c=np.full_like(l_5_prior[0], np.nan)
+            mu_a32_phys = extrapol.phys_point_fitres.data[0][:,0]
+            fitrange_start = np.full_like(l_5[0],cut[0])
+            fitrange_end = np.full_like(l_5[0],cut[1])
+            value_list=[artefact_id,fitrange_start,fitrange_end,
+                        chisquared_reduced,l_5,l_pik,c,mu_a32_phys]
+            fitresults={ key:values for key, values in zip(observables,value_list) }
+            fitresults_dataframe=pd.DataFrame(fitresults)
+            results_lattice_artefact = results_lattice_artefact.append(fitresults_dataframe)
+            print(results_lattice_artefact.where[results_lattice_artefact['sample']==0])
+            # summary of data
+            header = ["#amu_l", "amu_s", "mpi", "dmpi", "mk", "dmk", "fpi", "dfpi",
+                      "r0/a", "d(r0/a)", "m_eta","dm_eta","mu a0", "d(mu a0)"]
+            ana.print_summary(extrapol,header,amu_l_dict,amu_s_dict) 
+            #Plot
+            plotargs = extrapol.fitres.data[0]
+            lat_space=[0.0885,0.0815,0.0619]
+            args = np.asarray([np.vstack((plotargs[:,0,0],
+              plotargs[:,1,0],np.zeros_like(plotargs[:,1,0]),
+              np.full((1500),lat_space[r]),cont_data.get('l4'),
+              cont_data.get('b0'))).T for r in range(len(space))])
+            # Plot the data the given function
+            label=[r'$\mu_{\pi K}/f_{\pi}$',r'$\mu_{\pi K}\,a_{3/2}$',r' ',
+                   r'$(\mu_{\pi K}/f_{\pi})_{phys}$']
+            chiral_plot.plot_chiral_ext(extrapol,space,label, xlim=[0.7,1.7],
+                                        ylim=[-0.25,0.], func=None, args=args,
+                                        calc_x = None, ploterror=False,
+                                        kk=False, x_phys=0.8128,plotlim=[0.7,1.7],
+                                        argct=None)
+            args = np.vstack((plotargs[:,0,0], plotargs[:,1,0],
+              np.zeros_like(plotargs[:,0,0]),np.ones_like(plotargs[:,0,0]),cont_data.get('l4'),cont_data.get('b0'))).T
+            chiral_plot.plot_cont(extrapol,ana.wrap_test.pik_I32_lo,
+                                  [0.7,1.7],args,argct=None,calc_x=None,ploterror=False,
+                                  label=r'LO-$\chi$-PT',xcut=cut)
+            chiral_plot.save()
+            label[1]=r'rel. dev. $\mu_{\pi K}\,a_{3/2}$'
+            chiral_plot.plot_fit_proof(extrapol,space,ana.wrap_test.mu_pik_a_32_fit,
+                                        xvalue_function=ana.calc_x_plot,
+                                        data_label='fit',plotlim=[1.1,1.6],ylim=[-0.3,0.3],label=label,
+                                        x_phys=None)
+            chiral_plot.save()
+        del chiral_plot
+    #print(results_lattice_artefact.info())
     results_lattice_artefact.to_pickle(resdir+'/pik_disc_eff_M%d%s.pkl'%(zp_meth,
                                        ms_fixing.upper()))
 

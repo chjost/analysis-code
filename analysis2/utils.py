@@ -39,6 +39,7 @@ def mean_std(data, axis=0, mean=None):
     else:
         _mean = np.asarray(mean)
     diff = axis_subtract(data,_mean,axis)
+    # modified for blocked bootstrap
     var = np.nansum(np.square(diff), axis=axis) / data.shape[axis]
     std = np.sqrt(var)
     return _mean, std

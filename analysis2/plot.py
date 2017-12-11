@@ -62,6 +62,8 @@ class LatticePlot(object):
         if plt.get_fignums():
             for i in plt.get_fignums():
                 self.plotfile.savefig(plt.figure(i))
+        else:
+            plt.savefig()
         plt.clf()
 
     def _set_env_normal(self):
@@ -184,6 +186,7 @@ class LatticePlot(object):
 
         # iterate over correlation functions
         print("Number of correlators is: %d" %ncorr)
+        x_shift=-0.1
         for n in range(ncorr):
             # Check if there are ncorr datalabels
             if len(label[3]) == ncorr:
@@ -202,16 +205,16 @@ class LatticePlot(object):
                 self._set_env_normal()
                 # plot the relative error instead of data and error
                 if rel is True:
-                    plot_data(X, np.divide(ddata,corr.data[0,:,n]),
+                    plot_data(X+xshift, np.divide(ddata,corr.data[0,:,n]),
                         np.zeros_like(ddata), label=_datlabel,
                         plotrange=[0,T],col=self.cycol(),fmt=self.cyfmt())
                 else:
                     # print data to screen
                     if debug > 3:
                       self._save_data_ascii(X, corr.data[0,:,n], ddata, label)
-                    plot_data(X, corr.data[0,:,n], ddata, _datlabel,
+                    plot_data(X+xshift, corr.data[0,:,n], ddata, _datlabel,
                         plotrange=[0,T],col=self.cycol(),fmt=self.cyfmt())
-                plt.legend()
+                plt.legend(loc='best')
                 if self.join is False:
                   self.save()
             else:
@@ -230,15 +233,16 @@ class LatticePlot(object):
 
                     # plot
                     self._set_env_normal()
-                    plot_data(X, corr.data[0,:,n], ddata, _datlabel,
+                    plot_data(X+xshift, corr.data[0,:,n], ddata, _datlabel,
                             plotrange=[1,T],col=self.cycol())
                     # The argument X has changed
                     #_X = [X[0],X[-1]]
                     plot_function(fitfunc.fitfunc, fi, mpar, label[4],
                             add, fi, ploterror,col=self.cycol())
-                    plt.legend()
+                    plt.legend(loc='best')
                     if self.join is False:
                       self.save()
+            xshift+=0.1
         label[0] = label_save
 
     def _genplot_comb(self, corr, label, fitresult, fitfunc, oldfit, add=None,
@@ -539,10 +543,10 @@ class LatticePlot(object):
         print data.data[0].shape
         if boot is False:
           _data = data.data[:,ts,0]
-          if data.conf is not None:
-              _x = np.unique(data.conf)
-          else:
-              _x = np.arange(_data.shape[0])
+          #if data.conf is not None:
+          #    _x = np.unique(data.conf)
+          #else:
+          _x = np.arange(_data.shape[0])
           plot_data(_x,_data,np.zeros_like(_data),label[-1])
         else:
           if data.conf is not None:
@@ -794,7 +798,7 @@ class LatticePlot(object):
         # Plot the data for the given lattice spacings
         # Initialize symbols and colors for lattice spacings
         col = ['r','b','g']
-        fmt_pts = ['^','v','o']
+        fmt_pts = ['x','x','x']
 
         for i,a in enumerate(beta):
             # get data for beta, the data passed should be 3 arrays (X,Y,dy)
@@ -975,6 +979,7 @@ class LatticePlot(object):
             if len(xcut) > 1:
                 plot_brace(args,xcut,func,xpos="low")
                 plot_brace(args,xcut,func,xpos="up")
+                
             else:
                 plot_brace(args,xcut,func,xpos="up")
         if plotlim is None:
@@ -988,7 +993,6 @@ class LatticePlot(object):
         if len(label) > 2:
             plt.title(label[2])
         plt.legend(loc='lower left',ncol=2,numpoints=1,fontsize=16)
-
 
     def plot_fit_proof(self, chirana, lattice_spacings,
                        fit_function, xvalue_function=None,
@@ -1034,7 +1038,7 @@ class LatticePlot(object):
                    legend_array=legend,labels=label)
 
     def plot_cont(self,chirana,func,xlim,args,par=None,argct=None,calc_x=None,
-                  phys=True,ploterror=True,label=None):
+                  phys=True,ploterror=True,label=None,xcut=None):
       """ Plot the continuum curve of a chiral analysis and the physical point
       result
       """
@@ -1054,33 +1058,49 @@ class LatticePlot(object):
       else:
           plot_function(func, xlim, args, _label, fmt='k-',
               ploterror=ploterror,debug=self.debug)
+      if xcut is not None:
+          if len(xcut) > 1:
+              plot_brace(args,xcut,func,xpos="low")
+              plot_brace(args,xcut,func,xpos="up")
+              
+          else:
+              plot_brace(args,xcut,func,xpos="up")
       if phys ==True:
           plt.errorbar(chirana.phys_point[0,0],chirana.phys_point[1,0],
                        chirana.phys_point[1,1],xerr=chirana.phys_point[0,1],
                        fmt='d', color='darkorange', label='phys.')
       plt.legend(loc='lower left',ncol=2,numpoints=1,fontsize=16)
     
-def plot_brace(args, xcut, func, xpos=None):
+def plot_brace(args, xcut, func=None, xpos=None):
     """ internal function that plots vertical braces at xcut"""
     if len(xcut) > 1:
         if xpos == "low":
-            y = func(args[0,:,:], xcut[0])
-            plt.hlines(0.9*y[0], xcut[0]*1.02, xcut[0], colors="k", label="")
-            plt.hlines(1.1*y[0], xcut[0]*1.02, xcut[0], colors="k", label="")
-            plt.vlines(xcut[0], 0.9*y[0], 1.1*y[0], colors="k", label="")
+            y = func(args[0,...], xcut[0])
+            #plt.hlines(0.9*y[0], xcut[0]*1.02, xcut[0], colors="k", label="")
+            #plt.hlines(1.1*y[0], xcut[0]*1.02, xcut[0], colors="k", label="")
+            #plt.vlines(xcut[0], 0.9*y[0], 1.1*y[0], colors="k", label="")
+            plt.hlines(0.9*y, xcut[0]*1.02, xcut[0], colors="k", label="")
+            plt.hlines(1.1*y, xcut[0]*1.02, xcut[0], colors="k", label="")
+            plt.vlines(xcut[0], 0.9*y, 1.1*y, colors="k", label="")
         
         elif xpos == "up":
-            y = func(args[0,:,:], xcut[1])
-            plt.hlines(0.9*y[0], xcut[1]*0.98, xcut[1], colors="k", label="")
-            plt.hlines(1.1*y[0], xcut[1]*0.98, xcut[1], colors="k", label="")
-            plt.vlines(xcut[1], 0.9*y[0], 1.1*y[0], colors="k", label="")
+            y = np.asarray(func(args[0,...], xcut[1]))
+            #plt.hlines(0.9*y[0], xcut[1]*0.98, xcut[1], colors="k", label="")
+            #plt.hlines(1.1*y[0], xcut[1]*0.98, xcut[1], colors="k", label="")
+            #plt.vlines(xcut[1], 0.9*y[0], 1.1*y[0], colors="k", label="")
+            plt.hlines(0.9*y, xcut[1]*0.98, xcut[1], colors="k", label="")
+            plt.hlines(1.1*y, xcut[1]*0.98, xcut[1], colors="k", label="")
+            plt.vlines(xcut[1], 0.9*y, 1.1*y, colors="k", label="")
         else:
             print("x position not known, not plotting anything")
     else:
-        y = func(args[0,:,:], xcut)
-        plt.hlines(0.9*y[0], xcut*0.98, xcut, colors="k", label="")
-        plt.hlines(1.1*y[0], xcut*0.98, xcut, colors="k", label="")
-        plt.vlines(xcut, 0.9*y[0], 1.1*y[0], colors="k", label="")
+        y = func(args[0,...], xcut)
+        #plt.hlines(0.9*y[0], xcut*0.98, xcut, colors="k", label="")
+        #plt.hlines(1.1*y[0], xcut*0.98, xcut, colors="k", label="")
+        #plt.vlines(xcut, 0.9*y[0], 1.1*y[0], colors="k", label="")
+        plt.hlines(0.9*y, xcut*0.98, xcut, colors="k", label="")
+        plt.hlines(1.1*y, xcut*0.98, xcut, colors="k", label="")
+        plt.vlines(xcut, 0.9*y, 1.1*y, colors="k", label="")
 
         
 def plot_single_line(x,y,label,col):

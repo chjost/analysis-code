@@ -1162,7 +1162,7 @@ class ChirAna(object):
   # This should be a general fitfunction just taking the fitfunction as an
   # argument
   def fit(self,err_func,start,plotdir=None,correlated=False,prior=None,
-          xcut=None):
+          xcut=None,pik=False):
       """ Fit fitfunc to the data of self
 
       Parameters
@@ -1178,7 +1178,7 @@ class ChirAna(object):
       _x_data, _y_data = [], []
       for d in zip(self.x_data,self.y_data):
           if xcut is not None:
-              tmp_x, tmp_y = chut.cut_data(d[0],d[1],xcut)
+              tmp_x, tmp_y = chut.cut_data(d[0],d[1],xcut,pik)
           else:
               tmp_x, tmp_y = d[0],d[1]
           _x_data.append(tmp_x)
