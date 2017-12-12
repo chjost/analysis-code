@@ -1,5 +1,6 @@
 import pandas as pd
 import syseffos_io as io
+import syseffos_info as info
 import boot_statistics as bstats
 
 class SysEffos:
@@ -16,17 +17,17 @@ class SysEffos:
         self.data[name]=self.data.index
     
     def bootstrap_means(self,names,observables):
-        self.mean_frame=self.data.groupby(names)[observables].agg([bstats.own_mean,
+        bstrap_frame=self.data.groupby(names)[observables].agg([bstats.own_mean,
                                                        bstats.own_std])
+        info.print_si_format(bstrap_frame)
+        return bstrap_frame
     
-    def bootstrap_means_key(groups,observables,mean_key=None):
-        if mean_key is not None:
-           # mean over fitranges, needs group by sample
-           self.key_mean_frame=self.data.groupby(groups+'sample').mean()
-           # undo grouping by samples
+    def bootstrap_means_key(self,groups,observables):
+        # mean over fitranges, needs group by sample
+        self.key_mean_frame=self.data.groupby(groups+['sample']).mean()
+        # undo grouping by samples
+        self.key_mean_frame=self.data.reset_index(level=['sample'])
+        self.mean_frame=self.bootstrap_means(groups,observables)
 
-        else:
-            print("no key given, returning bootstrap_means instead")
-            bootstrap_means
 #    def result_weights():
 #        self.data.pipe(bstats.own_weight)

@@ -19,13 +19,13 @@ def main():
     # We are interested in the mean values and standard deviations for each
     # method, lattice artefact and fitrange separately
     groups=['method', 'Lattice Artefact','fit_end']
-    observables=['L_5','L_piK','c','mu_a32_phys']
+    observables=['L_5','L_piK','mu_a32_phys']
     chiral_data.bootstrap_means(groups,observables)
-    print(chiral_data.mean_frame)
     # Furthermore we want to take the average over a few keys first and then
     # look at the mean values and standard deviations again.
     groups=['method','Lattice Artefact']
-    chiral_data.bootstrap_means_key(groups,observables,mean_key='fit_end')
+    chiral_data.bootstrap_means_key(groups,observables)
+    print(chiral_data.mean_frame)
 if __name__ == '__main__':
     try:
         main()

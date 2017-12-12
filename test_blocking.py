@@ -58,10 +58,10 @@ def main():
     picorr_b2 = ana.Correlators(files, matrix=False,conf_col = 2)
     picorr_b3 = ana.Correlators(files, matrix=False,conf_col = 2)
     print(picorr.data)
-    picorr.sym_and_boot(nboot)
-    picorr_b1.sym_and_boot(nboot,blocking=True,bl=1)
-    picorr_b2.sym_and_boot(nboot,blocking=True,bl=2)
-    picorr_b3.sym_and_boot(nboot,blocking=True,bl=3)
+    picorr.bootstrap(nboot)
+    picorr_b1.bootstrap(nboot,blocking=True,bl=2)
+    picorr_b2.bootstrap(nboot,blocking=True,bl=4)
+    picorr_b3.bootstrap(nboot,blocking=True,bl=8)
     data_arr = np.dstack((picorr.data,picorr_b1.data,picorr_b2.data,picorr_b3.data))
     twopoint = ana.Correlators.create(data_arr)
     print(twopoint.data.shape)
@@ -80,18 +80,22 @@ def main():
     plotter = ana.LatticePlot("%s/test_blocking_k_%s.pdf" % (plotdir,
       lat),join=True)
     plotter.set_env(ylog=True,grid=False)
-    datalbl = ["unblocked","blocklength=1","blocklength=2","blocklength=3"]
+    datalbl = ["unblocked","blocklength=2","blocklength=4","blocklength=8"]
     label = ["single particle", "t", "C(t)", datalbl]
     plotter.plot(twopoint, label, add=addT, debug=debug)
+    #plotter.plot(picorr, label, add=addT, debug=debug)
+    #plotter.plot(picorr_b1, label, add=addT, debug=debug)
+    #plotter.plot(picorr_b2, label, add=addT, debug=debug)
+    #plotter.plot(picorr_b3, label, add=addT, debug=debug)
     plotter.save()
     # now plot the relative errors
-    plotter.set_env(ylog=False,grid=False)
+    plotter.set_env(ylog=False,grid=False,xlim=[18,22],ylim=[0.004,0.008])
     label = ["single particle", "t", "dC(t)/C(t)", datalbl]
     plotter.plot(twopoint, label, add=addT, debug=debug, rel=True)
     plotter.save()
     twopoint.mass()
     label = ["single particle", "t", "M_eff(t)", datalbl]
-    plotter.set_env(ylog=False,grid=False,xlim=[9.5,30.5],ylim=[0.21,0.221])
+    plotter.set_env(ylog=False,grid=False)
     plotter.plot(twopoint,label,add=addT,debug=debug)
     plotter.save()
     del plotter

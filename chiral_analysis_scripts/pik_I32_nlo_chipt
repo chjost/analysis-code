@@ -108,7 +108,7 @@ def main():
         print(80*'#')
         print('lattice artefact is %s'%la)
         print(80*'#')
-        ranges=[[0,1.3],[0,1.41],[0,2.5]]
+        ranges=[[0,1.35],[0,1.41],[0,2.5]]
         filename = plotdir+'/mu_a32_nlo_disc_eff_'+str(lattice_artefacts[la])+'_M%d%s.pdf'%(zp_meth,ms_fixing.upper())
         chiral_plot = ana.LatticePlot(filename, join = False,debug=4)
         for cut in ranges:
@@ -141,7 +141,6 @@ def main():
             fitresults={ key:values for key, values in zip(observables,value_list) }
             fitresults_dataframe=pd.DataFrame(fitresults)
             results_lattice_artefact = results_lattice_artefact.append(fitresults_dataframe)
-            print(results_lattice_artefact.where[results_lattice_artefact['sample']==0])
             # summary of data
             header = ["#amu_l", "amu_s", "mpi", "dmpi", "mk", "dmk", "fpi", "dfpi",
                       "r0/a", "d(r0/a)", "m_eta","dm_eta","mu a0", "d(mu a0)"]

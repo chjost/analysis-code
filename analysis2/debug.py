@@ -10,14 +10,15 @@ def print_info_data(x,y,dy,dx=None):
     """
     print("\n--------------------------------------------------------------------------------")
     print("Data for plotting")
-    print("x-data:")
+    np.set_printoptions(precision=4)
     if dx is not None:
-        print(x,dx)
+        print("x\tdx\ty\tdy:")
+        data=np.column_stack((x,dx,y,dy))
+        print(data)
     else:
-        print(x)
-    print("\n")
-    print("y-data:")
-    print(y,dy)
+        print("x\ty\tdy:")
+        data=np.column_stack((x,y,dy))
+        print(data)
     print("--------------------------------------------------------------------------------\n")
 
 def init_summ_arrays(extrapol,lyt_x,lyt_y):

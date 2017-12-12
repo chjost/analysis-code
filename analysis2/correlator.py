@@ -180,11 +180,19 @@ class Correlators(object):
                 in_out.write_data(self.data, filename, self.conf, verbose)
             else:
                 in_out.write_data(self.data, filename, verbose)
+    
+    def block(self,bl=1):
+        """Block data into blocks of length bl
 
-    def symmetrize(self):
+        The data are blocked and the mean over each block is taken
+        """
+        self.data = boot.block(self.data, l=bl)
+        self.shape = self.data.shape
+
+    def symmetrize(self,blocking=False,bl=1):
         """Symmetrizes the data around the second axis.
         """
-        self.data = boot.sym(self.data)
+        self.data = boot.sym(self.data,blocking=blocking,bl=bl)
         self.shape = self.data.shape
 
     def bootstrap(self, nsamples, blocking= False, bl = None):

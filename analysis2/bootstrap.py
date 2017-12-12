@@ -6,7 +6,7 @@ import os
 import math
 import numpy as np
 
-def bootstrap(source, nbsamples,blocking = False, bl=None):
+def bootstrap(source, nbsamples,blocking = False, bl=1):
     """Bootstraping of data.
 
     Creates nbsamples bootstrap samples of source.
@@ -152,7 +152,7 @@ def asym(source):
     asymm[:,-1] = source[:, int(_T/2)]
     return asymm
 
-def sym(source):
+def sym(source, blocking=None, bl=1):
     """Symmetrizes correlation functions.
 
     Symmetrizes the correlation functions given in source. The data is
@@ -168,10 +168,12 @@ def sym(source):
     symm : ndarray
         The symmetrized data
     """
+    if blocking is not None:
+        source=block(source,bl)
     _rshape = list(source.shape)
     _T = _rshape[1]
     _rshape[1] = int(_T/2)+1
-
+    
     # initialize symmetrized data to 0.
     symm = np.zeros(_rshape, dtype=float)
     # the first timeslice is not symmetrized

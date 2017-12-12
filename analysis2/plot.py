@@ -196,7 +196,10 @@ class LatticePlot(object):
             if debug > 1:
                 print("plotting correlators %d" % (n))
             mdata, ddata = compute_error(corr.data[:,:,n])
-            
+            #mdata = np.mean(corr.data[:,:,n],axis=0)
+
+            #data_var = np.sum(np.square(np.diff(corr.data[:,:,n]-mdata,axis=0)),axis=0)/(corr.shape[0]*(corr.shape[0]-1))
+            #ddata=np.sqrt(data_var)
             if fitresult is None:
                 # set up labels
                 label[0] = "%s, pc %d" % (label_save, n)
@@ -205,7 +208,10 @@ class LatticePlot(object):
                 self._set_env_normal()
                 # plot the relative error instead of data and error
                 if rel is True:
-                    plot_data(X+xshift, np.divide(ddata,corr.data[0,:,n]),
+                    #plot_data(X+xshift, np.divide(ddata,corr.data[0,:,n]),
+                    #    np.zeros_like(ddata), label=_datlabel,
+                    #    plotrange=[0,T],col=self.cycol(),fmt=self.cyfmt())
+                    plot_data(X+xshift, ddata,
                         np.zeros_like(ddata), label=_datlabel,
                         plotrange=[0,T],col=self.cycol(),fmt=self.cyfmt())
                 else:
