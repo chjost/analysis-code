@@ -3,31 +3,24 @@ import syseffos_io as io
 import syseffos_info as info
 import boot_statistics as bstats
 
-class SysEffos:
-    def __init__(self,directory=None,filenames=None,debug=0):
-        self.debug=debug
-        if filenames is not None and directory is not None:
-            self.data=io.get_dataframe_disk(directory,filenames)
-            self.add_index_as_column('sample')
-            if self.debug > 0:
-                self.data.info()
+def bootstrap_means(frame,names,observables):
+    bstrap_frame=frame.groupby(names)[observables].agg([bstats.own_mean,
+                                                   bstats.own_std])
+    info.print_si_format(bstrap_frame)
+    return bstrap_frame
 
-    def add_index_as_column(self,name):
-        # Sooner or later we need the sample_number as variable
-        self.data[name]=self.data.index
-    
-    def bootstrap_means(self,names,observables):
-        bstrap_frame=self.data.groupby(names)[observables].agg([bstats.own_mean,
-                                                       bstats.own_std])
-        info.print_si_format(bstrap_frame)
-        return bstrap_frame
-    
-    def bootstrap_means_key(self,groups,observables):
-        # mean over fitranges, needs group by sample
-        self.key_mean_frame=self.data.groupby(groups+['sample']).mean()
-        # undo grouping by samples
-        self.key_mean_frame=self.data.reset_index(level=['sample'])
-        self.mean_frame=self.bootstrap_means(groups,observables)
+def bootstrap_means_key(frame,groups,observables,loc=None):
+    # mean over fitranges, needs group by sample
+    mean_frame=frame.groupby(groups+['sample']).mean()
+    # undo grouping by samples
+    mean_frame=frame.reset_index(level=['sample'])
+    mean_frame=get_at_loc(mean_frame,groups,observables,loc_tuple=loc)
+    return mean_frame
 
-#    def result_weights():
-#        self.data.pipe(bstats.own_weight)
+
+def get_at_loc(frame,groups,observables,loc_tuple=None):
+    if loc_tuple is not None:
+        mean_frame=bootstrap_means(frame,groups,observables).loc[loc_tuple,:]
+    else:
+        mean_frame=bootstrap_means(frame,groups,observables)
+    return mean_frame

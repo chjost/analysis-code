@@ -15,17 +15,25 @@ def main():
         "/pik_disc_eff_M2A.pkl",
         "/pik_disc_eff_M2B.pkl" 
         ]
-    chiral_data = chiron.SysEffos(directory=resdir,filenames=artefact_files,debug=2)
+    chiral_data = chiron.get_dataframe_disk(directory=resdir,filenames=artefact_files)
+    print(chiral_data.info())
     # We are interested in the mean values and standard deviations for each
     # method, lattice artefact and fitrange separately
-    groups=['method', 'Lattice Artefact','fit_end']
-    observables=['L_5','L_piK','mu_a32_phys']
-    chiral_data.bootstrap_means(groups,observables)
+    groups = ['method', 'Lattice Artefact','fit_end']
+    observables = ['L_5','L_piK','mu_a32_phys','chi2 reduced']
+    bmeans = chiron.bootstrap_means(chiral_data,groups,observables)
+    print(chiron.bootstrap_means(chiral_data,groups,
+                                 observables).loc[(slice(None),'None'),:])
     # Furthermore we want to take the average over a few keys first and then
     # look at the mean values and standard deviations again.
     groups=['method','Lattice Artefact']
-    chiral_data.bootstrap_means_key(groups,observables)
-    print(chiral_data.mean_frame)
+    observables=['L_5','L_piK','mu_a32_phys']
+    fitrange_means=chiron.bootstrap_means_key(chiral_data,groups,observables,
+                                              loc=(slice(None),'None'))
+    chiron.print_si_format(fitrange_means)
+
+    # Next we need to take some averages to estimate systematics 
+    
 if __name__ == '__main__':
     try:
         main()

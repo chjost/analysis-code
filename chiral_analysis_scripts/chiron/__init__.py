@@ -2,3 +2,5 @@
 supports the estimation of systematic effects from pandas objects
 """
 from syseffos import *
+from syseffos_io import *
+from syseffos_info import *

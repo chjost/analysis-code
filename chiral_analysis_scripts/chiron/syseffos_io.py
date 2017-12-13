@@ -32,5 +32,6 @@ def build_dataframe(results_list,fix_ms_methods):
         v.loc[:,'method'] = pd.Series(k,index=v.index)
     # make a great table with all data.
     combined_methods = pd.concat(results_dict.values())
+    combined_methods['sample'] = combined_methods.index
     return combined_methods
 
