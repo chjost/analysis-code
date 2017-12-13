@@ -24,3 +24,33 @@ def get_at_loc(frame,groups,observables,loc_tuple=None):
     else:
         mean_frame=bootstrap_means(frame,groups,observables)
     return mean_frame
+
+def average_systematics(frame,agg1,agg2):
+    """Take systematic 
+
+    """
+    # need only lattice artefact 'None' and fit_end 2.5
+    # TODO: I cannot shake off the feeling that this should work simpler
+    # Look at Lattice artefact None and largest fitrange
+    filtered_frame=frame.where((frame['Lattice Artefact'] == 'None') &
+                               (frame['fit_end'] == 2.50)).drop(['Lattice Artefact',
+                                'c', 'fit_start','fit_end'],1).dropna()
+    print(filtered_frame.sample(n=25))
+    # take methods of agg1
+    result_agg1 = method_average(filtered_frame, agg1)
+    result_agg2 = method_average(filtered_frame, agg2)
+    print(result_agg1)
+    print(result_agg2)
+
+    
+def method_average(filtered,agg):
+    method_filtered = filtered.where((filtered['method'] == agg[0]) |
+                                     (filtered['method'] == agg[1])).dropna()
+    average=method_filtered.groupby('sample').mean().reset_index()
+    mean=average.apply(bstats.own_mean).drop('sample',0)
+    std=average.apply(bstats.own_std).drop('sample',0)
+    result=pd.concat((mean,std),keys=['mean','std'],axis=1)
+    return result
+
+    #average =
+    #return average

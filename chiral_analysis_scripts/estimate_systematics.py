@@ -31,8 +31,19 @@ def main():
     fitrange_means=chiron.bootstrap_means_key(chiral_data,groups,observables,
                                               loc=(slice(None),'None'))
     chiron.print_si_format(fitrange_means)
+    print(chiral_data.sample(n=25))
+    # Next we need to take some averages to estimate systematics
+    # Define a naive weight based on the fitranges
 
-    # Next we need to take some averages to estimate systematics 
+    # Weighted average of None-lattice artefact over fitranges and Zp for A and
+    # B gives estimate of ms-fixing influence
+    weighted_chiral_data = chiron.average_systematics(chiral_data,('M1A','M1B'),
+                                                                 ('M2A','M2B'))
+
+    # Weighted average of None-lattice artefact over fitranges and ms-fixing for
+    # Zp1 and Zp2 fives estimate of renormalisation scale influence
+    #weighted_chiral_data = chiron.average_systematics(chiral_data,('M1A','M2A'),
+    #                                                              ('M1B','M2B'))
     
 if __name__ == '__main__':
     try:
