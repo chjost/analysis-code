@@ -25,7 +25,17 @@ def get_at_loc(frame,groups,observables,loc_tuple=None):
         mean_frame=bootstrap_means(frame,groups,observables)
     return mean_frame
 
-def average_systematics(frame,agg1,agg2):
+def average_all_methods(frame,agg):
+    # need only lattice artefact 'None' and fit_end 2.5
+    # TODO: I cannot shake off the feeling that this should work simpler
+    # Look at Lattice artefact None and largest fitrange
+    filtered_frame=frame.where((frame['Lattice Artefact'] == 'None') &
+                               (frame['fit_end'] == 2.50)).drop(['Lattice Artefact',
+                                'c', 'fit_start','fit_end'],1).dropna()
+    return method_average(filtered_frame,agg)
+
+
+def average_methods(frame,agg1,agg2,fixed=None):
     """Take systematic 
 
     """
@@ -35,22 +45,29 @@ def average_systematics(frame,agg1,agg2):
     filtered_frame=frame.where((frame['Lattice Artefact'] == 'None') &
                                (frame['fit_end'] == 2.50)).drop(['Lattice Artefact',
                                 'c', 'fit_start','fit_end'],1).dropna()
-    print(filtered_frame.sample(n=25))
-    # take methods of agg1
     result_agg1 = method_average(filtered_frame, agg1)
     result_agg2 = method_average(filtered_frame, agg2)
-    print(result_agg1)
-    print(result_agg2)
+    return pd.concat((result_agg1,result_agg2),keys=fixed)
 
     
 def method_average(filtered,agg):
-    method_filtered = filtered.where((filtered['method'] == agg[0]) |
-                                     (filtered['method'] == agg[1])).dropna()
-    average=method_filtered.groupby('sample').mean().reset_index()
-    mean=average.apply(bstats.own_mean).drop('sample',0)
-    std=average.apply(bstats.own_std).drop('sample',0)
-    result=pd.concat((mean,std),keys=['mean','std'],axis=1)
+    method_filtered = filtered.where((filtered['method'].isin(agg))).dropna()
+    average = method_filtered.groupby('sample').mean().reset_index()
+    mean = average.apply(bstats.own_mean).drop('sample',0)
+    std = average.apply(bstats.own_std).drop('sample',0)
+    result = pd.concat((mean,std),keys=['mean','std'],axis=1)
     return result
 
+def combine(main,sys=None,names=None):
+    
+    orig_columns = pd.MultiIndex.from_tuples([('original','mean'),('original','std')])
+    tmp_columns = pd.MultiIndex.from_product([names,['+','-']])
+    fix_ms_up = main['mean']-sys[0].loc['Zp1']['mean']
+    fix_ms_dn = main['mean']-sys[0].loc['Zp2']['mean']
+    zp_up = main['mean']-sys[1].loc['A']['mean']
+    zp_dn = main['mean']-sys[1].loc['B']['mean']
+    orig_final = pd.DataFrame(main.values,index=main.index,columns=orig_columns)
+    final = pd.concat((fix_ms_up,fix_ms_dn,zp_up,zp_dn), axis=1, keys=tmp_columns)
+    return orig_final.merge(final,left_index=True,right_index=True) 
     #average =
     #return average
