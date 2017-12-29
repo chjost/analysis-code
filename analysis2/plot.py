@@ -975,8 +975,8 @@ class LatticePlot(object):
                               fmt=col+fmt_ls,col=col, debug=self.debug)
 
 
-        plt.xlabel(label[0],fontsize=24)
-        plt.ylabel(label[1],fontsize=24)
+        plt.xlabel(label[0])
+        plt.ylabel(label[1])
         #self.save()
         if x_phys is not None:
             plt.axvline(x=x_phys, color='k', ls='--', label=label[0]+'_phys.')
@@ -998,7 +998,7 @@ class LatticePlot(object):
         plt.ylabel(label[1])
         if len(label) > 2:
             plt.title(label[2])
-        plt.legend(loc='lower left',ncol=2,numpoints=1,fontsize=16)
+        plt.legend(loc='lower left',ncol=2,numpoints=1)
 
     def plot_fit_proof(self, chirana, lattice_spacings,
                        fit_function, xvalue_function=None,
@@ -1082,28 +1082,27 @@ def plot_brace(args, xcut, func=None, xpos=None):
     if len(xcut) > 1:
         if xpos == "low":
             y = func(args[0,...], xcut[0])
-            #plt.hlines(0.9*y[0], xcut[0]*1.02, xcut[0], colors="k", label="")
-            #plt.hlines(1.1*y[0], xcut[0]*1.02, xcut[0], colors="k", label="")
-            #plt.vlines(xcut[0], 0.9*y[0], 1.1*y[0], colors="k", label="")
             plt.hlines(0.9*y, xcut[0]*1.02, xcut[0], colors="k", label="")
             plt.hlines(1.1*y, xcut[0]*1.02, xcut[0], colors="k", label="")
-            plt.vlines(xcut[0], 0.9*y, 1.1*y, colors="k", label="")
+            # TODO just a hotfix
+            try:
+                plt.vlines(xcut[0], 0.9*y, 1.1*y, colors="k", label="")
+            except:
+                plt.vlines(xcut[0], 0.9*y[0], 1.1*y[0], colors="k", label="")
+                
         
         elif xpos == "up":
             y = np.asarray(func(args[0,...], xcut[1]))
-            #plt.hlines(0.9*y[0], xcut[1]*0.98, xcut[1], colors="k", label="")
-            #plt.hlines(1.1*y[0], xcut[1]*0.98, xcut[1], colors="k", label="")
-            #plt.vlines(xcut[1], 0.9*y[0], 1.1*y[0], colors="k", label="")
             plt.hlines(0.9*y, xcut[1]*0.98, xcut[1], colors="k", label="")
             plt.hlines(1.1*y, xcut[1]*0.98, xcut[1], colors="k", label="")
-            plt.vlines(xcut[1], 0.9*y, 1.1*y, colors="k", label="")
+            try:
+                plt.vlines(xcut[1], 0.9*y, 1.1*y, colors="k", label="")
+            except:
+                plt.vlines(xcut[1], 0.9*y[0], 1.1*y[0], colors="k", label="")
         else:
             print("x position not known, not plotting anything")
     else:
         y = func(args[0,...], xcut)
-        #plt.hlines(0.9*y[0], xcut*0.98, xcut, colors="k", label="")
-        #plt.hlines(1.1*y[0], xcut*0.98, xcut, colors="k", label="")
-        #plt.vlines(xcut, 0.9*y[0], 1.1*y[0], colors="k", label="")
         plt.hlines(0.9*y, xcut*0.98, xcut, colors="k", label="")
         plt.hlines(1.1*y, xcut*0.98, xcut, colors="k", label="")
         plt.vlines(xcut, 0.9*y, 1.1*y, colors="k", label="")

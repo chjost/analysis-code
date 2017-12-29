@@ -73,7 +73,8 @@ def print_line_latex(lat, d, prec1=1e4, prec2=1e3, prec3=1e5):
   #  print("%9s & NA & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$  & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ \\\\" % 
   #              (lat, dx[0][0], dx[0][1]*prec, dx[0][2]*prec, dx[0][3]*prec,
   #                dy[0], dy[1]*prec, dy[2]*prec, dy[3]*prec))
-
+def print_line_plain(lat, d, prec1=1e4, prec2=1e3, prec3=1e5):
+    print("%9s\t%.4f\t%f\t%f" %(lat,d[0],d[1][0],d[1][1]))     
 def print_summary(ens_names,datafolder,match=False,strange_dict=None):
   """ pi-K summary print. In contrast to pipi summary one degree of freedom more
   (m_s)
@@ -92,25 +93,29 @@ def print_summary(ens_names,datafolder,match=False,strange_dict=None):
              '$a\delta E_{\text{m}}$','$a_{0\text{,m}$',
              '$(M_Ka_0)_{\text{m}}$'] 
   else:
-    head = ['Ensemble','$a\mu_{s}$','$aM_{K}$','$aM_{\pi}$','$a\mu_{\pi K}$',
-             '$a\delta E$','$a_0$',
-             '$(\mu_{\pi K}a_0)$'] 
+    #head = ['Ensemble','$a\mu_{s}$','$aM_{K}$','$aM_{\pi}$','$a\mu_{\pi K}$',
+    #         '$a\delta E$','$a_0$',
+    #         '$(\mu_{\pi K}a_0)$'] 
+    head = ['Ensemble','$a\mu_{s}$',
+             '$aE_{\pi K}$'] 
     # summ is a #Ens,#Obs,4 numpy array
     summ = np.zeros((len(ens_names),3,4)) 
     par_mk=1
     par_mpi=1
     par_mupik=0
-    par_dE=0
+    #par_dE=0
+    par_E=1
     e_print = []
     summ_ms, summ_mpi, summ_mk, summ_mupik = [], [], [], [] 
-    summ_dE, summ_a, summ_amupik = [], [], []
+    summ_E, summ_dE, summ_a, summ_amupik = [], [], [], []
     print("Collect data for summary in unmatched case")
     for i,e in enumerate(ens_names):
       print("\nread data for %s" % e)
       filemk = "fit_k_unit_%s.npz" % e
       filempi = "fit_pi_unit_%s.npz" % e
       filemupik = "mu_pi_k_TP0_%s.npz" % e
-      filedE = "dE_TP0_%s.npz" % e
+      #filedE = "dE_TP0_%s.npz" % e
+      fileE = "fit_pik_weight_unit_%s.npz" % e
       filea = "scat_len_TP0_%s.npz" % e
       fileam = "mu_a0_TP0_%s.npz" % e
       if e == "D30.48":
@@ -139,9 +144,12 @@ def print_summary(ens_names,datafolder,match=False,strange_dict=None):
         mupik.calc_error()
         if e == "D45.32":
             print(mupik.data[0][1])
-        # get dE
-        dE = ana.FitResult.read("%s/%s/%s/%s" % (datafolder, e, s, filedE))
-        dE.calc_error()
+        ## get dE
+        #dE = ana.FitResult.read("%s/%s/%s/%s" % (datafolder, e, s, filedE))
+        #dE.calc_error()
+        # get E
+        E = ana.FitResult.read("%s/%s/%s/%s" % (datafolder, e, s, fileE))
+        E.calc_error()
         # get a_0
         print("%s/%s/%s/%s" % (datafolder, e, s, filea))
         a = ana.FitResult.read("%s/%s/%s/%s" % (datafolder, e, s, filea))
@@ -163,9 +171,12 @@ def print_summary(ens_names,datafolder,match=False,strange_dict=None):
         # m_pi is not derived, so choose correct parameter
         summ_mupik.append([mupik.error[par_mupik][0][0][0], mupik.error[par_mupik][1][0],
                          mupik.error[par_mupik][2][0][0], mupik.error[par_mupik][2][0][0]])
-        # dE might is not derived, so choose correct parameter
-        summ_dE.append([dE.error[par_dE][0][0][0], dE.error[par_dE][1][0],
-                        dE.error[par_dE][2][0][0], dE.error[par_dE][2][0][1]])
+        ## dE might is not derived, so choose correct parameter
+        #summ_dE.append([dE.error[par_dE][0][0][0], dE.error[par_dE][1][0],
+        #                dE.error[par_dE][2][0][0], dE.error[par_dE][2][0][1]])
+        # E might is not derived, so choose correct parameter
+        summ_E.append([E.error[par_E][0][0][0], E.error[par_E][1][0],
+                        E.error[par_E][2][0][0], E.error[par_E][2][0][1]])
 
         # a_0 is derived, no need to choose parameter
         summ_a.append([a.error[0][0][0][0], a.error[0][1][0],
@@ -177,9 +188,11 @@ def print_summary(ens_names,datafolder,match=False,strange_dict=None):
     
     print(e_print)
     print_table_header(head) 
-    for i,d in enumerate(zip(summ_ms, summ_mk, summ_mpi, summ_mupik, summ_dE,
-                             summ_a, summ_amupik)):
-      print_line_latex(e_print[i],d)
+    #for i,d in enumerate(zip(summ_ms, summ_mk, summ_mpi, summ_mupik, summ_E,
+    #                         summ_a, summ_amupik)):
+    #  print_line_latex(e_print[i],d)
+    for i,d in enumerate(zip(summ_ms,summ_E)):
+      print_line_plain(e_print[i],d)
 
 def main():
   #ens =["A30.32", 

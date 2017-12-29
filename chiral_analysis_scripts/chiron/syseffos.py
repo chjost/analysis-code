@@ -25,30 +25,45 @@ def get_at_loc(frame,groups,observables,loc_tuple=None):
         mean_frame=bootstrap_means(frame,groups,observables)
     return mean_frame
 
-def average_all_methods(frame,agg):
+def average_all_methods(frame,agg,fixed=None,index=None,value=None,drop=None):
     # need only lattice artefact 'None' and fit_end 2.5
     # TODO: I cannot shake off the feeling that this should work simpler
     # Look at Lattice artefact None and largest fitrange
-    filtered_frame=frame.where((frame['Lattice Artefact'] == 'None') &
-                               (frame['fit_end'] == 2.50)).drop(['Lattice Artefact',
-                                'c', 'fit_start','fit_end'],1).dropna()
+    if index is None and value is None:
+        index,value,drop=default_index()
+    else:
+        drop=index+drop
+    filtered_frame=choose_data(frame,index,value,drop)
     return method_average(filtered_frame,agg)
 
 
-def average_methods(frame,agg1,agg2,fixed=None):
+def average_methods(frame,agg1,agg2,fixed=None,index=None,value=None,drop=None):
     """Take systematic 
 
     """
     # need only lattice artefact 'None' and fit_end 2.5
     # TODO: I cannot shake off the feeling that this should work simpler
     # Look at Lattice artefact None and largest fitrange
-    filtered_frame=frame.where((frame['Lattice Artefact'] == 'None') &
-                               (frame['fit_end'] == 2.50)).drop(['Lattice Artefact',
-                                'c', 'fit_start','fit_end'],1).dropna()
+    if index is None and value is None:
+        index,value,drop=default_index()
+    else:
+        drop=index+drop
+    filtered_frame=choose_data(frame,index,value,drop)
     result_agg1 = method_average(filtered_frame, agg1)
     result_agg2 = method_average(filtered_frame, agg2)
     return pd.concat((result_agg1,result_agg2),keys=fixed)
 
+def default_index():
+    index=['Lattice Artefact','fit_end']
+    value=['None',2.50]
+    drop=index+['c','fit_start']
+    return index,value,drop
+
+def choose_data(frame,index,value,drop):
+    for i,v in zip(index,value):
+        frame=frame.where(frame[i] == v)
+    chosen=frame.drop(drop,1).dropna()
+    return chosen
     
 def method_average(filtered,agg):
     method_filtered = filtered.where((filtered['method'].isin(agg))).dropna()

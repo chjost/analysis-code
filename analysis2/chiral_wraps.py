@@ -40,8 +40,10 @@ def err_func(p, x, y, error):
     # TODO: find a runtime way to disable prior
     if y.p is not None:
         chi_p = y.p - p[1]
+        return np.dot(error,np.r_[chi_a,chi_b,chi_d])
+    else:
+        return np.dot(error,np.r_[chi_a,chi_b,chi_d,chi_p])
     # and append them to a vector
-    return np.dot(error,np.r_[chi_a,chi_b,chi_d,chi_p])
     #return np.dot(error,np.r_[chi_a])
 
 def gamma_errfunc(p,x,y,error):
