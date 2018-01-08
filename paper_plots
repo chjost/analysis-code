@@ -1,0 +1,124 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+
+# Script to plot plots for paper in a uniform style
+
+import sys
+import numpy as np
+import analysis2 as ana
+
+def main():
+####################################################
+# parse the input file and setup parameters
+#####################################################
+    if len(sys.argv) < 2:
+        ens = ana.LatticeEnsemble.parse("kk_I1_TP0_A40.24.ini")
+    else:
+        ens = ana.LatticeEnsemble.parse(sys.argv[1])
+
+    # get data from input file
+    prefix = ens.get_data("path")
+    print prefix
+    lat = ens.name()
+    nboot = ens.get_data("nboot")
+    datadir = ens.get_data("datadir")
+    plotdir = ens.get_data("plotdir")
+    gmax = ens.get_data("gmax")
+    d2 = ens.get_data("d2")
+    try:
+        debug = ens.get_data("debug")
+    except KeyError:
+        debug = 0
+    T = ens.T()
+    T2 = ens.T2()
+    addT = np.ones((nboot,)) * T
+    addT2 = np.ones((nboot,)) * T2
+    min_size_ratio = ens.get_data("tmin_ratio")
+
+
+########################## Plot Correlators ###############################
+
+# Fit for single kaon
+    picorr = ana.Correlators.read("%s/corr_k_%s.npy" % (datadir, lat))
+    fit_single = ana.LatticeFit(0, True)
+    pifit = ana.FitResult.read("%s/fit_k_%s.npz" % (datadir, lat))
+    pifit.print_data(1)
+    range_mk, r_mk_shape = pifit.get_ranges()
+    print(r_mk_shape[0][0])
+    # plot the result
+    print("plotting")
+    plotter = ana.LatticePlot("%s/fit_k_%s.pdf" % (plotdir, lat))
+    plotter.set_env(ylog=True,grid=False,title=False)
+    plotter.new_file("%s/hist_fit_k_%s.pdf" % (plotdir, lat))
+    label = ["kaon energy", "$E_K$/a", "$E_K$"]
+    range_mk, r_mk_shape = pifit.get_ranges()
+    # declare number of bins dependant of fit ranges of 0th correlator
+    nbins = r_mk_shape[0][0]/3.
+    plotter.histogram(pifit, label, nb_bins=7, par=1)
+
+# Fit for ratio
+    kkcorr = ana.Correlators.read("%s/corr_kk_TP%d_%s.npy" % (datadir, d2, lat))
+    ratio = kkcorr.ratio(picorr, ratio=2 )
+    ratiofit = ana.FitResult.read("%s/fit_kk_TP%d_%s.npz" % (datadir,
+            d2, lat))
+    fit_ratio = ana.LatticeFit(1, dt=min_size_ratio, dt_i=1, dt_f=-1, xshift=0.5,
+        debug=5)
+    plotter = ana.LatticePlot("%s/fit_ratio_kk_TP%d_%s.pdf" % (plotdir, d2,
+      lat),join=True)
+    plotter.set_env(ylog=False,grid=False)
+    label = ["Ratio", "t", "R(t)", "data"]
+    print "plotter set up"
+    plotter.plot(ratio, label, ratiofit, fit_ratio, oldfit=pifit, add=addT,
+        oldfitpar=1, xshift=0.5, debug=debug)
+    range_r, r_r_shape = ratiofit.get_ranges()
+# Collection of ratios (one fitrange)
+
+# Histogram single kaon
+    plotter.new_file("%s/hist_fit_k_%s.pdf" % (plotdir, lat))
+    label = ["", "$E_K$/a", "$E_K$"]
+    range_mk, r_mk_shape = pifit.get_ranges()
+    # declare number of bins dependant of fit ranges of 0th correlator
+    nbins = r_mk_shape[0][0]/3.
+    plotter.histogram(pifit, label, nb_bins=7, par=1)
+
+# Histogram ratio (delta E)
+    plotter.new_file("%s/hist_fit_kk_ratio_TP%d_%s.pdf" % (plotdir, d2, lat))
+    plotter._set_limits(4)
+    label = ["ratio", "$\delta E_{KK}$/a", "$\delta E_{KK}$"]
+    # Number of bins is last parameter fit ranges of 0th correlator divided
+    # by 3
+    range_r, r_r_shape = ratiofit.get_ranges()
+    nbins = r_r_shape[1][0]/3.
+    plotter.histogram(ratiofit, label, nb_bins=nbins, par=1)
+# QQ single kaon
+    plotter.new_file("%s/qq_fit_k_%s.pdf" % (plotdir, lat))
+    label = [r'QQ-Plot $E_K$ %s' % lat, r'weighted $E_K$']
+    plotter.qq_plot(pifit,label,par=1)
+# QQ delta E
+    plotter.new_file("%s/qq_fit_kk_%s.pdf" % (plotdir, lat))
+    label = [r'QQ-Plot $\delta E$ %s' % lat, r'weighted$\delta E$']
+    plotter.qq_plot(ratiofit,label,par=1)
+
+########################## Plot M_K a_0  ###############################
+    mult_obs = ana.FitResult.read("%s/mk_akk_%s.npz" % (datadir,lat))
+# Histogram
+    plotter.new_file("%s/hist_mk_akk_%s.pdf" % (plotdir, lat))
+    plotter._set_limits(4)
+    label = ["Scattering length", "$M_K a_0$", "$M_K a_0$"]
+    plotter.histogram(mult_obs, label, nb_bins=16)
+# QQ-plot
+    plotter.new_file("%s/qq_mk_a0_%s.pdf" % (plotdir, lat))
+    plotter._set_limits(4)
+    label = [r'QQ-Plot $M_Ka_0$ %s' % lat, r'Bootstrap samples $M_K a_0$']
+    plotter.qq_plot(mult_obs,label,par=0)
+    del plotter
+
+########################## Plot Correlator  ###############################
+########################## Plot Correlator  ###############################
+
+
+if __name__ == '__main__':
+    try:
+        print("starting")
+        main()
+    except KeyboardInterrupt:
+        pass

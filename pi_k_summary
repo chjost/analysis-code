@@ -1,0 +1,196 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+################################################################################
+#
+# Author: Christian Jost (jost@hiskp.uni-bonn.de)
+# Date:   Februar 2015
+#
+# Copyright (C) 2015 Christian Jost
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Script that collects all data results specified in the input file and prints
+# them in a LaTeX compatible table format
+#
+#
+# For informations on input parameters see the description of the function.
+#
+################################################################################
+
+import sys
+import numpy as np
+import matplotlib
+matplotlib.use('Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+
+import analysis2 as ana
+def folded_error(error):
+  return np.sqrt(np.square(error[1][0]) + np.square(np.amax(error[2][0])))
+
+def print_table_header(col_names):
+  """ Print the header for a latex table"""
+  print(' & '.join(col_names))
+  print('\midrule')
+
+def print_line_latex(lat, d, prec1=1e4, prec2=1e3):
+  """Print summary line.
+
+  Parameter
+  ---------
+  lat : str
+      The lattice names
+  d : tuple, list
+      The data as formatted multicolumn array
+  """
+  #if dx.shape[0] == 2:
+  print("%9s & %.4f & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%.3f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%.3f(%1.0f)(^{+%1.0f}_{-%1.0f})$ \\\\" % 
+                (lat, d[0],
+                  d[1][0], d[1][1]*prec1, d[1][2]*prec1, d[1][3]*prec1,
+                  d[2][0], d[2][1]*prec1, d[2][2]*prec1, d[2][3]*prec1,
+                  # For negative valued observables the sign for the systematics
+                  # needs to be changed, implemented by changing position of up
+                  # and down boundaries
+                  d[3][0], d[3][1]*prec2, d[3][3]*prec2, d[3][2]*prec2,
+                  d[4][0], d[4][1]*prec2, d[4][3]*prec2, d[4][2]*prec2)
+       )
+
+  ##else:
+  #  print("%9s & NA & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$  & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ \\\\" % 
+  #              (lat, dx[0][0], dx[0][1]*prec, dx[0][2]*prec, dx[0][3]*prec,
+  #                dy[0], dy[1]*prec, dy[2]*prec, dy[3]*prec))
+
+def print_summary(ens_names,datafolder,match=False,strange_dict=None):
+  """ pi K summary print. In contrast to pipi summary one degree of freedom more
+  (m_s)
+
+  Parameters
+  ----------
+  ens_names : a list of the ensemble names for the summary
+  datadir : string where to find the data
+  match : bool, is data matched to some mu_s value or not?
+  strange_dict : dictionary of strange quark masses used, if match is false
+  """
+
+  # Table contents: Ensemble amu_s(matched) M_K(matched) delta_E a_0 M_K*a_0
+  if match is True:
+    head = ['Ensemble','$a\mu_{s\text{,m}}$','$aM_{K\text{,m}}$',
+             '$a\delta E_{\text{m}}$','$a_{0\text{,m}$',
+             '$(M_Ka_0)_{\text{m}}$'] 
+  else:
+    head = ['Ensemble','$a\mu_{s}$','$aM_{K}$',
+             '$a\delta E$','$a_0$',
+             '$(M_Ka_0)$'] 
+    # summ is a #Ens,#Obs,4 numpy array
+    summ = np.zeros((len(ens_names),3,4)) 
+    par_mk=1
+    par_dE=1
+    e_print = []
+    summ_ms, summ_mk, summ_dE, summ_a, summ_amk = [], [], [], [], []
+    print("Collect data for summary in unmatched case")
+    for i,e in enumerate(ens_names):
+      print("\nread data for %s" % e)
+      filemk = "fit_k_%s.npz" % e
+      filedE = "fit_kk_TP0_%s.npz" % e
+      filea = "scat_len_TP0_%s.npz" % e
+      fileam = "mk_akk_%s.npz" % e
+      if e == "D30.48":
+        strange_dict[e[0]] = ["amu_s_115","amu_s_15","amu_s_18"] 
+      for j,s in enumerate(strange_dict[e[0]]):
+        if j == 0:
+          e_print.append(e)
+        else:
+          e_print.append("")
+        summ_ms.append(float('0.0%s' % s[6:]))
+        print("\tat strange mass %s" % s)
+        # Collect data from fit results
+        # Print data after consistency check
+        # get m_pi data
+        mk = ana.FitResult.read("%s/%s/%s/%s" % (datafolder, e, s, filemk))
+        mk.calc_error()
+        # get dE
+        dE = ana.FitResult.read("%s/%s/%s/%s" % (datafolder, e, s, filedE))
+        dE.calc_error()
+        # get a_0
+        print("%s/%s/%s/%s" % (datafolder, e, s, filea))
+        a = ana.FitResult.read("%s/%s/%s/%s" % (datafolder, e, s, filea))
+        a.calc_error()
+        # get m_pi*a_0 data
+        amk = ana.FitResult.read("%s/%s/%s/%s" % (datafolder, e, s, fileam))
+        #amk = amk.singularize()
+        amk.calc_error()
+        # Fold larger systematic error into statistical one
+        amk_err = folded_error(amk.error[0])
+
+        # m_pi is not derived, so choose correct parameter
+        summ_mk.append([mk.error[par_mk][0][0][0], mk.error[par_mk][1][0],
+                         mk.error[par_mk][2][0][0], mk.error[par_mk][2][0][0]])
+
+        # dE might is not derived, so choose correct parameter
+        summ_dE.append([dE.error[par_dE][0][0][0], dE.error[par_dE][1][0],
+                        dE.error[par_dE][2][0][0], dE.error[par_dE][2][0][1]])
+
+        # a_0 is derived, no need to choose parameter
+        summ_a.append([a.error[0][0][0][0], a.error[0][1][0],
+                       a.error[0][2][0][0], a.error[0][2][0][1]])
+
+        # a_0*m_pi is derived, no need to choose parameter
+        #summ_amk.append([amk.error[0][0][0][0], amk.error[0][1][0],
+        #                  amk.error[0][2][0][0], amk.error[0][2][0][1]])
+        #mean, amk_err = ana.compute_error(amk.data[0])
+        summ_amk.append([amk.data[0][0,0,0],amk_err,
+                          0.,0.])
+    
+    print(e_print)
+    print_table_header(head) 
+    for i,d in enumerate(zip(summ_ms,summ_mk,summ_dE,summ_a,summ_amk)):
+      print_line_latex(e_print[i],d)
+
+def main():
+  #ens =["A30.32", 
+  #      "B85.24", "D45.32"]
+  ens =["A30.32", "A40.20", "A40.24", "A40.32", "A60.24",
+        "A80.24", "A100.24", "B25.32t", "B35.32", "B55.32",
+        "B85.24", "D45.32", "D30.48"]
+  #mus_a_fld = ["amu_s_185","amu_s_225","amu_s_2464"]
+  #mus_b_fld = ["amu_s_16","amu_s_186","amu_s_21"]
+  #mus_d_fld = ["amu_s_13","amu_s_15","amu_s_18"]
+  #mus_d_fld_var = ["amu_s_115","amu_s_15","amu_s_18"]
+
+  # Lowest mu_s values:
+  mus_a_fld = ["amu_s_185"]
+  mus_b_fld = ["amu_s_16"]
+  mus_d_fld = ["amu_s_13"]
+  mus_d_fld_var = ["amu_s_115"]
+
+  # Medium mu_s values:
+  #mus_a_fld = ["amu_s_225"]
+  #mus_b_fld = ["amu_s_186"]
+  #mus_d_fld = ["amu_s_15"]
+  #mus_d_fld_var = ["amu_s_15"]
+
+  # Highest mu_s values:
+  #mus_a_fld = ["amu_s_2464"]
+  #mus_b_fld = ["amu_s_21"]
+  #mus_d_fld = ["amu_s_18"]
+  #mus_d_fld_var = ["amu_s_18"]
+  mass_fld = {"A":mus_a_fld,"B":mus_b_fld,"D":mus_d_fld}
+  data = '/hiskp2/helmes/analysis/scattering/analysis_vault/k_charged_wo_outliers/data/'
+  print_summary(ens,data,match=False,strange_dict = mass_fld)
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass
