@@ -15,13 +15,13 @@ def main():
 #
 ################################################################################
     artefact_files=[
-        "/pik_disc_eff_M1A.pkl",
-        "/pik_disc_eff_M1B.pkl",
-        "/pik_disc_eff_M2A.pkl",
-        "/pik_disc_eff_M2B.pkl" 
+        "/pik_disc_eff_M1A.h5",
+        "/pik_disc_eff_M1B.h5",
+        "/pik_disc_eff_M2A.h5",
+        "/pik_disc_eff_M2B.h5" 
         ]
     chiral_data = chiron.get_dataframe_disk(directory=resdir,filenames=artefact_files)
-    print(chiral_data.info())
+    #print(chiral_data.info())
     # We are interested in the mean values and standard deviations for each
     # method, lattice artefact and fitrange separately
     groups = ['method', 'Lattice Artefact','fit_end']
@@ -64,13 +64,13 @@ def main():
 #
 ################################################################################
     artefact_files=[
-        "/pik_gamma_M1A.pkl",
-        "/pik_gamma_M1B.pkl",
-        "/pik_gamma_M2A.pkl",
-        "/pik_gamma_M2B.pkl" 
+        "/pik_gamma_M1A.h5",
+        "/pik_gamma_M1B.h5",
+        "/pik_gamma_M2A.h5",
+        "/pik_gamma_M2B.h5" 
         ]
     chiral_data = chiron.get_dataframe_disk(directory=resdir,filenames=artefact_files)
-    print(chiral_data.info())
+    #print(chiral_data.info())
     # We are interested in the mean values and standard deviations for each
     # method, lattice artefact and fitrange separately
     groups = ['method', 'fit_start']

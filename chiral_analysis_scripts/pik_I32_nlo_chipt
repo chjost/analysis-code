@@ -174,8 +174,13 @@ def main():
             chiral_plot.save()
         del chiral_plot
     #print(results_lattice_artefact.info())
-    results_lattice_artefact.to_pickle(resdir+'/pik_disc_eff_M%d%s.pkl'%(zp_meth,
-                                       ms_fixing.upper()))
+    process_id = 'pik_disc_eff_M%d%s'%(zp_meth, ms_fixing.upper())
+    hdf_filename = resdir+process_id+'.h5'
+    hdfstorer = pd.HDFStore(hdf_filename)
+    hdfstorer[process_id] = results_lattice_artefact 
+    del hdfstorer
+    #results_lattice_artefact.to_pickle(resdir+'/pik_disc_eff_M%d%s.pkl'%(zp_meth,
+    #                                   ms_fixing.upper()))
 
 if __name__ == '__main__':
     try:

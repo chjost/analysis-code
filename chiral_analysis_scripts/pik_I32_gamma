@@ -1,5 +1,5 @@
 #!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
-
+##!/hiskp2/werner/libraries/Python-2.7.12/python
 ################################################################################
 #
 # Author: Christopher Helmes (helmes@hiskp.uni-bonn.de)
@@ -211,8 +211,12 @@ def main():
         chiral_plot.save()
     del chiral_plot
     fitresults_gamma.info()
-    fitresults_gamma.to_pickle(resdir+'/pik_gamma_M%d%s.pkl'%(zp_meth,
-                               ms_fixing.upper()))
+    process_id = 'pik_gamma_M%d%s'%(zp_meth, ms_fixing.upper())
+    hdf_filename = resdir+process_id+'.h5'
+    hdfstorer = pd.HDFStore(hdf_filename)
+    hdfstorer[process_id] = fitresults_gamma
+    del hdfstorer
+    #fitresults_gamma.to_pickle(resdir+'/pik_gamma_M%d%s.pkl'%(zp_meth, ms_fixing.upper()))
 if __name__ == '__main__':
     try:
         main()

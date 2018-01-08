@@ -1165,6 +1165,22 @@ def plot_lines(x,y,label,proc=None):
       plot_single_line(x[1],y,label,col='r')
       plot_single_line(x[2],y,label,col='b')
 
+#def plot_gell_mann_okubo(self,dataframe,x-names,y-names,func):
+#    col = ['r','b','g']
+#    fmt_pts = ['^','v','o']
+#    fmt_ls = ['--',':','-.']
+#    dat_label = [r'$a=0.0885$fm',r'$a=0.0815$fm',r'$a=0.0619$fm']
+#    for i,a in enumerate(dataframe.beta.unique()):
+#        data=dataframe.where(dataframe.beta==a)
+#        # Calculate x-data, x-err,y-err based on light quark mass value
+#        data.groupby('m_ud').apply([own_mean,own_std])
+#        x_data = data.M_pi.own_mean
+#        x_err = data.M_pi.own_std
+#        y_data = data.M_eta.own_mean
+#        y_err = data.M_eta.own_std
+#        plot_errorbar()
+    
+    
 
 if __name__ == "__main__":
   pass
