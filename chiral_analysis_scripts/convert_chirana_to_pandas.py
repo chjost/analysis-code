@@ -1,4 +1,4 @@
-#!/hiskp2/werner/libraries/Python-2.7.12/python
+#!/usr/bin/python2.7
 
 # Check of the GMOR-relation in the end we would like to have a plot of the eta
 # masses calculated with the GMOR relation and the interpolated Eta masses as a
@@ -18,7 +18,7 @@ import matplotlib.cm as cm
 from matplotlib.backends.backend_pdf import PdfPages
 
 # Christian's packages
-sys.path.append('/hiskp2/helmes/projects/analysis-code/')
+sys.path.append('/hadron/helmes/projects/analysis-code/')
 import analysis2 as ana
 
 def main():
@@ -72,7 +72,7 @@ def main():
     cont_data = ana.ContDat(continuum_seeds,zp_meth=zp_meth)
     fpi_raw = ana.read_extern("../plots2/data/fpi.dat",(1,2))
 ################### Setup chiral analysis ######################################
-    extrapol = ana.ChirAna("gell_mann_okubo_check_%s%d"%(ms_fixing.upper(),zp_meth),
+    extrapol = ana.ChirAna("pi-K_I32_chipt_%s%d"%(ms_fixing.upper(),zp_meth),
                            correlated=False,gamma=False,match=True)
     # have five x-values: mk,mpi,meta,fpi,r0/a
     ens_shape_chirana = (len(latA),len(latB),len(latD))
@@ -86,26 +86,31 @@ def main():
     except:
         print("Could not load chiral analysis!")
     #Convert interpolated data to pandas dataframe (place that in an own script?)
-    observables = ['beta','mu_l','mu_s','M_pi','M_K','M_eta','sample']
+    observables = ['beta','mu_l','mu_s','sample','r_0','f_pi',
+                   'M_pi','M_K','M_eta','mu_a32']
     results_fix_ms = pd.DataFrame(columns=observables)
     beta_vals = [1.90,1.95,2.1]
     for i,a in enumerate(space):
-        for j,m in enumerate(amu_l_dict[i]):
+        for j,m in enumerate(amu_l_dict[a]):
             beta = np.full(nboot,beta_vals[i])
             mu_light = np.full(nboot,m)
             value_list = [beta,mu_light,
-                          extrapol.amu_matched_to[i,j,0,0],
+                          extrapol.amu_matched_to[i][j,0,0],np.arange(nboot),
+                          extrapol.x_data[i][j,0,3],
+                          extrapol.x_data[i][j,0,2],
                           extrapol.x_data[i][j,0,0],
                           extrapol.x_data[i][j,0,1],
                           extrapol.x_data[i][j,0,4],
-                          np.arange(nboot)]
+                          extrapol.y_data[i][j,0,0]]
             tmp_frame=pd.DataFrame({key:values for key,
                                     values in zip(observables,value_list)})
-            results_fix_ms.append(tmp_frame)
-    results_fix_ms.sample(n=20)
-    #filename=plotdir+'/check_gell_mann_okubo_M%d%s.pdf'%(zp_meth,ms_fixing.upper())
-    #chiral_plot = ana.LatticePlot(filename, join=False,debug=4)
-    #chiral_plot.plot_gell_man_okubo()
+            results_fix_ms = results_fix_ms.append(tmp_frame)
+    print(results_fix_ms.sample(n=20))
+    proc_id = 'pi_K_I32_chipt_%s%d'%(ms_fixing.upper(),zp_meth) 
+    hdf_filename = resdir+proc_id+'.h5'
+    hdfstorer = pd.HDFStore(hdf_filename)
+    hdfstorer[proc_id] = results_fix_ms
+    del hdfstorer
 
 if __name__ == '__main__':
     try:

@@ -10,7 +10,7 @@ matplotlib.rcParams['font.size'] = 14
 matplotlib.rcParams['axes.labelsize'] = 'large'
 
 import chiral_utils as chut
-from chiral_functions import *
+#from chiral_functions import *
 import extern_bootstrap as extboot
 import plot as plot
 from fit import FitResult
