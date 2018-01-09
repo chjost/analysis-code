@@ -75,7 +75,8 @@ def print_line_latex(lat, d, prec1=1e4, prec2=1e3, prec3=1e5):
   #                dy[0], dy[1]*prec, dy[2]*prec, dy[3]*prec))
 def print_line_plain(lat, d, prec1=1e4, prec2=1e3, prec3=1e5):
     print("%9s\t%.4f\t%f\t%f" %(lat,d[0],d[1][0],d[1][1]))     
-def print_summary(ens_names,datafolder,match=False,strange_dict=None):
+def print_summary(ens_names,datafolder,match=False,strange_dict=None,
+                  strange_eta_dict=None):
   """ pi-K summary print. In contrast to pipi summary one degree of freedom more
   (m_s)
 
@@ -97,7 +98,7 @@ def print_summary(ens_names,datafolder,match=False,strange_dict=None):
     #         '$a\delta E$','$a_0$',
     #         '$(\mu_{\pi K}a_0)$'] 
     head = ['Ensemble','$a\mu_{s}$',
-             '$aE_{\pi K}$'] 
+             '$aM_{\eta}$'] 
     # summ is a #Ens,#Obs,4 numpy array
     summ = np.zeros((len(ens_names),3,4)) 
     par_mk=1
@@ -106,20 +107,31 @@ def print_summary(ens_names,datafolder,match=False,strange_dict=None):
     #par_dE=0
     par_E=1
     e_print = []
-    summ_ms, summ_mpi, summ_mk, summ_mupik = [], [], [], [] 
+    summ_ms, summ_mpi, summ_mk, summ_meta, summ_mupik = [], [], [], [], [] 
     summ_E, summ_dE, summ_a, summ_amupik = [], [], [], []
     print("Collect data for summary in unmatched case")
     for i,e in enumerate(ens_names):
       print("\nread data for %s" % e)
       filemk = "fit_k_unit_%s.npz" % e
       filempi = "fit_pi_unit_%s.npz" % e
+      filemeta = "fit_eta_rm_TP0.npz"
       filemupik = "mu_pi_k_TP0_%s.npz" % e
       #filedE = "dE_TP0_%s.npz" % e
       fileE = "fit_pik_weight_unit_%s.npz" % e
       filea = "scat_len_TP0_%s.npz" % e
       fileam = "mu_a0_TP0_%s.npz" % e
       if e == "D30.48":
-        strange_dict[e[0]] = ["amu_s_115","amu_s_15","amu_s_18"] 
+        strange_dict[e[0]] = ["amu_s_115","amu_s_15","amu_s_18"]
+        strange_eta_dict[e[0]] = ["strange_1150", "strange_1500", "strange_1800"]
+      for j,s in enumerate(strange_eta_dict[e[0]]):
+        # get m_eta data
+        meta = ana.FitResult.read("/hiskp2/jost/eta_data/%s/%s/%s" % (e, s, filemeta))
+        meta.calc_error()
+        if e == "D45.32":
+            print(meta.data[0][1])
+        # m_eta is not derived, so choose correct parameter
+        summ_meta.append([meta.error[par_mk][0][0][0], meta.error[par_mk][1][0],
+                         meta.error[par_mk][2][0][0], meta.error[par_mk][2][0][0]])
       for j,s in enumerate(strange_dict[e[0]]):
         if j == 0:
           e_print.append(e)
@@ -191,7 +203,7 @@ def print_summary(ens_names,datafolder,match=False,strange_dict=None):
     #for i,d in enumerate(zip(summ_ms, summ_mk, summ_mpi, summ_mupik, summ_E,
     #                         summ_a, summ_amupik)):
     #  print_line_latex(e_print[i],d)
-    for i,d in enumerate(zip(summ_ms,summ_E)):
+    for i,d in enumerate(zip(summ_ms,summ_meta)):
       print_line_plain(e_print[i],d)
 
 def main():
@@ -204,6 +216,10 @@ def main():
   mus_b_fld = ["amu_s_16","amu_s_186","amu_s_21"]
   mus_d_fld = ["amu_s_13","amu_s_15","amu_s_18"]
   mus_d_fld_var = ["amu_s_115","amu_s_15","amu_s_18"]
+  mus_eta_a_fld =     ["strange_1850","strange_2250","strange_2464"]
+  mus_eta_b_fld =     ["strange_1600","strange_1860","strange_2100"]
+  mus_eta_d_fld =     ["strange_1300","strange_1500","strange_1800"]
+  mus_eta_d_fld_var = ["strange_1150","strange_1500","strange_1800"]
 
   # Lowest mu_s values:
   #mus_a_fld = ["amu_s_185"]
@@ -223,8 +239,10 @@ def main():
   #mus_d_fld = ["amu_s_18"]
   #mus_d_fld_var = ["amu_s_18"]
   mass_fld = {"A":mus_a_fld,"B":mus_b_fld,"D":mus_d_fld}
+  mass_eta_fld = {"A":mus_eta_a_fld,"B":mus_eta_b_fld,"D":mus_eta_d_fld}
   data = '/hiskp2/helmes/analysis/scattering/test/pi_k/I_32/data/'
-  print_summary(ens,data,match=False,strange_dict = mass_fld)
+  print_summary(ens,data,match=False,strange_dict = mass_fld,
+                strange_eta_dict=mass_eta_fld)
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':
     try:

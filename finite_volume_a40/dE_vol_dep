@@ -1,0 +1,163 @@
+#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+
+# Script to investigate finite volume effects on the a40-ensembles
+
+import sys
+import numpy as np
+# Christian's packages
+sys.path.append('/hiskp2/helmes/projects/analysis-code/')
+import analysis2 as ana
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+
+def luescher_dE(pars,L_inv,m):
+  """Evaluate the energy shift to O(L^(-6))
+  Parameters
+  ----------
+      pars : list of parameters (scattering length and effective range)
+      L : The spatial extent of the lattice
+      m : the mass Value in lattice units (taken from largest lattice)
+  """
+  # Constants for the Luescher Function
+  c = [-2.837297, 6.375183, -8.311951]
+  lusch = -4*np.pi*pars[...,0]*L_inv**3/m * (1. + c[0]*pars[...,0]*L_inv
+                                                + c[1]*pars[...,0]**2*L_inv**2 
+                                                + c[2]*pars[...,0]**3*L_inv**3) - 8*np.pi**2*pars[...,0]**3*L_inv**6/m*pars[...,1]
+  return lusch
+  #frac = pars[...,0]*L_inv
+  #pre = -4.*np.pi*pars[...,0]*L_inv**3
+  #parenth = 1.+c[0]*frac+c[1]*frac**2 + c[2]*frac**3
+  #minus = -8.*np.pi**2*L_inv**3/m *frac**3*pars[...,1]
+  #return pre * parenth + minus
+
+def main():
+####################################################
+# parse the input file1 and setup parameters
+#####################################################
+    if len(sys.argv) < 2:
+        ens = ana.LatticeEnsemble.parse("kk_I1_TP0_A40.24.ini")
+    else:
+        ens = ana.LatticeEnsemble.parse(sys.argv[1])
+
+    # read settings
+    readsingledata = False
+    plotsingle = True
+    readtwodata = False
+    plottwo = False
+    plotratio = True
+    compare = True
+
+    # get data from first input file
+    prefix = ens.get_data("path")
+    print prefix
+    lat = ens.get_data("namea")
+    nboot = ens.get_data("nboot")
+    datadir = ens.get_data("datadir")
+    plotdir = ens.get_data("plotdir")
+    d2 = ens.get_data("d2")
+    ssb_strange = ['amu_s_185','amu_s_225','amu_s_2464']
+    fitparameter = ens.get_data("fitpar")
+    try:
+        debug = ens.get_data("debug")
+    except KeyError:
+        debug = 0
+
+#######################################################################
+# Begin calculation
+#######################################################################
+
+# Plot delta E vs 1/L for A40.{20,24,32} at one strange quark mass
+    ratio1 = ana.FitResult.read(datadir+lat[0]+'/'+ssb_strange[0]+'/dE_TP0_%s.npz'%(lat[0]))
+    ratio2 = ana.FitResult.read(datadir+lat[1]+'/'+ssb_strange[0]+'/dE_TP0_%s.npz'%(lat[1])) 
+    ratio3 = ana.FitResult.read(datadir+lat[2]+'/'+ssb_strange[0]+'/dE_TP0_%s.npz'%(lat[2]))
+    m_k_32 = ana.FitResult.read(datadir+lat[2]+'/'+ssb_strange[0]+'/mu_pi_k_TP0_%s.npz'%(lat[2]))
+
+
+    ratio1.print_data(par=fitparameter)
+    ratio2.print_data(par=fitparameter)
+    ratio3.print_data(par=fitparameter)
+    m_k_32.print_data(par=fitparameter)
+
+    #ratio1 = ratio1.singularize()
+    #ratio2 = ratio2.singularize()
+    #ratio3 = ratio3.singularize()
+    #m_k_32 = m_k_32.singularize()
+
+# stack the data together
+    print(ratio1.data[0].shape)
+    stack_ratio = np.vstack((ratio1.data[0][:,fitparameter,0],
+                             ratio2.data[0][:,fitparameter,0],
+                             ratio3.data[0][:,fitparameter,0])).T
+    print(stack_ratio)
+# generate plot arrays
+    L = np.asarray((20.,24.,32.)) 
+    #L = np.asarray((24,32)) 
+    L_inv = 1./L
+    L_fit = L_inv[1:]
+    print(L_fit.shape)
+    plot_ratio = ana.compute_error(stack_ratio)
+# set up a fit
+# fit function for one bootstrapsample
+
+    start = [-1.,1.]
+    #start = [-1.]
+    res,chisq,pvals = ana.fitting(luescher_dE,L_fit,stack_ratio[:,fitparameter:],start,
+                                  add=m_k_32.data[0][:,fitparameter,0],
+                                  correlated=False, debug=4)
+    
+# plot the data
+    vol_dep = PdfPages(plotdir+'/vol_dep_%s.pdf' % ssb_strange[0])
+    label = [r'$a/L$',r'$a\delta E$']
+    plt.errorbar(L_inv[0],plot_ratio[0][0],plot_ratio[1][0],fmt = 'bv',label =
+        'A40.20')
+    plt.errorbar(L_inv[1],plot_ratio[0][1],plot_ratio[1][1],fmt = 'bd',label =
+        'A40.24')
+    plt.errorbar(L_inv[2],plot_ratio[0][2],plot_ratio[1][2],fmt = 'bo',label =
+        'A40.32')
+    ana.plot_function(luescher_dE,[0.,0.051],res,r'$\delta E(a/L)$',
+                      add=m_k_32.data[0][:,fitparameter,0],ploterror=True)
+    plt.xlabel(label[0],fontsize=24)
+    plt.ylabel(label[1],fontsize=24)
+    plt.locator_params(nbins=4)
+    plt.xlim(0.,0.054)
+    plt.ylim(0.,0.015)
+    plt.legend(loc='best',numpoints=1)
+    vol_dep.savefig()
+    vol_dep.close()
+    plt.clf()
+    plt.close()
+# print mka0 again
+    
+    mk_a0 = m_k_32.data[0][:,1,0]*res[:,0]
+    mk_a0_fit = ana.compute_error(mk_a0)
+    print("mu_pi_K a_0 from fit to dE: %.4f +/- %.4f" %(mk_a0_fit[0],mk_a0_fit[1]))
+    r0 = ana.compute_error(res[:,1])
+    print("r_0 from fit to dE: %.4f +/- %.4f" %(r0[0],r0[1]))
+    mk_r0 = m_k_32.data[0][:,fitparameter,0]*res[:,1]
+    mk_r0_fit = ana.compute_error(mk_r0)
+    print("mu_pi_K r_0 from fit to dE: %.4f +/- %.4f" %(mk_r0_fit[0],mk_r0_fit[1]))
+
+    # We want to fix M_K r_f before calculating a_0
+    # Save M_K r_f as a FitResult
+    save_mkrf= ana.FitResult('mu_pi_K_rf')
+    nboot = res.shape[0]
+    print("Number of bootstraps %r:" % nboot)
+    shape1=(nboot,1,1)
+    shape2=(nboot,1)
+    corr_num = 1
+    save_mkrf.create_empty(shape1,shape2,corr_num)
+    save_mkrf.data[0][:,0,0] = mk_r0
+    print("Saving fixed mka0 to %s" % datadir)
+    save_mkrf.save(datadir+'/mu_pik_rf.npz')
+
+    # Try to read that in again
+    load_mkrf = ana.FitResult.read(datadir+'/mu_pik_rf.npz')
+    mk_r0_fit = ana.compute_error(load_mkrf.data[0])
+    print("Read in mu_pi_K r_0 from fit to dE: %.4f +/- %.4f" %(mk_r0_fit[0],mk_r0_fit[1]))
+
+# make this script importable, according to the Google Python Style Guide
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Keyboard Interrupt")
