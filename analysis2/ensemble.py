@@ -4,7 +4,9 @@ Lattice Ensemble Class.
 
 import numpy as np
 import pickle
+# ConfigParser has been renamed in python 3
 import ConfigParser
+#import configparser
 
 from in_out import check_read, check_write
 
