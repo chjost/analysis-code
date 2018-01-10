@@ -11,10 +11,139 @@ matplotlib.use('Agg') # has to be imported before the next lines
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from matplotlib.backends.backend_pdf import PdfPages
-
+import collections as coll
 # Christian's packages
 sys.path.append('/home/christopher/programming/analysis-code/')
 import analysis2 as ana
+
+def concat_data_cov(data, space, beta_vals, mu_l_vals, mu_s_vals, prior=None):
+    # infer dimensions of covariance matrix
+    # Bootstrapsamples
+    nboot = data['sample'].nunique()
+    nobs = 0
+    for i,beta in enumerate(beta_vals):
+       data_per_beta=data.where(data['beta'] == beta).dropna()
+       nmu_s = data_per_beta['mu_s'].nunique()
+       nmu_l = data_per_beta['mu_l'].nunique()
+       nobs += nmu_l*nmu_s
+    if prior is not None:
+        # requires prior to be 2d
+        nobs += prior.shape[0]
+    cov = np.zeros((nobs,nboot))
+
+    # Distribute data to cov
+    for i,beta in enumerate(zip(space,beta_vals)):
+        for j,mu_l in enumerate(mu_l_vals[beta[0]]):
+            for k,mu_s in enumerate(mu_s_vals[beta[0]]):
+                print(i,beta[0],beta[1])
+                print(j,mu_l)
+                print(k,mu_s)
+                beta_data = data.where(data['beta']==beta[1]).dropna()
+                ens_data = beta_data.where(beta_data['mu_l'] == mu_l).dropna()
+                select = ens_data.where(ens_data['mu_s'] == mu_s).dropna().as_matrix(['ratio'])[:,0]
+                print("Selected data:")
+                print(select)
+                cov[i*j*k+j*k] = select 
+    if prior is not None:
+        cov[nobs - prior.shape[0]] = prior
+    return cov
+
+
+#def concat_data_cov(data,prior=None,debug=1):
+#    """ Change data layout for estimating covariance matrix
+#
+#    A covariance matrix is a 2d array of shape (nvar,nmeas)
+#    data comes in as a list with layout of a ChirAna object
+#
+#    Parameters
+#    ----------
+#    lst: data of a chirana object
+#    prior: possible array of priors, needs to be at least 2d with shape[1]=nboot
+#    """
+#    
+#    # get layout values
+#    # last shape entry is number of bootstrapsamples
+#    nmeas = data['sample'].nunique()
+#    nvar = 0
+#    # at the moment only one y-observable is allowed 
+#    for n in lst:
+#        nvar += n.shape[0]*n.shape[1]
+#    if prior is not None:
+#        nvar += prior.shape[0]
+#    # initialize data array
+#    d = np.zeros((nvar,nmeas))
+#    # fill array
+#    offset = 0
+#    for i,l in enumerate(beta_vals):
+#        # get number of ensembles for each lattice spacing
+#        ens = 
+#        mu = l.shape[1]
+#        for _ens in range(ens):
+#            for _mu in range(mu):
+#                index = offset + _ens *mu +_mu
+#                # choose 0th entry of y-values
+#                d[index] = l[_ens,_mu,0]
+#        offset += ens*mu
+#    if prior is not None:
+#        d[offset:] = prior
+#    return d
+def concat_data_fit(data,space,beta_values,obs,prior=None,debug=1):
+    """ Function to reorganise read in data
+
+    The fit function loops over the bootstrapsamples, we would like to evaluate
+    the fit function for every lattice spacing separately. Hence this function
+    returns a list of the bootstrapsamples. Each bootstrapsample contains a
+    namedtuple over the Lattice spacings. Each namedtuple entry is a numpy array
+    of shape (nb_ens(beta), nb_dim). Optional a prior can be added as an
+    additional named tuple.
+    """
+
+    # set up data structures
+    # number of bootstrapsamples
+    nboot = data['sample'].nunique()
+    print("inferred R = %d"%nboot)
+    #nboot = lst[0].shape[-1]
+    # named tuple instance
+    # modify space if prior is given
+    # TODO: what happens with multiple priors?
+    if prior is not None:
+      space += 'p'
+    beta = coll.namedtuple('beta',space)
+    d = []
+    if prior is not None:
+        for b in range(nboot):
+            sampleframe = data.where(data['sample']==b).dropna()
+            # compile list of lattice spacings
+            tmp = []
+            for i in range(len(space)-1):
+                subframe=sampleframe.where(sampleframe['beta']==beta_values[i]).dropna()
+                ens = subframe.mu_l.unique()
+                mu = subframe.mu_s.unique()
+                tmp.append(subframe.as_matrix(obs))
+            if len(prior) < nboot:
+                _p = []
+                for p in prior:
+                    _p.append(p[b])
+                tmp.append(_p)  
+            else:
+                tmp.append(prior[b])
+            tmpnt = beta(*tmp)
+            d.append(tmpnt)
+    # Code doubling in favour of faster for loop not sure if needed anmore
+    else:
+        for b in range(nboot):
+            sampleframe = data.where(data['sample']==b).dropna()
+            # compile list of lattice spacings
+            tmp = []
+            for i in range(len(space)):
+                subframe=sampleframe.where(sampleframe['beta']==beta_values[i]).dropna()
+                ens = subframe.mu_l.unique()
+                mu = subframe.mu_s.unique()
+                tmp.append(subframe.as_matrix(obs))
+            # TODO: Bad style think of something else
+            tmpnt = beta(*tmp)
+            d.append(tmpnt)
+    return d
 
 def main():
 ################################################################################
@@ -68,8 +197,7 @@ def main():
     fpi_raw = ana.read_extern("../plots2/data/fpi.dat",(1,2))
     dummies=np.loadtxt("./dummy_data_fk_fpi.txt")
     # set up dummy data for experiments
-    observables = ['beta','mu_l','mu_s','sample','f_k','f_pi',
-                   'M_pi','M_K','M_eta']
+    observables = ['beta','mu_l','mu_s','sample','f_k','f_pi', 'M_pi','M_K','M_eta']
     results_fix_ms = pd.DataFrame(columns=observables)
     beta_vals = [1.90,1.95,2.1]
     for i,a in enumerate(space):
@@ -91,7 +219,18 @@ def main():
                                     values in zip(observables,value_list)})
             results_fix_ms = results_fix_ms.append(tmp_frame)
     print(results_fix_ms)
-    
+    #print(results_fix_ms.where(results_fix_ms['sample']==0).dropna())
+# to reuse the fit functions already established organize the data again in
+# named tuples
+# We need two functions one organizing the named tuples 
+    data_for_fit = concat_data_fit(results_fix_ms,space,beta_vals,
+                                   ['f_k','f_pi', 'M_pi','M_K','M_eta'])
+    print(data_for_fit)
+# and one for the covariance matrix
+    results_fix_ms['ratio'] = results_fix_ms['f_k']/results_fix_ms['f_pi']
+    data_for_cov = concat_data_cov(results_fix_ms, space, beta_vals, amu_l_dict,
+            amu_s_dict, prior=None)
+
 if __name__=="__main__":
     try:
         main()
