@@ -26,26 +26,16 @@ def concat_data_cov(data, space, beta_vals, mu_l_vals, mu_s_vals, prior=None):
        nmu_s = data_per_beta['mu_s'].nunique()
        nmu_l = data_per_beta['ens_id'].nunique()
        nobs += nmu_l*nmu_s
+    # Covariance matrix always be two dimensional
+    preliminary_shape = (nobs,nboot)
+    cov_data = data.as_matrix(['ratio']).reshape(preliminary_shape)
     if prior is not None:
         # requires prior to be 2d
         nobs += prior.shape[0]
-    cov = np.zeros((nobs,nboot))
-    data.as_matrix(['ratio']).reshape(cov.shape)
-    # Distribute data to cov
-    #for i,beta in enumerate(zip(space,beta_vals)):
-    #    for j,mu_l in enumerate(mu_l_vals[beta[0]]):
-    #        for k,mu_s in enumerate(mu_s_vals[beta[0]]):
-    #            print(i,beta[0],beta[1])
-    #            print(j,mu_l)
-    #            print(k,mu_s)
-    #            beta_data = data.where(data['beta']==beta[1]).dropna()
-    #            ens_data = beta_data.where(beta_data['mu_l'] == mu_l).dropna()
-    #            select = ens_data.where(ens_data['mu_s'] == mu_s).dropna().as_matrix(['ratio'])[:,0]
-    #            print("Selected data:")
-    #            print(select)
-    #            cov[i*j*k+j*k] = select 
     if prior is not None:
-        cov[nobs - prior.shape[0]] = prior
+        cov = np.vstack((cov_data,prior))
+    else:
+        cov = cov_data
     return cov
 
 
@@ -231,8 +221,10 @@ def main():
     print(data_for_fit)
 # and one for the covariance matrix
     results_fix_ms['ratio'] = results_fix_ms['f_k']/results_fix_ms['f_pi']
+    # Prior:
+    prior=np.arange(6).reshape((3,2))
     data_for_cov = concat_data_cov(results_fix_ms, space, beta_vals, amu_l_dict,
-            amu_s_dict, prior=None)
+            amu_s_dict, prior=prior)
 
 if __name__=="__main__":
     try:
