@@ -39,44 +39,6 @@ def concat_data_cov(data, space, beta_vals, mu_l_vals, mu_s_vals, prior=None):
     return cov
 
 
-#def concat_data_cov(data,prior=None,debug=1):
-#    """ Change data layout for estimating covariance matrix
-#
-#    A covariance matrix is a 2d array of shape (nvar,nmeas)
-#    data comes in as a list with layout of a ChirAna object
-#
-#    Parameters
-#    ----------
-#    lst: data of a chirana object
-#    prior: possible array of priors, needs to be at least 2d with shape[1]=nboot
-#    """
-#    
-#    # get layout values
-#    # last shape entry is number of bootstrapsamples
-#    nmeas = data['sample'].nunique()
-#    nvar = 0
-#    # at the moment only one y-observable is allowed 
-#    for n in lst:
-#        nvar += n.shape[0]*n.shape[1]
-#    if prior is not None:
-#        nvar += prior.shape[0]
-#    # initialize data array
-#    d = np.zeros((nvar,nmeas))
-#    # fill array
-#    offset = 0
-#    for i,l in enumerate(beta_vals):
-#        # get number of ensembles for each lattice spacing
-#        ens = 
-#        mu = l.shape[1]
-#        for _ens in range(ens):
-#            for _mu in range(mu):
-#                index = offset + _ens *mu +_mu
-#                # choose 0th entry of y-values
-#                d[index] = l[_ens,_mu,0]
-#        offset += ens*mu
-#    if prior is not None:
-#        d[offset:] = prior
-#    return d
 def concat_data_fit(data,space,beta_values,obs,prior=None,debug=1):
     """ Function to reorganise read in data
 
@@ -96,20 +58,22 @@ def concat_data_fit(data,space,beta_values,obs,prior=None,debug=1):
     # named tuple instance
     # modify space if prior is given
     # TODO: what happens with multiple priors?
-    if prior is not None:
-      space += 'p'
-    beta = coll.namedtuple('beta',space)
+    _space = space + ['p']
+    beta = coll.namedtuple('beta',_space)
     d = []
-    if prior is not None:
-        for b in range(nboot):
-            sampleframe = data.where(data['sample']==b).dropna()
-            # compile list of lattice spacings
-            tmp = []
-            for i in range(len(space)-1):
-                subframe=sampleframe.where(sampleframe['beta']==beta_values[i]).dropna()
-                ens = subframe.mu_l.unique()
-                mu = subframe.mu_s.unique()
-                tmp.append(subframe.as_matrix(obs))
+    for b in range(nboot):
+        sampleframe = data.where(data['sample']==b).dropna()
+        # compile list of lattice spacings
+        tmp = []
+        for i in range(len(space)):
+            subframe=sampleframe.where(sampleframe['beta']==beta_values[i]).dropna()
+            ens = subframe.mu_l.unique()
+            mu = subframe.mu_s.unique()
+            subframe_to_add = subframe.as_matrix(obs) 
+            if len(obs) == 1:
+                subframe_to_add = subframe_to_add.flatten()
+            tmp.append(subframe_to_add)
+        if prior is not None:
             if len(prior) < nboot:
                 _p = []
                 for p in prior:
@@ -117,22 +81,10 @@ def concat_data_fit(data,space,beta_values,obs,prior=None,debug=1):
                 tmp.append(_p)  
             else:
                 tmp.append(prior[b])
-            tmpnt = beta(*tmp)
-            d.append(tmpnt)
-    # Code doubling in favour of faster for loop not sure if needed anmore
-    else:
-        for b in range(nboot):
-            sampleframe = data.where(data['sample']==b).dropna()
-            # compile list of lattice spacings
-            tmp = []
-            for i in range(len(space)):
-                subframe=sampleframe.where(sampleframe['beta']==beta_values[i]).dropna()
-                ens = subframe.mu_l.unique()
-                mu = subframe.mu_s.unique()
-                tmp.append(subframe.as_matrix(obs))
-            # TODO: Bad style think of something else
-            tmpnt = beta(*tmp)
-            d.append(tmpnt)
+        else:
+            tmp.append(None)
+        tmpnt = beta(*tmp)
+        d.append(tmpnt)
     return d
 
 def main():
@@ -216,15 +168,36 @@ def main():
 # to reuse the fit functions already established organize the data again in
 # named tuples
 # We need two functions one organizing the named tuples 
-    data_for_fit = concat_data_fit(results_fix_ms,space,beta_vals,
+    xdata_for_fit = concat_data_fit(results_fix_ms,space,beta_vals,
                                    ['f_k','f_pi', 'M_pi','M_K','M_eta'])
-    print(data_for_fit)
 # and one for the covariance matrix
     results_fix_ms['ratio'] = results_fix_ms['f_k']/results_fix_ms['f_pi']
+    ydata_for_fit = concat_data_fit(results_fix_ms,space,beta_vals,
+                                   ['ratio'])
+
+    print(xdata_for_fit)
+    print(ydata_for_fit)
     # Prior:
     prior=np.arange(6).reshape((3,2))
     data_for_cov = concat_data_cov(results_fix_ms, space, beta_vals, amu_l_dict,
-            amu_s_dict, prior=prior)
+            amu_s_dict, prior=None)
+    fit_instance=ana.ChiralFit("fit",ana.fk_fpi_ratio_errfunc)
+    _cov = np.cov(data_for_cov)
+    print(_cov)
+    _cov = np.diag(np.diagonal(_cov))
+    start=[0.1]
+    fitres = fit_instance.chiral_fit(xdata_for_fit,ydata_for_fit,start,parlim=None,
+                                  correlated=False,cov=_cov,
+                                  debug=4)
+    fitres.set_ranges(np.array([[[0,len(xdata_for_fit)]]]),[[1,]])
+    # build fit_stats array
+    _chi2 = fitres.chi2[0][0,0]
+    _pval = fitres.pval[0][0,0]
+    _dof = _cov.shape[0]-len(start)
+    fit_stats = np.atleast_2d(np.asarray((_dof,_chi2,_pval)))
+    print(fit_stats)
+
+
 
 if __name__=="__main__":
     try:

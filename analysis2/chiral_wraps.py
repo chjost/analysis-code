@@ -13,6 +13,7 @@ from fit_routines import fitting
 from chipt_basic_observables import *
 from chipt_nlo import *
 from pik_scat_len import *
+from chipt_decayconstants import *
 
 """Wrapper functions for fits and plots"""
 def calc_x_plot(x):
@@ -239,4 +240,28 @@ def mua0_I32_nlo_from_fit(pars,x):
     _mua0 = pik_I32_chipt_nlo(_x[:,1], _x[:,2], _x[:,3], _x[:,4], pars, lambda_x=None) 
     return _mua0
 
+def fk_by_fpi_fit(p, x, add=None):
+    ratio_fit = fk_by_fpi(x[:,2],x[:,3],x[:,4],x[:,0],x[:,0],p)
+    print("Ratio fit return has shape:")
+    print(ratio_fit.shape)
+    return ratio_fit
 
+def fk_fpi_ratio_errfunc(p, x, y, error):
+    # for each lattice spacing and prior determine the dot product of the error
+    chi_a = y.A - fk_by_fpi_fit(p,x.A)
+    chi_b = y.B - fk_by_fpi_fit(p,x.B)
+    chi_d = y.D - fk_by_fpi_fit(p,x.D)
+    # TODO: find a runtime way to disable prior
+    print(error.shape)
+    print(y.A.shape)
+    print(y.B.shape)
+    print(y.D.shape)
+    print(chi_a.shape)
+    print(chi_b.shape)
+    print(chi_d.shape)
+    print(np.r_[chi_a,chi_b,chi_d].shape)
+    if y.p is not None:
+        chi_p = y.p - p[1]
+        return np.dot(error,np.r_[chi_a,chi_b,chi_d,chi_p])
+    else:
+        return np.dot(error,np.r_[chi_a,chi_b,chi_d])

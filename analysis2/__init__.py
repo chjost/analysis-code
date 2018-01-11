@@ -17,6 +17,7 @@ from .utils import mean_std, physical_mass, r0_mass
 #from .chiral_utils import lo_chipt, err_phys_pt, read_extern, prepare_mpi, prepare_mk, prepare_data, plot_ensemble
 from .chiral_utils import *
 from .pik_scat_len import *
+from .chipt_decayconstants import *
 from .chiral_wraps import *
 from .chipt_basic_observables import *
 import mu_pik_a0_wraps as wrap_test

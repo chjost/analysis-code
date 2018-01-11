@@ -1,6 +1,6 @@
 import numpy as np
 from chipt_logs import *
-from basic_observables import *
+from chipt_basic_observables import *
 
 #TODO: Is that placed correctly here?
 def chipt_logs_fk_by_fpi(mpi,mk,meta,f,mu):
@@ -11,7 +11,7 @@ def chipt_logs_fk_by_fpi(mpi,mk,meta,f,mu):
     Returns
     -------
     """
-    logs = np.zeros((3,mpi.shape))
+    logs = np.zeros((3,mpi.shape[-1]))
     logs[0] =1.25*mass_log(mpi,f,mu) 
     logs[1] =-0.5*mass_log(mk,f,mu) 
     logs[2] =-0.75*mass_log(meta,f,mu)
