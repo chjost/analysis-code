@@ -24,26 +24,26 @@ def concat_data_cov(data, space, beta_vals, mu_l_vals, mu_s_vals, prior=None):
     for i,beta in enumerate(beta_vals):
        data_per_beta=data.where(data['beta'] == beta).dropna()
        nmu_s = data_per_beta['mu_s'].nunique()
-       nmu_l = data_per_beta['mu_l'].nunique()
+       nmu_l = data_per_beta['ens_id'].nunique()
        nobs += nmu_l*nmu_s
     if prior is not None:
         # requires prior to be 2d
         nobs += prior.shape[0]
     cov = np.zeros((nobs,nboot))
-
+    data.as_matrix(['ratio']).reshape(cov.shape)
     # Distribute data to cov
-    for i,beta in enumerate(zip(space,beta_vals)):
-        for j,mu_l in enumerate(mu_l_vals[beta[0]]):
-            for k,mu_s in enumerate(mu_s_vals[beta[0]]):
-                print(i,beta[0],beta[1])
-                print(j,mu_l)
-                print(k,mu_s)
-                beta_data = data.where(data['beta']==beta[1]).dropna()
-                ens_data = beta_data.where(beta_data['mu_l'] == mu_l).dropna()
-                select = ens_data.where(ens_data['mu_s'] == mu_s).dropna().as_matrix(['ratio'])[:,0]
-                print("Selected data:")
-                print(select)
-                cov[i*j*k+j*k] = select 
+    #for i,beta in enumerate(zip(space,beta_vals)):
+    #    for j,mu_l in enumerate(mu_l_vals[beta[0]]):
+    #        for k,mu_s in enumerate(mu_s_vals[beta[0]]):
+    #            print(i,beta[0],beta[1])
+    #            print(j,mu_l)
+    #            print(k,mu_s)
+    #            beta_data = data.where(data['beta']==beta[1]).dropna()
+    #            ens_data = beta_data.where(beta_data['mu_l'] == mu_l).dropna()
+    #            select = ens_data.where(ens_data['mu_s'] == mu_s).dropna().as_matrix(['ratio'])[:,0]
+    #            print("Selected data:")
+    #            print(select)
+    #            cov[i*j*k+j*k] = select 
     if prior is not None:
         cov[nobs - prior.shape[0]] = prior
     return cov
@@ -173,6 +173,8 @@ def main():
     external_seeds=ens.get_data("external_seeds_%s"%(ms_fixing.lower()))
     continuum_seeds=ens.get_data("continuum_seeds_%s"%(ms_fixing.lower()))
     lat_dict = {'A':latA,'B':latB,'D':latD}
+    print("lat_dict['A'] reads:")
+    print(lat_dict['A'])
     amulA = ens.get_data("amu_l_a")
     amulB = ens.get_data("amu_l_b")
     amulD = ens.get_data("amu_l_d")
@@ -197,14 +199,15 @@ def main():
     fpi_raw = ana.read_extern("../plots2/data/fpi.dat",(1,2))
     dummies=np.loadtxt("./dummy_data_fk_fpi.txt")
     # set up dummy data for experiments
-    observables = ['beta','mu_l','mu_s','sample','f_k','f_pi', 'M_pi','M_K','M_eta']
+    observables = ['beta','ens_id','mu_l','mu_s','sample','f_k','f_pi', 'M_pi','M_K','M_eta']
     results_fix_ms = pd.DataFrame(columns=observables)
     beta_vals = [1.90,1.95,2.1]
     for i,a in enumerate(space):
         for j,m in enumerate(amu_l_dict[a]):
             beta = np.full(nboot,beta_vals[i])
             mu_light = np.full(nboot,m)
-            value_list = [beta,mu_light, amu_s_dict[a][0],np.arange(nboot),
+            ens_id = np.full(nboot,lat_dict[a][j],dtype=object)
+            value_list = [beta,ens_id,mu_light, amu_s_dict[a][0],np.arange(nboot),
                 ana.draw_gauss_distributed(dummies[i+j,11],dummies[i+j,12],
                     (nboot,),origin=True),
                 ana.draw_gauss_distributed(dummies[i+j,5],dummies[i+j,6],
