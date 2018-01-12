@@ -189,7 +189,9 @@ def main():
     results_fix_ms['F'] = F(results_fix_ms,['M_pi','M_K','M_eta','f_k','f_pi'])
     #ydata_for_fit = concat_data_fit(results_fix_ms,space,beta_vals,
     #                               ['ratio'])
-
+    data_means = chi.syseffos.bootstrap_means(results_fix_ms,
+                                                  ['ens_id'],['beta','r0/a','ens_id','mu_l','sample','f_k','f_pi',
+                                                      'M_pi','M_K','M_eta','ratio','F'])
     #print(xdata_for_fit)
     #print(ydata_for_fit)
     # Prior:
