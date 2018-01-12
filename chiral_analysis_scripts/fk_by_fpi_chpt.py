@@ -15,6 +15,7 @@ import collections as coll
 # Christian's packages
 sys.path.append('/home/christopher/programming/analysis-code/')
 import analysis2 as ana
+import chiron as chi
 
 def concat_data_cov(data, space, beta_vals, mu_l_vals, mu_s_vals, prior=None):
     # infer dimensions of covariance matrix
@@ -87,6 +88,17 @@ def concat_data_fit(data,space,beta_values,obs,prior=None,debug=1):
         d.append(tmpnt)
     return d
 
+def F(dataframe,col):
+    mpi=dataframe[col[0]]
+    mk=dataframe[col[1]]
+    meta=dataframe[col[2]]
+    fk=dataframe[col[3]]
+    fpi=dataframe[col[4]]
+    mu=dataframe[col[4]]
+    f=dataframe[col[4]]
+    F=ana.chipt_decayconstants.l5(mpi,mk,meta,fk,fpi,f,mu)
+    return F
+
 def main():
 ################################################################################
 #                   set up objects                                             #
@@ -136,20 +148,22 @@ def main():
     resdir = ens.get_data("resultdir") 
     nboot = ens.get_data("nboot")
     # Prepare external data
-    ext_data = ana.ExtDat(external_seeds,space,zp_meth)
+    ext_data = ana.ExtDat(external_seeds,space,zp_meth,nboot=nboot)
     cont_data = ana.ContDat(continuum_seeds,zp_meth=zp_meth)
     fpi_raw = ana.read_extern("../plots2/data/fpi.dat",(1,2))
     dummies=np.loadtxt("./dummy_data_fk_fpi.txt")
     # set up dummy data for experiments
-    observables = ['beta','ens_id','mu_l','mu_s','sample','f_k','f_pi', 'M_pi','M_K','M_eta']
+    observables = ['beta','r0/a','ens_id','mu_l','mu_s','sample','f_k','f_pi', 'M_pi','M_K','M_eta']
     results_fix_ms = pd.DataFrame(columns=observables)
     beta_vals = [1.90,1.95,2.1]
     for i,a in enumerate(space):
         for j,m in enumerate(amu_l_dict[a]):
             beta = np.full(nboot,beta_vals[i])
+            r_0 = ext_data.get(a,'r0')
             mu_light = np.full(nboot,m)
             ens_id = np.full(nboot,lat_dict[a][j],dtype=object)
-            value_list = [beta,ens_id,mu_light, amu_s_dict[a][0],np.arange(nboot),
+            value_list = [beta, r_0, ens_id, mu_light, amu_s_dict[a][0],
+                          np.arange(nboot),
                 ana.draw_gauss_distributed(dummies[i+j,11],dummies[i+j,12],
                     (nboot,),origin=True),
                 ana.draw_gauss_distributed(dummies[i+j,5],dummies[i+j,6],
@@ -168,36 +182,87 @@ def main():
 # to reuse the fit functions already established organize the data again in
 # named tuples
 # We need two functions one organizing the named tuples 
-    xdata_for_fit = concat_data_fit(results_fix_ms,space,beta_vals,
-                                   ['f_k','f_pi', 'M_pi','M_K','M_eta'])
+    #xdata_for_fit = concat_data_fit(results_fix_ms,space,beta_vals,
+    #                               ['f_k','f_pi', 'M_pi','M_K','M_eta'])
 # and one for the covariance matrix
     results_fix_ms['ratio'] = results_fix_ms['f_k']/results_fix_ms['f_pi']
-    ydata_for_fit = concat_data_fit(results_fix_ms,space,beta_vals,
-                                   ['ratio'])
+    results_fix_ms['F'] = F(results_fix_ms,['M_pi','M_K','M_eta','f_k','f_pi'])
+    #ydata_for_fit = concat_data_fit(results_fix_ms,space,beta_vals,
+    #                               ['ratio'])
 
-    print(xdata_for_fit)
-    print(ydata_for_fit)
+    #print(xdata_for_fit)
+    #print(ydata_for_fit)
     # Prior:
     prior=np.arange(6).reshape((3,2))
     data_for_cov = concat_data_cov(results_fix_ms, space, beta_vals, amu_l_dict,
             amu_s_dict, prior=None)
     fit_instance=ana.ChiralFit("fit",ana.fk_fpi_ratio_errfunc)
-    _cov = np.cov(data_for_cov)
-    print(_cov)
-    _cov = np.diag(np.diagonal(_cov))
+    #_cov = np.cov(data_for_cov)
+    #print(_cov)
+    #_cov = np.diag(np.diagonal(_cov))
     start=[0.1]
-    fitres = fit_instance.chiral_fit(xdata_for_fit,ydata_for_fit,start,parlim=None,
-                                  correlated=False,cov=_cov,
-                                  debug=4)
-    fitres.set_ranges(np.array([[[0,len(xdata_for_fit)]]]),[[1,]])
+    #fitres = fit_instance.chiral_fit(xdata_for_fit,ydata_for_fit,start,parlim=None,
+    #                              correlated=False,cov=_cov,
+    #                              debug=4)
+    #fitres.set_ranges(np.array([[[0,len(xdata_for_fit)]]]),[[1,]])
     # build fit_stats array
-    _chi2 = fitres.chi2[0][0,0]
-    _pval = fitres.pval[0][0,0]
-    _dof = _cov.shape[0]-len(start)
-    fit_stats = np.atleast_2d(np.asarray((_dof,_chi2,_pval)))
-    print(fit_stats)
+    #_chi2 = fitres.chi2[0][0,0]
+    #_pval = fitres.pval[0][0,0]
+    #_dof = _cov.shape[0]-len(start)
+    #fit_stats = np.atleast_2d(np.asarray((_dof,_chi2,_pval)))
+    #print(fit_stats)
 
+# We need a plot of the data points as a function of the light quark mass ->
+# Same problem as for pi_K first plot data
+    
+    ydata_for_plot = chi.syseffos.bootstrap_means(results_fix_ms,
+                                                  ['ens_id'],['beta','ratio'])
+    results_fix_ms['(r0M_pi)^2'] = (results_fix_ms['r0/a']*results_fix_ms['M_pi'])**2
+    xdata_for_plot = chi.syseffos.bootstrap_means(results_fix_ms,
+                                                ['ens_id'],['beta','(r0M_pi)^2'])
+    print(ydata_for_plot)
+    print(xdata_for_plot)
+    with PdfPages('./dummy_ratio.pdf') as pdf:
+        # set layout
+        plt.ylabel(r'$f_K/f_{\pi}$')
+        plt.xlabel(r'$(r_0M_{\pi})^2$')
+        fmts=['^r','vb','og']
+        for i,b in enumerate(beta_vals):
+            x = xdata_for_plot.where(xdata_for_plot['beta','own_mean'] ==
+                    b)['(r0M_pi)^2','own_mean'].dropna()
+            xerr = xdata_for_plot.where(xdata_for_plot['beta','own_mean'] ==
+                    b)['(r0M_pi)^2','own_std'].dropna()
+            y = ydata_for_plot.where(ydata_for_plot['beta','own_mean'] ==
+                   b)['ratio','own_mean'].dropna()
+            yerr = ydata_for_plot.where(ydata_for_plot['beta','own_mean'] ==
+                    b)['ratio','own_std'].dropna()
+            
+            plt.errorbar(x,y,yerr,xerr=xerr,fmt=fmts[i],label=r'$\beta=%.2f$'%b)
+        plt.legend()
+        pdf.savefig()
 
+    ydata_for_plot = chi.syseffos.bootstrap_means(results_fix_ms,
+                                                  ['ens_id'],['beta','F'])
+    plt.clf()
+    print(ydata_for_plot)
+    with PdfPages('./dummy_f.pdf') as pdf:
+        # set layout
+        plt.ylabel(r'$\mathcal{F}$')
+        plt.xlabel(r'$(r_0M_{\pi})^2$')
+        fmts=['^r','vb','og']
+        for i,b in enumerate(beta_vals):
+            x = xdata_for_plot.where(xdata_for_plot['beta','own_mean'] ==
+                    b)['(r0M_pi)^2','own_mean'].dropna()
+            xerr = xdata_for_plot.where(xdata_for_plot['beta','own_mean'] ==
+                    b)['(r0M_pi)^2','own_std'].dropna()
+            y = ydata_for_plot.where(ydata_for_plot['beta','own_mean'] ==
+                   b)['F','own_mean'].dropna()
+            yerr = ydata_for_plot.where(ydata_for_plot['beta','own_mean'] ==
+                    b)['F','own_std'].dropna()
+            
+            plt.errorbar(x,y,yerr,xerr=xerr,fmt=fmts[i],label=r'$\beta=%.2f$'%b)
+        plt.legend()
+        pdf.savefig()
 
 if __name__=="__main__":
     try:

@@ -39,7 +39,10 @@ def systematics_by_methods(results,keys,column):
         system_list.append(sys)
     return system_list
 
-def keywise_mean(frame,keys):
-    key_mean=frame.groupby('nb').mean()[keys].agg([own_mean,own_std])
+def keywise_mean(frame,keys,col=None):
+    if col is not None:
+        key_mean=frame.groupby(col).mean()[keys].agg([own_mean,own_std])
+    else:
+        key_mean=frame.groupby('nb').mean()[keys].agg([own_mean,own_std])
     return key_mean
 
