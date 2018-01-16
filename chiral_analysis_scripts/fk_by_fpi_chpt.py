@@ -7,7 +7,8 @@ from numpy.polynomial import polynomial as P
 import pandas as pd
 import math
 import matplotlib
-matplotlib.use('Agg') # has to be imported before the next lines
+#matplotlib.use('Agg') # has to be imported before the next lines
+matplotlib.use('pgf') # has to be imported before the next lines
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from matplotlib.backends.backend_pdf import PdfPages
@@ -224,47 +225,80 @@ def main():
                                                 ['ens_id'],['beta','(r0M_pi)^2'])
     print(ydata_for_plot)
     print(xdata_for_plot)
-    with PdfPages('./dummy_ratio.pdf') as pdf:
-        # set layout
-        plt.ylabel(r'$f_K/f_{\pi}$')
-        plt.xlabel(r'$(r_0M_{\pi})^2$')
-        fmts=['^r','vb','og']
-        for i,b in enumerate(beta_vals):
-            x = xdata_for_plot.where(xdata_for_plot['beta','own_mean'] ==
-                    b)['(r0M_pi)^2','own_mean'].dropna()
-            xerr = xdata_for_plot.where(xdata_for_plot['beta','own_mean'] ==
-                    b)['(r0M_pi)^2','own_std'].dropna()
-            y = ydata_for_plot.where(ydata_for_plot['beta','own_mean'] ==
-                   b)['ratio','own_mean'].dropna()
-            yerr = ydata_for_plot.where(ydata_for_plot['beta','own_mean'] ==
-                    b)['ratio','own_std'].dropna()
-            
-            plt.errorbar(x,y,yerr,xerr=xerr,fmt=fmts[i],label=r'$\beta=%.2f$'%b)
-        plt.legend()
-        pdf.savefig()
+    #with PdfPages('./dummy_ratio.pdf') as pdf:
+    #    # set layout
+    #    plt.ylabel(r'$f_K/f_{\pi}$')
+    #    plt.xlabel(r'$(r_0M_{\pi})^2$')
+    #    fmts=['^r','vb','og']
+    #    for i,b in enumerate(beta_vals):
+    #        x = xdata_for_plot.where(xdata_for_plot['beta','own_mean'] ==
+    #                b)['(r0M_pi)^2','own_mean'].dropna()
+    #        xerr = xdata_for_plot.where(xdata_for_plot['beta','own_mean'] ==
+    #                b)['(r0M_pi)^2','own_std'].dropna()
+    #        y = ydata_for_plot.where(ydata_for_plot['beta','own_mean'] ==
+    #               b)['ratio','own_mean'].dropna()
+    #        yerr = ydata_for_plot.where(ydata_for_plot['beta','own_mean'] ==
+    #                b)['ratio','own_std'].dropna()
+    #        
+    #        plt.errorbar(x,y,yerr,xerr=xerr,fmt=fmts[i],label=r'$\beta=%.2f$'%b)
+    #    plt.legend()
+    #    pdf.savefig()
+    plt.ylabel(r'$f_K/f_{\pi}$')
+    plt.xlabel(r'$(r_0M_{\pi})^2$')
+    fmts=['^r','vb','og']
+    for i,b in enumerate(beta_vals):
+        x = xdata_for_plot.where(xdata_for_plot['beta','own_mean'] ==
+                b)['(r0M_pi)^2','own_mean'].dropna()
+        xerr = xdata_for_plot.where(xdata_for_plot['beta','own_mean'] ==
+                b)['(r0M_pi)^2','own_std'].dropna()
+        y = ydata_for_plot.where(ydata_for_plot['beta','own_mean'] ==
+               b)['ratio','own_mean'].dropna()
+        yerr = ydata_for_plot.where(ydata_for_plot['beta','own_mean'] ==
+                b)['ratio','own_std'].dropna()
+        
+        plt.errorbar(x,y,yerr,xerr=xerr,fmt=fmts[i],label=r'$\beta=%.2f$'%b)
+    plt.legend()
+    plt.savefig('dummy_ratio.pgf')
 
     ydata_for_plot = chi.syseffos.bootstrap_means(results_fix_ms,
                                                   ['ens_id'],['beta','F'])
     plt.clf()
     print(ydata_for_plot)
-    with PdfPages('./dummy_f.pdf') as pdf:
-        # set layout
-        plt.ylabel(r'$\mathcal{F}$')
-        plt.xlabel(r'$(r_0M_{\pi})^2$')
-        fmts=['^r','vb','og']
-        for i,b in enumerate(beta_vals):
-            x = xdata_for_plot.where(xdata_for_plot['beta','own_mean'] ==
-                    b)['(r0M_pi)^2','own_mean'].dropna()
-            xerr = xdata_for_plot.where(xdata_for_plot['beta','own_mean'] ==
-                    b)['(r0M_pi)^2','own_std'].dropna()
-            y = ydata_for_plot.where(ydata_for_plot['beta','own_mean'] ==
-                   b)['F','own_mean'].dropna()
-            yerr = ydata_for_plot.where(ydata_for_plot['beta','own_mean'] ==
-                    b)['F','own_std'].dropna()
-            
-            plt.errorbar(x,y,yerr,xerr=xerr,fmt=fmts[i],label=r'$\beta=%.2f$'%b)
-        plt.legend()
-        pdf.savefig()
+    # set layout
+    plt.ylabel(r'$\mathcal{F}$')
+    plt.xlabel(r'$(r_0M_{\pi})^2$')
+    fmts=['^r','vb','og']
+    for i,b in enumerate(beta_vals):
+        x = xdata_for_plot.where(xdata_for_plot['beta','own_mean'] ==
+                b)['(r0M_pi)^2','own_mean'].dropna()
+        xerr = xdata_for_plot.where(xdata_for_plot['beta','own_mean'] ==
+                b)['(r0M_pi)^2','own_std'].dropna()
+        y = ydata_for_plot.where(ydata_for_plot['beta','own_mean'] ==
+               b)['F','own_mean'].dropna()
+        yerr = ydata_for_plot.where(ydata_for_plot['beta','own_mean'] ==
+                b)['F','own_std'].dropna()
+        
+        plt.errorbar(x,y,yerr,xerr=xerr,fmt=fmts[i],label=r'$\beta=%.2f$'%b)
+    plt.legend()
+    plt.savefig('dummy_f.pgf')
+    #with PdfPages('./dummy_f.pdf') as pdf:
+    #    # set layout
+    #    plt.ylabel(r'$\mathcal{F}$')
+    #    plt.xlabel(r'$(r_0M_{\pi})^2$')
+    #    fmts=['^r','vb','og']
+    #    for i,b in enumerate(beta_vals):
+    #        x = xdata_for_plot.where(xdata_for_plot['beta','own_mean'] ==
+    #                b)['(r0M_pi)^2','own_mean'].dropna()
+    #        xerr = xdata_for_plot.where(xdata_for_plot['beta','own_mean'] ==
+    #                b)['(r0M_pi)^2','own_std'].dropna()
+    #        y = ydata_for_plot.where(ydata_for_plot['beta','own_mean'] ==
+    #               b)['F','own_mean'].dropna()
+    #        yerr = ydata_for_plot.where(ydata_for_plot['beta','own_mean'] ==
+    #                b)['F','own_std'].dropna()
+    #        
+    #        plt.errorbar(x,y,yerr,xerr=xerr,fmt=fmts[i],label=r'$\beta=%.2f$'%b)
+    #    plt.legend()
+    #    pdf.savefig()
 
 if __name__=="__main__":
     try:
