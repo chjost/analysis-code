@@ -660,5 +660,24 @@ class Correlators(object):
         _corr.data -= sub
         return _corr
 
+    def subtract_pollution(self, fit1, fit2, T):
+
+        _corr = Correlators.create(self.data) 
+        # Correlators have shape [nboot,T,real]
+        T2 = _corr.shape[1]
+        # pollution is:
+        # A_1**2 * p(t) = A_1**2 * {exp[(E_K-E_pi)*t]*exp[-E_K*T] 
+        #                           + exp[(-(E_K-E_pi)*t]*exp[-E_pi*T]}
+        # A_1**2 = A_pi*A_K
+        amplitude_squared = fit1.data[0][:,0,-1]*fit2.data[0][:,0,-1]
+        # Energy values
+        ek = fit2.data[0][:,1,-1] 
+        epi = fit1.data[0][:,1-1] 
+        diff_ek_epi =  ek - epi
+        pollution = amplitude_squared*(np.exp()*np.exp() + np.exp()*np.exp())
+
+        return _corr
+
+
 if __name__ == "main":
     pass
