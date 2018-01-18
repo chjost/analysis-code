@@ -80,6 +80,8 @@ class Correlators(object):
                     self.conf = in_out.read_single(filename, (conf_col,), skip, debug)
         if self.data is not None:
             self.shape = self.data.shape
+            self.T = self.data.shape[1]
+            print("Total time extent is: %d" %self.T)
         else:
             self.shape = None
 
@@ -128,7 +130,7 @@ class Correlators(object):
         return tmp
 
     @classmethod
-    def create(cls, data, conf=None, debug=0):
+    def create(cls, data, conf=None, T=None, debug=0):
         """Create correlator class from preexisting data.
 
         Parameters
@@ -153,6 +155,8 @@ class Correlators(object):
             tmp.ncorr = 1
         else:
             tmp.ncorr = tmp.data.shape[0]
+        if T is not None:
+            tmp.T=T
         return tmp
 
     def save(self, filename, asascii=False):
@@ -342,7 +346,10 @@ class Correlators(object):
         usecosh : bool
             Toggle between the two implemented methods.
         """
-        self.data = func.compute_eff_mass(self.data, usecosh, exp, weight, shift)
+        # more versatile interface:
+        # self.data = func.compute_eff_mass(self.data,method,weight,shift)
+        self.data = func.compute_eff_mass(self.data, usecosh, exp, weight,
+                shift, T=self.T)
         self.shape = self.data.shape
 
     def get_data(self):
@@ -659,25 +666,69 @@ class Correlators(object):
             sub[:,t,0] = _amp*np.exp((_fit2.data[0][:,1,-1]-_fit2.data[0][:,0,-1])*t)
         _corr.data -= sub
         return _corr
-
-    def subtract_pollution(self, fit1, fit2, T):
-
-        _corr = Correlators.create(self.data) 
+# TODO: This can be made more efficient by introducing a few more functions
+    def subtract_pollution(self, fit1, fit2):
+        #_corr = Correlators.create(self.data) 
         # Correlators have shape [nboot,T,real]
-        T2 = _corr.shape[1]
+        T2 = self.shape[1]
+        T= 2*T2
+        # singularize fitresults
+        _fit1 = fit1.singularize()
+        _fit2 = fit2.singularize()
+        _fit1.calc_error()
+        _fit2.calc_error()
         # pollution is:
         # A_1**2 * p(t) = A_1**2 * {exp[(E_K-E_pi)*t]*exp[-E_K*T] 
         #                           + exp[(-(E_K-E_pi)*t]*exp[-E_pi*T]}
         # A_1**2 = A_pi*A_K
-        amplitude_squared = fit1.data[0][:,0,-1]*fit2.data[0][:,0,-1]
+        amplitude_squared = _fit1.data[0][:,0,-1]**2 *_fit2.data[0][:,0,-1]**2
         # Energy values
         ek = fit2.data[0][:,1,-1] 
-        epi = fit1.data[0][:,1-1] 
+        epi = fit1.data[0][:,1,-1] 
         diff_ek_epi =  ek - epi
-        pollution = amplitude_squared*(np.exp()*np.exp() + np.exp()*np.exp())
+        pollution = np.zeros_like(self.data)
+        for t in range(0,T2):
+            pollution[:,t,0] = amplitude_squared*(np.exp(diff_ek_epi*t) * np.exp(-ek*T) +
+                               np.exp(-diff_ek_epi*t) * np.exp(-epi*T))
+            #pollution[:,t,0] = amplitude_squared*(np.exp(-epi*t) * np.exp(-ek*(T-t)) +
+            #                   np.exp(-ek*t) * np.exp(-epi*(T-t)))
+        self.data -= pollution
+    
+    def divide_out_pollution(self, fit1, fit2):
+        T2 = self.shape[1]
+        T= 2*T2
+        # singularize fitresults
+        _fit1 = fit1.singularize()
+        _fit2 = fit2.singularize()
+        _fit1.calc_error()
+        _fit2.calc_error()
+        # Energy values
+        ek = fit2.data[0][:,1,-1] 
+        epi = fit1.data[0][:,1,-1] 
+        diff_ek_epi =  ek - epi
+        pollution_exp = np.zeros_like(self.data)
+        for t in range(0,T2):
+            pollution_exp[:,t,0] = (np.exp(diff_ek_epi*t) * np.exp(-ek*T) +
+                               np.exp(-diff_ek_epi*t) * np.exp(-epi*T))
+        self.data /= pollution_exp
 
-        return _corr
-
+    def multiply_pollution(self,fit1,fit2):
+        T2 = self.shape[1]
+        T= 2*T2
+        # singularize fitresults
+        _fit1 = fit1.singularize()
+        _fit2 = fit2.singularize()
+        _fit1.calc_error()
+        _fit2.calc_error()
+        # Energy values
+        ek = fit2.data[0][:,1,-1] 
+        epi = fit1.data[0][:,1,-1] 
+        diff_ek_epi =  ek - epi
+        pollution_exp = np.zeros_like(self.data)
+        for t in range(0,T2):
+            pollution_exp[:,t,0] = (np.exp(diff_ek_epi*t) * np.exp(-ek*T) +
+                               np.exp(-diff_ek_epi*t) * np.exp(-epi*T))
+        self.data *= pollution_exp
 
 if __name__ == "main":
     pass

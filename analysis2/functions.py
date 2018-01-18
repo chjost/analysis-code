@@ -37,7 +37,7 @@ def compute_derivative(data):
             derv[b,t] = row[t+1] - row[t]
     return derv
 #TODO: Clean up this mess of a mass function
-def compute_eff_mass(data, usecosh=True, exp=False, weight=None, shift=None):
+def compute_eff_mass(data, usecosh=True, exp=False, weight=None, shift=None, T=None):
     """Computes the effective mass of a correlation function.
 
     The effective mass is calculated along the second axis. The extend
@@ -60,13 +60,17 @@ def compute_eff_mass(data, usecosh=True, exp=False, weight=None, shift=None):
     if exp is True:
        # Write a numerical solve for the effective mass per timeslice
        # args are (t,T2)
-       T2 = data.shape[1]-1
+       if T is not None: 
+            _T = T 
+       else:
+            _T = data.shape[1]
        mass = np.zeros_like(data[:,:-1])
+       print("Exponential solve for symmetric correlator")
        print(mass.shape)
        for b, row in enumerate(data):
            for t in range(len(row)-1):
-                #mass[b, t] = fsolve(corr_exp,0.5,args=(row[t],row[t+1],t,T2))
-                mass[b, t] = fsolve(corr_exp_mod,0.5,args=(row[t],weight[b],t,T2))
+                mass[b, t] = fsolve(corr_exp,0.5,args=(row[t],row[t+1],t,_T))
+                #mass[b, t] = fsolve(corr_exp_mod,0.5,args=(row[t],weight[b],t,T2))
       
     elif (usecosh == True and weight is None):
         # creating mass array from data array
@@ -75,16 +79,16 @@ def compute_eff_mass(data, usecosh=True, exp=False, weight=None, shift=None):
             for t in range(1, len(row)-1):
                 mass[b,t-1] = (row[t-1] + row[t+1])/(2.*row[t])
         mass = np.arccosh(mass)
-    elif (usecosh == False and weight is None):
-       # Write a numerical solve for the effective mass per timeslice
-       # args are (t,T2)
-       T2=data.shape[1]
-       mass = np.zeros_like(data[:,:-1])
-       print(mass.shape)
-       for b, row in enumerate(data):
-           for t in range(len(row)-1):
-                #print(fsolve(corr_shift_ratio,0.5,args=(row[t],row[t+1],t,T2)))
-                mass[b, t] = fsolve(corr_shift_ratio,0.5,args=(row[t],row[t+1],t,T2))
+    #elif (usecosh == False and weight is None):
+    #   # Write a numerical solve for the effective mass per timeslice
+    #   # args are (t,T2)
+    #   T2=data.shape[1]
+    #   mass = np.zeros_like(data[:,:-1])
+    #   print(mass.shape)
+    #   for b, row in enumerate(data):
+    #       for t in range(len(row)-1):
+    #            #print(fsolve(corr_shift_ratio,0.5,args=(row[t],row[t+1],t,T2)))
+    #            mass[b, t] = fsolve(corr_shift_ratio,0.5,args=(row[t],row[t+1],t,T2),maxfev=10000)
     
     elif(weight is not None and shift is not None):
        print("Using shifted weighted")
@@ -96,7 +100,7 @@ def compute_eff_mass(data, usecosh=True, exp=False, weight=None, shift=None):
                  mass[b, t] = fsolve(corr_shift_weight,0.5,
                                      args=(row[t],row[t+1],t,T2,weight[b],
                                      shift),maxfev=1000)
-    else:
+    elif(usecosh is False and exp is False):
         # creating mass array from data array
         mass = np.zeros_like(data[:,:-1])
         for b, row in enumerate(data):
@@ -110,14 +114,14 @@ def corr_shift_weight(m,r0,r1,t,T2,weight,shift=1.):
     _diff = r0/r1 - _num/_den
     return _diff
 
-def corr_exp(m,r0,r1,t,T2):
+def corr_exp(m,r0,r1,t,T):
     """
     Parameters
     ----------
     p: tuple
     """
-    _den = np.exp(-m*t) + np.exp(-m*(2*T2-t))
-    _num = np.exp(-m*(t+1)) + np.exp(-m*(2*T2-(t+1))) 
+    _den = np.exp(-m*t) + np.exp(-m*(T-t))
+    _num = np.exp(-m*(t+1)) + np.exp(-m*(T-(t+1))) 
     _diff = r0/r1 - _den/_num 
     return _diff
 
@@ -137,10 +141,10 @@ def corr_shift_ratio(m,r0,r1,t,T2):
     ----------
     p: tuple
     """
-    #_den = np.exp(-m*t) - np.exp(-m*(2*T2-t))
-    #_num = np.exp(-m*(t+1)) - np.exp(-m*(2*T2-(t+1))) 
-    _den = np.sinh(m*(T2-t-0.5))
-    _num = np.sinh(m*(T2-t-1.-0.5)) 
+    _den = np.exp(-m*t) - np.exp(-m*(2*T2-t))
+    _num = np.exp(-m*(t+1)) - np.exp(-m*(2*T2-(t+1))) 
+    #_den = np.sinh(m*(T2-t-0.5))
+    #_num = np.sinh(m*(T2-t-1.-0.5)) 
     _diff = r0/r1 - _den/_num 
     return _diff
 
