@@ -174,6 +174,10 @@ def sys_error(data, pvals, par=0, rel=True):
         res_sys.append(np.zeros((2,)))
         
         # calculate the weight for the fit ranges
+        #TODO: hotfix for having only one parameter, think about more elegant
+        #solution
+        #print("The data inside sys_error are")
+        #print(d[:,par])
         data_weight.append(compute_weight(d[:,par], pvals[i], rel=rel))
         # using the weights, calculate the median over all fit intervals
         # for every bootstrap sample.

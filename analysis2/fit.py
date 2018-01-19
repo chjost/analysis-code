@@ -809,6 +809,7 @@ class FitResult(object):
                 npar = self.data[0].shape[1]
                 #print("In calc_error: Data")
                 #print(self.data)
+                print(npar)
                 for i in range(npar):
                     r, r_std, r_syst, w = sys_error(self.data, self.pval,
                         i,rel=rel)

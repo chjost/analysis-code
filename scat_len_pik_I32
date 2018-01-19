@@ -1,10 +1,12 @@
-#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+#!/bin/python
 
 # Calculate delta E and pi-K scattering length for I=3/2
 
 import sys
 import numpy as np
 import itertools
+# Christian's packages
+sys.path.append('/hadron/helmes/projects/analysis-code/')
 
 import analysis2 as ana
 

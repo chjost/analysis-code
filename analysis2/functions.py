@@ -36,6 +36,7 @@ def compute_derivative(data):
         for t in range(len(row)-1):
             derv[b,t] = row[t+1] - row[t]
     return derv
+
 #TODO: Clean up this mess of a mass function
 def compute_eff_mass(data, usecosh=True, exp=False, weight=None, shift=None, T=None):
     """Computes the effective mass of a correlation function.

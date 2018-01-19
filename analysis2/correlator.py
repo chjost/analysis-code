@@ -669,7 +669,7 @@ class Correlators(object):
 # TODO: This can be made more efficient by introducing a few more functions
     def subtract_pollution(self, fit1, fit2):
         #_corr = Correlators.create(self.data) 
-        # Correlators have shape [nboot,T,real]
+        # Correlators have shape [nboot,T/2,real] after symmetrization
         T2 = self.shape[1]
         T= 2*T2
         # singularize fitresults
@@ -681,17 +681,18 @@ class Correlators(object):
         # A_1**2 * p(t) = A_1**2 * {exp[(E_K-E_pi)*t]*exp[-E_K*T] 
         #                           + exp[(-(E_K-E_pi)*t]*exp[-E_pi*T]}
         # A_1**2 = A_pi*A_K
-        amplitude_squared = _fit1.data[0][:,0,-1]**2 *_fit2.data[0][:,0,-1]**2
+        amplitude_squared = _fit1.data[0][:,0,-1] *_fit2.data[0][:,0,-1]
+        print(amplitude_squared)
         # Energy values
         ek = fit2.data[0][:,1,-1] 
         epi = fit1.data[0][:,1,-1] 
         diff_ek_epi =  ek - epi
         pollution = np.zeros_like(self.data)
         for t in range(0,T2):
-            pollution[:,t,0] = amplitude_squared*(np.exp(diff_ek_epi*t) * np.exp(-ek*T) +
-                               np.exp(-diff_ek_epi*t) * np.exp(-epi*T))
-            #pollution[:,t,0] = amplitude_squared*(np.exp(-epi*t) * np.exp(-ek*(T-t)) +
-            #                   np.exp(-ek*t) * np.exp(-epi*(T-t)))
+            #pollution[:,t,0] = amplitude_squared*(np.exp(diff_ek_epi*t) * np.exp(-ek*T) +
+            #                   np.exp(-diff_ek_epi*t) * np.exp(-epi*T))
+            pollution[:,t,0] = amplitude_squared*(np.exp(-epi*t) * np.exp(-ek*(T-t)) +
+                               np.exp(-ek*t) * np.exp(-epi*(T-t)))
         self.data -= pollution
     
     def divide_out_pollution(self, fit1, fit2):
