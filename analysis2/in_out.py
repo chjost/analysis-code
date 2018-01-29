@@ -4,7 +4,7 @@ Functions for in and output
 
 from __future__ import with_statement
 
-#import h5py
+import h5py
 import json
 import os
 import numpy as np
@@ -108,7 +108,8 @@ def inputnames(conf_file, corr_string, h5=False):
         tmp = config.get('correlator_lists',key)
         c0 = tmp.split(':')
         # read only functions in corr_string, sort them into q and op arrays
-        if c0[0] in corr_string:
+        if c0[0] in corr_string:            
+            print(c0[0])
             q_list = []
             op_list = []
             for val in c0[1:]:
@@ -670,13 +671,28 @@ def check_write(filename, verbose=False):
 #        inputnames.append(corrname)
 #    return inputnames
 
+def build_corr_func(raw_array):
+    number_parts=len(raw_array[0])
+    if number_parts > 2:
+        shape = (raw_array.shape[0],number_parts)
+        tmp=raw_array.view(float).reshape(shape)
+        out=np.zeros((raw_array.shape),dtype=complex)
+        out[:].real=tmp[:,0]-tmp[:,3]
+        out[:].imag=tmp[:,1]+tmp[:,2]
+    else:
+        out=raw_array.view(complex)
+    return out
+
 def _read_data_h5(fname, gname, debug=0):
     f = h5py.File(fname,'r')
     gname="/"+gname
     # Get correlator data as complex nparray
-    corr = np.asarray(f[gname]).view(complex)
+    # First dimension is time second is complex number
+    corr = build_corr_func(np.asarray(f[gname]))
+    #corr = np.asarray(f[gname]).view(complex)
     f.close()
     _corr = np.vstack((np.real(corr),np.imag(corr))).T
+    print(_corr)
     return _corr
 
 def _read_corr(_name, _T=48):
