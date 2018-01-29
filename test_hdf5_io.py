@@ -12,7 +12,7 @@ def main():
     path_2pt="/hiskp4/helmes/contractions/pi_k/I_32/A40.20/strange_1850/data/C2+_cnfg"
     path_4pt_d="/hiskp4/helmes/contractions/pi_k/I_32/A40.20/strange_1850/data/C4+D_cnfg"
     path_4pt_c="/hiskp4/helmes/contractions/pi_k/I_32/A40.20/strange_1850/data/C4+C_cnfg"
-    Corrs = ana.inputnames(sys.argv[1],['C2+','C2+','C4+D','C4+C'],h5=True)
+    Corrs = ana.inputnames(sys.argv[1],['c0','c1','c2','c3'],h5=True)
     print(Corrs)
     #C2_one = ana.read_confs(path,Corrs[0],["0202"],64,h5=True,verb=True)
     #C2_two = ana.read_confs(path,Corrs[1],["0202"],64,h5=True,verb=True)

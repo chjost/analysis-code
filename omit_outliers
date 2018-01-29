@@ -1,4 +1,4 @@
-#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+#!/usr/bin/python
 
 ###############################################################################
 # Remove exceptional configurations without decorrelation in amu_s

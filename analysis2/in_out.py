@@ -108,8 +108,9 @@ def inputnames(conf_file, corr_string, h5=False):
         tmp = config.get('correlator_lists',key)
         c0 = tmp.split(':')
         # read only functions in corr_string, sort them into q and op arrays
-        if c0[0] in corr_string:            
-            print(c0[0])
+        #if c0[0] in corr_string:            
+        if key in corr_string:            
+            print("reading %r" %key)
             q_list = []
             op_list = []
             for val in c0[1:]:
@@ -692,7 +693,6 @@ def _read_data_h5(fname, gname, debug=0):
     #corr = np.asarray(f[gname]).view(complex)
     f.close()
     _corr = np.vstack((np.real(corr),np.imag(corr))).T
-    print(_corr)
     return _corr
 
 def _read_corr(_name, _T=48):
