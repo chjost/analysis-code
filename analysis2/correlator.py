@@ -648,7 +648,7 @@ class Correlators(object):
         -------
         Correlator
         """
-        _corr = Correlators.create(self.data) 
+        _corr = Correlators.create(self.data,T=self.T) 
         # Correlators have shape [nboot,T,real]
         T2 = _corr.shape[1]
         print("Half lattice time extent is %d" %T2)

@@ -1,11 +1,10 @@
-#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
-
+#!/usr/bin/python
 # Script to investigate finite volume effects on the a40-ensembles
 
 import sys
 import numpy as np
 # Christian's packages
-sys.path.append('/hiskp2/helmes/projects/analysis-code/')
+sys.path.append('/hiskp4/helmes/projects/analysis-code/')
 import analysis2 as ana
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
@@ -20,15 +19,14 @@ def luescher_dE(pars,L_inv,m):
   """
   # Constants for the Luescher Function
   c = [-2.837297, 6.375183, -8.311951]
-  lusch = -4*np.pi*pars[...,0]*L_inv**3/m * (1. + c[0]*pars[...,0]*L_inv
+  # This is the same particle case
+  #lusch = -4*np.pi*pars[...,0]*L_inv**3/m * (1. + c[0]*pars[...,0]*L_inv
+  #                                              + c[1]*pars[...,0]**2*L_inv**2 
+  #                                              + c[2]*pars[...,0]**3*L_inv**3) - 8*np.pi**2*pars[...,0]**3*L_inv**6/m*pars[...,1]
+  lusch = -2*np.pi*pars[...,0]*L_inv**3/m * (1. + c[0]*pars[...,0]*L_inv
                                                 + c[1]*pars[...,0]**2*L_inv**2 
                                                 + c[2]*pars[...,0]**3*L_inv**3) - 8*np.pi**2*pars[...,0]**3*L_inv**6/m*pars[...,1]
   return lusch
-  #frac = pars[...,0]*L_inv
-  #pre = -4.*np.pi*pars[...,0]*L_inv**3
-  #parenth = 1.+c[0]*frac+c[1]*frac**2 + c[2]*frac**3
-  #minus = -8.*np.pi**2*L_inv**3/m *frac**3*pars[...,1]
-  #return pre * parenth + minus
 
 def main():
 ####################################################
@@ -77,6 +75,8 @@ def main():
     ratio2.print_data(par=fitparameter)
     ratio3.print_data(par=fitparameter)
     m_k_32.print_data(par=fitparameter)
+    print("Shape of reduced mass is:")
+    print(m_k_32.data[0].shape)
 
     #ratio1 = ratio1.singularize()
     #ratio2 = ratio2.singularize()
@@ -88,12 +88,11 @@ def main():
     stack_ratio = np.vstack((ratio1.data[0][:,fitparameter,0],
                              ratio2.data[0][:,fitparameter,0],
                              ratio3.data[0][:,fitparameter,0])).T
-    print(stack_ratio)
+    print(stack_ratio.shape)
 # generate plot arrays
     L = np.asarray((20.,24.,32.)) 
-    #L = np.asarray((24,32)) 
     L_inv = 1./L
-    L_fit = L_inv[1:]
+    L_fit = L_inv[0:]
     print(L_fit.shape)
     plot_ratio = ana.compute_error(stack_ratio)
 # set up a fit
@@ -101,8 +100,8 @@ def main():
 
     start = [-1.,1.]
     #start = [-1.]
-    res,chisq,pvals = ana.fitting(luescher_dE,L_fit,stack_ratio[:,fitparameter:],start,
-                                  add=m_k_32.data[0][:,fitparameter,0],
+    res,chisq,pvals = ana.fitting(luescher_dE,L_fit,stack_ratio[:,0:],start,
+                                  add=m_k_32.data[0][:,fitparameter],
                                   correlated=False, debug=4)
     
 # plot the data
@@ -115,7 +114,7 @@ def main():
     plt.errorbar(L_inv[2],plot_ratio[0][2],plot_ratio[1][2],fmt = 'bo',label =
         'A40.32')
     ana.plot_function(luescher_dE,[0.,0.051],res,r'$\delta E(a/L)$',
-                      add=m_k_32.data[0][:,fitparameter,0],ploterror=True)
+                      add=m_k_32.data[0][:,fitparameter],ploterror=True)
     plt.xlabel(label[0],fontsize=24)
     plt.ylabel(label[1],fontsize=24)
     plt.locator_params(nbins=4)
@@ -128,12 +127,12 @@ def main():
     plt.close()
 # print mka0 again
     
-    mk_a0 = m_k_32.data[0][:,1,0]*res[:,0]
+    mk_a0 = m_k_32.data[0][:,0]*res[:,0]
     mk_a0_fit = ana.compute_error(mk_a0)
     print("mu_pi_K a_0 from fit to dE: %.4f +/- %.4f" %(mk_a0_fit[0],mk_a0_fit[1]))
     r0 = ana.compute_error(res[:,1])
     print("r_0 from fit to dE: %.4f +/- %.4f" %(r0[0],r0[1]))
-    mk_r0 = m_k_32.data[0][:,fitparameter,0]*res[:,1]
+    mk_r0 = m_k_32.data[0][:,fitparameter]*res[:,1]
     mk_r0_fit = ana.compute_error(mk_r0)
     print("mu_pi_K r_0 from fit to dE: %.4f +/- %.4f" %(mk_r0_fit[0],mk_r0_fit[1]))
 
