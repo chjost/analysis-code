@@ -1,8 +1,10 @@
-#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+#!/usr/bin/python
 
 import sys
 import numpy as np
 import itertools
+# Christian's packages
+sys.path.append('/hiskp4/helmes/projects/analysis-code/')
 
 import analysis2 as ana
 
@@ -106,7 +108,7 @@ def main():
     label=["C_55", "t", "C(t)","data"]
     plotter.plot(corr,label)
     plotter.save()
-    corr_mass = ana.Correlators.create(corr.data)
+    corr_mass = ana.Correlators.create(corr.data,T=T)
     label=["C_55", "t", "m_eff(t)","data"]
     corr_mass.mass(usecosh=True)
     plotter.set_env(ylog=False)
@@ -153,7 +155,7 @@ def main():
     print(e_k[0],e_pi[0])
     corr_shift.shift(1,mass = e_k-e_pi, shift=1,d2=0)
     # Convert again to correlator for plotting ws denotes weighted and shifted
-    corr_ws = ana.Correlators.create(corr_shift.data[...,0])
+    corr_ws = ana.Correlators.create(corr_shift.data[...,0],T=T)
     corr_ws.shape = corr_ws.data.shape
 
  #-------------- Fit weighted and shifted correlator ---------------------------- 

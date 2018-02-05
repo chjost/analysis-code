@@ -17,7 +17,7 @@ from statistics import (compute_error, sys_error, sys_error_der, draw_weighted,
     freq_count, draw_gauss_distributed)
 from energies import calc_q2, calc_Ecm
 from zeta_wrapper import Z
-from scattering_length import calculate_scat_len
+from scattering_length import calculate_scat_len, calculate_parametrised_scat_len
 from chiral_utils import evaluate_phys
 from phaseshift_functions import compute_phaseshift
 
@@ -1163,6 +1163,64 @@ class FitResult(object):
         print(_mass.shape)
         for res in calculate_scat_len(_mass, _massweight, _energy, _energyweight,
                 L, isdependend, isratio, rf_est):
+            scat.add_data(*res)
+        return scat
+#TODO: Code doubling, safer against errors 
+    def calc_parametrised_scattering_length(self, mass, parself=0, parmass=0, L=24,
+            isdependend=True):
+        """Calculate the scattering length.
+        This only makes sense for correlation functions with no momentum.
+
+        Warning
+        -------
+        This overwrites the data, so be careful to save the data before.
+
+        Parameters
+        ----------
+        mass : FitResult
+            The masses of the single particles.
+        parself, parmass : int, optional
+            The parameters for which to do this.
+        L : int
+            The spatial extend of the lattice.
+        isratio : bool
+            If self is already the ratio.
+        truncated : bool
+            If energy has only one fit range dimension
+        isdependend : bool
+            If mass and self are dependend on each other.
+        """
+        # we need the weight of both mass and self
+        self.calc_error()
+        mass.calc_error()
+        # get the data
+        if mass.derived:
+            _mass = mass.data[0]
+            _massweight = mass.weight[0][0]
+        else:
+            _mass = mass.data[0][:,parmass]
+            _massweight = mass.weight[parmass][0]
+        if self.derived:
+            _energy = self.data[0]
+            _energyweight = self.weight[0][0]
+        else:
+            _energy = self.data[0][:,parself]
+            _energyweight = self.weight[parself][0]
+        print(_energy[0,0])
+        nsam = _mass.shape[0]
+        # create the new shapes
+        scatshape = (nsam, _mass.shape[-1], _energy.shape[-1])
+        scatshape_w = scatshape
+        # prepare storage
+        scat = FitResult("scat_len", True)
+        scat.create_empty(scatshape, scatshape_w, [1,1])
+        # calculate scattering length
+        print("_energy has shape:")
+        print _energy.shape
+        print("_mass has shape:")
+        print(_mass.shape)
+        for res in calculate_parametrised_scat_len(_mass, _massweight, _energy, _energyweight,
+                L, isdependend):
             scat.add_data(*res)
         return scat
 

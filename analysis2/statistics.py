@@ -110,7 +110,7 @@ def compute_weight(data, pvals, rel=True):
         errors = np.nanstd(data, axis=0)
     # get the minimum of the errors
     #print("the data inside compute weight are:")
-    #print(data)
+    #print(data.shape)
     #print("the errors inside compute weight are:")
     #print(errors)
     min_err = np.amin(errors)

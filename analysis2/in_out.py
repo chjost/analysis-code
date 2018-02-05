@@ -737,9 +737,12 @@ def read_confs(path,corrname,confs,_T=48,h5=False,verb=False):
       # For hdf5 corrname is the groupname
       _fname = path+d+".h5"
       if verb is True:
-        print(_fname)
+        print("Reading %s from %s" %(corrname,_fname))
       _C_tmp = _read_data_h5(_fname,corrname)
       C[i] = _C_tmp
+      if verb is True:
+        print("first 10 timeslices of Correlator:")
+        print(C[i,0:11])
   else:
     for i,d in enumerate(confs):
       #Generate filename from inputlist

@@ -137,6 +137,50 @@ def calculate_scat_len(mass, massweight, energy, energyweight, L=24,
                     result[b] = real_roots[real_ind][0].real
             yield (0, 0, j, i), result, needed, weight
 
+# this solves the energy shift for the parametrised scattering length given in
+# arxiv:0811.4392
+def calculate_parametrised_scat_len(mass, massweight, energyshift, eshiftweight, L=24,
+        isdependend=True):
+    """Calculate the scattering length with the Luescher Formula.
+    """
+    cut = 1e-14
+    nsam = mass.shape[0]
+    # Constants for the Energyshift Function
+    i, j, k = -8.9136329, 16.532316, 8.4019240
+    c = [i, i**2-j, 3.*i*j-i**3-k]
+    _L=np.pi*L
+    # prefactor is due to different particles (isospin not integer)
+    pre = -2.*np.pi / (mass * float(L*L*L))
+    print("pre has shape:")
+    print(pre.shape)
+    needed = np.zeros((nsam,))
+    # loop over fitranges of self
+    for i in range(energyshift.shape[-1]):
+        # loop over fitranges of mass
+        for j in range(mass.shape[-1]):
+            result = np.zeros((nsam,))
+            weight = np.zeros((nsam,))
+            # check if the weight is smaller than cut-off, if so
+            # don't calculate
+            if isdependend:
+                weight = np.full(nsam, massweight[j] * eshiftweight[j,i])
+            else:
+                weight = np.full(nsam, massweight[j] * eshiftweight[i])
+            # loop over samples
+            for b in range(nsam):
+                p = np.asarray([pre[b,j]*c[2]/float(_L*_L*_L),
+                                pre[b,j]*c[1]/float(_L*_L),
+                                pre[b,j]*c[0]/float(_L), 
+                                pre[b,j],
+                                -1. * energyshift[b,j,i]])
+                # find the roots of the polynomial
+                root = np.roots(p)
+                # choose the real solution
+                mask = np.isreal(root)
+                real_roots = root[mask]
+                real_ind = np.argsort(np.fabs(real_roots.real))
+                result[b] = real_roots[real_ind][0].real
+            yield (0, 0, j, i), result, needed, weight
 if __name__ == "main":
     pass
 
