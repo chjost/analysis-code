@@ -4,7 +4,7 @@ Functions for in and output
 
 from __future__ import with_statement
 
-import h5py
+#import h5py
 import json
 import os
 import numpy as np

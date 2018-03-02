@@ -3,22 +3,28 @@ Debug information printed to screen:
 """
 
 import numpy as np
+import re
 from statistics import compute_error
 
-def print_info_data(x,y,dy,dx=None):
+def print_info_data(x,y,dy=None,dx=None):
     """ print info on data for a plot
     """
     print("\n--------------------------------------------------------------------------------")
     print("Data for plotting")
     np.set_printoptions(precision=4)
-    if dx is not None:
-        print("x\tdx\ty\tdy:")
+    if dx is not None and dy is not None:
+        print("#x\tdx\ty\tdy:")
         data=np.column_stack((x,dx,y,dy))
-        print(data)
-    else:
-        print("x\ty\tdy:")
+    elif dx is not None and dy is None:
+        print("#x\tdx\ty:")
+        data=np.column_stack((x,dx,y))
+    elif dx is None and dy is not None:
+        print("#x\ty\tdy:")
         data=np.column_stack((x,y,dy))
-        print(data)
+    else:
+        print("#x\ty:")
+        data=np.column_stack((x,y))
+    print(re.sub('[\[\]]', '', np.array_str(data)))
     print("--------------------------------------------------------------------------------\n")
 
 def init_summ_arrays(extrapol,lyt_x,lyt_y):

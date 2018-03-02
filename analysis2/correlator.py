@@ -349,7 +349,7 @@ class Correlators(object):
         # more versatile interface:
         # self.data = func.compute_eff_mass(self.data,method,weight,shift)
         self.data = func.compute_eff_mass(self.data, usecosh, exp, weight,
-                shift, T=self.T)
+                shift)
         self.shape = self.data.shape
 
     def get_data(self):
@@ -670,8 +670,7 @@ class Correlators(object):
     def subtract_pollution(self, fit1, fit2):
         #_corr = Correlators.create(self.data) 
         # Correlators have shape [nboot,T/2,real] after symmetrization
-        T2 = self.shape[1]
-        T= 2*T2
+        T = self.T
         # singularize fitresults
         _fit1 = fit1.singularize()
         _fit2 = fit2.singularize()
@@ -681,41 +680,38 @@ class Correlators(object):
         # A_1**2 * p(t) = A_1**2 * {exp[(E_K-E_pi)*t]*exp[-E_K*T] 
         #                           + exp[(-(E_K-E_pi)*t]*exp[-E_pi*T]}
         # A_1**2 = A_pi*A_K
-        amplitude_squared = _fit1.data[0][:,0,-1] *_fit2.data[0][:,0,-1]
+        amplitude_squared = _fit1.data[0][:,0,-1]**2 *_fit2.data[0][:,0,-1]**2
         print(amplitude_squared)
         # Energy values
         ek = fit2.data[0][:,1,-1] 
         epi = fit1.data[0][:,1,-1] 
         diff_ek_epi =  ek - epi
         pollution = np.zeros_like(self.data)
-        for t in range(0,T2):
-            #pollution[:,t,0] = amplitude_squared*(np.exp(diff_ek_epi*t) * np.exp(-ek*T) +
-            #                   np.exp(-diff_ek_epi*t) * np.exp(-epi*T))
-            pollution[:,t,0] = amplitude_squared*(np.exp(-epi*t) * np.exp(-ek*(T-t)) +
-                               np.exp(-ek*t) * np.exp(-epi*(T-t)))
+        for t in range(0,self.data.shape[1]):
+            pollution[:,t,0] = amplitude_squared*(np.exp(diff_ek_epi*t) * np.exp(-ek*T) +
+                               np.exp(-diff_ek_epi*t) * np.exp(-epi*T))
+            #pollution[:,t,0] = amplitude_squared*(np.exp(-epi*t) * np.exp(-ek*(T-t)) +
+            #                   np.exp(-ek*t) * np.exp(-epi*(T-t)))
         self.data -= pollution
     
     def divide_out_pollution(self, fit1, fit2):
-        T2 = self.shape[1]
-        T= 2*T2
-        # singularize fitresults
-        _fit1 = fit1.singularize()
-        _fit2 = fit2.singularize()
-        _fit1.calc_error()
-        _fit2.calc_error()
+        # only true for symmetrized correlators
+        #T2 = self.shape[1]
+        T = self.T
         # Energy values
         ek = fit2.data[0][:,1,-1] 
-        epi = fit1.data[0][:,1,-1] 
-        diff_ek_epi =  ek - epi
+        epi = fit1.data[0][:,1,-1]
         pollution_exp = np.zeros_like(self.data)
-        for t in range(0,T2):
-            pollution_exp[:,t,0] = (np.exp(diff_ek_epi*t) * np.exp(-ek*T) +
-                               np.exp(-diff_ek_epi*t) * np.exp(-epi*T))
-        self.data /= pollution_exp
+        for t in range(0,self.data.shape[1]):
+            pollution_exp[:,t,0] = np.exp(-epi*t) * np.exp(-ek*(T-t)) + np.exp(-ek*t) * np.exp(-epi*(T-t))
+            #pollution_exp[:,t,0] = (np.exp(diff_ek_epi*t) * np.exp(-ek*T) +
+            #                   np.exp(-diff_ek_epi*t) * np.exp(-epi*T))
+            self.data[:,t] /= pollution_exp[:,t]
 
     def multiply_pollution(self,fit1,fit2):
-        T2 = self.shape[1]
-        T= 2*T2
+        # only true for symmetrized correlators
+        #T2 = self.shape[1]
+        T= self.T
         # singularize fitresults
         _fit1 = fit1.singularize()
         _fit2 = fit2.singularize()
@@ -726,10 +722,11 @@ class Correlators(object):
         epi = fit1.data[0][:,1,-1] 
         diff_ek_epi =  ek - epi
         pollution_exp = np.zeros_like(self.data)
-        for t in range(0,T2):
-            pollution_exp[:,t,0] = (np.exp(diff_ek_epi*t) * np.exp(-ek*T) +
-                               np.exp(-diff_ek_epi*t) * np.exp(-epi*T))
-        self.data *= pollution_exp
+        for t in range(0,self.data.shape[1]):
+            pollution_exp[:,t,0] = np.exp(-epi*t) * np.exp(-ek*(T-t)) + np.exp(-ek*t) * np.exp(-epi*(T-t))
+            #pollution_exp[:,t,0] = (np.exp(diff_ek_epi*t) * np.exp(-ek*T) +
+            #                   np.exp(-diff_ek_epi*t) * np.exp(-epi*T))
+            self.data[:,t] *= pollution_exp[:,t]
 
 if __name__ == "main":
     pass

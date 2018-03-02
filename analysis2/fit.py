@@ -697,6 +697,67 @@ class FitResult(object):
         singular.derived = self.derived
         return singular
 
+    
+    def pick_data(self, chi_sq_dof=None, pval=None):
+        """ Pick data from multifitrange fitresult
+
+        The data gets selected on either a reduced chi^2 value or the p-value of
+        the fit. Either one of chi_sq_dof or pval needs to be set.
+        
+        Parameters
+        ----------
+        chi_sq_dof: float, value of chi^2/dof for choice of fitresult
+        pval: float, p-value for choice of fitresult
+        """
+        # debug output
+        print("Shapes of data,chi2 and pval:")
+        print(self.data[0].shape)
+        print(self.chi2[0].shape)
+        print(self.pval[0].shape)
+
+        # define default behaviour
+        if chi_sq_dof is None and pval is None:
+            print("no arguments given, proceeding with pval=0.4")
+            pval=0.4
+            fitrange_index = get_fitrange_index(self.pval[0][0],pval)
+        # get fit range index
+        elif chi_sq_dof is not None and pval is None:
+            fitrange_index = get_array_index(self.chi2[0][0],chi_sq_dof)
+        elif chi_sq_dof is None and pval is not None:
+            fitrange_index = get_array_index(self.pval[0][0],pval)
+        # based on fitrange_index build new fitresult instance
+        fitres_cut = FitResult(self.corr_id,derived=self.derived)
+        # determine shape
+        shape_data = (self.data[0].shape[0], self.data[0].shape[1], 1) 
+        shape_pval = (self.pval[0].shape[0], 1)
+        shape1 = [shape_data for d in self.data]
+        shape2 = [shape_pval for p in self.pval]
+        fitres_cut.create_empty(shape1, shape2, 1)
+
+        # Get data for error calculation
+        # 0 in data is for median mass
+        try:
+            dat = self.data[0][:,:,fitrange_index]
+            pval = self.pval[0][:,fitrange_index]
+            chi2 = self.chi2[0][:,fitrange_index]
+        except:
+            dat = self.data[0][:,:,0,fitrange_index]
+            pval = self.pval[0][:,0,fitrange_index]
+            chi2 = self.chi2[0][:,0,fitrange_index]
+
+        # add data to FitResult
+        fitres_cut.data[0] = dat.reshape(dat.shape+(1,))
+        fitres_cut.pval[0] = pval.reshape(pval.shape+(1,))
+        fitres_cut.chi2[0] = chi2.reshape(chi2.shape+(1,))
+        # build fitrange array
+        fitranges,fitrange_shape = self.get_ranges()
+        _fr = np.zeros((1,1,2))
+        _fr[0,0] = fitranges[0,fitrange_index]
+        fitres_cut.fit_ranges = _fr
+        return fitres_cut
+    
+        
+
     def create_empty(self, shape1, shape2, corr_num):
         """Create empty data structures.
 
@@ -928,6 +989,13 @@ class FitResult(object):
                                                   %(rel_err*self.pval[i][select]),
                                                   tmppar))
                             print(tmpstring)
+    def reduced_chi2(self):
+        r = self.fit_ranges[0,0]
+        print(r)
+        print(self.chi2[0].shape)
+        #red_chi2 =self.chi2[0][0,0]/(r[1]-r[0]-self.data[0].shape[1]) 
+        red_chi2 =self.chi2[0][0,0]/(r[1]-r[0]-self.data[0].shape[1]) 
+        return red_chi2
 
     def data_for_plot(self, par=0, new=False):
         """Prints the errors etc of the data."""
@@ -1925,6 +1993,8 @@ def get_fr_idx(search,find):
       print("fit range not found")
     return idx[0]
 
+def get_array_index(array,value):
+    return np.argmin(np.abs(array-value))
 
 if __name__ == "__main__":
     pass

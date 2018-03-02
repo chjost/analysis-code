@@ -859,3 +859,7 @@ def update_shapes(x,y):
     print(_new_x_shape)
     print(_new_y_shape)
     return _new_x_shape, _new_y_shape
+
+def generate_chirana_shape(spacings,ensemble_lengths,nb_mus,nb_obs,samples=1500):
+    ens_shape = [se[1] for se in zip(spacings,ensemble_lengths)]
+    return (len(spacings),tuple(ens_shape),nb_mus,nb_obs,samples)

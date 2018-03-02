@@ -40,7 +40,7 @@ class ExtDat(object):
         # Start with an empty dictionary
         self.data={}
         # test length of tuples
-        if len(seeds) != len(space)*len(obs_a):
+        if len(seeds) < len(space)*len(obs_a):
             raise ValueError("Seeds and Space tuples have incompatible lengths")
         # each observable should get its own seed so the desired layout would be
         # something like 
@@ -120,7 +120,7 @@ class ContDat(object):
         # Start with an empty dictionary
         self.data={}
         # test length of tuples
-        if len(seeds) != len(obs):
+        if len(seeds) < len(obs):
             raise ValueError("Seeds and Observable tuples have incompatible lengths")
         # initialize the dictionary with one seed for every observable
         for a in zip(obs, seeds):

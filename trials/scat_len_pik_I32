@@ -37,7 +37,7 @@ def main():
 #--------------- Define filenames
     fit_k_out="fit_k_unit"
     fit_pi_out = "fit_pi_unit"
-    fit_pik_out = "fit_pik_pvalcut_e1"
+    fit_pik_out = "fit_pik_pvalcut_e3"
 # --------------- Load single particle fitresults   
 # Kaon fit
     k_fit = ana.FitResult.read("%s/%s_%s.npz" % (datadir,fit_k_out, lat))
@@ -50,9 +50,9 @@ def main():
     pi_fit.print_details()
 
 # --------------- Load total energy fitresult
-# Corr WSS fit
+# effective mass fit, only one parameter
     pi_k_fit = ana.FitResult.read("%s/%s_%s.npz" % (datadir,fit_pik_out,lat))
-    pi_k_fit.print_data(1)
+    pi_k_fit.print_data(0)
 
 # --------------- Calculate m_pi + m_K
     sum_m = k_fit.add_mass(pi_fit)
@@ -71,8 +71,8 @@ def main():
 # --------------- Calculate delta E
     calc_dE = True
     if calc_dE:
-        dE = pi_k_fit.calc_dE(sum_m,parself=1,parmass=1,flv_diff=True,
-                              isdependend=False)
+        dE = pi_k_fit.calc_dE(sum_m,parself=0,parmass=1,flv_diff=True,
+                isdependend=False)
         dE.save("%s/dE_TP0_%s.npz" % (datadir,lat))
     else: 
         dE = ana.FitResult.read("%s/dE_TP0_%s.npz" % (datadir,lat))

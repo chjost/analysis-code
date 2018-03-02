@@ -112,11 +112,11 @@ def main():
 # plot the data
     vol_dep = PdfPages(plotdir+'/vol_dep_%s.pdf' % ssb_strange[0])
     label = [r'$a/L$',r'$a\delta E$']
-    plt.errorbar(L_inv[0],plot_ratio[0][0],plot_ratio[1][0],fmt = 'bv',label =
+    plt.errorbar(L_inv[0],plot_ratio[0][0],plot_ratio[1][0],fmt = 'rv',label =
         'A40.20')
-    plt.errorbar(L_inv[1],plot_ratio[0][1],plot_ratio[1][1],fmt = 'bd',label =
+    plt.errorbar(L_inv[1],plot_ratio[0][1],plot_ratio[1][1],fmt = 'rd',label =
         'A40.24')
-    plt.errorbar(L_inv[2],plot_ratio[0][2],plot_ratio[1][2],fmt = 'bo',label =
+    plt.errorbar(L_inv[2],plot_ratio[0][2],plot_ratio[1][2],fmt = 'ro',label =
         'A40.32')
     ana.plot_function(luescher_dE,[0.,0.051],res,r'$\delta E(a/L)$',
                       add=m_k_32.data[0][:,fitparameter],ploterror=True)
@@ -124,7 +124,7 @@ def main():
     plt.ylabel(label[1],fontsize=24)
     plt.locator_params(nbins=4)
     plt.xlim(0.,0.054)
-    plt.ylim(0.,0.015)
+    plt.ylim(0.,0.0175)
     plt.legend(loc='best',numpoints=1)
     vol_dep.savefig()
     vol_dep.close()

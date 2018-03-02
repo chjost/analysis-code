@@ -1,4 +1,4 @@
-#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+#!/usr/bin/python
 # system imports
 import sys
 from scipy import stats
@@ -14,7 +14,7 @@ import matplotlib.cm as cm
 from matplotlib.backends.backend_pdf import PdfPages
 
 # Christian's packages
-sys.path.append('/hiskp2/helmes/projects/analysis-code/')
+sys.path.append('/hiskp4/helmes/projects/analysis-code/')
 import analysis2 as ana
 
 def main():
@@ -84,10 +84,13 @@ def main():
     extrapol = ana.ChirAna("pi-K_I32_chipt_%s%d"%(ms_fixing.upper(),zp_meth),
                            correlated=False,gamma=False,match=True)
     # have five x-values: mk,mpi,meta,fpi,r0/a
+
     ens_shape_chirana = (len(latA),len(latB),len(latD))
     print(ens_shape_chirana)
-    lyt_xvals = (len(space),ens_shape_chirana,1,5,1500)
-    lyt_yvals = (len(space),ens_shape_chirana,1,1,1500)
+    lyt_xvals = ana.generate_chirana_shape(space,ens_shape_chirana,1,5,1500)
+    lyt_yvals = ana.generate_chirana_shape(space,ens_shape_chirana,1,1,1500) 
+    #lyt_xvals = (len(space),ens_shape_chirana,1,5,1500)
+    #lyt_yvals = (len(space),ens_shape_chirana,1,1,1500)
     extrapol.create_empty(lyt_xvals,lyt_yvals,lat_dict=lat_dict)
     print("\nSetup complete, begin chiral analysis")
     try:

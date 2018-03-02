@@ -1,5 +1,4 @@
-#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
-##!/hiskp2/werner/libraries/Python-2.7.12/python
+#!/usr/bin/python
 ################################################################################
 #
 # Author: Christopher Helmes (helmes@hiskp.uni-bonn.de)
@@ -43,7 +42,7 @@ import matplotlib.cm as cm
 from matplotlib.backends.backend_pdf import PdfPages
 import pandas as pd
 # Christian's packages
-sys.path.append('/hiskp2/helmes/projects/analysis-code/')
+sys.path.append('/hiskp4/helmes/projects/analysis-code/')
 import analysis2 as ana
 
 def main():
@@ -99,26 +98,31 @@ def main():
     #------------------------- Setup objects -----------------------------------
     # First load the data from fixing the strange quark mass
     fix_ms = ana.ChirAna("pi-K_I32_chipt_%s%d"%(ms_fixing.upper(),zp_meth),
-                         correlated=True,gamma=False, match=True, fit_ms = True)
+                         correlated=True,gamma=False, match=True, fit_ms =
+                         True)
     ens_shape_chirana = (len(latA),len(latB),len(latD))
     print(ens_shape_chirana)
-    # have 3 strange quark masses 
-    lyt_xvals = (3,ens_shape_chirana,3,2,1500)
-    lyt_yvals = (3,ens_shape_chirana,3,1,1500)
+    # have 3 strange quark masses
+    lyt_xvals = ana.generate_chirana_shape(space,ens_shape_chirana,3,2,1500)
+    lyt_yvals = ana.generate_chirana_shape(space,ens_shape_chirana,3,1,1500) 
+    #lyt_xvals = (3,ens_shape_chirana,3,2,1500)
+    #lyt_yvals = (3,ens_shape_chirana,3,1,1500)
     fix_ms.create_empty(lyt_xvals,lyt_yvals,lat_dict=lat_dict)
     try:
         fix_ms.load(resdir)
     except:
         print("Could not load chiral analysis!")
     extrapol = ana.ChirAna("pi-K_I32_chipt_%s%d"%(ms_fixing.upper(),zp_meth),
-                            correlated=False,gamma=True)
+                            correlated=False,gamma=True,debug=2)
     # have two x-values: mk/mpi, a/r0
     # determine size of objects from ensemble dictionary
     #TODO: write as function
     ens_shape_chirana = (len(latA),len(latB),len(latD))
     print(ens_shape_chirana)
-    lyt_xvals = (3,ens_shape_chirana,1,1,1500)
-    lyt_yvals = (3,ens_shape_chirana,1,1,1500)
+    lyt_xvals = ana.generate_chirana_shapes(space,ens_shape_chirana,1,1,1500)
+    lyt_yvals = ana.generate_chirana_shapes(space,ens_shape_chirana,1,1,1500)
+    #lyt_xvals = (3,ens_shape_chirana,1,1,1500)
+    #lyt_yvals = (3,ens_shape_chirana,1,1,1500)
     extrapol.create_empty(lyt_xvals,lyt_yvals,lat_dict=lat_dict)
     # copy over observables to extrapol 
     for i,a in enumerate(space):
@@ -174,6 +178,9 @@ def main():
         chiral_plot.plot_chiral_ext(extrapol,space,label,xlim=[0,2.2], args=args,
                                     ylim=[-0.015,0.010], func=line, ploterror=True,
                                     kk=False,xcut=cut, gamma=True,plotlim=[0.,2.2])
+        label[1]=r'$\chi$ '
+        #chiral_plot.plot_chi_values(extrapol,space,line,data_label=r'$\chi$',
+        #                            label=label,plotlim=[0,2.2],prior=l_5)
         
         extrapol.mu_a0_pik_phys(cont_data.get("mpi_0"),cont_data.get("mk"),
                                          cont_data.get("fpi"),

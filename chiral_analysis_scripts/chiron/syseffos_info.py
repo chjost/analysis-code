@@ -15,4 +15,5 @@ def print_si_format(frame):
         formatted[k]=si_format(frame[k])
     pd.set_option('display.width',None)
     print(formatted)
+    return formatted
 

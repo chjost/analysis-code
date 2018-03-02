@@ -15,7 +15,8 @@ from statistics import compute_error, draw_gauss_distributed, acf
 from plot_functions import plot_data, plot_function, plot_function_multiarg, plot_histogram
 from plot_layout import set_plotstyles, set_layout
 from in_out import check_write
-#from chiral_functions import *
+from chipt_basic_observables import *
+import chiral_utils as chut
 
 class LatticePlot(object):
     def __init__(self, filename, join=False, debug=0):
@@ -999,6 +1000,62 @@ class LatticePlot(object):
         if len(label) > 2:
             plt.title(label[2])
         plt.legend(loc='lower left',ncol=2,numpoints=1)
+    
+    # Function to plot the chi values frim the fit
+    def plot_chi_values(self, chirana, lattice_spacings,
+                       fit_function, xvalue_function=None,
+                       data_label="Fit evaluation",label=None,plotlim=None,
+                       ylim=None,prior=None,legend=None,xcut=None):
+        """Plot relative deviation of fit function evaluated at lattice input
+        values from measurements
+
+        The x-data for the plot are taken from a chiral extrapolation object.
+        If given the actual x-axis points are calculated via xvalue_function and
+        the fit function is used for the evaluation.
+        """
+        # In dependence of the lattice_spacings set layout options
+        colors, markerstyles, linestyles, data_labels = set_plotstyles(lattice_spacings)
+        # Treat every lattice spacing separately
+        for i,a in enumerate(lattice_spacings):
+            y_input = chirana.y_data[i]
+            xvalues_fit = chirana.x_data[i][:,0]
+            # Extract fit arguments from chirana instance, include lattice
+            # artefact..
+            fit_arguments = chirana.fitres.data[0][:,:]
+            print("in plot_chi: ")
+            print("shape of fit_arguments:")
+            print(fit_arguments.shape)
+            print("shape of xvalues_fit:")
+            print(xvalues_fit.shape)
+            y_fit = fit_function(fit_arguments.T,xvalues_fit)
+            # determine covariance matrix, including prior
+            _y_cov = chut.concat_data_cov(y_input,prior=prior)
+            _cov = np.cov(_y_cov)
+            if chirana.correlated is False:
+                _cov = np.diag(np.diagonal(_cov))
+            _cov = (np.linalg.cholesky(np.linalg.inv(_cov))).T
+            chi_vector = np.dot(_cov,y_fit-y_input)
+            print(chi_vector)
+            print("\ny_fit has shape")
+            print(y_fit.shape)
+            # TODO: compute_error seems not to work for 3d-arrays take 0-th
+            # bootstrapsamples for the time being
+            xvalues_plot,dummy1,dummy2 = self.shape_data_pik(chirana.x_data[i],
+                                                   chirana.y_data[i])
+            _ymean, _dy = compute_error(chi_vector,axis=1)
+            plot_data(xvalues_plot,_ymean,_dy,label=a,col=colors[i],
+                      fmt=markerstyles[i], debug=self.debug)
+
+        if xcut is not None:
+            if len(xcut) > 1:
+                plot_brace(fit_arguments,xcut,fit_function,xpos="low")
+                plot_brace(fit_arguments,xcut,fit_function,xpos="up")
+            else:
+                plot_brace(fit_arguments,xcut,fit_function,xpos="up")
+        plt.axhline(color='k')
+        set_layout(physical_x=x_phys,xlimits=plotlim,ylimits=ylim,
+                   legend_array=legend,labels=label)
+            
 
     def plot_fit_proof(self, chirana, lattice_spacings,
                        fit_function, xvalue_function=None,

@@ -18,7 +18,7 @@ import matplotlib.cm as cm
 from matplotlib.backends.backend_pdf import PdfPages
 
 # Christian's packages
-sys.path.append('/hadron/helmes/projects/analysis-code/')
+sys.path.append('/hiskp4/helmes/projects/analysis-code/')
 import analysis2 as ana
 
 def main():

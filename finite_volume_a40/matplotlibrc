@@ -90,8 +90,8 @@ lines.markersize  : 10            # markersize, in points
 #lines.solid_capstyle : projecting   # butt|round|projecting
 #lines.antialiased : True         # render lines in antialiased (no jaggies)
 
-markers.fillstyle: none # full|left|right|bottom|top|none
-markers.facecolor: (1,1,0.5,0)
+markers.fillstyle: full # full|left|right|bottom|top|none
+#markers.facecolor: (1,1,0.5,0)
 
 ### PATCHES
 # Patches are graphical objects that fill 2D space, like polygons or

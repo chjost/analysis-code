@@ -3,9 +3,9 @@
 import sys
 import numpy as np
 import itertools
+
 # Christian's packages
 sys.path.append('/hiskp4/helmes/projects/analysis-code/')
-
 import analysis2 as ana
 
 def main():
@@ -16,7 +16,7 @@ def main():
         ens = ana.LatticeEnsemble.parse(sys.argv[1])
     # define filenames depending on os flag
     # read settings
-    readdata = False 
+    readdata = False
     read_kfit = False
     read_pifit = False
     read_pikfit = False
@@ -33,10 +33,10 @@ def main():
     pik_raw_plot = "corr_c55_unit"
     fit_k_out="fit_k_unit"
     fit_pi_out = "fit_pi_unit"
-    fit_pik_out = "fit_pik_weight_unit"
-    fit_pik_one_fitrange = "fit_pik_pvalcut_e1"
-    fit_pik_plot ="fit_pik_weight_unit" 
-    mass_pik_plot="m_eff_pik_weight_unit"
+    fit_pik_out = "fit_pik_subtract_unit"
+    fit_pik_one_fitrange = "fit_pik_pvalcut_e2"
+    fit_pik_plot ="fit_pik_subtract" 
+    mass_pik_plot="m_eff_pik_subtract_unit"
     # get data from input file
     prefix = ens.get_data("path")
     print prefix
@@ -109,12 +109,6 @@ def main():
     label=["C_55", "t", "C(t)","data"]
     plotter.plot(corr,label)
     plotter.save()
-    corr_mass = ana.Correlators.create(corr.data,T=T)
-    label=["C_55", "t", "m_eff(t)","data"]
-    corr_mass.mass(usecosh=True)
-    plotter.set_env(ylog=False)
-    plotter.plot(corr_mass,label)
-    plotter.save()
     del plotter
     print(corr.data.shape)
     fit_k_single = ana.LatticeFit(9,dt_f=-1, dt_i=-1,
@@ -144,110 +138,64 @@ def main():
     pi_fit.print_data(1)
     pi_fit.print_details()
     pi_fit.calc_error()
- # Before fitting shift the correlator
-    # make matrix out of corr
-    corr_shift = ana.Correlators.create(corr.data)
-    corr_shift.matrix=True
-    corr_shift.shape = np.append(corr.data.shape,1)
-    print(corr.shape)
-    corr_shift.data.reshape((corr_shift.shape))
-    e_k = k_fit.singularize().data[0][:,1,0]
-    e_pi = pi_fit.singularize().data[0][:,1,0]
-    print(e_k[0],e_pi[0])
-    corr_shift.shift(1,mass = e_k-e_pi, shift=1,d2=0)
-    # Convert again to correlator for plotting ws denotes weighted and shifted
-    corr_ws = ana.Correlators.create(corr_shift.data[...,0],T=T)
-    corr_ws.shape = corr_ws.data.shape
-    print("weighted and shifted corr has shape")
-    print(corr_ws.data.shape)
-
- #-------------- Fit weighted and shifted correlator ---------------------------- 
-    #masses = comb_fitres((pi_fit,k_fit),1)
-    masses = pi_fit.comb_fitres(k_fit,1)
-    print("combined particle masses:")
-    print(masses.data[0])
-    masses.print_details()
-    # fix the fitranges
-    fit_pi_k = ana.LatticeFit(8, dt_f=1, dt_i=1, dt=min_size_etot,
+    corr_sub = ana.Correlators.create(corr.data,T=corr.T)
+    corr_sub.subtract_pollution(pi_fit,k_fit)
+    corr_sub.mass(usecosh=True)
+    corr.mass(usecosh=True)
+    fit_pi_k = ana.LatticeFit(2, dt_f=1, dt_i=1, dt=min_size_etot,
                               correlated=True)
     #start = [10.,10.5]
     if read_pikfit == False:
         print("fitting correlator")
-        start = [5.,0.5,10.]
-        pi_k_fit = fit_pi_k.fit(start,corr_ws,fit_e_tot,add=addT,oldfit=masses,
-                            oldfitpar=slice(0,2))
+        start = [0.5]
+        pi_k_fit = fit_pi_k.fit(start,corr_sub,fit_e_tot,add=addT2)
         print(pi_k_fit.data[0])
         pi_k_fit.save("%s/%s_%s.npz" % (datadir,fit_pik_out,lat))
     else:
         pi_k_fit = ana.FitResult.read("%s/%s_%s.npz" % (datadir,fit_pik_out,lat))
     pi_k_fit.print_data(0)
-    pi_k_fit.print_data(1)
-    pi_k_fit.print_data(2)
     pi_k_fit.print_details()
     pi_k_fit.calc_error()
+    #plotter = ana.LatticePlot("%s/fit_c55_sub_%s.pdf"%(plotdir,lat))
+    #plotter.set_env(ylog=False,grid=False)
+    #label=["M_eff subtracted", "t", "M_eff(t)","fit"]
+    #print("\n This is the weighted and shifted correlator:")
+    #plotter.plot(corr_sub,label,pi_k_fit,fit_pi_k,add=addT)
+    #del plotter
+
     # plotranges
-    xlow = fit_e_tot[0] 
-    xhigh = fit_e_tot[1] 
-    ylow = corr_ws.data[0,xlow,0]-0.1*corr_ws.data[0,xlow,0]
-    yhigh = corr_ws.data[0,xhigh,0]+0.1*corr_ws.data[0,xhigh,0] 
-    plotter = ana.LatticePlot("%s/fit_c55_weight_%s.pdf"%(plotdir,lat))
-    plotter.set_env(ylog=True,grid=False)
-    label=["C_55 weighted", "t", "C(t)","fit"]
-    print("\n This is the weighted and shifted correlator:")
-    plotter.plot(corr_ws,label,pi_k_fit,fit_pi_k,add=addT,
-                 oldfit=masses,oldfitpar=slice(0,2))
-    plotter.set_env(xlim=[xlow,xhigh], ylim=[ylow,yhigh])
-    plotter.plot(corr_ws,label,pi_k_fit,fit_pi_k,add=addT,
-                 oldfit=masses,oldfitpar=slice(0,2))
+    ylow = pi_k_fit.data[0][0,0,0]-0.05*pi_k_fit.data[0][0,0,0]
+    yhigh = pi_k_fit.data[0][0,0,0]+0.05*pi_k_fit.data[0][0,0,0]
+
+    plotter=ana.LatticePlot("%s/%s_%s" %(plotdir,fit_pik_plot, lat))
+    plotter.set_env(ylog=False, grid=False)
+    label=["Effective Mass", "t", "m_eff(t)", "pollution divided"]
+    plotter.plot(corr_sub,label,fitresult=pi_k_fit,
+                 fitfunc=fit_pi_k,add=addT-1)
+    plotter.set_env(ylog=False, grid=False, 
+                    xlim=[fit_e_tot[0]-2, fit_e_tot[1]+2], ylim=[ylow,yhigh])
+    plotter.plot(corr_sub,label,fitresult=pi_k_fit, fitfunc=fit_pi_k,
+                 add=addT-1)
     del plotter
 
     range_mk, r_mk_shape = pi_k_fit.get_ranges()
-    nbins1 = r_mk_shape[1][0]/3
+    nbins1 = r_mk_shape[0][0]/3
     if nbins1 > 0:
         if nbins1 > 10:
           nbins = nbins1
         else:
           nbins = r_mk_shape[0][0]
-    plotter=ana.LatticePlot("%s/hist_fit_pik_e1_%s.pdf" % (plotdir, lat))
+    plotter=ana.LatticePlot("%s/hist_fit_pik_%s.pdf" % (plotdir, lat))
     label = ["pik energy", "E$_{\pi K}$/a", "E$_{\pi K}$"]
-    plotter.histogram(pi_k_fit, label, nb_bins=nbins, par=1)
-    plotter.new_file("%s/qq_fit_pik_e1_%s.pdf" % (plotdir, lat))
+    plotter.histogram(pi_k_fit, label, nb_bins=nbins, par=0)
+    plotter.new_file("%s/qq_fit_pik_%s.pdf" % (plotdir, lat))
     label = [r'QQ-Plot $E_{\pi K}$ %s' % lat, r'weighted $E_{\pi K}$']
-    plotter.qq_plot(pi_k_fit,label,par=1)
+    plotter.qq_plot(pi_k_fit,label,par=0)
     del plotter
 
     pik_mass_fit_cherry = pi_k_fit.pick_data(pval=0.4)
     pik_mass_fit_cherry.print_details()
     pik_mass_fit_cherry.save("%s/%s_%s.npz" % (datadir,fit_pik_one_fitrange,lat))
-
- #---------------- Subtract subleading term from C_{\pi K} --------------------
-    #corr_ws_sub = sub_subleading(corr_ws, pi_k_fit, masses, addT)
-    #corr_ws_sub = corr_ws.sub_subleading(pi_k_fit, masses, addT)
-
- #--------------- Plot the original correlator with fits and the mass
-    #plotter = ana.LatticePlot("%s/c55_weight_%s.pdf"%(plotdir,lat),join=True)
-    #plotter.set_env(ylog=True,grid=False)
-    #label=["C_55 weighted", "t", "C(t)","bare"]
-    #plotter.plot(corr,label)
-    #label=["C_55 weighted", "t", "C(t)","weighted and shifted"]
-    #plotter.plot(corr_ws,label)
-    #plotter.save()
-    #del plotter
-    #plotter=ana.LatticePlot("%s/%s_%s.pdf" %(plotdir,mass_pik_plot,lat),join=True)
-    #plotter.set_env(ylog=False,grid=False)
-    #corr.mass(usecosh=True)
-    #corr_ws.mass(usecosh=False,weight = e_k-e_pi,shift=1.)
-    #corr_ws_sub.mass(usecosh=False,weight = e_k-e_pi,shift=1.)
-    #label[2] = "m_eff(t)"
-    #label[3] = "UW"
-    #plotter.plot(corr,label)
-    #label[3] = "WS"
-    #plotter.plot(corr_ws,label)
-    #label[3] = "WSS"
-    #plotter.plot(corr_ws_sub,label)
-    #plotter.save()
-    #del plotter
-
 if __name__ == '__main__':
     try:
         print("starting")

@@ -1,4 +1,4 @@
-#!/hiskp2/werner/libraries/Python-2.7.12/python
+#!/usr/bin/python
 
 import pandas as pd
 # TODO: Calling is complicated improve that
@@ -8,12 +8,19 @@ def main():
     pd.set_option('display.width',1000)
     pd.set_option('display.precision',10)
     delim = '\n'+'-'*80+'\n'
-    resdir="/hiskp2/helmes/analysis/scattering/test/pi_k/I_32/results"
+    method_delim = '#'*80
+    #resdir="/hiskp4/hiskp2/helmes/analysis/scattering/test/pi_k/I_32/results"
+    #resdir="/hiskp4/helmes/analysis/scattering/pi_k/I_32/results"
+    #resdir="/hiskp4/helmes/analysis/scattering/pi_k/I_32_fp/results"
+    resdir="/hiskp4/helmes/analysis/scattering/pi_k/I_32_div/results"
 ################################################################################
 #
 #     Analysis for NLO ChPT
 #
 ################################################################################
+    print('\n'+method_delim)
+    print("Analysing systematic effects for ChPT fit at NLO:")
+    print(method_delim+'\n')
     artefact_files=[
         "/pik_disc_eff_M1A.h5",
         "/pik_disc_eff_M1B.h5",
@@ -63,6 +70,9 @@ def main():
 #     Analysis for Gamma-Method
 #
 ################################################################################
+    print('\n'+method_delim)
+    print("Analysing systematic effects for Gamma fit:")
+    print(method_delim+'\n')
     artefact_files=[
         "/pik_gamma_M1A.h5",
         "/pik_gamma_M1B.h5",

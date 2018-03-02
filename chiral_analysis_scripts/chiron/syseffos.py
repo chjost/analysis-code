@@ -6,7 +6,7 @@ import boot_statistics as bstats
 def bootstrap_means(frame,names,observables):
     bstrap_frame=frame.groupby(names)[observables].agg([bstats.own_mean,
                                                    bstats.own_std])
-    info.print_si_format(bstrap_frame)
+    #info.print_si_format(bstrap_frame)
     return bstrap_frame
 
 def bootstrap_means_key(frame,groups,observables,loc=None):

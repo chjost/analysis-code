@@ -1211,11 +1211,13 @@ class ChirAna(object):
                                     correlated=correlated,cov=_cov,
                                     debug=self.debug)
       self.fitres.set_ranges(np.array([[[0,len(_x)]]]),[[1,]])
-      if self.debug > 0:
-          self.fitres.print_details()
       # build fit_stats array
       _chi2 = self.fitres.chi2[0][0,0]
       _pval = self.fitres.pval[0][0,0]
       _dof = _cov.shape[0]-len(start)
       self.fit_stats = np.atleast_2d(np.asarray((_dof,_chi2,_pval)))
+      if self.debug > 0:
+          self.fitres.print_details()
+      print("Fit info (d.o.f, chi^2, p-val): ")
+      print(self.fit_stats)
 

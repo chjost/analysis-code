@@ -1,4 +1,4 @@
-#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
+#!/usr/bin/python
 ################################################################################
 #
 # Author: Christopher Helmes (helmes@hiskp.uni-bonn.de)
@@ -48,7 +48,7 @@ import matplotlib.cm as cm
 from matplotlib.backends.backend_pdf import PdfPages
 
 # Christian's packages
-sys.path.append('/hiskp2/helmes/projects/analysis-code/')
+sys.path.append('/hiskp4/helmes/projects/analysis-code/')
 import analysis2 as ana
 
 def main():
@@ -63,6 +63,7 @@ def main():
 
     # get data from input file
     lat = ens.name()
+    space=ens.get_data("beta")
     latA = ens.get_data("namea")
     latB = ens.get_data("nameb")
     latD = ens.get_data("named")
@@ -72,7 +73,7 @@ def main():
     strange_eta_A = ens.get_data("strange_alt_a")
     strange_eta_B = ens.get_data("strange_alt_b")
     strange_eta_D = ens.get_data("strange_alt_d")
-    space=['A','B','D']
+
     # read seeds from input files
     zp_meth=ens.get_data("zp_meth")
     external_seeds = ens.get_data("external_seeds_a")
@@ -110,8 +111,10 @@ def main():
     # have five x-values: mk,mpi,meta,fpi,r0/a
     ens_shape_chirana = (len(latA),len(latB),len(latD))
     print(ens_shape_chirana)
-    lyt_xvals = (len(space),ens_shape_chirana,1,5,1500)
-    lyt_yvals = (len(space),ens_shape_chirana,1,1,1500)
+    lyt_xvals = ana.generate_chirana_shape(space,ens_shape_chirana,1,5,1500)
+    lyt_yvals = ana.generate_chirana_shape(space,ens_shape_chirana,1,1,1500) 
+    #lyt_xvals = (len(space),ens_shape_chirana,1,5,1500)
+    #lyt_yvals = (len(space),ens_shape_chirana,1,1,1500)
     extrapol.create_empty(lyt_xvals,lyt_yvals,lat_dict=lat_dict)
     print("\nSetup complete, begin chiral analysis")
     if read is True:
@@ -165,7 +168,7 @@ def main():
 ####    ############### read in M_eta ##############################################
                 metasq = ana.MatchResult("metasq_M%dA_%s"%(zp_meth,e),save=datadir+'%s/'%e)
                 ana.MatchResult.create_empty(metasq,1500,3)
-                meta_names = ['/hiskp2/jost/eta_data/'+'%s/' % (e) +s+'/fit_eta_rm_TP0.npz' for s in mu_s_eta_dict[a]]
+                meta_names = ['/hiskp4/hiskp2/jost/eta_data/'+'%s/' % (e) +s+'/fit_eta_rm_TP0.npz' for s in mu_s_eta_dict[a]]
                 meta_meas = ana.init_fitreslst(meta_names)
                 metasq.load_data(meta_meas,1,amu_s_dict[a],square=True)
                 print("\nM_eta^2:")

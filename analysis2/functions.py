@@ -80,6 +80,17 @@ def compute_eff_mass(data, usecosh=True, exp=False, weight=None, shift=None, T=N
             for t in range(1, len(row)-1):
                 mass[b,t-1] = (row[t-1] + row[t+1])/(2.*row[t])
         mass = np.arccosh(mass)
+    elif (usecosh is False and exp is True and shift is not None):
+       if T is not None: 
+            _T = T 
+       else:
+            _T = data.shape[1]
+       mass = np.zeros_like(data[:,:-1])
+       print("Exponential solve for symmetric correlator")
+       print(mass.shape)
+       for b, row in enumerate(data):
+           for t in range(len(row)-1):
+                mass[b, t] = fsolve(corr_asym_exp,0.5,args=(row[t],row[t+1],t,_T))
     #elif (usecosh == False and weight is None):
     #   # Write a numerical solve for the effective mass per timeslice
     #   # args are (t,T2)
@@ -123,6 +134,17 @@ def corr_exp(m,r0,r1,t,T):
     """
     _den = np.exp(-m*t) + np.exp(-m*(T-t))
     _num = np.exp(-m*(t+1)) + np.exp(-m*(T-(t+1))) 
+    _diff = r0/r1 - _den/_num 
+    return _diff
+
+def corr_asym_exp(m,r0,r1,t,T):
+    """
+    Parameters
+    ----------
+    p: tuple
+    """
+    _den = np.exp(-m*t) - np.exp(-m*(T-t))
+    _num = np.exp(-m*(t+1)) - np.exp(-m*(T-(t+1))) 
     _diff = r0/r1 - _den/_num 
     return _diff
 
@@ -515,10 +537,10 @@ def func_two_corr_dws(p,t,add):
     return p[0]*np.exp(p[1]*(t-add[0]))+p[2]*np.exp(-p[1]*(t-add[0]))
 
 
-def func_single_corr_bare(p, t, T2):
+def func_single_corr_bare(p, t, T):
     """A function that describes two point correlation functions.
 
-    The function is given by p0^2*(exp(-p1*t)+exp(-p1*(T2-t))),
+    The function is given by p0^2*(exp(-p1*t)+exp(-p1*(T-t))),
     where
     * p0 is the amplitude,
     * p1 is the energy of the correlation function,
@@ -532,12 +554,12 @@ def func_single_corr_bare(p, t, T2):
         The parameters of the function.
     t : float
         The variable of the function.
-    T2 : float
-        The time around which the function is symmetric.
+    T : float
+        The total time extent of the lattice
 
     Returns
     -------
     float
         The result.
     """
-    return p[0]*p[0]*(np.exp(-p[1]*t)+np.exp(-p[1]*(T2-t)))
+    return p[0]*p[0]*(np.exp(-p[1]*t)+np.exp(-p[1]*(T-t)))

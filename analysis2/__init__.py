@@ -29,3 +29,7 @@ from .globalfit import ChiralFit
 from .debug import *
 from .gamma_pik_nplqcd import *
 from .phys_obs import *
+# Temporary imports
+from .chipt_nlo import *
+from .chipt_basic_observables import *
+
