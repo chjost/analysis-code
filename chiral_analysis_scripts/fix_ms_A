@@ -62,7 +62,6 @@ def main():
         ens = ana.LatticeEnsemble.parse(sys.argv[1])
 
     # get data from input file
-    lat = ens.name()
     space=ens.get_data("beta")
     latA = ens.get_data("namea")
     latB = ens.get_data("nameb")
@@ -78,19 +77,20 @@ def main():
     zp_meth=ens.get_data("zp_meth")
     external_seeds = ens.get_data("external_seeds_a")
     continuum_seeds = ens.get_data("continuum_seeds_a")
-    lat_dict = {'A':latA,'B':latB,'D':latD}
     amulA = ens.get_data("amu_l_a")
     amulB = ens.get_data("amu_l_b")
     amulD = ens.get_data("amu_l_d")
-    amu_l_dict = {'A': amulA,'B': amulB, 'D': amulD}
 
     #dictionary of strange quark masses
-    mu_s_dict = {'A': strangeA,'B': strangeB, 'D': strangeD}
-    mu_s_eta_dict = {'A': strange_eta_A,'B': strange_eta_B, 'D': strange_eta_D}
     amusA = ens.get_data("amu_s_a")
     amusB = ens.get_data("amu_s_b")
     amusD = ens.get_data("amu_s_d")
-    amu_s_dict = {'A': amusA,'B': amusB, 'D': amusD}
+    # dictionaries for chiral analysis
+    lat_dict = ana.make_dict(space,[latA,latB,latD])
+    amu_l_dict = ana.make_dict(space,[amulA,amulB,amulD])
+    mu_s_dict = ana.make_dict(space,[strangeA,strangeB,strangeD])
+    mu_s_eta_dict = ana.make_dict(space,[strange_eta_A,strange_eta_B,strange_eta_D])
+    amu_s_dict = ana.make_dict(space,[amusA,amusB,amusD])
     print(amu_s_dict)
     #quark = ens.get_data("quark")
     datadir = ens.get_data("datadir") 

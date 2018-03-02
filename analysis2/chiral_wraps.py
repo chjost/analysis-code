@@ -32,29 +32,30 @@ def calc_x_plot_cont(x):
     xplot=reduced_mass(mpi,mk)/fpi
     #xplot=mk/mpi
     return xplot
-
-def err_func(p, x, y, error):
-    # for each lattice spacing and prior determine the dot product of the error
-    chi_a = y.A - pik_I32_chipt_fit(p,x.A)
-    chi_b = y.B - pik_I32_chipt_fit(p,x.B)
-    chi_d = y.D - pik_I32_chipt_fit(p,x.D)
-    # TODO: find a runtime way to disable prior
-    if y.p is not None:
-        chi_p = y.p - p[1]
-        return np.dot(error,np.r_[chi_a,chi_b,chi_d])
-    else:
-        return np.dot(error,np.r_[chi_a,chi_b,chi_d,chi_p])
-    # and append them to a vector
-    #return np.dot(error,np.r_[chi_a])
-
-def gamma_errfunc(p,x,y,error):
-    chi_a = y.A - line(p,x.A)
-    chi_b = y.B - line(p,x.B)
-    chi_d = y.D - line(p,x.D)
-    # p[0] is L_5
-    chi_p = y.p - p[0]
-    # calculate the chi values weighted with inverse covariance matrix
-    return np.dot(error,np.r_[chi_a,chi_b,chi_d,chi_p])
+# TODO Deprecated?
+#def err_func(p, x, y, error):
+#    # for each lattice spacing and prior determine the dot product of the error
+#    chi_a = y.A - pik_I32_chipt_fit(p,x.A)
+#    chi_b = y.B - pik_I32_chipt_fit(p,x.B)
+#    #chi_d = y.D - pik_I32_chipt_fit(p,x.D)
+#    # TODO: find a runtime way to disable prior
+#    if y.p is not None:
+#        chi_p = y.p - p[1]
+#        #return np.dot(error,np.r_[chi_a,chi_b,chi_d])
+#        return np.dot(error,np.r_[chi_a,chi_b])
+#    else:
+#        #return np.dot(error,np.r_[chi_a,chi_b,chi_d,chi_p])
+#        return np.dot(error,np.r_[chi_a,chi_b,chi_p])
+#
+#def gamma_errfunc(p,x,y,error):
+#    chi_a = y.A - line(p,x.A)
+#    chi_b = y.B - line(p,x.B)
+#    #chi_d = y.D - line(p,x.D)
+#    # p[0] is L_5
+#    chi_p = y.p - p[0]
+#    # calculate the chi values weighted with inverse covariance matrix
+#    #return np.dot(error,np.r_[chi_a,chi_b,chi_d,chi_p])
+#    return np.dot(error,np.r_[chi_a,chi_b,chi_p])
 
 def global_ms_errfunc(p,x,y,error):
 
@@ -65,12 +66,16 @@ def global_ms_errfunc(p,x,y,error):
     chi_a = y.A - _func(p[0],p[3],p[6:9],x.A)
     chi_b = y.B - _func(p[1],p[4],p[6:9],x.B) 
     chi_d = y.D - _func(p[2],p[5],p[6:9],x.D)
+    #chi_a = y.A - _func(p[0],p[2],p[4:7],x.A)
+    #chi_b = y.B - _func(p[1],p[3],p[4:7],x.B) 
     # have several priors here as a list
     # y.p is list of 6 priors
     chi_p = np.asarray(y.p) - np.asarray(p[0:6])  
+    #chi_p = np.asarray(y.p) - np.asarray(p[0:4])  
     # collect residuals as one array
     # chi_p[0] are the r_0 residuals, chi_p[1] are the zp residuals
     _residuals = np.concatenate((np.r_[chi_a,chi_b,chi_d], chi_p))
+    #_residuals = np.concatenate((np.r_[chi_a,chi_b], chi_p))
 
     # calculate the chi values weighted with inverse covariance matrix
     _chi = np.dot(error,_residuals)

@@ -23,14 +23,17 @@ def err_func(p, x, y, error):
     # for each lattice spacing and prior determine the dot product of the error
     chi_a = y.A - mu_pik_a_32_fit(p,x.A)
     chi_b = y.B - mu_pik_a_32_fit(p,x.B)
-    chi_d = y.D - mu_pik_a_32_fit(p,x.D)
+    #chi_d = y.D - mu_pik_a_32_fit(p,x.D)
     # TODO: find a runtime way to disable prior
-    if len(y._fields) > 3:
+    #if len(y._fields) > 3:
+    try:
         chi_p = y.p - p[1]
-        return np.dot(error,np.r_[chi_a,chi_b,chi_d,chi_p])
-    else:
+        #return np.dot(error,np.r_[chi_a,chi_b,chi_d,chi_p])
+        return np.dot(error,np.r_[chi_a,chi_b,chi_p])
+    except:
         # and append them to a vector
-        return np.dot(error,np.r_[chi_a,chi_b,chi_d])
+        #return np.dot(error,np.r_[chi_a,chi_b,chi_d])
+        return np.dot(error,np.r_[chi_a,chi_b])
     #return np.dot(error,np.r_[chi_a])
 
 # TODO: This is a heck of code doubling think about how to organize that better    
@@ -84,17 +87,23 @@ def err_func_mupik(p, x, y, error):
         # and append them to a vector
         return np.dot(error,np.r_[chi_a,chi_b,chi_d])
 
+def line(p,x):
+    _res = p[0]-2.*x*p[1]
+    return _res
+
 def gamma_errfunc(p,x,y,error):
     chi_a = y.A - line(p,x.A)
     chi_b = y.B - line(p,x.B)
-    chi_d = y.D - line(p,x.D)
+    #chi_d = y.D - line(p,x.D)
     # p[0] is L_5
-    if len(y._fields) > 3:
-        chi_p = y.p - p[1]
-        return np.dot(error,np.r_[chi_a,chi_b,chi_d,chi_p])
-    else:
+    try:
+        chi_p = y.p - p[0]
+        #return np.dot(error,np.r_[chi_a,chi_b,chi_d,chi_p])
+        return np.dot(error,np.r_[chi_a,chi_b,chi_p])
+    except:
         # and append them to a vector
-        return np.dot(error,np.r_[chi_a,chi_b,chi_d])
+        #return np.dot(error,np.r_[chi_a,chi_b,chi_d])
+        return np.dot(error,np.r_[chi_a,chi_b])
 def mu_pik_a_32_fit(p,x):
     """Wrapper for fitting the chipt formula of mu_pik_a_32 to the lattice data
     

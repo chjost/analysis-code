@@ -633,7 +633,7 @@ def calc_r0ms(para, r0_phys, mk_phys, ml_phys):
   print("samples of _r0ms: %r" % _r0ms)
   return _r0ms
 
-def compute_bare_mu_s(r0,ml,mk,mul,args,disc_eff=False):
+def compute_bare_mu_s(r0,ml,mk,mul,args_p,args_g,disc_eff=False):
   """ Compute the bare strange quark mass from the fitparameters, the continuum
   values of ml,r0 and mk
 
@@ -647,7 +647,8 @@ def compute_bare_mu_s(r0,ml,mk,mul,args,disc_eff=False):
   r0,ml,mk: 1d array, pseudosamples for continuum values of the Sommer
             parameter, the light quark mass and the Kaon mass
   mul: float, value of the bare light quark mass of ensemble under consideration
-  args: ndarray, fitparameters of the global fit to the squared kaon mass
+  args_p: ndarray, fitparameters of the priors per lattice spacing
+  args_g: ndarray, global fitparameters, same for all lattice spacings
   
   Returns
   -------
@@ -660,15 +661,18 @@ def compute_bare_mu_s(r0,ml,mk,mul,args,disc_eff=False):
   #print(args[0])
   #print("Bare light quark mass: %4f" %mul)
   _hbarc = 197.37
-  _mul = args[:,1]/args[:,0]*(r0*ml)/_hbarc
-  _nom = args[:,1] * (r0*mk/_hbarc)**2
-  _par = 1 + args[:,3] * (r0 * ml)/_hbarc
+  #_mul = 
+  _mul = args_p[:,1]/args_p[:,0]*(r0*ml)/_hbarc
+  #_nom = (pz (r_0*M_K)^2 )
+  _nom = args_p[:,1] * (r0*mk/_hbarc)**2
+  #_par = (1 + p1*(r_0*m_l) 
+  _par = 1 + args_g[:,1] * (r0 * ml)/_hbarc
 
   # Take discretisation effects into account 
   if disc_eff is True:
-      _par += args[:,4]/args[:,0]**2
-
-  _denom = (args[:,0] * args[:,2]) * _par
+      _par += args_g[:,2]/args_p[:,0]**2
+  #_denom = (pr * p0 * (1 + p1*(r_0*m_l) + p2/pr**2))
+  _denom = (args_p[:,0] * args_g[:,0]) * _par
   #print("Parts to construct bare mus:")
   #print(_nom[0],_par[0],_denom[0])
   _frac = np.divide(_nom,_denom)
@@ -863,3 +867,9 @@ def update_shapes(x,y):
 def generate_chirana_shape(spacings,ensemble_lengths,nb_mus,nb_obs,samples=1500):
     ens_shape = [se[1] for se in zip(spacings,ensemble_lengths)]
     return (len(spacings),tuple(ens_shape),nb_mus,nb_obs,samples)
+
+def make_dict(identifiers,entry_list):
+    dictionary = {}
+    for ie in zip(identifiers, entry_list):
+        dictionary[ie[0]] = ie[1]
+    return dictionary

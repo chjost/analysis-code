@@ -1028,23 +1028,34 @@ class ChirAna(object):
       # pr,pz,p0,p1,p2
       # TODO: What happens for two lattice spacings
       _tmp = self.fitres.data[0]
-      _args = np.asarray([np.hstack((_tmp[:,0+i],_tmp[:,3+i],_tmp[:,6:,0])) 
-              for i in range(3)])
+      # split arguments into pr and pzs and global ones
+      # array of
+      _args_priors = np.asarray([np.hstack((_tmp[:,0+i],_tmp[:,len(space)+i]))
+          for i in range(len(space))])
+      # 2 is for pr and pz
+      _args_global = _tmp[:,2*len(space):,0]
+      _args = np.asarray([np.hstack((_tmp[:,0+i],_tmp[:,len(space)+i],_tmp[:,2*len(space):,0])) 
+              for i in range(len(space))])
+      print("in bare_mus:")
+      print(_args.shape)
+      print(_args_priors.shape,_args_global.shape)
       # For loop over lattice spacings
       for i,a in enumerate(space):
         # For loop over each ensemble
         for j,e in enumerate(ens[a]):
           _mul = mul[a][j]
-          _mus = chut.compute_bare_mu_s(_r0,_ml,_mk,_mul,_args[i],disc_eff=disc_eff)
+          _mus = chut.compute_bare_mu_s(_r0,_ml,_mk,_mul,_args_priors[i],
+                                        _args_global,disc_eff=disc_eff)
           if debug > 0:
             _mus_m, _mus_err = compute_error(_mus)
             # If discretisation effects are taken into account, amu_s formula
             # not valid for continuum value, calculate anew
             if disc_eff is True:
-                _tmp_mus = chut.compute_bare_mu_s(_r0,_ml,_mk,_mul,_args[i])
-                _ms = _args[i][:,0]/_r0*_tmp_mus/_args[i][:,1]*197.37 
+                _tmp_mus = chut.compute_bare_mu_s(_r0,_ml,_mk,_mul,
+                                                  _args_priors[i],_args_global)
+                _ms = _args_priors[i][:,0]/_r0*_tmp_mus/_args_priors[i][:,1]*197.37 
             else:
-                _ms = _args[i][:,0]/_r0*_mus/_args[i][:,1]*197.37
+                _ms = _args_priors[i][:,0]/_r0*_mus/_args_priors[i][:,1]*197.37
             m_s, m_s_err = compute_error(_ms)
             print("mus on Ensemble %s is : %.4f +- %.4f" %(e,_mus_m,_mus_err))
             print(" --> ms_phys = %.3f +- %.3f MeV" %(m_s,m_s_err))

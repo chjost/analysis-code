@@ -54,7 +54,7 @@ def main():
     # second system argument is fixing for ms
     ms_fixing=sys.argv[2]
     # get data from input file
-    lat = ens.name()
+    space=ens.get_data("beta")
     latA = ens.get_data("namea")
     latB = ens.get_data("nameb")
     latD = ens.get_data("named")
@@ -64,24 +64,24 @@ def main():
     strange_eta_A = ens.get_data("strange_alt_a")
     strange_eta_B = ens.get_data("strange_alt_b")
     strange_eta_D = ens.get_data("strange_alt_d")
-    space=['A','B','D']
    # keep seeds per zp method fixed
     zp_meth=ens.get_data("zp_meth")
     external_seeds=ens.get_data("external_seeds_%s"%(ms_fixing.lower()))
     continuum_seeds=ens.get_data("continuum_seeds_%s"%(ms_fixing.lower()))
-    lat_dict = {'A':latA,'B':latB,'D':latD}
     amulA = ens.get_data("amu_l_a")
     amulB = ens.get_data("amu_l_b")
     amulD = ens.get_data("amu_l_d")
-    amu_l_dict = {'A': amulA,'B': amulB, 'D': amulD}
 
     #dictionary of strange quark masses
-    mu_s_dict = {'A': strangeA,'B': strangeB, 'D': strangeD}
-    mu_s_eta_dict = {'A': strange_eta_A,'B': strange_eta_B, 'D': strange_eta_D}
     amusA = ens.get_data("amu_s_a")
     amusB = ens.get_data("amu_s_b")
     amusD = ens.get_data("amu_s_d")
-    amu_s_dict = {'A': amusA,'B': amusB, 'D': amusD}
+    # dictionaries for chiral analysis
+    lat_dict = ana.make_dict(space,[latA,latB,latD])
+    amu_l_dict = ana.make_dict(space,[amulA,amulB,amulD])
+    mu_s_dict = ana.make_dict(space,[strangeA,strangeB,strangeD])
+    mu_s_eta_dict = ana.make_dict(space,[strange_eta_A,strange_eta_B,strange_eta_D])
+    amu_s_dict = ana.make_dict(space,[amusA,amusB,amusD])
     print(amu_s_dict)
     #quark = ens.get_data("quark")
     datadir = ens.get_data("datadir") 
@@ -98,7 +98,7 @@ def main():
     #------------------------- Setup objects -----------------------------------
     # First load the data from fixing the strange quark mass
     fix_ms = ana.ChirAna("pi-K_I32_chipt_%s%d"%(ms_fixing.upper(),zp_meth),
-                         correlated=True,gamma=False, match=True, fit_ms =
+                         correlated=False,gamma=False, match=True, fit_ms =
                          True)
     ens_shape_chirana = (len(latA),len(latB),len(latD))
     print(ens_shape_chirana)
@@ -119,8 +119,8 @@ def main():
     #TODO: write as function
     ens_shape_chirana = (len(latA),len(latB),len(latD))
     print(ens_shape_chirana)
-    lyt_xvals = ana.generate_chirana_shapes(space,ens_shape_chirana,1,1,1500)
-    lyt_yvals = ana.generate_chirana_shapes(space,ens_shape_chirana,1,1,1500)
+    lyt_xvals = ana.generate_chirana_shape(space,ens_shape_chirana,1,1,1500)
+    lyt_yvals = ana.generate_chirana_shape(space,ens_shape_chirana,1,1,1500)
     #lyt_xvals = (3,ens_shape_chirana,1,1,1500)
     #lyt_yvals = (3,ens_shape_chirana,1,1,1500)
     extrapol.create_empty(lyt_xvals,lyt_yvals,lat_dict=lat_dict)
@@ -158,7 +158,7 @@ def main():
         #l_5 = np.atleast_2d(ana.draw_gauss_distributed(5.65e-3,2e-5,(1500,),origin=True))
         #For future use
         start = [0.1,0.1]
-        extrapol.fit(ana.gamma_errfunc,start,prior=l_5,xcut=cut)
+        extrapol.fit(ana.wrap_test.gamma_errfunc,start,prior=l_5,xcut=cut)
         l_5 = extrapol.fitres.data[0][:,0,0]
         l_pik = extrapol.fitres.data[0][:,1,0]
         chi_sq_reduced = np.full_like(l_5[0],

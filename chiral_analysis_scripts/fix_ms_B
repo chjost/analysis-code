@@ -81,19 +81,24 @@ def main():
     zp_meth=ens.get_data("zp_meth")
     external_seeds=ens.get_data("external_seeds_a")
     continuum_seeds=ens.get_data("continuum_seeds_b")
-    lat_dict = {'A':latA,'B':latB,'D':latD}
     amulA = ens.get_data("amu_l_a")
     amulB = ens.get_data("amu_l_b")
     amulD = ens.get_data("amu_l_d")
-    amu_l_dict = {'A': amulA,'B': amulB, 'D': amulD}
-
     #dictionary of strange quark masses
-    mu_s_dict = {'A': strangeA,'B': strangeB, 'D': strangeD}
-    mu_s_eta_dict = {'A': strange_eta_A,'B': strange_eta_B, 'D': strange_eta_D}
     amusA = ens.get_data("amu_s_a")
     amusB = ens.get_data("amu_s_b")
     amusD = ens.get_data("amu_s_d")
-    amu_s_dict = {'A': amusA,'B': amusB, 'D': amusD}
+    # dictionaries for chiral analysis
+    lat_dict = ana.make_dict(space,[latA,latB,latD])
+    #lat_dict = {'A':latA,'B':latB,'D':latD}
+    amu_l_dict = ana.make_dict(space,[amulA,amulB,amulD])
+    #amu_l_dict = {'A': amulA,'B': amulB, 'D': amulD}
+    mu_s_dict = ana.make_dict(space,[strangeA,strangeB,strangeD])
+    #mu_s_dict = {'A': strangeA,'B': strangeB, 'D': strangeD}
+    mu_s_eta_dict = ana.make_dict(space,[strange_eta_A,strange_eta_B,strange_eta_D])
+    #mu_s_eta_dict = {'A': strange_eta_A,'B': strange_eta_B, 'D': strange_eta_D}
+    amu_s_dict = ana.make_dict(space,[amusA,amusB,amusD])
+    #amu_s_dict = {'A': amusA,'B': amusB, 'D': amusD}
     print(amu_s_dict)
     #quark = ens.get_data("quark")
     datadir = ens.get_data("datadir") 
@@ -158,31 +163,17 @@ def main():
         fixms.save(resdir)
         #fixms.fit_strange_mass(datadir=datadir,ext=ext_data)
         # have as many values for r and z as lattice spacings
-        if len(space) == 3:
-            r = np.r_[1.,1.,1.]
-            z = np.r_[1.,1.,1.]
-            p = np.r_[6.,0.1,1.]
-            start=np.r_[r,z,p]
-            # Get the prior samples
-            prior = np.vstack((ext_data.get('A','r0'), ext_data.get('B','r0'),
-                               ext_data.get('D','r0'), ext_data.get('A','zp'), 
-                               ext_data.get('B','zp'), ext_data.get('D','zp')))
-        elif len(space) == 2:
-            r = np.r_[1.,1.]
-            z = np.r_[1.,1.]
-            p = np.r_[6.,0.1,1.]
-            start=np.r_[r,z,p]
-            # Get the prior samples
-            prior = np.vstack((ext_data.get('A','r0'), ext_data.get('B','r0'),
-                               ext_data.get('A','zp'), ext_data.get('B','zp')))
-        elif len(space) == 1:
-            r = np.r_[1.]
-            z = np.r_[1.]
-            p = np.r_[6.,0.1,1.]
-            start=np.r_[r,z,p]
-            # Get the prior samples
-            prior = np.vstack((ext_data.get('A','r0'), ext_data.get('B','r0'),
-                               ext_data.get('A','zp'), ext_data.get('B','zp')))
+        r = np.r_[[1. for s in space]]
+        z = np.r_[[1. for s in space]]
+        p = np.r_[6.,0.1,1.]
+        start=np.r_[r,z,p]
+        # Get the prior samples
+        external_r0 = [ext_data.get(beta,'r0') for beta in space]
+        external_zp = [ext_data.get(beta,'zp') for beta in space]
+        prior = np.vstack(tuple(external_r0 + external_zp))
+        #prior = np.vstack((ext_data.get('A','r0'), ext_data.get('B','r0'),
+        #                   ext_data.get('D','r0'), ext_data.get('A','zp'), 
+        #                   ext_data.get('B','zp'), ext_data.get('D','zp')))
 
         fixms.fit(ana.global_ms_errfunc,start,plotdir=plotdir,correlated=True,
                   prior=prior)
@@ -192,8 +183,9 @@ def main():
         label = [r'$a\mu_l$',r'$(aM_K)^2$']
         #pick the correct arguments
         args = fixms.fitres.data[0] 
-        plot_args = np.asarray([np.hstack((args[:,0+i],args[:,3+i],args[:,6:,0]))
-          for i in range(3)])
+        plot_args = np.asarray([np.hstack((args[:,0+i],args[:,len(space)+i],
+            args[:,2*len(space):,0])) for i in range(len(space))])
+        #plotfunc = lambda p,x: p[2]/(p[0]*p[1]) * (x+p[5]) * (1+p[3]*p[0]/p[1]*x+p[4]/p[0]**2)
         plotfunc = lambda p,x: p[2]/(p[0]*p[1]) * (x+p[5]) * (1+p[3]*p[0]/p[1]*x+p[4]/p[0]**2)
         filename = plotdir+'/'+ fixms.proc_id+'.pdf'
         chiral_plot = ana.LatticePlot(filename, join = True,debug=4)
@@ -204,8 +196,11 @@ def main():
         ms = fixms.bare_mu_s(space, lat_dict, cont_data, amu_l_dict, disc_eff=True, debug=1)
     # reset from D30.48 values
     print("modifying lowest mu_s values")
-    mu_s_dict['D'][0] ='amu_s_13' 
-    amu_s_dict['D'][0]=0.013
+    try:
+        mu_s_dict['D'][0] ='amu_s_13' 
+        amu_s_dict['D'][0]=0.013
+    except:
+        print("no D ensembles in analysis")
 
 ################### Setup chiral analysis ######################################
     extrapol = ana.ChirAna("pi-K_I32_chipt_B%d"%zp_meth,correlated=False,gamma=False,match=True)

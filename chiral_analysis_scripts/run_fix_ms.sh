@@ -1,7 +1,7 @@
 #!/bin/bash
 # e is one of '', '_fp' or '_div' corresponding to E1, E2 and E3
 e='_div'
-meth=( A B )
+meth=( B )
 zp=( 1 2 )
 for m in "${meth[@]}"; do
     for z in "${zp[@]}"; do

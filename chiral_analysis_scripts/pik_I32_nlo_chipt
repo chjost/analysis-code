@@ -30,6 +30,7 @@ def main():
     ms_fixing=sys.argv[2]
     # get data from input file
     lat = ens.name()
+    space=ens.get_data("beta")
     latA = ens.get_data("namea")
     latB = ens.get_data("nameb")
     latD = ens.get_data("named")
@@ -39,24 +40,24 @@ def main():
     strange_eta_A = ens.get_data("strange_alt_a")
     strange_eta_B = ens.get_data("strange_alt_b")
     strange_eta_D = ens.get_data("strange_alt_d")
-    space=['A','B','D']
    # keep seeds per zp method fixed
     zp_meth=ens.get_data("zp_meth")
     external_seeds=ens.get_data("external_seeds_%s"%(ms_fixing.lower()))
     continuum_seeds=ens.get_data("continuum_seeds_%s"%(ms_fixing.lower()))
-    lat_dict = {'A':latA,'B':latB,'D':latD}
     amulA = ens.get_data("amu_l_a")
     amulB = ens.get_data("amu_l_b")
     amulD = ens.get_data("amu_l_d")
-    amu_l_dict = {'A': amulA,'B': amulB, 'D': amulD}
 
     #dictionary of strange quark masses
-    mu_s_dict = {'A': strangeA,'B': strangeB, 'D': strangeD}
-    mu_s_eta_dict = {'A': strange_eta_A,'B': strange_eta_B, 'D': strange_eta_D}
     amusA = ens.get_data("amu_s_a")
     amusB = ens.get_data("amu_s_b")
     amusD = ens.get_data("amu_s_d")
-    amu_s_dict = {'A': amusA,'B': amusB, 'D': amusD}
+    # dictionaries for chiral analysis
+    lat_dict = ana.make_dict(space,[latA,latB,latD])
+    amu_l_dict = ana.make_dict(space,[amulA,amulB,amulD])
+    mu_s_dict = ana.make_dict(space,[strangeA,strangeB,strangeD])
+    mu_s_eta_dict = ana.make_dict(space,[strange_eta_A,strange_eta_B,strange_eta_D])
+    amu_s_dict = ana.make_dict(space,[amusA,amusB,amusD])
     print(amu_s_dict)
     #quark = ens.get_data("quark")
     datadir = ens.get_data("datadir") 
@@ -69,11 +70,11 @@ def main():
     fpi_raw = ana.read_extern("../plots2/data/fpi.dat",(1,2))
     print(fpi_raw)
 
-    lattice_artefacts={'None'                  :0,
-                       '(a M_pi)^2'            :1,
-                       '(a M_K)^2'             :2,
-                       'a^2(M_K^2 + 0.5M_pi^2)':3,
-                       '(a mu_piK)^2'          :4}
+    lattice_artefacts={'None'                  :0}
+    #                   '(a M_pi)^2'            :1,
+    #                   '(a M_K)^2'             :2,
+    #                   'a^2(M_K^2 + 0.5M_pi^2)':3,
+    #                   '(a mu_piK)^2'          :4}
     error_functions={0: ana.wrap_test.err_func,
                      1: ana.wrap_test.err_func_mpi,
                      2: ana.wrap_test.err_func_mk,
@@ -82,7 +83,7 @@ def main():
 
 ################### Setup chiral analysis ######################################
     extrapol = ana.ChirAna("pi-K_I32_chipt_%s%d"%(ms_fixing.upper(),zp_meth),
-                           correlated=False,gamma=False,match=True)
+                           correlated=False,gamma=False,match=True,debug=2)
     # have five x-values: mk,mpi,meta,fpi,r0/a
 
     ens_shape_chirana = (len(latA),len(latB),len(latD))
