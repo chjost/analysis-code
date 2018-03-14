@@ -148,6 +148,9 @@ class Correlators(object):
         tmp.shape = tmp.data.shape
         if conf is not None:
             tmp.conf=conf
+        print("original data shape:")
+        print(data.shape)
+        print(data.shape[-2],data.shape[-1])
         if data.shape[-2] != data.shape[-1]:
             tmp.matrix = False
         tmp.ncorr = data.shape[-1]
@@ -333,8 +336,8 @@ class Correlators(object):
         self.data = gevp.calculate_gevp(self.data, t0)
         self.shape = self.data.shape
         self.matrix = False
-
-    def mass(self, usecosh=True, exp=False, weight=None, shift=None):
+    # new interface
+    def mass(self, function=0, add=None):
         """Computes the effective mass.
 
         Three formulae are implemented. The standard formula is based on the
@@ -343,14 +346,39 @@ class Correlators(object):
 
         Parameters
         ----------
-        usecosh : bool
-            Toggle between the two implemented methods.
+        func : integer
+            Toggle between the implemented methods.
+            implemented_functions = {0: corr_arcosh,
+                                     1: corr_exp,
+                                     2: corr_exp_asym,
+                                     3: corr_log,
+                                     4: corr_shift_weight,
+                                     5: corr_shift_weight_div}
+        add : list of additional arguments to the different implementations
         """
         # more versatile interface:
         # self.data = func.compute_eff_mass(self.data,method,weight,shift)
-        self.data = func.compute_eff_mass(self.data, usecosh, exp, weight,
-                shift)
+        self.data = func.compute_eff_mass(self.data, self.T,
+                                          function=function, add=add)
         self.shape = self.data.shape
+
+    #def mass(self, usecosh=True, exp=False, weight=None, shift=None, T=None):
+    #    """Computes the effective mass.
+
+    #    Three formulae are implemented. The standard formula is based on the
+    #    cosh function, the alternative is based on the sinh function. The third
+    #    option (chosen via usecosh=None) is the log
+
+    #    Parameters
+    #    ----------
+    #    usecosh : bool
+    #        Toggle between the two implemented methods.
+    #    """
+    #    # more versatile interface:
+    #    # self.data = func.compute_eff_mass(self.data,method,weight,shift)
+    #    self.data = func.compute_eff_mass(self.data, usecosh, exp, weight,
+    #            shift,T=T)
+    #    self.shape = self.data.shape
 
     def get_data(self):
         """Returns a copy of the data.
@@ -683,8 +711,8 @@ class Correlators(object):
         amplitude_squared = _fit1.data[0][:,0,-1]**2 *_fit2.data[0][:,0,-1]**2
         print(amplitude_squared)
         # Energy values
-        ek = fit2.data[0][:,1,-1] 
-        epi = fit1.data[0][:,1,-1] 
+        ek = _fit2.data[0][:,1,-1] 
+        epi = _fit1.data[0][:,1,-1] 
         diff_ek_epi =  ek - epi
         pollution = np.zeros_like(self.data)
         for t in range(0,self.data.shape[1]):
@@ -698,9 +726,14 @@ class Correlators(object):
         # only true for symmetrized correlators
         #T2 = self.shape[1]
         T = self.T
+        # singularize fitresults
+        _fit1 = fit1.singularize()
+        _fit2 = fit2.singularize()
+        _fit1.calc_error()
+        _fit2.calc_error()
         # Energy values
-        ek = fit2.data[0][:,1,-1] 
-        epi = fit1.data[0][:,1,-1]
+        ek = _fit2.data[0][:,1,0] 
+        epi = _fit1.data[0][:,1,0]
         pollution_exp = np.zeros_like(self.data)
         for t in range(0,self.data.shape[1]):
             pollution_exp[:,t,0] = np.exp(-epi*t) * np.exp(-ek*(T-t)) + np.exp(-ek*t) * np.exp(-epi*(T-t))
@@ -718,8 +751,8 @@ class Correlators(object):
         _fit1.calc_error()
         _fit2.calc_error()
         # Energy values
-        ek = fit2.data[0][:,1,-1] 
-        epi = fit1.data[0][:,1,-1] 
+        ek = _fit2.data[0][:,1,0] 
+        epi = _fit1.data[0][:,1,0] 
         diff_ek_epi =  ek - epi
         pollution_exp = np.zeros_like(self.data)
         for t in range(0,self.data.shape[1]):

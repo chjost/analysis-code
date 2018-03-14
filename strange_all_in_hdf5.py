@@ -116,7 +116,7 @@ def main():
         #  C2[i] = _Cfull
         C2 = ana.read_confs(corrpaths_pi[0]+"/C2+_cnfg",Corrs_pi[0],conf_feed_stringlist,T,h5=True)
         print("Read in done")
-        save_pi = datadir+'pi/'
+        save_pi = datadir+'/pi/'
         print("Writing to: %s..." % save_pi)
         ana.write_data_ascii(C2,save_pi +'pi_charged_p0_outlier.dat',conf=config)
     

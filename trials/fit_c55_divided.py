@@ -186,7 +186,7 @@ def main():
     e_k = k_fit.singularize().data[0][:,1,0]
     e_pi = pi_fit.singularize().data[0][:,1,0]
 
-    pollution_samples = np.zeros((1500,24,1))
+    pollution_samples = np.zeros((1500,T/2,1))
     for t in range(pollution_samples.shape[1]):
         pollution_samples[:,t,0] = pik_pollution(t,T,e_pi,e_k)
     poll = np.column_stack((ana.compute_error(pollution_samples)))

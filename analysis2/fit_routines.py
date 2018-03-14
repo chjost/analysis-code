@@ -568,18 +568,17 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
         if debug > 3:
             print("Fit %d converged with reason %d, %s" %(b,ier,mesg))
     chi = errfunc(res[0],x[0],y[0],_cov)
-    #if debug > 0:
-        #print("Check of errorfunction:")
-        #try:
-        #    x_data = np.r_[x[0].A,x[0].B,x[0].D,y[0].p]
-        #except:
-        #    x_data = np.r_[x[0].A,x[0].B,y[0].p] 
-        #print(x_data.shape)
-        #print()
-        #print(np.column_stack((x_data,chi)))
-        #print("Chi_squared manually")
-        #print(np.sum(np.square(chi)))
-        #print(chisquare[0])
+    if debug > 0:
+        print("Check of errorfunction:")
+        try:
+            x_data = np.r_[x[0].A,x[0].B,x[0].D]
+        except:
+            x_data = np.r_[x[0].A,x[0].B] 
+        print(x_data.shape)
+        print(np.column_stack((x_data,chi[:-1])))
+        print("Chi_squared manually")
+        print(np.sum(np.square(chi)))
+        print(chisquare[0])
     # calculate mean and standard deviation
     res_mean, res_std = compute_error(res)
     # p-value calculated

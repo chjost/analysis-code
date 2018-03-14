@@ -4,7 +4,7 @@ Functions for in and output
 
 from __future__ import with_statement
 
-#import h5py
+import h5py
 import json
 import os
 import numpy as np
@@ -266,6 +266,7 @@ def write_data_ascii(data, filename, verbose=False, conf=None):
     head = "%i %i %i %i %i" % (nsamples, T, 0, L, 0)
     # prepare data and counter
     #_data = data.flatten()
+    print("Shape of reshaped data in write_data_ascii")
     _data = data.reshape((T*nsamples), -1)
     print(_data.shape)
     _counter = np.fromfunction(lambda i, *j: i%T,
@@ -281,6 +282,7 @@ def write_data_ascii(data, filename, verbose=False, conf=None):
         _config = conf.reshape(conf.shape[0]*T,1)
         pass
       # make ints from strings omit last character and first four
+    
       _fdata = np.concatenate((_counter,_data,_config), axis=1)
       fmt = ('%.0f',) + ('%.14f',) * _data[0].size + ('%.0f',)
     else:

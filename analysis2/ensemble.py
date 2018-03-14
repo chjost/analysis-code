@@ -55,17 +55,20 @@ class LatticeEnsemble(object):
         if verbose:
             print("reading ensemble %s" % name)
             print("L = %d, T = %d" % (L, T))
-        if config.getboolean("main", "readold"):
-            oldname = config.get("main", "olddata")
-            if verbose:
-                print("reading old data from %s" % oldname)
-            obj = cls.read(oldname)
-            obj.data["name"] = name
-            obj.data["T"] = T
-            obj.data["T2"] = int(T//2+1)
-            obj.data["L"] = L
+        if config.has_option("main", "readold"):
+            if config.getboolean("main", "readold"):
+                oldname = config.get("main", "olddata")
+                obj = cls.read(oldname)
+                if verbose:
+                    print("reading old data from %s" % oldname)
+            else:
+                obj = cls(name, L, T)
         else:
             obj = cls(name, L, T)
+        obj.data["name"] = name
+        obj.data["T"] = T
+        obj.data["T2"] = int(T//2+1)
+        obj.data["L"] = L
         # get all other options
         if config.has_section("strings"):
             for opt in config.options("strings"):

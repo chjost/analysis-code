@@ -44,6 +44,17 @@ def print_table_header(col_names):
   print(' & '.join(col_names)+'\\\\')
   print('\midrule')
 
+def fitres_stats(filename,par):
+    # load fitresult and calculate error
+    fitresult = ana.FitResult.read(filename)
+    fitresult.calc_error()
+    res_mean = fitresult.error[par][0][0][0]
+    res_std = fitresult.error[par][1][0]
+    res_sys_dn = fitresult.error[par][2][0][0]
+    res_sys_up = fitresult.error[par][2][0][1]
+    stats_list = [res_mean,res_std,res_sys_dn,res_sys_up]
+    return stats_list
+
 def print_line_latex(lat, d, prec1=1e4, prec2=1e3, prec3=1e5, prec4=1e2, syserror=True):
   """Print summary line.
 
@@ -56,7 +67,17 @@ def print_line_latex(lat, d, prec1=1e4, prec2=1e3, prec3=1e5, prec4=1e2, syserro
   """
   #if dx.shape[0] == 2:
   if syserror:
-    print("%9s & %.4f & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%.5f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%.5f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%.3f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & $%.3f(%1.0f)(^{+%1.0f}_{-%1.0f})$\\\\" % 
+    print(("%9s & %.4f & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
+           " $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
+           #" $%.5f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &" 
+           ## Next 3 lines are for E_piK
+           #" $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
+           #" $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
+           #" $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & \\\\") %
+           ## Next 3 lines are for delta E
+           " $%.5f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
+           " $%.5f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
+           " $%.5f(%1.0f)(^{+%1.0f}_{-%1.0f})$ \\\\") % 
                 (lat,
                   d[0],
                   d[1][0], d[1][1]*prec1, d[1][2]*prec1, d[1][3]*prec1,
@@ -64,10 +85,15 @@ def print_line_latex(lat, d, prec1=1e4, prec2=1e3, prec3=1e5, prec4=1e2, syserro
                   # For negative valued observables the sign for the systematics
                   # needs to be changed, implemented by changing position of up
                   # and down boundaries
-                  d[3][0], d[3][1]*prec3, d[3][3]*prec3, d[3][2]*prec3,
-                  d[4][0], d[4][1]*prec3, d[4][3]*prec3, d[4][2]*prec3,
-                  d[5][0], d[5][1]*prec2, d[5][3]*prec2, d[5][2]*prec2,
-                  d[6][0], d[6][1]*prec2, d[6][3]*prec2, d[6][2]*prec2)
+                  #d[3][0], d[3][1]*prec3, d[3][3]*prec3, d[3][2]*prec3,
+                  # Next 3 lines are for E_piK
+                  #d[4][0], d[4][1]*prec1, d[4][3]*prec1, d[4][2]*prec1,
+                  #d[5][0], d[5][1]*prec1, d[5][3]*prec1, d[5][2]*prec1,
+                  #d[6][0], d[6][1]*prec1, d[6][3]*prec1, d[6][2]*prec1)
+                  ## Next 3 lines are for delta E
+                  d[7][0], d[7][1]*prec3, d[7][3]*prec3, d[7][2]*prec3,
+                  d[8][0], d[8][1]*prec3, d[8][3]*prec3, d[8][2]*prec3,
+                  d[9][0], d[9][1]*prec3, d[9][3]*prec3, d[9][2]*prec3)
        )
 
   else:
@@ -112,8 +138,11 @@ def print_summary(ens_names,datafolder,match=False,strange_dict=None,
     #head = ['Ensemble','$a\mu_{s}$','$aM_{K}$','$aM_{\pi}$','$a\mu_{\pi K}$',
     #         '$a\delta E$','$a_0$',
     #         '$(\mu_{\pi K}a_0)$'] 
-    head = ['Ensemble','$a\mu_{s}$','$aM_{K}$','$aM_{\pi}$','$a\mu_{\pi K}$',
-             '$E_{\pi K}$','$a\delta E$','$a_0$','$\mu_{\pi K} a_0$'] 
+    #head = ['Ensemble','$a\mu_{s}$','$aM_{K}$','$aM_{\pi}$','$a\mu_{\pi K}$',
+    #         '$E_{\pi K}$','$a\delta E$','$a_0$','$\mu_{\pi K} a_0$'] 
+    head = ['Ensemble','$a\mu_{s}$','$aM_{K}$','$aM_{\pi}$',
+             #'$E^{E1}_{\pi K}$','$E^{E2}_{\pi K}$','$E^{E3}_{\pi K}$']
+             '$a\delta E^{E1}$','$a\delta E^{E2}$','$a\delta E^{E3}$'] 
     #head = ['Ensemble','$a\mu_{s}$',
     #         '$aM_{\eta}$'] 
     # summ is a #Ens,#Obs,4 numpy array
@@ -122,106 +151,51 @@ def print_summary(ens_names,datafolder,match=False,strange_dict=None,
     par_mpi=1
     par_mupik=0
     par_dE=0
-    par_E=1
     e_print = []
     summ_ms, summ_mpi, summ_mk, summ_meta, summ_mupik = [], [], [], [], [] 
-    summ_E, summ_dE, summ_a, summ_amupik = [], [], [], []
+    summ_E1, summ_E2, summ_E3 = [], [], []
+    summ_dE1, summ_dE2, summ_dE3 = [], [], []
+    summ_a, summ_amupik = [],[]
     print("Collect data for summary in unmatched case")
     for i,e in enumerate(ens_names):
-      print("\nread data for %s" % e)
-      filemk = "fit_k_unit_%s.npz" % e
-      filempi = "fit_pi_unit_%s.npz" % e
-      filemeta = "fit_eta_rm_TP0.npz"
-      filemupik = "mu_pi_k_TP0_%s.npz" % e
-      filedE = "dE_TP0_%s.npz" % e
-      fileE = "fit_pik_weight_unit_%s.npz" % e
-      #fileE = "fit_pik_subtract_unit_%s.npz" % e
-      #fileE = "fit_pik_divided_unit_%s.npz" % e
-      filea = "scat_len_TP0_%s.npz" % e
-      fileam = "mu_a0_TP0_%s.npz" % e
       if e == "D30.48":
         strange_dict[e[0]] = ["amu_s_115","amu_s_15","amu_s_18"]
         strange_eta_dict[e[0]] = ["strange_1150", "strange_1500", "strange_1800"]
-      #for j,s in enumerate(strange_eta_dict[e[0]]):
-        # get m_eta data
-        #meta = ana.FitResult.read("/hiskp4/hiskp2/jost/eta_data/%s/%s/%s" % (e, s, filemeta))
-        #meta.calc_error()
-        #if e == "D45.32":
-        #    print(meta.data[0][1])
-        ## m_eta is not derived, so choose correct parameter
-        #summ_meta.append([meta.error[par_mk][0][0][0], meta.error[par_mk][1][0],
-        #                 meta.error[par_mk][2][0][0], meta.error[par_mk][2][0][0]])
       for j,s in enumerate(strange_dict[e[0]]):
+        print("\nread data for %s" % e)
+        path_to_mk = "%s/%s/%s/fit_k_%s.npz" % (datafolder,e,s,e)
+        path_to_mpi = "%s/%s/pi/fit_pi_%s.npz" % (datafolder,e,e)
+        path_to_eta = "%s/%s/%s/fit_eta_rm_TP0.npz" % (datafolder,e,s)
+        path_to_mupik = "%s/%s/%s/mu_pi_k_TP0_%s.npz" % (datafolder,e,s,e)
+        list_path_to_dE = ["%s/%s/%s/dE_TP0_%s_E%d.npz" % (datafolder,e,s,e,i) for i in np.arange(1,4)]
+        list_path_to_E = ["%s/%s/%s/fit_pik_%s_E%d.npz" % (datafolder,e,s,e,i) for i in np.arange(1,4)]
+        path_to_a = ["%s/%s/%s/scat_len_TP0_%s_E%d.npz" % (datafolder,e,s,e,i)for i in np.arange(1,4)]
+        path_to_mua = ["%s/%s/%s/mu_a0_TP0_%s_E%d.npz" % (datafolder,e,s,e,i) for i in np.arange(1,4)]
         if j == 0:
           e_print.append("\\multirow{3}{*}{%s}"%e)
         else:
           e_print.append("")
         summ_ms.append(float('0.0%s' % s[6:]))
-        print("\tat strange mass %s" % s)
-        # Collect data from fit results
-        # Print data after consistency check
-        # get m_pi data
-        mpi = ana.FitResult.read("%s/%s/%s/%s" % (datafolder, e, s, filempi))
-        mpi.calc_error()
-        if e == "D45.32":
-            print(mpi.data[0][1])
-        # get m_pi data
-        mk = ana.FitResult.read("%s/%s/%s/%s" % (datafolder, e, s, filemk))
-        mk.calc_error()
-        if e == "D45.32":
-            print(mk.data[0][1])
-        # get reduced mass data
-        mupik = ana.FitResult.read("%s/%s/%s/%s" % (datafolder, e, s, filemupik))
-        mupik.calc_error()
-        if e == "D45.32":
-            print(mupik.data[0][1])
-        ## get dE
-        dE = ana.FitResult.read("%s/%s/%s/%s" % (datafolder, e, s, filedE))
-        dE.calc_error()
-        # get E
-        E = ana.FitResult.read("%s/%s/%s/%s" % (datafolder, e, s, fileE))
-        E.calc_error()
-        # get a_0
-        print("%s/%s/%s/%s" % (datafolder, e, s, filea))
-        a = ana.FitResult.read("%s/%s/%s/%s" % (datafolder, e, s, filea))
-        a.calc_error()
-        # get m_pi*a_0 data
-        amupik = ana.FitResult.read("%s/%s/%s/%s" % (datafolder, e, s, fileam))
-        #amk = amk.singularize()
-        amupik.calc_error()
-        # Fold larger systematic error into statistical one
-        amupik_err = folded_error(amupik.error[0])
 
-        # m_pi is not derived, so choose correct parameter
-        summ_mpi.append([mpi.error[par_mpi][0][0][0], mpi.error[par_mpi][1][0],
-                         mpi.error[par_mpi][2][0][0], mpi.error[par_mpi][2][0][0]])
-
-        # m_pi is not derived, so choose correct parameter
-        summ_mk.append([mk.error[par_mk][0][0][0], mk.error[par_mk][1][0],
-                         mk.error[par_mk][2][0][0], mk.error[par_mk][2][0][0]])
-        # m_pi is not derived, so choose correct parameter
-        summ_mupik.append([mupik.error[par_mupik][0][0][0], mupik.error[par_mupik][1][0],
-                         mupik.error[par_mupik][2][0][0], mupik.error[par_mupik][2][0][0]])
-        ## dE might is not derived, so choose correct parameter
-        summ_dE.append([dE.error[par_dE][0][0][0], dE.error[par_dE][1][0],
-                        dE.error[par_dE][2][0][0], dE.error[par_dE][2][0][1]])
-        # E might is not derived, so choose correct parameter
-        summ_E.append([E.error[par_E][0][0][0], E.error[par_E][1][0],
-                        E.error[par_E][2][0][0], E.error[par_E][2][0][1]])
-
-        # a_0 is derived, no need to choose parameter
-        summ_a.append([a.error[0][0][0][0], a.error[0][1][0],
-                       a.error[0][2][0][0], a.error[0][2][0][1]])
-
-        # a_0*m_pi is derived, no need to choose parameter
-        summ_amupik.append([amupik.data[0][0,0,0],amupik_err,
-                          0.,0.])
+        
+        summ_mpi.append(fitres_stats(path_to_mpi,1))
+        summ_mk.append(fitres_stats(path_to_mk,1))
+        summ_mupik.append(fitres_stats(path_to_mupik,0))
+        summ_E1.append(fitres_stats(list_path_to_E[0],1))
+        summ_E2.append(fitres_stats(list_path_to_E[1],0))
+        summ_E3.append(fitres_stats(list_path_to_E[2],0))
+        summ_dE1.append(fitres_stats(list_path_to_dE[0],0))
+        summ_dE2.append(fitres_stats(list_path_to_dE[1],0))
+        summ_dE3.append(fitres_stats(list_path_to_dE[2],0))
     
     print(e_print)
     print_table_header(head) 
-    for i,d in enumerate(zip(summ_ms, summ_mk, summ_mpi, summ_mupik, summ_E,
-        summ_dE, summ_a, summ_amupik)):
-      print_line_latex(e_print[i],d,syserror=syserror)
+    for i,d in enumerate(zip(summ_ms, summ_mk, summ_mpi, summ_mupik,
+                             summ_E1, summ_E2, summ_E3,
+                             summ_dE1, summ_dE2, summ_dE3)):
+        print_line_latex(e_print[i],d,syserror=syserror)
+        if (i+1)%3 == 0:
+            print("\\midrule")
     #for i,d in enumerate(zip(summ_ms,summ_meta)):
     #  print_line_plain(e_print[i],d)
 
@@ -259,9 +233,9 @@ def main():
   #mus_d_fld_var = ["amu_s_18"]
   mass_fld = {"A":mus_a_fld,"B":mus_b_fld,"D":mus_d_fld}
   mass_eta_fld = {"A":mus_eta_a_fld,"B":mus_eta_b_fld,"D":mus_eta_d_fld}
-  data = '/hiskp4/helmes/analysis/scattering/pi_k/I_32/data/'
+  data = '/hiskp4/helmes/analysis/scattering/pi_k/I_32_final/data/'
   print_summary(ens,data,match=False,strange_dict = mass_fld,
-                strange_eta_dict=mass_eta_fld,syserror=False)
+                strange_eta_dict=mass_eta_fld,syserror=True)
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':
     try:

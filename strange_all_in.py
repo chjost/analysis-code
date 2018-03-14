@@ -41,9 +41,9 @@ def main():
     if len(sys.argv) < 2:
       Corrs = ana.inputnames('charged.ini',['C20', 'C40C', 'C40D'])
     else:
-      Corrs = ana.inputnames(sys.argv[1],['c0','c2', 'c3'])
+      Corrs = ana.inputnames(sys.argv[1],['c1','c2', 'c3'])
       #Corrs = ana.inputnames(sys.argv[1],['c0'])
-      Corrs_pi = ana.inputnames(sys.argv[1],['c1'])
+      Corrs_pi = ana.inputnames(sys.argv[1],['c0'])
       Corrs_ss = ana.inputnames(sys.argv[1],['c6'])
     # os.path.join treats preceding slashes as new paths
     print(Corrs)
@@ -79,13 +79,13 @@ def main():
                                 key = lambda fold: int(fold[4:-1]))
     # read only pi    
     elif c2_pi:
-        #conf_feed = sorted([i +'/' for i in
-        #  set(configs_coll[0]).intersection(set(configs_coll[1]),set(configs_coll[2]),
-        #                        set(configs_coll_pi[0]))],
-        #                        key = lambda fold: int(fold[4:-1]))
         conf_feed = sorted([i +'/' for i in
-          set(configs_coll[0]).intersection(set(configs_coll_pi[0]))],
+          set(configs_coll[0]).intersection(set(configs_coll[1]),set(configs_coll[2]),
+                                set(configs_coll_pi[0]))],
                                 key = lambda fold: int(fold[4:-1]))
+        #conf_feed = sorted([i +'/' for i in
+        #  set(configs_coll[0]).intersection(set(configs_coll_pi[0]))],
+        #                        key = lambda fold: int(fold[4:-1]))
     # read only c2
     elif c2_ss:
         conf_feed = sorted([i +'/' for i in
@@ -115,6 +115,10 @@ def main():
       C4D = ana.read_confs(s[0],Corrs[1],conf_feed,T)
       C4C = ana.read_confs(s[0],Corrs[2],conf_feed,T)
       print("Read in done")
+      print("Read in:")
+      print("C2: %d configs" %C2.shape[0])
+      print("C4D: %d configs" %C4D.shape[0])
+      print("C4C: %d configs" %C4C.shape[0])
       # subtract crossed from direct diagram
       C4_tot = ana.confs_subtr(C4D,C4C)
       #C4_tot = ana.confs_mult(C4_tot,2)
@@ -144,7 +148,7 @@ def main():
         #  C2[i] = _Cfull
         C2 = ana.read_confs(corrpaths_pi[0],Corrs_pi[0],conf_feed,T)
         print("Read in done")
-        save_pi = datadir+'pi/'
+        save_pi = datadir+'/pi/'
         print("Writing to: %s..." % save_pi)
         ana.write_data_ascii(C2,save_pi +'pi_charged_p0_outlier.dat',conf=conf_feed)
     

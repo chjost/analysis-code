@@ -12,7 +12,8 @@ from in_out import read_fitresults, write_fitresults
 from interpol import match_lin, match_quad, evaluate_lin
 from functions import (func_single_corr,func_single_corr_bare, func_ratio, func_const, func_two_corr,
     func_two_corr_shifted, func_single_corr2, func_sinh, compute_eff_mass,
-    func_two_corr_therm, func_corr_shift_therm, func_two_corr_dws)
+    func_two_corr_therm, func_corr_shift_therm, func_two_corr_dws,
+    func_corr_shift_therm_subtract)
 from statistics import (compute_error, sys_error, sys_error_der, draw_weighted,
     freq_count, draw_gauss_distributed)
 from energies import calc_q2, calc_Ecm
@@ -46,7 +47,7 @@ class LatticeFit(object):
         self.debug = debug
         # chose the correct function if using predefined function
         if isinstance(fitfunc, int):
-            if fitfunc > 10:
+            if fitfunc > 12:
                 raise ValueError("No fit function choosen")
             if fitfunc == 2:
                 self.npar = 1
@@ -62,13 +63,19 @@ class LatticeFit(object):
                 self.npar = 2
             elif fitfunc == 10:
                 self.npar = 3
+            elif fitfunc == 10:
+                self.npar = 2
+            elif fitfunc == 11:
+                self.npar = 2
+            elif fitfunc == 12:
+                self.npar = 2
             else:
                 self.npar = 2
             functions = {0: func_single_corr, 1: func_ratio, 2: func_const,
                 3: func_two_corr, 4: func_single_corr2, 5: func_sinh,
                 6: func_two_corr_shifted, 7: func_two_corr_therm,
                 8: func_corr_shift_therm, 9: func_single_corr_bare,
-                10: func_two_corr_dws}
+                10: func_two_corr_dws, 11: func_corr_shift_therm_subtract}
             self.fitfunc = functions.get(fitfunc)
         else:
             self.npar = npar
@@ -620,8 +627,9 @@ class FitResult(object):
           print("fitresult is derived: %s" % self.derived)
         if self.derived:
           npars = 1
-          shape1 = self.data[0].shape
-          #shape1 = (nboot,1,1)
+          # not needed?
+          #shape1 = self.data[0].shape
+          shape1 = (nboot,1,1)
         else:
           npars = self.data[0].shape[1]
           shape1 = (nboot,npars,1)
@@ -1918,7 +1926,7 @@ class FitResult(object):
                 _sum.pval[0][:,fr] = np.ones((nboot,1))*np.square(self.weight[p][0][fr])
         return _sum
 
-    def add_mass(self, mass, par=1):
+    def add_mass(self, mass, par=1,neg=False):
         """add one mass to the mass of self m += m1 for different particles
 
         The function takes one additional fitresult argument and calculates mu. It
@@ -1926,6 +1934,7 @@ class FitResult(object):
 
         Parameters
         ----------
+        neg: bool, if True difference is calculated
         Returns
         ----------
         _mu : FitRes, the reduced mass returned as a fitresult
@@ -1966,7 +1975,10 @@ class FitResult(object):
             # loop over fitrange combination j is fitres entry, r is
             # fitrange index
             # calculate sum of masses for each fitrange combination
-            _sum.data[0][:,i] = fitres[0].data[0][:,par,item[0]]+fitres[1].data[0][:,par,item[1]]
+            if neg is False: 
+                _sum.data[0][:,i] = fitres[0].data[0][:,par,item[0]]+fitres[1].data[0][:,par,item[1]]
+            else:
+                _sum.data[0][:,i] = fitres[0].data[0][:,par,item[0]]-fitres[1].data[0][:,par,item[1]]
             _sum.pval[0][:,i] = np.ones((nboot,))*fitres[0].weight[par][0][item[0]]*fitres[1].weight[par][0][item[1]]
         return _sum
 

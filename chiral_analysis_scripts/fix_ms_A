@@ -75,6 +75,10 @@ def main():
 
     # read seeds from input files
     zp_meth=ens.get_data("zp_meth")
+    try:
+        epik_meth = ens.get_data("epik_meth")
+    except:
+        epik_meth=""
     external_seeds = ens.get_data("external_seeds_a")
     continuum_seeds = ens.get_data("continuum_seeds_a")
     amulA = ens.get_data("amu_l_a")
@@ -107,7 +111,8 @@ def main():
 
     read = False
 ################### Setup chiral analysis ######################################
-    extrapol = ana.ChirAna("pi-K_I32_chipt_A%d"%zp_meth,correlated=False,gamma=False,match=True)
+    extrapol = ana.ChirAna("pi-K_I32_chipt_A%d_%s"%(zp_meth,epik_meth),
+                           correlated=False,gamma=False,match=True)
     # have five x-values: mk,mpi,meta,fpi,r0/a
     ens_shape_chirana = (len(latA),len(latB),len(latD))
     print(ens_shape_chirana)
@@ -135,9 +140,11 @@ def main():
                     mu_s_eta_dict[a][0]='strange_1150'
 
 ####    ############### read in M_K^FSE ############################################
-                mksq_fse = ana.MatchResult("mksq_fse_M%dA_%s"%(zp_meth,e),save=datadir+'%s/'%e)
+                mksq_fse = ana.MatchResult("mksq_fse_M%dA_%s"%(zp_meth, e),
+                                           save=datadir+'%s/'%e)
                 ana.MatchResult.create_empty(mksq_fse,1500,3)
-                mk_names = [datadir+'%s/' % (e) +s+'/fit_k_unit_%s.npz' % (e) for s in mu_s_dict[a]]
+                mk_names = [datadir+'%s/' % (e) +s+'/fit_k_%s.npz' % (e) for s in mu_s_dict[a]]
+                print(mk_names)
                 mksq_fse_meas = ana.init_fitreslst(mk_names)
                 mksq_fse.load_data(mksq_fse_meas,1,amu_s_dict[a],square=True)
                 mksq_fse.add_extern_data('../plots2/data/k_fse_mk.dat',e,square=True,
@@ -146,9 +153,10 @@ def main():
                 print(mksq_fse.obs[:,0])
 
 ####    ############### read in M_pi^FSE ###########################################
-                mpi_fse = ana.MatchResult("mpi_fse_M%dA_%s"%(zp_meth,e),save=datadir+'%s/'%e)
+                mpi_fse = ana.MatchResult("mpi_fse_M%dA_%s"%(zp_meth,e),
+                                          save=datadir+'%s/'%e)
                 ana.MatchResult.create_empty(mpi_fse,1500,3)
-                mpi_names = [datadir+'%s/' % (e) +s+'/fit_pi_unit_%s.npz' % (e) for s in mu_s_dict[a]]
+                mpi_names = [datadir+'%s/' % (e) +'/pi'+'/fit_pi_%s.npz' % (e) for s in mu_s_dict[a]]
                 mpi_fse_meas = ana.init_fitreslst(mpi_names)
                 mpi_fse.load_data(mpi_fse_meas,1,amu_s_dict[a],square=False)
                 mpi_fse.add_extern_data('../plots2/data/k_fse_mpi.dat',e,square=False,
@@ -175,9 +183,11 @@ def main():
                 print(metasq.obs[:,0])
 
 ########################  read in mu_pik a_3/2 ################################
-                mua32 = ana.MatchResult("mua32_M%dA_%s" %(zp_meth,e),save=datadir+'%s/'%e)
+                mua32 = ana.MatchResult("mua32_M%dA_%s_%s" %(zp_meth,epik_meth,
+                                        e),save=datadir+'%s/'%e)
                 ana.MatchResult.create_empty(mua32,1500,3)
-                mua32_names = [datadir+'%s/' % (e) +s+'/mu_a0_TP0_%s.npz' % (e) for s in mu_s_dict[a]]
+                mua32_names = [datadir+'%s/' % (e) +s+'/mu_a0_TP0_%s_%s.npz' 
+                               % (e,epik_meth) for s in mu_s_dict[a]]
                 mua32_meas=ana.init_fitreslst(mua32_names)
                 mua32.load_data(mua32_meas,0,amu_s_dict[a],square=False)
 ####    ############################################################################

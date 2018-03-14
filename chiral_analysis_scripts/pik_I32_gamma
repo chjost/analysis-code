@@ -98,8 +98,7 @@ def main():
     #------------------------- Setup objects -----------------------------------
     # First load the data from fixing the strange quark mass
     fix_ms = ana.ChirAna("pi-K_I32_chipt_%s%d"%(ms_fixing.upper(),zp_meth),
-                         correlated=False,gamma=False, match=True, fit_ms =
-                         True)
+                         correlated=False,gamma=False, match=True, fit_ms = True)
     ens_shape_chirana = (len(latA),len(latB),len(latD))
     print(ens_shape_chirana)
     # have 3 strange quark masses

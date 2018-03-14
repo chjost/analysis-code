@@ -315,7 +315,7 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
 
 # Tryout from devel_branch
 def plot_data(X, Y, dY, label, plotrange=None, dX=None, fmt="x", col='b',
-    alpha=None, debug=2):
+    alpha=None, debug=0):
     """A function that plots data.
 
     Parameters
@@ -439,8 +439,10 @@ def plot_histogram(data, data_weight, label, nb_bins=20, debug=0):
                                 density=True)
 
     # prepare the plot
-    width = 0.7 * (bins[1] - bins[0])
-    uwidth = 0.7 * (ubins[1] - ubins[0])
+    #width = 0.7 * (bins[1] - bins[0])
+    #uwidth = 0.7 * (ubins[1] - ubins[0])
+    width = (bins[1] - bins[0])
+    uwidth = (ubins[1] - ubins[0])
     center = (bins[:-1] + bins[1:]) / 2
     ucenter = (ubins[:-1] + ubins[1:]) / 2
 
@@ -456,10 +458,10 @@ def plot_histogram(data, data_weight, label, nb_bins=20, debug=0):
     plt.ylabel("".join(("distribution of ", label[2])))
     #plt.grid(True)
     # plot
-    plt.bar(center, hist, align='center', width=width, color='r', alpha=0.5,
-            label='weighted data')
-    plt.bar(center, uhist, align='center', width=width, color='b', alpha=0.5,
-            label='unweighted data')
+    plt.bar(center, hist/np.sum(hist), align='center', width=width, color='r', alpha=0.5,
+            label='weighted data',edgecolor='k')
+    plt.bar(center, uhist/np.sum(uhist), align='center', width=width, color='b', alpha=0.5,
+            label='unweighted data',edgecolor='k')
 
 def plot_eff_mass(X, corr, dcorr, mass, dmass, fit, label, mass_shift=1, masspar=1, fmt1='xb', fmt2='xr'):
     # create a subplot

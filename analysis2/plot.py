@@ -14,6 +14,7 @@ from correlator import Correlators
 from statistics import compute_error, draw_gauss_distributed, acf
 from plot_functions import plot_data, plot_function, plot_function_multiarg, plot_histogram
 from plot_layout import set_plotstyles, set_layout
+from plot_utils import get_hist_bins
 from in_out import check_write
 from chipt_basic_observables import *
 import chiral_utils as chut
@@ -395,14 +396,14 @@ class LatticePlot(object):
         fitresult.calc_error()
         label_save = label[0]
         if nb_bins is None:
-            _bins = fitresult.fit_ranges_shape[-1][0] / 2
+            _bins = get_hist_bins(fitresult.fit_ranges_shape)
         else:
             _bins = nb_bins
         if fitresult.derived:
             w = fitresult.weight[0]
             for i, d in enumerate(fitresult.data):
                 label[0] = " ".join((label_save, str(fitresult.label[i])))
-                plot_histogram(d[0], w[i], label, nb_bins=nb_bins)
+                plot_histogram(d[0], w[i], label, nb_bins=_bins)
                 plt.legend()
                 self.save()
         else:
@@ -410,14 +411,14 @@ class LatticePlot(object):
                 for p, w in enumerate(fitresult.weight):
                     for i, d in enumerate(fitresult.data):
                         label[0] = " ".join((label_save, str(fitresult.label[i])))
-                        plot_histogram(d[0,p], w[i], label, nb_bins=nb_bins)
+                        plot_histogram(d[0,p], w[i], label, nb_bins=_bins)
                         plt.legend()
                         self.save()
             else:
                 w = fitresult.weight[par]
                 for i, d in enumerate(fitresult.data):
                     label[0] = " ".join((label_save, str(fitresult.label[i])))
-                    plot_histogram(d[0,par], w[i], label, nb_bins=nb_bins)
+                    plot_histogram(d[0,par], w[i], label, nb_bins=_bins)
                     plt.legend()
                     self.save()
         label[0] = label_save
