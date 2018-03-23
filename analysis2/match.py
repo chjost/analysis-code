@@ -523,7 +523,7 @@ class MatchResult(object):
       if plot:
         self.plot_match(obs_to_match,plotdir,ens,meth=meth,proc='match',label=label)
 
-    def eval_at(self, amu_match, amu_x=None, meth = None, ens=None,plot = True,
+    def eval_at(self, amu_match, amu_x=None, meth = None,correlated=True, ens=None,plot = True,
                 plotdir=None,label=None):
       """Evaluates a given observable at a matched strange quark mass
 
@@ -594,7 +594,7 @@ class MatchResult(object):
 
         if meth == 2:
           print("Using linear fit")
-          self.eval_obs[2], self.coeffs[2] = calc_y_fit(obs[0],obs[1],obs[2],amu,amu_match[2])
+          self.eval_obs[2], self.coeffs[2] = calc_y_fit(obs[0],obs[1],obs[2],amu,amu_match[2],correlated)
         # print summary to screen
         orig, std = compute_error(self.eval_obs[meth])
         if self.debug > 0:
@@ -608,9 +608,11 @@ class MatchResult(object):
             self.eval_obs[0], self.coeffs[0] = calc_y_lin(obs[1],obs[2],amu[1:3],amu_match[0])
         if obs.shape[0] == 3:
           self.eval_obs[1], self.coeffs[1] = calc_y_quad(obs[0],obs[1],obs[2],amu,amu_match[1])
-          self.eval_obs[2], self.coeffs[2] = calc_y_fit(obs[0],obs[1],obs[2],amu,amu_match[1])
+          self.eval_obs[2], self.coeffs[2] = calc_y_fit(obs[0],obs[1],obs[2],
+                                                        amu,amu_match[1],
+                                                        correlated)
         else:
-          self.eval_obs[2], self.coeffs[2] = calc_y_fit(obs[0],obs[1],obs[2],amu,amu_match[2])
+          self.eval_obs[2], self.coeffs[2] = calc_y_fit(obs[0],obs[1],obs[2],amu,amu_match[2],correlated)
 
         # print summary to screen
         meths = ['lin. ipol','quad. ipol.','lin fit']

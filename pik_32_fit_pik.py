@@ -23,11 +23,11 @@ import itertools
 import analysis2 as ana
 
 def main():
-    read_data = True
+    read_data = False
     read_fit = False
-    do_e1 = False
+    do_e1 = True
     do_e2 = True
-    do_e3 = False
+    do_e3 = True
     # parse infile
     if len(sys.argv) < 2:
         ens = ana.LatticeEnsemble.parse("kk_I1_TP0_A40.24.ini")

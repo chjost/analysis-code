@@ -232,7 +232,7 @@ class LatticePlot(object):
                         print("plotting fit ranges %s" % str(r))
                     fi = ranges[n][r]
                     mpar, dpar = compute_error(fitresult.data[n][:,:,r])
-                    print(mpar,dpar)
+                    #print(mpar,dpar)
 
                     # set up labels
                     label[0] = "%s, pc %d" % (label_save, n)
@@ -977,8 +977,8 @@ class LatticePlot(object):
                               fmt=col+fmt_ls,col=col, debug=self.debug)
 
 
-        plt.xlabel(label[0])
-        plt.ylabel(label[1])
+        #plt.xlabel(label[0])
+        #plt.ylabel(label[1])
         #self.save()
         if x_phys is not None:
             plt.axvline(x=x_phys, color='k', ls='--', label=label[0]+'_phys.')
@@ -1139,31 +1139,34 @@ def plot_brace(args, xcut, func=None, xpos=None):
     """ internal function that plots vertical braces at xcut"""
     if len(xcut) > 1:
         if xpos == "low":
-            y = func(args[0,...], xcut[0])
-            plt.hlines(0.9*y, xcut[0]*1.02, xcut[0], colors="k", label="")
-            plt.hlines(1.1*y, xcut[0]*1.02, xcut[0], colors="k", label="")
-            # TODO just a hotfix
             try:
-                plt.vlines(xcut[0], 0.9*y, 1.1*y, colors="k", label="")
+                _y = func(args[0,...], xcut[0])[0]
             except:
-                plt.vlines(xcut[0], 0.9*y[0], 1.1*y[0], colors="k", label="")
+                _y = func(args[0,...], xcut[0])
+            plt.hlines(0.9*_y, xcut[0]*1.02, xcut[0], colors="k", label="")
+            plt.hlines(1.1*_y, xcut[0]*1.02, xcut[0], colors="k", label="")
+            # TODO just a hotfix
+            plt.vlines(xcut[0], 0.9*_y, 1.1*_y, colors="k", label="")
                 
         
         elif xpos == "up":
-            y = np.asarray(func(args[0,...], xcut[1]))
-            plt.hlines(0.9*y, xcut[1]*0.98, xcut[1], colors="k", label="")
-            plt.hlines(1.1*y, xcut[1]*0.98, xcut[1], colors="k", label="")
             try:
-                plt.vlines(xcut[1], 0.9*y, 1.1*y, colors="k", label="")
+                _y = np.asarray(func(args[0,...], xcut[1]))[0]
             except:
-                plt.vlines(xcut[1], 0.9*y[0], 1.1*y[0], colors="k", label="")
+                _y = np.asarray(func(args[0,...], xcut[1]))
+            plt.hlines(0.9*_y, xcut[1]*0.98, xcut[1], colors="k", label="")
+            plt.hlines(1.1*_y, xcut[1]*0.98, xcut[1], colors="k", label="")
+            plt.vlines(xcut[1], 0.9*_y, 1.1*_y, colors="k", label="")
         else:
             print("x position not known, not plotting anything")
     else:
-        y = func(args[0,...], xcut)
-        plt.hlines(0.9*y, xcut*0.98, xcut, colors="k", label="")
-        plt.hlines(1.1*y, xcut*0.98, xcut, colors="k", label="")
-        plt.vlines(xcut, 0.9*y, 1.1*y, colors="k", label="")
+        try:
+            _y = func(args[0,...], xcut)[0]
+        except:
+            _y = func(args[0,...], xcut)
+        plt.hlines(0.9*_y, xcut*0.98, xcut, colors="k", label="")
+        plt.hlines(1.1*_y, xcut*0.98, xcut, colors="k", label="")
+        plt.vlines(xcut, 0.9*_y, 1.1*_y, colors="k", label="")
 
         
 def plot_single_line(x,y,label,col):

@@ -184,6 +184,9 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
         print(_args.shape)
     if add is not None:
         _add = np.asarray(add)
+    print("In plot_function _args.ndim:")
+    print(_args.ndim)
+    print(_args)
     if _args.ndim > 1:
         # the first sample contains original data,
         # also save min and max at each x

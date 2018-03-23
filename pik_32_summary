@@ -67,35 +67,51 @@ def print_line_latex(lat, d, prec1=1e4, prec2=1e3, prec3=1e5, prec4=1e2, syserro
   """
   #if dx.shape[0] == 2:
   if syserror:
-    print(("%9s & %.4f & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
-           " $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
-           #" $%.5f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &" 
+    print(("%9s & %.4f &"
+           #" $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
+           #" $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
+           #" $%.5f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &")% 
            ## Next 3 lines are for E_piK
            #" $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
            #" $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
            #" $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ & \\\\") %
            ## Next 3 lines are for delta E
-           " $%.5f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
-           " $%.5f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
-           " $%.5f(%1.0f)(^{+%1.0f}_{-%1.0f})$ \\\\") % 
+           #" $%.5f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
+           #" $%.5f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
+           #" $%.5f(%1.0f)(^{+%1.0f}_{-%1.0f})$ \\\\") % 
+           ## Next 3 lines are for delta a0
+           " $%.2f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
+           #" $%.5f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
+           " $%.2f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &" 
+           ## Next 3 lines are for delta mu a0
+           " $%.3f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
+           #" $%.3f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
+           " $%.3f(%1.0f)(^{+%1.0f}_{-%1.0f})$ \\\\") % 
                 (lat,
                   d[0],
-                  d[1][0], d[1][1]*prec1, d[1][2]*prec1, d[1][3]*prec1,
-                  d[2][0], d[2][1]*prec1, d[2][2]*prec1, d[2][3]*prec1,
+                  #d[1][0], d[1][1]*prec1, d[1][2]*prec1, d[1][3]*prec1,
+                  #d[2][0], d[2][1]*prec1, d[2][2]*prec1, d[2][3]*prec1,
                   # For negative valued observables the sign for the systematics
                   # needs to be changed, implemented by changing position of up
                   # and down boundaries
-                  #d[3][0], d[3][1]*prec3, d[3][3]*prec3, d[3][2]*prec3,
+                  #d[3][0], d[3][1]*prec3, d[3][3]*prec3, d[3][2]*prec3)
                   # Next 3 lines are for E_piK
                   #d[4][0], d[4][1]*prec1, d[4][3]*prec1, d[4][2]*prec1,
                   #d[5][0], d[5][1]*prec1, d[5][3]*prec1, d[5][2]*prec1,
                   #d[6][0], d[6][1]*prec1, d[6][3]*prec1, d[6][2]*prec1)
                   ## Next 3 lines are for delta E
-                  d[7][0], d[7][1]*prec3, d[7][3]*prec3, d[7][2]*prec3,
-                  d[8][0], d[8][1]*prec3, d[8][3]*prec3, d[8][2]*prec3,
-                  d[9][0], d[9][1]*prec3, d[9][3]*prec3, d[9][2]*prec3)
-       )
-
+                  #d[7][0], d[7][1]*prec3, d[7][3]*prec3, d[7][2]*prec3,
+                  #d[8][0], d[8][1]*prec3, d[8][3]*prec3, d[8][2]*prec3,
+                  #d[9][0], d[9][1]*prec3, d[9][3]*prec3, d[9][2]*prec3)
+                  ## Next 3 lines are for a0
+                  d[10][0], d[10][1]*prec4, d[10][3]*prec4, d[10][2]*prec4,
+                  #d[11][0], d[11][1]*prec4, d[11][3]*prec4, d[11][2]*prec4,
+                  d[12][0], d[12][1]*prec4, d[12][3]*prec4, d[12][2]*prec4,
+                  ## Next 3 lines are for mua0
+                  d[13][0], d[13][1]*prec2, d[13][3]*prec2, d[13][2]*prec2,
+                  #d[14][0], d[14][1]*prec2, d[14][3]*prec2, d[14][2]*prec2,
+                  d[15][0], d[15][1]*prec2, d[15][3]*prec2, d[15][2]*prec2)
+    )
   else:
     print("%25s & %.4f & $%.4f(%1.0f)$ & $%.4f(%1.0f)$ & $%.4f(%1.0f)$ & $%.4f(%1.0f)$ & $%.4f(%1.0f)$ & $%.2f(%1.0f)$ & $%.3f(%1.0f)$\\\\" % 
                 (lat,
@@ -140,9 +156,12 @@ def print_summary(ens_names,datafolder,match=False,strange_dict=None,
     #         '$(\mu_{\pi K}a_0)$'] 
     #head = ['Ensemble','$a\mu_{s}$','$aM_{K}$','$aM_{\pi}$','$a\mu_{\pi K}$',
     #         '$E_{\pi K}$','$a\delta E$','$a_0$','$\mu_{\pi K} a_0$'] 
-    head = ['Ensemble','$a\mu_{s}$','$aM_{K}$','$aM_{\pi}$',
+    head = ['Ensemble',
+            #'$a\mu_{s}$','$aM_{K}$','$aM_{\pi}$',
              #'$E^{E1}_{\pi K}$','$E^{E2}_{\pi K}$','$E^{E3}_{\pi K}$']
-             '$a\delta E^{E1}$','$a\delta E^{E2}$','$a\delta E^{E3}$'] 
+             #'$a\delta E^{E1}$','$a\delta E^{E3}$'] 
+             '$a_{3/2}^{E1}/a$','$a_{3/2}^{E3}/a$', 
+             '$mu a_{3/2}^{E1}$','$mu a_{3/2}^{E3}$'] 
     #head = ['Ensemble','$a\mu_{s}$',
     #         '$aM_{\eta}$'] 
     # summ is a #Ens,#Obs,4 numpy array
@@ -154,8 +173,9 @@ def print_summary(ens_names,datafolder,match=False,strange_dict=None,
     e_print = []
     summ_ms, summ_mpi, summ_mk, summ_meta, summ_mupik = [], [], [], [], [] 
     summ_E1, summ_E2, summ_E3 = [], [], []
+    summ_a01, summ_a02, summ_a03 = [], [], []
+    summ_mua01, summ_mua02, summ_mua03 = [], [], []
     summ_dE1, summ_dE2, summ_dE3 = [], [], []
-    summ_a, summ_amupik = [],[]
     print("Collect data for summary in unmatched case")
     for i,e in enumerate(ens_names):
       if e == "D30.48":
@@ -169,13 +189,8 @@ def print_summary(ens_names,datafolder,match=False,strange_dict=None,
         path_to_mupik = "%s/%s/%s/mu_pi_k_TP0_%s.npz" % (datafolder,e,s,e)
         list_path_to_dE = ["%s/%s/%s/dE_TP0_%s_E%d.npz" % (datafolder,e,s,e,i) for i in np.arange(1,4)]
         list_path_to_E = ["%s/%s/%s/fit_pik_%s_E%d.npz" % (datafolder,e,s,e,i) for i in np.arange(1,4)]
-        path_to_a = ["%s/%s/%s/scat_len_TP0_%s_E%d.npz" % (datafolder,e,s,e,i)for i in np.arange(1,4)]
-        path_to_mua = ["%s/%s/%s/mu_a0_TP0_%s_E%d.npz" % (datafolder,e,s,e,i) for i in np.arange(1,4)]
-        if j == 0:
-          e_print.append("\\multirow{3}{*}{%s}"%e)
-        else:
-          e_print.append("")
-        summ_ms.append(float('0.0%s' % s[6:]))
+        list_path_to_a0 = ["%s/%s/%s/scat_len_TP0_%s_E%d.npz" % (datafolder,e,s,e,i)for i in np.arange(1,4)]
+        list_path_to_mua0 = ["%s/%s/%s/mu_a0_TP0_%s_E%d.npz" % (datafolder,e,s,e,i) for i in np.arange(1,4)]
 
         
         summ_mpi.append(fitres_stats(path_to_mpi,1))
@@ -187,12 +202,26 @@ def print_summary(ens_names,datafolder,match=False,strange_dict=None,
         summ_dE1.append(fitres_stats(list_path_to_dE[0],0))
         summ_dE2.append(fitres_stats(list_path_to_dE[1],0))
         summ_dE3.append(fitres_stats(list_path_to_dE[2],0))
+        summ_a01.append(fitres_stats(list_path_to_a0[0],0))
+        summ_a02.append(fitres_stats(list_path_to_a0[1],0))
+        summ_a03.append(fitres_stats(list_path_to_a0[2],0))
+        summ_mua01.append(fitres_stats(list_path_to_mua0[0],0))
+        print(fitres_stats(list_path_to_mua0[0],0))
+        summ_mua02.append(fitres_stats(list_path_to_mua0[1],0))
+        summ_mua03.append(fitres_stats(list_path_to_mua0[2],0))
+        if j == 0:
+          e_print.append("\\multirow{3}{*}{%s}"%e)
+        else:
+          e_print.append("")
+        summ_ms.append(float('0.0%s' % s[6:]))
     
     print(e_print)
     print_table_header(head) 
     for i,d in enumerate(zip(summ_ms, summ_mk, summ_mpi, summ_mupik,
                              summ_E1, summ_E2, summ_E3,
-                             summ_dE1, summ_dE2, summ_dE3)):
+                             summ_dE1, summ_dE2, summ_dE3,
+                             summ_a01, summ_a02, summ_a03,
+                             summ_mua01, summ_mua02, summ_mua03)):
         print_line_latex(e_print[i],d,syserror=syserror)
         if (i+1)%3 == 0:
             print("\\midrule")

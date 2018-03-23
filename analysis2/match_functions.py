@@ -28,10 +28,10 @@ def calc_y_quad(y1,y2,y3,x,x_match):
   result = mh.eval_quad(coeff, x_match)
   return result, coeff
 
-def calc_y_fit(y1,y2,y3,x,x_match):
+def calc_y_fit(y1,y2,y3,x,x_match,correlated=True):
 
   y=np.asarray((y1,y2,y3))
-  coeff = mh.fit_lin(y,x)
+  coeff = mh.fit_lin(y,x,correlated)
   result = mh.eval_lin(coeff,x_match)
   return result, coeff
 

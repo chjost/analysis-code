@@ -10,9 +10,8 @@ def main():
     delim = '\n'+'-'*80+'\n'
     method_delim = '#'*80
     #resdir="/hiskp4/hiskp2/helmes/analysis/scattering/test/pi_k/I_32/results"
-    #resdir="/hiskp4/helmes/analysis/scattering/pi_k/I_32/results"
-    #resdir="/hiskp4/helmes/analysis/scattering/pi_k/I_32_fp/results"
-    resdir="/hiskp4/helmes/analysis/scattering/pi_k/I_32_div/results"
+    resdir="/hiskp4/helmes/analysis/scattering/pi_k/I_32_final/results"
+    epik_meth="E1"
 ################################################################################
 #
 #     Analysis for NLO ChPT
@@ -22,10 +21,10 @@ def main():
     print("Analysing systematic effects for ChPT fit at NLO:")
     print(method_delim+'\n')
     artefact_files=[
-        "/pik_disc_eff_M1A.h5",
-        "/pik_disc_eff_M1B.h5",
-        "/pik_disc_eff_M2A.h5",
-        "/pik_disc_eff_M2B.h5" 
+        "/pik_disc_eff_M1A_%s.h5"%epik_meth,
+        "/pik_disc_eff_M1B_%s.h5"%epik_meth,
+        "/pik_disc_eff_M2A_%s.h5"%epik_meth,
+        "/pik_disc_eff_M2B_%s.h5"%epik_meth 
         ]
     chiral_data = chiron.get_dataframe_disk(directory=resdir,filenames=artefact_files)
     #print(chiral_data.info())
@@ -74,10 +73,10 @@ def main():
     print("Analysing systematic effects for Gamma fit:")
     print(method_delim+'\n')
     artefact_files=[
-        "/pik_gamma_M1A.h5",
-        "/pik_gamma_M1B.h5",
-        "/pik_gamma_M2A.h5",
-        "/pik_gamma_M2B.h5" 
+        "/pik_gamma_M1A_%s.h5"%epik_meth,
+        "/pik_gamma_M1B_%s.h5"%epik_meth,
+        "/pik_gamma_M2A_%s.h5"%epik_meth,
+        "/pik_gamma_M2B_%s.h5"%epik_meth 
         ]
     chiral_data = chiron.get_dataframe_disk(directory=resdir,filenames=artefact_files)
     #print(chiral_data.info())
@@ -86,6 +85,8 @@ def main():
     groups = ['method', 'fit_start']
     observables = ['L_5','L_piK','mu_a32_phys','chi2 reduced']
     bmeans = chiron.bootstrap_means(chiral_data,groups,observables)
+    chiron.print_si_format(chiron.bootstrap_means(chiral_data,groups,
+                                 observables).loc[(slice(None),),:])
     print(chiron.bootstrap_means(chiral_data,groups,
                                  observables))
     # Furthermore we want to take the average over a few keys first and then

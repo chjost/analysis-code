@@ -135,10 +135,16 @@ def eval_quad(coeff, x_match):
 
 # fitting functions
 # pass a general ndarray since the number of x and y points for a fit may vary
-def fit_lin(y,x,debug=0):
+def fit_lin(y,x,correlated=True,debug=2):
   f = lambda p,x: p[0]*x+p[1]
   start = [0.51,0.32]
-  res, chi2, pval = fitting(f,x,y.T,start,add=None, correlated=True,debug=debug) 
+  res, chi2, pval = fitting(f,x,y.T,start,add=None, correlated=correlated,debug=debug) 
+  if debug > 0:
+      adjective = 'correlated'
+      if correlated is False:
+          adjective = 'un'+adjective
+      print("Did an %s Fit" %adjective)
+      print("Chi^2 value for linear fit in match is: %f" % chi2[0])
   return res
 
 def in_ival(x,a,b,):

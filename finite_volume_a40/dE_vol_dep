@@ -25,12 +25,12 @@ def luescher_dE(pars,L_inv,m):
   #lusch = -2*np.pi*pars[...,0]*L_inv**3/m * (1. + c[0]*pars[...,0]*L_inv
   #                                              + c[1]*pars[...,0]**2*L_inv**2 
   #                                              + c[2]*pars[...,0]**3*L_inv**3) - L_inv**6/m*pars[...,1] 
-  #lusch = -2*np.pi*pars[...,0]*L_inv**3/m * (1. + c[0]*pars[...,0]*L_inv
-  #                                              + c[1]*pars[...,0]**2*L_inv**2 ) - pars[...,0]**3*L_inv**6/m * (4*np.pi*pars[...,0] - pars[...,1])
+  lusch = -2*np.pi*pars[...,0]*L_inv**3/m * (1. + c[0]*pars[...,0]*L_inv
+                                                + c[1]*pars[...,0]**2*L_inv**2 ) - pars[...,0]**3*L_inv**6/m * (4*np.pi*pars[...,0] - pars[...,1])
   # pars[...,1] is a combination of
   #  effective range and prefactors
-  lusch = -2*np.pi*pars[...,0]*L_inv**3/m * (1. + c[0]*pars[...,0]*L_inv
-                                                + c[1]*pars[...,0]**2*L_inv**2)
+  #lusch = -2*np.pi*pars[...,0]*L_inv**3/m * (1. + c[0]*pars[...,0]*L_inv
+  #                                              + c[1]*pars[...,0]**2*L_inv**2)
   return lusch
 
 def main():
@@ -70,10 +70,10 @@ def main():
 #######################################################################
 
 # Plot delta E vs 1/L for A40.{20,24,32} at one strange quark mass
-    ratio1 = ana.FitResult.read(datadir+lat[0]+'/'+ssb_strange[0]+'/dE_TP0_%s.npz'%(lat[0]))
-    ratio2 = ana.FitResult.read(datadir+lat[1]+'/'+ssb_strange[0]+'/dE_TP0_%s.npz'%(lat[1])) 
-    ratio3 = ana.FitResult.read(datadir+lat[2]+'/'+ssb_strange[0]+'/dE_TP0_%s.npz'%(lat[2]))
-    m_k_32 = ana.FitResult.read(datadir+lat[2]+'/'+ssb_strange[0]+'/mu_pi_k_TP0_%s.npz'%(lat[2]))
+    ratio1 = ana.FitResult.read(datadir+lat[0]+'/'+ssb_strange[1]+'/dE_TP0_%s_E3.npz'%(lat[0]))
+    ratio2 = ana.FitResult.read(datadir+lat[1]+'/'+ssb_strange[1]+'/dE_TP0_%s_E3.npz'%(lat[1])) 
+    ratio3 = ana.FitResult.read(datadir+lat[2]+'/'+ssb_strange[1]+'/dE_TP0_%s_E3.npz'%(lat[2]))
+    m_k_32 = ana.FitResult.read(datadir+lat[2]+'/'+ssb_strange[1]+'/mu_pi_k_TP0_%s.npz'%(lat[2]))
 
 
     ratio1.print_data(par=fitparameter)
@@ -83,10 +83,10 @@ def main():
     print("Shape of reduced mass is:")
     print(m_k_32.data[0].shape)
 
-    #ratio1 = ratio1.singularize()
-    #ratio2 = ratio2.singularize()
-    #ratio3 = ratio3.singularize()
-    #m_k_32 = m_k_32.singularize()
+    ratio1 = ratio1.singularize()
+    ratio2 = ratio2.singularize()
+    ratio3 = ratio3.singularize()
+    m_k_32 = m_k_32.singularize()
 
 # stack the data together
     print(ratio1.data[0].shape)
@@ -97,20 +97,24 @@ def main():
 # generate plot arrays
     L = np.asarray((20.,24.,32.)) 
     L_inv = 1./L
-    L_fit = L_inv[:]
+    L_fit = L_inv[1:]
     print(L_fit.shape)
     plot_ratio = ana.compute_error(stack_ratio)
+    print(plot_ratio)
 # set up a fit
 # fit function for one bootstrapsample
 
-    #start = [-1.,1]
-    start = [-1.]
-    res,chisq,pvals = ana.fitting(luescher_dE,L_fit,stack_ratio[:,:],start,
+    start = [-1.,1]
+    #start = [-1.]
+    res,chisq,pvals = ana.fitting(luescher_dE,L_fit,stack_ratio[:,1:],start,
                                   add=m_k_32.data[0][:,fitparameter],
                                   correlated=False, debug=4)
+    print("Shapes for function plot:")
+    print(res.shape)
+    print(m_k_32.data[0].shape)
     
 # plot the data
-    vol_dep = PdfPages(plotdir+'/vol_dep_%s.pdf' % ssb_strange[0])
+    vol_dep = PdfPages(plotdir+'/vol_dep_%s.pdf' % ssb_strange[1])
     label = [r'$a/L$',r'$a\delta E$']
     plt.errorbar(L_inv[0],plot_ratio[0][0],plot_ratio[1][0],fmt = 'rv',label =
         'A40.20')
@@ -118,8 +122,8 @@ def main():
         'A40.24')
     plt.errorbar(L_inv[2],plot_ratio[0][2],plot_ratio[1][2],fmt = 'ro',label =
         'A40.32')
-    ana.plot_function(luescher_dE,[0.,0.051],res,r'$\delta E(a/L)$',
-                      add=m_k_32.data[0][:,fitparameter],ploterror=True)
+    ana.plot_function(luescher_dE,[0.,0.053],res,r'$\delta E(a/L)$',
+            add=m_k_32.data[0][:,fitparameter,0],ploterror=True)
     plt.xlabel(label[0],fontsize=24)
     plt.ylabel(label[1],fontsize=24)
     plt.locator_params(nbins=4)
@@ -132,32 +136,32 @@ def main():
     plt.close()
 # print mka0 again
     
-    mk_a0 = m_k_32.data[0][:,0]*res[:,0]
+    mk_a0 = m_k_32.data[0][:,0,0]*res[:,0]
     mk_a0_fit = ana.compute_error(mk_a0)
     print("mu_pi_K a_0 from fit to dE: %.4f +/- %.4f" %(mk_a0_fit[0],mk_a0_fit[1]))
-    r0 = ana.compute_error(res[:,1])
-    print("r_0 from fit to dE: %.4f +/- %.4f" %(r0[0],r0[1]))
-    mk_r0 = m_k_32.data[0][:,fitparameter]*res[:,1]
-    mk_r0_fit = ana.compute_error(mk_r0)
-    print("mu_pi_K r_0 from fit to dE: %.4f +/- %.4f" %(mk_r0_fit[0],mk_r0_fit[1]))
+    #r0 = ana.compute_error(res[:,1])
+    #print("r_0 from fit to dE: %.4f +/- %.4f" %(r0[0],r0[1]))
+    #mk_r0 = m_k_32.data[0][:,fitparameter]*res[:,1]
+    #mk_r0_fit = ana.compute_error(mk_r0)
+    #print("mu_pi_K r_0 from fit to dE: %.4f +/- %.4f" %(mk_r0_fit[0],mk_r0_fit[1]))
 
-    # We want to fix M_K r_f before calculating a_0
-    # Save M_K r_f as a FitResult
-    save_mkrf= ana.FitResult('mu_pi_K_rf')
-    nboot = res.shape[0]
-    print("Number of bootstraps %r:" % nboot)
-    shape1=(nboot,1,1)
-    shape2=(nboot,1)
-    corr_num = 1
-    save_mkrf.create_empty(shape1,shape2,corr_num)
-    save_mkrf.data[0][:,0,0] = mk_r0
-    print("Saving fixed mka0 to %s" % datadir)
-    save_mkrf.save(datadir+'/mu_pik_rf.npz')
+    ## We want to fix M_K r_f before calculating a_0
+    ## Save M_K r_f as a FitResult
+    #save_mkrf= ana.FitResult('mu_pi_K_rf')
+    #nboot = res.shape[0]
+    #print("Number of bootstraps %r:" % nboot)
+    #shape1=(nboot,1,1)
+    #shape2=(nboot,1)
+    #corr_num = 1
+    #save_mkrf.create_empty(shape1,shape2,corr_num)
+    #save_mkrf.data[0][:,0,0] = mk_r0
+    #print("Saving fixed mka0 to %s" % datadir)
+    #save_mkrf.save(datadir+'/mu_pik_rf.npz')
 
     # Try to read that in again
-    load_mkrf = ana.FitResult.read(datadir+'/mu_pik_rf.npz')
-    mk_r0_fit = ana.compute_error(load_mkrf.data[0])
-    print("Read in mu_pi_K r_0 from fit to dE: %.4f +/- %.4f" %(mk_r0_fit[0],mk_r0_fit[1]))
+    #load_mkrf = ana.FitResult.read(datadir+'/mu_pik_rf.npz')
+    #mk_r0_fit = ana.compute_error(load_mkrf.data[0])
+    #print("Read in mu_pi_K r_0 from fit to dE: %.4f +/- %.4f" %(mk_r0_fit[0],mk_r0_fit[1]))
 
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':

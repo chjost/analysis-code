@@ -42,6 +42,10 @@ def main():
     strange_eta_D = ens.get_data("strange_alt_d")
    # keep seeds per zp method fixed
     zp_meth=ens.get_data("zp_meth")
+    try:
+        epik_meth = ens.get_data("epik_meth")
+    except:
+        epik_meth=""
     external_seeds=ens.get_data("external_seeds_%s"%(ms_fixing.lower()))
     continuum_seeds=ens.get_data("continuum_seeds_%s"%(ms_fixing.lower()))
     amulA = ens.get_data("amu_l_a")
@@ -82,7 +86,8 @@ def main():
                      4: ana.wrap_test.err_func_mupik}
 
 ################### Setup chiral analysis ######################################
-    extrapol = ana.ChirAna("pi-K_I32_chipt_%s%d"%(ms_fixing.upper(),zp_meth),
+    extrapol = ana.ChirAna("pi-K_I32_chipt_%s%d_%s"
+                           %(ms_fixing.upper(),zp_meth,epik_meth),
                            correlated=False,gamma=False,match=True,debug=2)
     # have five x-values: mk,mpi,meta,fpi,r0/a
 
@@ -113,7 +118,8 @@ def main():
         print('lattice artefact is %s'%la)
         print(80*'#')
         ranges=[[0,1.35],[0,1.41],[0,2.5]]
-        filename = plotdir+'/mu_a32_nlo_disc_eff_'+str(lattice_artefacts[la])+'_M%d%s.pdf'%(zp_meth,ms_fixing.upper())
+        filename = (plotdir+'/mu_a32_nlo_disc_eff_'+str(lattice_artefacts[la])
+                   +'_M%d%s%s.pdf')%(zp_meth,ms_fixing.upper(),epik_meth)
         chiral_plot = ana.LatticePlot(filename, join = False,debug=4)
         for cut in ranges:
             print(80*'#')
@@ -178,7 +184,7 @@ def main():
             chiral_plot.save()
         del chiral_plot
     #print(results_lattice_artefact.info())
-    process_id = 'pik_disc_eff_M%d%s'%(zp_meth, ms_fixing.upper())
+    process_id = 'pik_disc_eff_M%d%s_%s'%(zp_meth, ms_fixing.upper(),epik_meth)
     hdf_filename = resdir+process_id+'.h5'
     hdfstorer = pd.HDFStore(hdf_filename)
     hdfstorer[process_id] = results_lattice_artefact 

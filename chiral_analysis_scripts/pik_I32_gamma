@@ -66,6 +66,10 @@ def main():
     strange_eta_D = ens.get_data("strange_alt_d")
    # keep seeds per zp method fixed
     zp_meth=ens.get_data("zp_meth")
+    try:
+        epik_meth = ens.get_data("epik_meth")
+    except:
+        epik_meth=""
     external_seeds=ens.get_data("external_seeds_%s"%(ms_fixing.lower()))
     continuum_seeds=ens.get_data("continuum_seeds_%s"%(ms_fixing.lower()))
     amulA = ens.get_data("amu_l_a")
@@ -97,7 +101,8 @@ def main():
     read = True
     #------------------------- Setup objects -----------------------------------
     # First load the data from fixing the strange quark mass
-    fix_ms = ana.ChirAna("pi-K_I32_chipt_%s%d"%(ms_fixing.upper(),zp_meth),
+    fix_ms = ana.ChirAna("pi-K_I32_chipt_%s%d_%s"
+                         %(ms_fixing.upper(),zp_meth,epik_meth),
                          correlated=False,gamma=False, match=True, fit_ms = True)
     ens_shape_chirana = (len(latA),len(latB),len(latD))
     print(ens_shape_chirana)
@@ -111,7 +116,8 @@ def main():
         fix_ms.load(resdir)
     except:
         print("Could not load chiral analysis!")
-    extrapol = ana.ChirAna("pi-K_I32_chipt_%s%d"%(ms_fixing.upper(),zp_meth),
+    extrapol = ana.ChirAna("pi-K_I32_chipt_%s%d_%s"
+                            %(ms_fixing.upper(),zp_meth,epik_meth),
                             correlated=False,gamma=True,debug=2)
     # have two x-values: mk/mpi, a/r0
     # determine size of objects from ensemble dictionary
@@ -148,7 +154,7 @@ def main():
     observables=['fit_start','fit_end','chi2 reduced', 'p_val', 'L_5','L_piK',
                  'mu_a32_phys','Mpi_a32','Mpi_a12','tau']
     fitresults_gamma = pd.DataFrame(columns=observables)
-    filename = plotdir+'/gamma_pik_fse_%s%d.pdf'%(ms_fixing.upper(),zp_meth)
+    filename = plotdir+'/gamma_pik_fse_%s%d_%s.pdf' %(ms_fixing.upper(),zp_meth,epik_meth)
     chiral_plot = ana.LatticePlot(filename, join = False)
     ranges=[[0,2.5],[1.4,2.5],[1.5,2.5]]
     for cut in ranges:
@@ -217,7 +223,7 @@ def main():
         chiral_plot.save()
     del chiral_plot
     fitresults_gamma.info()
-    process_id = 'pik_gamma_M%d%s'%(zp_meth, ms_fixing.upper())
+    process_id = 'pik_gamma_M%d%s_%s'%(zp_meth, ms_fixing.upper(),epik_meth)
     hdf_filename = resdir+process_id+'.h5'
     hdfstorer = pd.HDFStore(hdf_filename)
     hdfstorer[process_id] = fitresults_gamma

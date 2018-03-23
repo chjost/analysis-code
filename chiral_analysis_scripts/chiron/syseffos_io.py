@@ -1,7 +1,7 @@
 
 import pandas as pd
 
-splitter = lambda x: x.split('/')[1].split('.')[0].rsplit('_')[-1]
+splitter = lambda x: x.split('/')[1].split('.')[0].rsplit('_')[-2]
 
 def get_dataframe_disk(directory,filenames):
     method_ids, results_as_list = read_unfiltered(directory,filenames)

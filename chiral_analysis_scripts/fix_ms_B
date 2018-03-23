@@ -207,7 +207,7 @@ def main():
         print("no D ensembles in analysis")
 
 ################### Setup chiral analysis ######################################
-    extrapol = ana.ChirAna("pi-K_I32_chipt_B%d"%zp_meth,correlated=False,gamma=False,match=True)
+    extrapol = ana.ChirAna("pi-K_I32_chipt_B%d_%s"%(zp_meth,epik_meth),correlated=False,gamma=False,match=True)
     # have five x-values: mk,mpi,meta,fpi,r0/a
     ens_shape_chirana = (len(latA),len(latB),len(latD))
     print(ens_shape_chirana)
@@ -291,7 +291,7 @@ def main():
                 label = [r'$a\mu_s$',r'$\mu_{\pi K}\, a_{3/2}$',
                          r'$a\mu_s = (a\mu_s^{\mathrm{ref}})^2$']
                 mua32.eval_at(evl_x,plotdir=plotdir,
-                               ens=e,plot=True,label=label, meth=2)
+                               ens=e,correlated=False,plot=True,label=label, meth=2)
 
 ####    ############################################################################
 #                       copy to chiral analysis                                    #

@@ -218,7 +218,7 @@ def main():
                 label = [r'$a^2(M_K^2-0.5M^2_{\pi})$',r'$\mu_{\pi K}\, a_{3/2}$',
                          r'$a^2(M_K^2-0.5M^2_{\pi}) = (aM_s^{\mathrm{ref}})^2$']
                 mua32.eval_at(evl_x,plotdir=plotdir,
-                               ens=e,plot=True,label=label, meth=2)
+                               ens=e,correlated=False,plot=True,label=label, meth=2)
 
 ####    ############################################################################
 #                       copy to chiral analysis                                    #
