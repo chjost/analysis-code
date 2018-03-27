@@ -1,3 +1,5 @@
+import ConfigParser as cp
+
 def build_operators_dict(config):
     # op_dict is dict of dicts
     op_dict = {}
@@ -6,7 +8,7 @@ def build_operators_dict(config):
         op_list = op.split('.')
         gammas = {'g': op_list[0].split(',')}
         disps = {'d':op_list[1].split(',')}
-        momenta = {'p':op_list[2].spli(',')}
+        momenta = {'p':op_list[2].split(',')}
         
 
 
