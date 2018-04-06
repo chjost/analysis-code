@@ -25,49 +25,33 @@
 # For informations on input parameters see the description of the function.
 #
 ################################################################################
-
-import input_output as io
-import bootstrap
-import corr_matrix
-import gevp
-
+import itertools as it
+import analysis2 as ana
 def main():
     ## definition of some variables
-    nbsamples = 10
-    filepath="/hiskp2/helmes/contractions/A40.20/disp/merged/pi+_d"
+    filepath="/hiskp4/helmes/analysis/tests/derivative_operators/pi_one_der/data/A40.24/unsmeared_gauges"
+    plotpath="/hiskp4/helmes/analysis/tests/derivative_operators/pi_one_der/plots/A40.24/unsmeared_gauges"
     #filepath="/home/chris/test/data/pi_corr_p"
-    filestring = ["xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz"]
-
-
-    # testing the input
-    #newfile="/hiskp2/correlators/A100.24_L24_T48_beta190_mul0100_musig150_mudel190_kappa1632550/ev120/liuming/pi_corr_p0.dat"
-    #corr, nbcfg, T = io.extract_corr_fct(newfile)
-    #print(corr)
-    #print(nbcfg)
-    #print(T)
-    #io.write_corr_fct(corr, "./corr_test.dat", T, nbcfg)
-
-    # testing the bootstraping
-    #samples = bootstrap.sym_and_boot(corr, T, nbcfg, 100)
-    #print(samples[:,1])
-    #print(samples.shape)
-
-    # testing the creation of a correlation function matrix bootstrapping
-    # included
-    corr_mat, T = corr_matrix.create_corr_matrix(10, filepath, filestring,
-        column=1)
-    #print(corr_mat[:,0,0,0])
-    #print(T)
-    #for s in range(0, nbsamples):
-    #    print("\ts = " + str(s))
-    #    for t in range(0, int(T/2)+1):
-    #        print("\tt = " + str(t))
-    #        print(corr_mat[s][t])
-
+    filestring = ['0','1' ,'2' ,'3' ,'4' ,'5' ,'6' ,'7' ,'8']
+    names = ["%s/C2+_corr%s.dat"%(filepath,i) for i in filestring]
+    corr_mat = ana.Correlators(names,matrix=True,conf_col=3)
+    corr_mat.sym_and_boot(100)
+    for i, j in it.product((0,1,2),repeat=2):
+        print("\n%d\t%d :" %(i,j))
+        print(corr_mat.data[0,:,i,j])
+    
     # testing the GEVP
-    eigenvalues = gevp.calculate_gevp(corr_mat)
-    #print(eigenvalues)
-    io.write_data(eigenvalues, "./test.dat")
+    corr_mat.gevp(2)
+    print(corr_mat.data)
+    corr_mat.mass()
+    print(corr_mat.data)
+    #eigenvalues = ana.gevp.calculate_gevp(corr_mat.data,t0=2)
+    #io.write_data(eigenvalues, "./test.dat")
+    corr_plot = ana.LatticePlot(plotpath+"/gevp_matrix.pdf")
+    corr_plot.set_env(ylog=False, grid=False,title = True)
+    label = ["Matrix entry of gevp", "t","M_eff(t)","data"]
+    corr_plot.plot_matrix(corr_mat,label,ploterror=True)
+    del corr_plot
 
 
 # make this script importable, according to the Google Python Style Guide

@@ -100,6 +100,7 @@ def main():
     method_mean = chiron.average_all_methods(chiral_data,('M1A','M2A',
                                                           'M1B','M2B'), 
                                            index=['fit_start'],value=[0.],drop=[])
+    method_mean.info()
 
     # Weighted average of None-lattice artefact over fitranges and Zp for A and
     # B gives estimate of ms-fixing influence

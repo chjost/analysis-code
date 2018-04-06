@@ -345,6 +345,7 @@ class LatticePlot(object):
                 plt.legend()
                 self.save()
 
+
     def plot(self, corr, label, fitresult=None, fitfunc=None, oldfit=None,
             add=None, oldfitpar=None, ploterror=False, rel=False, xshift=0., debug=0):
         """Plot the data of a Correlators object and a FitResult object
@@ -380,6 +381,38 @@ class LatticePlot(object):
         else:
             self._genplot_comb(corr, label, fitresult, fitfunc, oldfit, add,
                     oldfitpar, ploterror, xshift, debug)
+
+    def plot_matrix( self, corr, label, fitresult=None, fitfunc=None, oldfit=None,
+            add=None, oldfitpar=None, ploterror=False, rel=False, xshift=0., debug=0):
+        """Plot a correlation function matrix
+        """
+        if corr.matrix is False:
+            RuntimeError("Can only plot correlator matrix")
+        else:
+            rows = corr.data.shape[-2] 
+            cols = corr.data.shape[-1] 
+            fig, axes = plt.subplots(nrows = rows, ncols = cols,
+                                     sharex='all',sharey='all')
+            X = np.linspace(0., float(corr.shape[1]), corr.shape[1],
+                            endpoint=False) + xshift
+            label_save = label[0]
+            self._set_env_normal()
+            for r in range(rows):
+                for c in range(cols):
+                    mdata, ddata = compute_error(corr.data[:,:,r,c])
+                    print("Plotting: %d\t%d" %(r,c))
+                    print(corr.data[0,:,r,c])
+                    axes[r,c].errorbar(X,corr.data[0,:,r,c],ddata,fmt = 'ob',
+                            label = r'$C_{%d%d}$'%(r,c))
+                    if c == 0:
+                        axes[r,c].set_ylabel(label[2])
+                    if r == cols-1:
+                        axes[r,c].set_xlabel(label[1])
+                    axes[r,c].legend()
+            fig.tight_layout()
+            print(self.filename)
+            self.save()
+            
 
     def histogram(self, fitresult, label, nb_bins=20, par=None):
         """Plot the histograms.

@@ -733,9 +733,10 @@ def read_confs(path,corrname,confs,_T=48,h5=False,verb=False):
       (nb_cfg,T,2) for real and imaginary part
   """
   C = np.zeros((len(confs),_T,2))
-  print("Path,Corrname:")
-  print(path)
-  print(corrname)
+  if verb is not False:
+    print("Path,Corrname:")
+    print(path)
+    print(corrname)
   if h5 is True:
     for i,d in enumerate(confs):
       #Generate filename from inputlist

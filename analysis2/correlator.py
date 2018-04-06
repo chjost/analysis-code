@@ -321,21 +321,24 @@ class Correlators(object):
         self.shape = self.data.shape
 
     def gevp(self, t0):
-        """Calculate the GEVP of the matrix.
+           """Calculate the GEVP of the matrix.
+           This function only works with matrices.
+           Parameters
+           ----------
+           t0 : int
+               The index of the inverted matrix.
+           """
+           if not self.matrix:
+               print("not a matrix")
+               return
 
-        This function only works with matrices.
+           tmp = gevp.calculate_gevp(self.data, t0)
+           self.data = tmp
+           if not self.data is tmp:
+               raise RuntimeError("data not assinged correctly")
+           self.shape = self.data.shape
+           self.matrix = False
 
-        Parameters
-        ----------
-        t0 : int
-            The index of the inverted matrix.
-        """
-        if not self.matrix:
-            return
-
-        self.data = gevp.calculate_gevp(self.data, t0)
-        self.shape = self.data.shape
-        self.matrix = False
     # new interface
     def mass(self, function=0, add=None):
         """Computes the effective mass.

@@ -98,6 +98,7 @@ class ContDat(object):
         self.nsamp=nboot
         # These are the calculated values from arxiv.org/1403.4504v3
         # Only changes are in r0
+        # TODO: Check results with isospin corrected values from FLAG
         if zp_meth == 1:
             obs = {'r0':(0.470,0.012),'mk':(494.2,0.4),'mpi_0':(134.9766,0.0006),
                   'm_l':(3.7,0.17), 'fpi':(130.41,0.03), 'meta':(574.862,0.017),
