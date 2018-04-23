@@ -167,3 +167,45 @@ class ContDat(object):
         return self.data[obs]['boot']
 
     #def show
+class LatPhysDat(object):
+    def __init__(self, seeds, space, zp_meth, nboot=1500):
+        self.nsamp = nboot
+        # These are the calculated values from arxiv.org/1403.4504v3
+        # a is the lattice spacing in fm
+        obs_a = {'a':(0.0885,0.0036)}
+        obs_b = {'a':(0.0815,0.0030)}
+        obs_d = {'a':(0.0619,0.0018)}
+
+        self.table={'A':obs_a,'B':obs_b,'D':obs_d}
+
+        # Start with an empty dictionary
+        self.data={}
+        # test length of tuples
+        if len(seeds) < len(space)*len(obs_a):
+            raise ValueError("Seeds and Space tuples have incompatible lengths")
+        # each observable should get its own seed so the desired layout would be
+        # something like 
+        # {'A':{'r0':{'seed':int,'boot':samples},'zp':{'seed':int,'boot':samples}}
+        # for each observable and lattice spacing
+        for i,beta in enumerate(space):
+            self.data[beta]={}
+            for j,obs in enumerate(self.table[beta]):
+              self.data[beta][obs]={}
+              print(i,j)
+              self.data[beta][obs]['seed']=seeds[i]
+              self.set_obs(beta,obs)
+        
+    def set_obs(self, a, obs):
+        # From the initialized table take the desired observable of the correct
+        # lattice spacing with its error
+        lit = self.table[a][obs]
+        seed = self.data[a][obs]['seed']
+        self.data[a][obs]['boot'] = draw_gauss_distributed(lit[0],lit[1],
+                                (self.nsamp,),origin=True,seed=seed)
+  
+    #def save
+    #def save_txt
+    def get(self,a,obs):
+        return self.data[a][obs]['boot']
+
+    #def show

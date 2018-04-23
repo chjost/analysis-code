@@ -234,6 +234,12 @@ def mua0_I32_from_fit(pars,x):
     _mua0 = mu_aI32(_x[:,0],_x[:,1],_x[:,2],_x[:,3],pars[0],pars[1])
     return _mua0
 
+def mua0_I32_hkchpt_from_fit(pars,x):
+    # Ensure that x has at least 2 dimensions
+    _x = np.atleast_2d(x)
+    _mua0 = pik_I32_hkchpt(_x[:,0],_x[:,1],_x[:,2],_x[:,3],(pars[0],pars[1]))
+    return _mua0
+
 def mua0_I12_from_fit(pars,x):
     # Ensure that x has at least 2 dimensions
     _x = np.atleast_2d(x)

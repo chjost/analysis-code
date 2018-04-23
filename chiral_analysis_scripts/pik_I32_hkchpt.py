@@ -48,6 +48,7 @@ def main():
         epik_meth=""
     external_seeds=ens.get_data("external_seeds_%s"%(ms_fixing.lower()))
     continuum_seeds=ens.get_data("continuum_seeds_%s"%(ms_fixing.lower()))
+    latphys_seeds=ens.get_data("latphys_seeds_%s"%(ms_fixing.lower()))
     amulA = ens.get_data("amu_l_a")
     amulB = ens.get_data("amu_l_b")
     amulD = ens.get_data("amu_l_d")
@@ -71,6 +72,7 @@ def main():
     # Prepare external data
     ext_data = ana.ExtDat(external_seeds,space,zp_meth)
     cont_data = ana.ContDat(continuum_seeds,zp_meth=zp_meth)
+    latphys_data = ana.LatPhysDat(latphys_seeds,space,zp_meth)
     fpi_raw = ana.read_extern("../plots2/data/fpi.dat",(1,2))
     print(fpi_raw)
 
@@ -79,11 +81,7 @@ def main():
     #                   '(a M_K)^2'             :2,
     #                   'a^2(M_K^2 + 0.5M_pi^2)':3,
     #                   '(a mu_piK)^2'          :4}
-    error_functions={0: ana.wrap_test.err_func,
-                     1: ana.wrap_test.err_func_mpi,
-                     2: ana.wrap_test.err_func_mk,
-                     3: ana.wrap_test.err_func_mlms,
-                     4: ana.wrap_test.err_func_mupik}
+    error_functions={0: ana.wrap_test.err_func_hkchpt}
 
 ################### Setup chiral analysis ######################################
     extrapol = ana.ChirAna("pi-K_I32_chipt_%s%d_%s"
@@ -93,26 +91,26 @@ def main():
 
     ens_shape_chirana = (len(latA),len(latB),len(latD))
     print(ens_shape_chirana)
+    # Have four inputs mpi, mk, fpi and a
     lyt_xvals = ana.generate_chirana_shape(space,ens_shape_chirana,1,5,1500)
     lyt_yvals = ana.generate_chirana_shape(space,ens_shape_chirana,1,1,1500) 
-    #lyt_xvals = (len(space),ens_shape_chirana,1,5,1500)
-    #lyt_yvals = (len(space),ens_shape_chirana,1,1,1500)
     extrapol.create_empty(lyt_xvals,lyt_yvals,lat_dict=lat_dict)
     print("\nSetup complete, begin chiral analysis")
     try:
         extrapol.load(resdir)
     except:
         print("Could not load chiral analysis!")
+    #for i,a in enumerate(space):
+    #    for j,e in enumerate(lat_dict[a]):
+    #        extrapol.x_data[i][j,0,3]*=latphys_data.get(a,'a')
     # initialize dataframe for storage
     # the columns are physical value, L_piK, L_5, c, artefact id
-    observables=['Lattice Artefact','fit_start','fit_end','chi2 reduced','L_5',
-                 'L_piK','c','mu_a32_phys']
+    observables=['fit_start','fit_end','chi2 reduced','A_piK',
+                 'Alat_2','mu_a32_phys']
     results_lattice_artefact = pd.DataFrame(columns=observables)
     print(results_lattice_artefact.info())
     # Include bootstrapped L_5 as a prior value taken from HPQCD
-    l_5_prior = np.atleast_2d(ana.draw_gauss_distributed(5.41e-3,3e-5,(1500,),
-      origin=True))
-    start = [0.1,0.1,0.1]
+    start = [0.1,0.1]
     for la in lattice_artefacts:
         print(80*'#')
         print('lattice artefact is %s'%la)
@@ -127,27 +125,22 @@ def main():
             print(80*'#')
             # fit results
             _error_function=error_functions[lattice_artefacts[la]] 
-            extrapol.fit(_error_function,start,plotdir=plotdir,prior=l_5_prior,
+            extrapol.fit(_error_function,start,plotdir=plotdir,prior=None,
                          xcut=cut,pik=True)
             extrapol.mu_a0_pik_phys(cont_data.get('mpi_0'),cont_data.get('mk'),
-                                         cont_data.get('fpi'),cont_data.get('r0'),
-                                         meta=cont_data.get('meta'), iso_32=True)
+                                         cont_data.get('fpi'),cont_data.get('r0')/197.37,
+                                         iso_32=True,hkchpt=True)
             # build resultsarray
             st='|S%d'%len(la)
-            artefact_id = np.full(l_5_prior[0].shape, la, dtype=st)
-            chisquared_reduced = np.full_like(l_5_prior[0],
+            chisquared_reduced = np.full(1500,
                                               extrapol.fit_stats[0][1]/extrapol.fit_stats[0][0])
-            l_pik = extrapol.fitres.data[0][:,0,0]
-            l_5 = extrapol.fitres.data[0][:,1,0]
-            if lattice_artefacts[la] > 0:
-                c=extrapol.fitres.data[0][:,2,0]
-            else:
-                c=np.full_like(l_5_prior[0], np.nan)
+            a_pik = extrapol.fitres.data[0][:,0,0]
+            a_2 = extrapol.fitres.data[0][:,1,0]
             mu_a32_phys = extrapol.phys_point_fitres.data[0][:,0]
-            fitrange_start = np.full_like(l_5[0],cut[0])
-            fitrange_end = np.full_like(l_5[0],cut[1])
-            value_list=[artefact_id,fitrange_start,fitrange_end,
-                        chisquared_reduced,l_5,l_pik,c,mu_a32_phys]
+            fitrange_start = np.full_like(a_pik,cut[0])
+            fitrange_end = np.full_like(a_pik,cut[1])
+            value_list=[fitrange_start,fitrange_end,
+                        chisquared_reduced,a_2,a_pik,mu_a32_phys]
             fitresults={ key:values for key, values in zip(observables,value_list) }
             fitresults_dataframe=pd.DataFrame(fitresults)
             results_lattice_artefact = results_lattice_artefact.append(fitresults_dataframe)
@@ -177,14 +170,14 @@ def main():
                                   label=r'LO-$\chi$-PT',xcut=cut)
             chiral_plot.save()
             label[1]=r'rel. dev. $\mu_{\pi K}\,a_{0}$'
-            chiral_plot.plot_fit_proof(extrapol,space,ana.wrap_test.mu_pik_a_32_fit,
+            chiral_plot.plot_fit_proof(extrapol,space,ana.wrap_test.mu_pik_a_32_hkchpt_fit,
                                         xvalue_function=ana.calc_x_plot,
                                         data_label='fit',plotlim=[1.1,1.6],ylim=[-0.3,0.3],label=label,
                                         x_phys=None)
             chiral_plot.save()
         del chiral_plot
     #print(results_lattice_artefact.info())
-    process_id = 'pik_disc_eff_M%d%s_%s'%(zp_meth, ms_fixing.upper(),epik_meth)
+    process_id = 'pik_hkchpt_M%d%s_%s'%(zp_meth, ms_fixing.upper(),epik_meth)
     hdf_filename = resdir+process_id+'.h5'
     hdfstorer = pd.HDFStore(hdf_filename)
     hdfstorer[process_id] = results_lattice_artefact 

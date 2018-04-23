@@ -1029,8 +1029,8 @@ class LatticePlot(object):
             plt.xlim(plotlim[0],plotlim[1])
         if ylim is not None:
           plt.ylim(ylim[0],ylim[1])
-        plt.xlabel(label[0])
-        plt.ylabel(label[1])
+        plt.xlabel(label[0],fontsize=24)
+        plt.ylabel(label[1],fontsize=24)
         if len(label) > 2:
             plt.title(label[2])
         plt.legend(loc='lower left',ncol=2,numpoints=1)
@@ -1088,7 +1088,7 @@ class LatticePlot(object):
                 plot_brace(fit_arguments,xcut,fit_function,xpos="up")
         plt.axhline(color='k')
         set_layout(physical_x=x_phys,xlimits=plotlim,ylimits=ylim,
-                   legend_array=legend,labels=label)
+                   legend_array=legend,labels=label,labelfontsiz=24)
             
 
     def plot_fit_proof(self, chirana, lattice_spacings,
@@ -1132,7 +1132,7 @@ class LatticePlot(object):
                 plot_brace(fit_arguments,xcut,fit_function,xpos="up")
         plt.axhline(color='k')
         set_layout(physical_x=x_phys,xlimits=plotlim,ylimits=ylim,
-                   legend_array=legend,labels=label)
+                   legend_array=legend,labels=label,labelfontsize=24)
 
     def plot_cont(self,chirana,func,xlim,args,par=None,argct=None,calc_x=None,
                   phys=True,ploterror=True,label=None,xcut=None):

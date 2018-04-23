@@ -23,7 +23,7 @@ from .chipt_basic_observables import *
 import mu_pik_a0_wraps as wrap_test
 from .extern_bootstrap import *
 from .chiral_analysis import ChirAna
-from .externaldata import ExtDat, ContDat
+from .externaldata import ExtDat, ContDat, LatPhysDat
 from .nplqcddat import NPLDat
 from .globalfit import ChiralFit
 from .debug import *

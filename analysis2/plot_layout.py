@@ -30,14 +30,14 @@ def set_plotstyles(lattice_spacings):
 
 # TODO: document these functions
 def set_layout(physical_x=None,xlimits=None,ylimits=None,legend_array=None,
-              labels=None):
+              labels=None,labelfontsize=None):
     set_plotlimits(xlimits,ylimits)
     if labels is not None:
       plot_physical_x(physical_x,labels[0])
     else:
       plot_physical_x(physial_x,"x")
     set_legend(legend_array)
-    set_labels(labels)
+    set_labels(labels,fontsize=labelfontsize)
     
 def set_legend(legend_array=None):
     if legend_array is not None and len(legend_array == 4):
@@ -65,9 +65,13 @@ def set_plotlimits(xlimits=None,ylimits=None):
     if ylimits is not None:
         plt.ylim(ylimits[0],ylimits[1])
 
-def set_labels(labels=None):
+def set_labels(labels=None,fontsize = None):
     if labels is not None:
-         plt.xlabel(labels[0])
-         plt.ylabel(labels[1])
-         if len(labels) >= 3:
+        if fontsize is not None:
+            plt.xlabel(labels[0],fontsize=fontsize)
+            plt.ylabel(labels[1],fontsize=fontsize)
+        else:
+            plt.xlabel(labels[0])
+            plt.ylabel(labels[1])
+        if len(labels) >= 3:
             plt.title(labels[2])

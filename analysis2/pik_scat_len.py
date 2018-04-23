@@ -77,7 +77,29 @@ def pik_I32_chipt_nlo_cont(mpi, mk, fpi, r0, p, lambda_x=None, meta=None):
     _sum3 = chi_I32_nlo(lambda_x, mpi, mk, meta)/(16.*np.pi**2*fpi**2)
     _mua32 = (reduced_mass(mpi,mk)/fpi)**2/(4.*np.pi)*(-1.+_sum1-_sum2+_sum3)
     return _mua32
+# Heavy Kaon ChPT formula
+def pik_I32_hkchpt(mpi, mk, fpi, r0, p):
+    """ Calculates mu_{piK} a_3/2 in Heavy Kaon ChPT at NLO
 
+    Takes values for mpi, mk and fpi and returns the product mu_{piK} a_3/2
+
+    Parameters
+    ----------
+    mpi : 1d-array, pion mass
+    mk : 1d-array, kaon mass
+    fpi : 1d-array, pion decay constant
+    a : 1d-array, pseudo bootrstap samples for the lattice spacing in fm
+    p : nd-array, the LECs to fit
+
+    Returns
+    -------
+    _mua32 : 1d-array, the calculated values of _mua32
+    """
+    hbarc = 197.37
+    _r0 = r0
+    _mua32 = reduced_mass(mpi,mk)/(8*fpi**2)*(-(mk+mpi)/4
+             +p[0]*mpi**2/(mpi+mk)-p[1]*_r0**2/64.*(mk+mpi)**3)
+    return _mua32
 # Crossing even and crossing odd scattering lengths a_0^\pm
 def a_pik_pos(ren,mpi,mk,fpi,l_pik):
     """ Calculate pi-K crossing even scattering length

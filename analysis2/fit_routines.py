@@ -575,7 +575,7 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
         except:
             x_data = np.r_[x[0].A,x[0].B] 
         print(x_data.shape)
-        print(np.column_stack((x_data,chi[:-1])))
+        #print(np.column_stack((x_data,chi[:-1])))
         print("Chi_squared manually")
         print(np.sum(np.square(chi)))
         print(chisquare[0])

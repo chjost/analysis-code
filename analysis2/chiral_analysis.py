@@ -1128,7 +1128,8 @@ class ChirAna(object):
 
   #TODO:  Think about placing this somewhere else, save both isospin channels in
   #one fitresult as different correlators
-  def mu_a0_pik_phys(self, mpi, mk, fpi, r0=None, ren=None, meta=None, iso_32=True):
+  def mu_a0_pik_phys(self, mpi, mk, fpi, r0=None, ren=None, meta=None,
+          iso_32=True,hkchpt=False):
       """Calculate m0ua0 for pi-K from fitted LECs and continuum input
 
       Parameters
@@ -1146,19 +1147,24 @@ class ChirAna(object):
           else:
               _x = np.column_stack((ren,mpi,mk,fpi))
           if iso_32 is True:
-              self.phys_point_fitres = self.fitres.calc_mua0_pik_phys(_x,
+             self.phys_point_fitres = self.fitres.calc_mua0_pik_phys(_x,
                                                 chwrap.mua0_I32_from_fit)
           else:
               self.phys_point_fitres = self.fitres.calc_mua0_pik_phys(_x,
                                                 chwrap.mua0_I12_from_fit)
       else:
           if iso_32 is True:
-              _x = np.column_stack((mpi,mk,fpi,r0,meta))
+              if meta is not None:
+                _x = np.column_stack((mpi,mk,fpi,r0,meta))
+              else:
+                _x = np.column_stack((mpi,mk,fpi,r0))
               print(_x.shape)
-              #self.phys_point_fitres = self.fitres.calc_mua0_pik_phys(_x,
-              #                                 chwrap.pik_I32_chipt_cont)
-              self.phys_point_fitres = self.fitres.calc_mua0_pik_phys(_x,
-                                               wrap_test.mu_pik_a_32_fit)
+              if hkchpt is not True:
+                self.phys_point_fitres = self.fitres.calc_mua0_pik_phys(_x,
+                                                wrap_test.mua0_I32_from_fit)
+              else:
+                self.phys_point_fitres = self.fitres.calc_mua0_pik_phys(_x,
+                                                chwrap.mua0_I32_hkchpt_from_fit)
           else:
               _x = np.column_stack((ren,mpi,mk,fpi))
               self.phys_point_fitres = self.fitres.calc_mua0_pik_phys(_x,

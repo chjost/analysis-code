@@ -524,7 +524,7 @@ class MatchResult(object):
         self.plot_match(obs_to_match,plotdir,ens,meth=meth,proc='match',label=label)
 
     def eval_at(self, amu_match, amu_x=None, meth = None,correlated=True, ens=None,plot = True,
-                plotdir=None,label=None):
+                plotdir=None,label=None,y_lim=None):
       """Evaluates a given observable at a matched strange quark mass
 
       Parameters
@@ -621,7 +621,8 @@ class MatchResult(object):
           if self.debug > 0:
               print("%s: %s = %f +/- %f:" %(m,self.obs_id, orig, std))
       if plot:
-        self.plot_match(self.eval_obs,plotdir,ens,meth=meth,proc='eval',label=label)
+        self.plot_match(self.eval_obs,plotdir,ens,meth=meth,proc='eval',
+                label=label,y_lim = y_lim)
 
     def get_plot_error(self,dim='y'):
       y = np.zeros((self.obs.shape[0],2))
@@ -634,7 +635,8 @@ class MatchResult(object):
 
       return y 
 
-    def plot_match(self,obs,plotdir,ens, proc=None, meth=None, label=None):
+    def plot_match(self,obs,plotdir,ens, proc=None, meth=None, label=None,
+            y_lim=None):
       if self.debug > 0:
           print("match/eval amu_s value for plot:")
           print(compute_error(self.amu_match[meth]))
@@ -708,6 +710,8 @@ class MatchResult(object):
       #plt.xlim(0.015,0.022)
       xlo = np.amin(self.amu)-0.05*np.amin(self.amu)
       xhi = np.amax(self.amu)+0.05*np.amax(self.amu)
+      if y_lim is not None:
+        plt.ylim(y_lim[0],y_lim[1])
       plt.xlim(xlo,xhi)
       plt.locator_params(axis='y',nbins=4, min_n_ticks=2)
       plt.locator_params(axis='x',nbins=5, min_n_ticks=2)
