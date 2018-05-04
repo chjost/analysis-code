@@ -3,6 +3,7 @@ analysis package for scattering problems on the lattice
 """
 # .in_out imports only preliminary, think about more encapsulated solution
 from .in_out import inputnames, read_confs, write_data_ascii, confs_add, confs_subtr, conf_abs, confs_mult
+from .bootstrap import *
 from .correlator import Correlators
 from .ensemble import LatticeEnsemble
 from .fit import LatticeFit, FitResult, init_fitreslst
