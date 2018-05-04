@@ -164,3 +164,4 @@ def gamma_pik(mpi, mk, mu_a0, fpi, meta=None, ren=None):
     _sum = np.sum(_res,axis=0)
     _gamma = -fpi**2/(16.*mpi**2)*_sum 
     return _gamma
+

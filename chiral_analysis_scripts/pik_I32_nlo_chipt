@@ -110,8 +110,7 @@ def main():
     results_lattice_artefact = pd.DataFrame(columns=observables)
     print(results_lattice_artefact.info())
     # Include bootstrapped L_5 as a prior value taken from HPQCD
-    l_5_prior = np.atleast_2d(ana.draw_gauss_distributed(5.41e-3,3e-5,(1500,),
-      origin=True))
+    l_5_prior = np.atleast_2d(ana.draw_gauss_distributed(5.41e-3,3e-5,(1500,), origin=True))
     start = [0.1,0.1,0.1]
     for la in lattice_artefacts:
         print(80*'#')

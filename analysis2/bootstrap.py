@@ -70,9 +70,9 @@ def block(source, l = 2):
     """
     # Determine number of blocks
     _rshape = list(source.shape)
-    print("Blocklength is: %d " % l)
+    #print("Blocklength is: %d " % l)
     _nb = int(np.floor(_rshape[0]/l))
-    print("Number of blocks is: %d" % _nb)
+    #print("Number of blocks is: %d" % _nb)
     _rshape[0] = _nb
     _blocked = np.zeros(_rshape, dtype = source.dtype)
     for i in range(_nb):

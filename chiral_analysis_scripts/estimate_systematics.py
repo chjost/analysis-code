@@ -11,7 +11,7 @@ def main():
     method_delim = '#'*80
     #resdir="/hiskp4/hiskp2/helmes/analysis/scattering/test/pi_k/I_32/results"
     resdir="/hiskp4/helmes/analysis/scattering/pi_k/I_32_final/results"
-    epik_meth="E1"
+    epik_meth="E3"
 ################################################################################
 #
 #     Analysis for NLO ChPT

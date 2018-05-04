@@ -16,8 +16,13 @@ class ChirAna(object):
 
     def __init__(self, proc_id, observable_names):
         """Initialize an empt ChirAna object with a process identifier and the
-        names of the initial observables"""
-
+        names of the initial observables
+        
+        The data gets initialized with a process identifier and the observable
+        names, which pose the column names for the underlying dataframe
+        """
+        
+        # a unique identifier for the process. Also used for the filename
         self.process_id = proc_id
         # dataframe for the bootstrapsamples to store
         self.data = pd.DataFrame(columns = observable_names)
@@ -32,13 +37,21 @@ class ChirAna(object):
 
         Parameters
         ----------
-        measured_data: dictionary of the data, key and bootstrapsamples
-        meta_data: dictionary of describing data, key and data (not necessarily
-        bootstrapped)
+        measured_data:  dictionary of the data, key and bootstrapsamples
+        meta_data:      dictionary of describing data, key and data (not 
+                        necessarily bootstrapped)
         """
         _dataframe = pd.DataFrame(data=measured_data)
         _meta_data = data_handler.extend_data(meta_data,_dataframe.index)
         _metaframe = pd.DataFrame(data=_meta_data)
         _dataframe = _dataframe.join(_metaframe,how='left')
         self.data = self.data.append(_dataframe)
+    
+    def save(self, path):
+        filepath = path+'/'+self.process_id+'.h5'
+
+    def fse_corrections():    
+    def fix_quark_mass(self, observables,):
+        return qm_fixed
+    def extrapolate():
 

@@ -3,9 +3,9 @@
 # e is '_final'
 e='_final'
 # We have two methods for fixing the strange quark mass, labelled A and B
-meth=( A B )
+meth=( B )
 # Furthermore there are two values for Z_P around (choose 1, 2)
-zp=( 1 2 )
+zp=( 1 )
 # Lastly we employ three methods for extracting E_piK ( E1 E2 E3 )
 epik=( E1 E3 )
 for m in "${meth[@]}"; do

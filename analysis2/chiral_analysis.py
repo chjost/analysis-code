@@ -1209,18 +1209,22 @@ class ChirAna(object):
       # determine covariance matrix, including prior
       _y_cov = chut.concat_data_cov(_y_data,prior=prior)
       _cov = np.cov(_y_cov)
-      #_cov = mute(_cov)
+      if 'B' in self.proc_id and 'fixms' in self.proc_id:
+        _cov = mute(_cov)
       # plot correlation matrix
       if plotdir is not None:
           corr = plot.LatticePlot(plotdir+"/corr_%s.pdf"%self.proc_id)
-          #corr.plot_heatmap(np.corrcoef(_y_cov),
-          #                  ["Correlation",["data","data"]])
-          corr.plot_heatmap((np.linalg.cholesky(np.linalg.inv(_cov))).T,
+          np.set_printoptions(threshold=np.nan)
+          print(mute(np.corrcoef(_y_cov)))
+          corr.plot_heatmap(np.corrcoef(_y_cov),
                             ["Correlation",["data","data"]])
+          #corr.plot_heatmap((np.linalg.cholesky(np.linalg.inv(_cov))).T,
+          #                  ["Correlation",["data","data"]])
           del corr
       if self.correlated is False:
           _cov = np.diag(np.diagonal(_cov))
-      _cov = (np.linalg.cholesky(np.linalg.inv(_cov))).T
+      else:
+          _cov = (np.linalg.cholesky(np.linalg.inv(_cov))).T
       if self.debug > 0:
           print("in chiral fit: inverse covariance matrix:")
           print(_cov)
