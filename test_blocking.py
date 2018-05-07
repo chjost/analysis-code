@@ -55,9 +55,9 @@ def main():
     mu_s = ['amu_s_185','amu_s_225','amu_s_2464']
     #files = ["%s/pi_corr_p%d.dat" % (prefix, d) for d in range(4)]
     files = ["%s/%s/k_charged_p0.dat" % (datadir, s) for s in mu_s]
-    samples = [2000,1000,500,333,250,200]
+    samples = 2000
     bl = [1,2,4,6,8,10]
-    for nb in zip(samples,bl):
+    for nb in bl:
         corr = ana.Correlators(files, matrix=False,conf_col = 2)
         corr.sym_and_boot(2000,blocking=True,bl=nb[1])
         print(corr.data.shape)
