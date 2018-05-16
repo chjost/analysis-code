@@ -27,6 +27,7 @@ class ChirAna(object):
         # dataframe for the bootstrapsamples to store
         self.data = pd.DataFrame(columns = observable_names)
         self.covariance_matrix = None
+        # dataframe with the bootstrapsamples of the fitted parameters
         self.fitresult = None
 
     def add_data(self, measured_data, meta_data):
