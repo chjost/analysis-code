@@ -364,7 +364,7 @@ def func_ratio(p, t, o):
     return p[0]*(np.cosh(p[1]*(t-(o[1]/2.)))+np.sinh(p[1]*(t-(o[1]/2.)))/
             (np.tanh(2.*o[0]*(t-(o[1]/2.)))))
 
-def func_const(p, t, e):
+def func_const(p, t, e=None):
     """A constant function.
 
     The function is given by p.

@@ -83,6 +83,28 @@ def physical_mass(amps,ens):
   phys_mass =np.multiply(pre,amps) 
   return phys_mass 
 
+def svd_inv(mat):
+    """Singular value decomposed inverse of a matrix
+    """
+    
+    _u,_s,_vh = np.linalg.svd(mat)
+    _tmp = np.dot(np.diag(1./_s),_vh)
+    _mat_inv = np.dot(_u,_tmp) 
+    print(np.allclose(mat,_mat_inv))
+    return _mat_inv
+
+def chol_inv(mat):
+    """Inverse via Cholesky decomposition
+    """
+    l = np.linalg.cholesky(mat)
+    lt = l.T
+    mat_inv = np.dot(np.linalg.inv(lt),np.linalg.inv(l))
+    print("Inverse from Cholesky decomposition:")
+    print(mat_inv)
+    print(np.dot(mat_inv,mat))
+    return mat_inv
+
+
 def eig_decomp(mat):
   """ Compute eigendecomposition of a matrix and print it to screen.
 

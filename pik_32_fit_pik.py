@@ -38,6 +38,7 @@ def main():
     print prefix
     lat = ens.name()
     nboot = ens.get_data("nboot")
+    bs_bl = ens.get_data("boot_bl")
     datadir = ens.get_data("datadir")
     datadir_pi = ens.get_data("datadir_pi")
     plotdir = ens.get_data("plotdir")
@@ -81,7 +82,7 @@ def main():
     if read_data == False:
         pik_corr = ana.Correlators(files, matrix=False,conf_col=3)
     # symmetrize and bootstrap
-        pik_corr.sym_and_boot(nboot)
+        pik_corr.sym_and_boot(nboot,bl=bs_bl,method='stationary')
         #pik_corr.bootstrap(nboot)
         pik_corr.save("%s/%s_%s.npy" % (datadir,corr_pik_out, lat))
     else:

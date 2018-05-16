@@ -29,6 +29,7 @@ def main():
     print prefix
     lat = ens.name()
     nboot = ens.get_data("nboot")
+    bs_bl = ens.get_data("boot_bl")
     datadir = ens.get_data("datadir")
     plotdir = ens.get_data("plotdir")
     gmax = ens.get_data("gmax")
@@ -50,7 +51,7 @@ def main():
     files = ["%s/%s.dat" % (datadir,corr_k_in)]
     if readdata == False:
         k_corr = ana.Correlators(files, matrix=False)
-        k_corr.sym_and_boot(nboot)
+        k_corr.sym_and_boot(nboot,bl=bs_bl,method='stationary')
         print(k_corr.shape)
         k_corr.save("%s/%s_%s.npy" % (datadir,corr_k_out , lat))
     else:
@@ -58,7 +59,7 @@ def main():
     # fit kaon correlation function for multiple fitranges
     fit_k = ana.LatticeFit(9,dt_f=-1, dt_i=1,
                                   dt=min_size_mass_k, correlated=True)
-    start = [1., 0.3]
+    start = None
     if read_kfit == False:
         print("fitting kaon")
         k_fitresult = fit_k.fit(start, k_corr, [t_mass_k],

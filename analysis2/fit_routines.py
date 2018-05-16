@@ -11,7 +11,7 @@ import numpy as np
 from covariance import custom_cov
 from statistics import compute_error
 from functions import compute_eff_mass
-from utils import loop_iterator, eig_decomp
+from utils import loop_iterator, eig_decomp, svd_inv, chol_inv
 
 def fit_single(fitfunc, start, corr, franges, add=None, debug=0,
         correlated=True, xshift=0., npar=2):
@@ -377,19 +377,24 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, mute=None, debug=0)
         #print(np.diag(cov))
     else:
         cov = np.cov(Y.T)
-        cov_inv = np.linalg.inv(cov)
+        print("Covariance matrix in correlated fit:")
+        np.set_printoptions(linewidth=1000,threshold=1500)
+        print(cov)
+        np.set_printoptions()
+        #cov_inv = np.linalg.inv(cov)
         #print("Covariance matrix multiplied its inverse")
         #print(cov.dot(cov_inv))
         if mute is not None:
-          #print("Mutilating Covariance Matrix")
+          print("Mutilating Covariance Matrix")
           cov = mute(cov)
           #print("Covariance Matrix:")
           #print(cov)
-    cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
+    #cov = (np.linalg.cholesky(np.linalg.inv(cov))).T
+    cov = (np.linalg.cholesky(chol_inv(cov))).T
     corr = np.corrcoef(Y.T)
-    if debug > 0:
-        print("In fitting correlation matrix is:")
-        print(corr)
+    #if debug > 0:
+        #print("In fitting correlation matrix is:")
+        #print(corr)
     #print("Correlation matrix for fit is:\n %r" %corr)
     # Eigendecomposition of covariance matrix with screen output
     # eig_decomp(cov)
@@ -423,7 +428,7 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, mute=None, debug=0)
                 #  print("arguments:")
                 #  print(res[b-1])
                 p,cov1,infodict,mesg,ier = leastsq(errfunc, start, args=(X[:,b], Y[b],
-                    cov), full_output=1, factor=.1)
+                    cov), full_output=1, factor=100)
                 chisquare[b] = float(sum(infodict['fvec']**2.))
                 res[b] = np.array(p)
         else:
@@ -440,7 +445,7 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, mute=None, debug=0)
                 #  print("arguments:")
                 #  print(res[b-1])
                 p,cov1,infodict,mesg,ier = leastsq(errfunc, start, args=(X, Y[b],
-                    cov), full_output=1, factor=.1)
+                    cov), full_output=1, factor=100)
                 chisquare[b] = float(sum(infodict['fvec']**2.))
                 res[b] = np.array(p)
                 # check the results with original data
@@ -464,7 +469,7 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, mute=None, debug=0)
             #  print("arguments:")
             #  print(res[b-1])
             p,cov1,infodict,mesg,ier = leastsq(errfunc, start, args=(X, Y[b],
-                add[b], cov), full_output=1, factor=.1)
+                add[b], cov), full_output=1,factor=100)
             chisquare[b] = float(sum(infodict['fvec']**2.))
             res[b] = np.array(p)
     # calculate mean and standard deviation
@@ -562,7 +567,7 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
           print("arguments:")
           print(res[0])
         p,cov1,infodict,mesg,ier = leastsq(errfunc, start,
-            args=(x[b],y[b],_cov), full_output=1, factor=.1)
+            args=(x[b],y[b],_cov), full_output=1, maxfev=50000,factor=100)
         chisquare[b] = float(sum(infodict['fvec']**2.))
         res[b] = np.array(p)
         if debug > 3:
@@ -577,6 +582,7 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
         print(x_data.shape)
         #print(np.column_stack((x_data,chi[:-1])))
         print("Chi_squared manually")
+        print(np.square(chi))
         print(np.sum(np.square(chi)))
         print(chisquare[0])
     # calculate mean and standard deviation
@@ -645,7 +651,7 @@ def get_start_values(ncorr, ranges, data, npar=2):
         start.append([])
         # calculate effective values for correlator
         c_eff = np.nanmean(data[...,n], axis=0)
-        m_eff = np.nanmean(compute_eff_mass(data[...,n]), axis=0)
+        m_eff = np.nanmean(compute_eff_mass(data[...,n],data.shape[-2]), axis=0)
         # iterate over the ranges
         for r in ranges[n]:
             if npar == 2:

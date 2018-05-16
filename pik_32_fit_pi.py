@@ -29,6 +29,7 @@ def main():
     print prefix
     lat = ens.name()
     nboot = ens.get_data("nboot")
+    bs_bl = ens.get_data("boot_bl")
     datadir = ens.get_data("datadir_pi")
     plotdir = ens.get_data("plotdir_pi")
     gmax = ens.get_data("gmax")
@@ -50,7 +51,7 @@ def main():
     files = ["%s/%s.dat" % (datadir,corr_pi_in)]
     if readdata == False:
         pi_corr = ana.Correlators(files, matrix=False)
-        pi_corr.sym_and_boot(nboot)
+        pi_corr.sym_and_boot(nboot,bl=bs_bl,method='stationary')
         print(pi_corr.shape)
         pi_corr.save("%s/%s_%s.npy" % (datadir,corr_pi_out , lat))
     else:
@@ -58,7 +59,7 @@ def main():
     # fit pion correlation function for multiple fitranges
     fit_pi = ana.LatticeFit(9,dt_f=-1, dt_i=1,
                                   dt=min_size_mass_pi, correlated=True)
-    start = [1., 0.3]
+    start = None 
     if read_pifit == False:
         print("fitting pion")
         pi_fitresult = fit_pi.fit(start, pi_corr, [t_mass_pi],

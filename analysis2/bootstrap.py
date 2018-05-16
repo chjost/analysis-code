@@ -18,11 +18,14 @@ def truncate_sb_blocks(bindices,nbmeas):
     Returns
     -------
     _bi_array: 1d array, the indices of the bootstrapsample
-    """ 
+    """
+    # list of lists to np array
     _bi_array = np.concatenate([np.array(i) for i in bindices])
+    # delete superflouus indices
     _bi_array = np.delete(_bi_array,np.s_[nbmeas:])
     for i,el in enumerate(_bi_array):
-        if el >=nbmeas:
+        # replace too large indices by rest 
+        if el >= nbmeas:
             _bi_array[i] = np.mod(el,nbmeas)
     return _bi_array
 
@@ -63,9 +66,11 @@ def get_sb_indices(nbmeas,bl):
     """
     # TODO: How to determine length for tuples?
     _tup_length = nbmeas
-    _l = np.random.randint(0, nbmeas, size = _tup_length)
-    _i = np.random.geometric(1./bl,size=_tup_length)
-    _indices = build_sb_blocks(_l,_i,nbmeas)
+    # randint is half open [low,high) -> highest possible value is high-1
+    _i = np.random.randint(0, nbmeas, size = _tup_length)
+    #_l = 1+np.random.geometric(1./bl,size=_tup_length)
+    _l = np.random.geometric(1./bl,size=_tup_length)
+    _indices = build_sb_blocks(_i,_l,nbmeas)
     return _indices
 
 def get_naive_indices(nbmeas,bl=None):
@@ -92,6 +97,8 @@ def bootstrap(source, nbsamples,blocking = False, bl=None, method="naive"):
         if true data will be blocked
     bl: int 
         length of one block
+    method: string, which method to use for index generation, naive and
+            stationary bootstrap are implemented
 
     Returns
     -------
@@ -117,7 +124,7 @@ def bootstrap(source, nbsamples,blocking = False, bl=None, method="naive"):
     number = len(source)
     for _i in range(1, nbsamples):
         _rnd = get_bootstrap_indices(number,method,bl=bl)
-        print(np.max(_rnd))
+        #print(_rnd)
         _sum = 0.
         for _r in range(0, number):
             _sum += source[_rnd[_r]]
@@ -142,16 +149,17 @@ def block(source, l = 2):
     """
     # Determine number of blocks
     _rshape = list(source.shape)
-    print("Blocklength is: %d " % l)
+    #print("Blocklength is: %d " % l)
     _nb = int(np.floor(_rshape[0]/l))
-    print("Number of blocks is: %d" % _nb)
+    #print("Number of blocks is: %d" % _nb)
     _rshape[0] = _nb
     _blocked = np.zeros(_rshape, dtype = source.dtype)
     for i in range(_nb):
         _blocked[i] = np.mean(source[i*l:(i+1)*l],dtype = source.dtype, axis = 0)
     return _blocked
 
-def sym_and_boot(source, nbsamples = 1000, blocking = False, bl = 1):
+def sym_and_boot(source, nbsamples = 1000, blocking = False, bl = 1,
+                 method='naive'):
     """Symmetrizes and boostraps correlation functions.
 
     Symmetrizes the correlation functions given in source and creates
@@ -171,6 +179,8 @@ def sym_and_boot(source, nbsamples = 1000, blocking = False, bl = 1):
         The bootstrapsamples, the sample number is the first axis,
         the symmetrization is around the second axis.
     """
+    print("Using method: %s" %method)
+    print("Using blocklength: %d" %bl)
     _rshape = list(source.shape)
     _nbcorr = _rshape[0]
     _T = _rshape[1]
@@ -180,15 +190,16 @@ def sym_and_boot(source, nbsamples = 1000, blocking = False, bl = 1):
     # initialize the bootstrap samples to 0.
     boot = np.zeros(_rshape, dtype=float)
     # the first timeslice is not symmetrized
-    boot[:,0] = bootstrap(source[:,0], nbsamples, blocking = blocking, bl = bl)
+    boot[:,0] = bootstrap(source[:,0], nbsamples, blocking = blocking, bl = bl,
+                          method=method)
     for _t in range(1, int(_T/2)):
         # symmetrize the correlation function
         _symm = (source[:,_t] + source[:,(_T - _t)]) / 2.
         # bootstrap the timeslice
-        boot[:,_t] = bootstrap(_symm, nbsamples,blocking = blocking, bl=bl)
+        boot[:,_t] = bootstrap(_symm, nbsamples,blocking = blocking, bl=bl,method=method)
     # the timeslice at t = T/2 is not symmetrized
     boot[:,-1] = bootstrap(source[:,int(_T/2)], nbsamples,
-                           blocking = blocking, bl = bl)
+                           blocking = blocking, bl = bl, method=method)
     return boot
 
 
