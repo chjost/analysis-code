@@ -41,6 +41,103 @@ import analysis2 as ana
 #def mk_global():
 #
 #def errfunc_mk_global():
+def get_dataframe_fit_xy(dataframe,x_obs,y_obs,order,bname,priors=None):
+    """Get inverse covariance matrix from sampled data
+    
+    The dataframe containing x and y samples is split up. For each observable it
+    gets pivoted accordingly and then concatenated to a dataframe with the
+    samples as rows. Afterwards the inverse covariance matrix is calculated as
+    np.linalg.inv(pd.DataFrame.cov())
+
+    Parameters
+    ----------
+    dataframe: pd-dataframe containing the samples for all ensembles and
+               observables
+    x_obs: str, x-observable for covariance matrix
+    y_obs: str, y-observables for covariance matrix
+    order: list of str, ordering parameters for the covariance matrix
+    bname: str, name of the sample column
+
+    Returns
+    -------
+    _cov_inv: nd-array, the inverted covariance matrix
+    """
+    _cov_df_x = pivot_dataframe(dataframe,x_obs,order,bname)
+    _cov_df_y = pivot_dataframe(dataframe,y_obs,order,bname)
+    if priors is not None:
+        _covariance_df = pd.concat([_cov_df_x,_cov_df_y,priors],axis=1)
+    else:
+        _covariance_df = pd.concat([_cov_df_x,_cov_df_y],axis=1)
+    return _covariance_df
+
+def get_dataframe_fit(dataframe,y_obs,order,bname,priors=None):
+    """Get inverse covariance matrix from sampled data
+    
+    The dataframe containing x and y samples is split up. For each y-observable it
+    gets pivoted accordingly and then concatenated to a dataframe with the
+    samples as rows. Afterwards the inverse covariance matrix is calculated as
+    np.linalg.inv(pd.DataFrame.cov())
+
+    Parameters
+    ----------
+    dataframe: pd-dataframe containing the samples for all ensembles and
+               observables
+    y_obs: str, y-observables for covariance matrix
+    order: list of str, ordering parameters for the covariance matrix
+    bname: str, name of the sample column
+
+    Returns
+    -------
+    _cov_inv: nd-array, the inverted covariance matrix
+    """
+    _cov_df_y = pivot_dataframe(dataframe,y_obs,order,bname)
+    if priors is not None:
+        _covariance_df = pd.concat([_cov_df_y,priors],axis=1)
+    else:
+        _covariance_df = _cov_df_y
+    return _covariance_df
+
+def get_inverse_covariance(dataframe):
+    _cov =dataframe.cov().values 
+    return np.linalg.cholesky(np.linalg.inv(_cov)).T
+def get_uncorrelated_inverse_covariance(dataframe):
+    _cov =dataframe.cov().values
+    _cov_diag =np.diag(np.diagonal(_cov)) 
+    return np.linalg.cholesky(np.linalg.inv(_cov_diag)).T
+def get_covariance(dataframe):
+    return dataframe.cov().values
+def pivot_dataframe(dataframe,obs_name,ordering,bname):
+    """Pivot a dataframe from long format for calculation of a covariance matrix
+
+    The dataframe gets cut based on the conjunction of observable name, ordering
+    keys and smaples. The result is a dataframe with observable values for each
+    ensemble as columns and
+    samples as rows
+
+    Parameters
+    ----------
+    dataframe: pd-dataframe, Observable data containing at least one observable
+                column and one sample column in long data format
+    obs_name: str, name of the observable that gets pivoted
+    ordering: list of str, parameters by which the values get ordered
+    bname: name of the sample column
+
+    Returns
+    -------
+    _cut_pivot: pd dataframe as described above
+    """
+    # cut data TODO there has to be a better solution this has advantage of a
+    # generalized ordering (beta,mu_l) or (beta, mu_l, mu_s) 
+    _l = list((obs_name,ordering,bname))
+    _cut_indices =  [obs_name,]
+    for o in ordering:
+        _cut_indices.append(o)
+    _cut_indices.append(bname)
+    _df_cut = dataframe[_cut_indices]
+    _df_cut['ensemble'] = list(_df_cut[ordering].itertuples(index=False,
+                                                                   name=None))
+    _cut_pivot = _df_cut.pivot_table(index = bname,columns='ensemble',values=obs_name)
+    return _cut_pivot
 
 def main():
 ################################################################################
@@ -83,7 +180,7 @@ def main():
     #mu_s_eta_dict = ana.make_dict(space,[strange_eta_A,strange_eta_B,strange_eta_D])
     #amu_s_dict = ana.make_dict(space,[amusA,amusB,amusD])
     #print(amu_s_dict)
-    datadirens.get_data("datadir") 
+    datadir = ens.get_data("datadir") 
     resdir = ens.get_data("resultdir") 
     # Load theata from the resultdir
     proc_id = 'piK_I32_unfixed_data_B%d'%(zp_meth) 
@@ -91,9 +188,17 @@ def main():
     unfixed_data = pd.read_hdf(unfixed_data_path,key=proc_id)
     print(unfixed_data.sample(n=20))
     # Fits take place per bootstrapsample need an errorfunction and a function
+    # Get beta dependent priors r0 and Pz as dataframe
+    r0 = pivot_dataframe(unfixed_data,'r_0',['beta'],'nboot')
+    r0.info()
+    zp = pivot_dataframe(unfixed_data,'Z_P',['beta'],'nboot')
+    zp.info()
+    priors = pd.concat([r0,zp],axis=1)
     # We also need a covariance matrix that gets inverted
-    obs = ['M_K']
-    cov_matrix = build_cov_matrix(obs,unfixed_data)
+    data_for_cov = get_dataframe_fit(unfixed_data,'M_K^2_FSE',
+                                   ['beta','L','mu_l','mu_s'],'nboot',priors=priors)
+    print(data_for_cov.sample(n=20))
+    data_for_cov.info()
     #hdfstorer = pd.HDFStore(unfixed_data_path)
     #hdfstorer['raw_data'] = unfixed_data
     #hdfstorer['covariancematrix'] = cov_matrix

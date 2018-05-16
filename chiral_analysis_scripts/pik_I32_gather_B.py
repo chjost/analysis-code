@@ -92,9 +92,10 @@ def main():
     # Prepare external data
     ext_data = ana.ExtDat(external_seeds,space,zp_meth,nboot=nboot)
     # initialize an empty dataframe and get the corresponding data 
-    observables = ['beta','mu_l','mu_s','L','M_K^2_FSE','r_0','Z_P']
+    observables = ['nboot','beta','mu_l','mu_s','L','M_K^2_FSE','r_0','Z_P']
     unfixed_data = pd.DataFrame(columns=observables)
     beta_vals = [1.90,1.95,2.10]
+    samples = np.arange(nboot)
     # Loop over mul and mus and put data into subframe
     for i,a in enumerate(space):
         print("\nWorking at lattice spacing %s" %a)
@@ -123,11 +124,13 @@ def main():
             for k,s in enumerate(amu_s_dict[a]):
                 mu_s = np.full(nboot,s)
                 mksq = mksq_fse.obs[k]
-                value_list = [beta,mu_l,mu_s,length,mksq,r0,zp]
+                value_list = [samples,beta,mu_l,mu_s,length,mksq,r0,zp]
                 tmp_frame = pd.DataFrame({key:values for key, values in
                     zip(observables, value_list)})
                 # append subframe to unfixed dataframe
                 unfixed_data =unfixed_data.append(tmp_frame)
+    unfixed_data.nboot=unfixed_data.nboot.astype(int)
+    unfixed_data.L=unfixed_data.L.astype(int)
     print(unfixed_data.sample(n=20))
     unfixed_data.info()
     proc_id = 'piK_I32_unfixed_data_B%d'%(zp_meth)
