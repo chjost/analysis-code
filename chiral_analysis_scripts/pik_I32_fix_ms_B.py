@@ -37,6 +37,7 @@ import pandas as pd
 # Christian's packages
 sys.path.append('/hiskp4/helmes/projects/analysis-code/')
 import analysis2 as ana
+import chiron as chi
 
 #def mk_global():
 #
@@ -186,7 +187,7 @@ def main():
     proc_id = 'piK_I32_unfixed_data_B%d'%(zp_meth) 
     unfixed_data_path = resdir+'/'+proc_id+'.h5' 
     unfixed_data = pd.read_hdf(unfixed_data_path,key=proc_id)
-    print(unfixed_data.sample(n=20))
+    #print(unfixed_data.sample(n=20))
     # Fits take place per bootstrapsample need an errorfunction and a function
     # Get beta dependent priors r0 and Pz as dataframe
     r0 = pivot_dataframe(unfixed_data,'r_0',['beta'],'nboot')
@@ -199,6 +200,11 @@ def main():
                                    ['beta','L','mu_l','mu_s'],'nboot',priors=priors)
     print(data_for_cov.sample(n=20))
     data_for_cov.info()
+    obs_of_interest = ['M_K^2_FSE','r_0','Z_P']
+    result_means = chi.bootstrap_means(unfixed_data,['beta','mu_l','mu_s'],obs_of_interest)
+    chi.print_si_format(result_means)
+    cov = get_covariance(data_for_cov)
+    print(np.diag(cov))
     #hdfstorer = pd.HDFStore(unfixed_data_path)
     #hdfstorer['raw_data'] = unfixed_data
     #hdfstorer['covariancematrix'] = cov_matrix
