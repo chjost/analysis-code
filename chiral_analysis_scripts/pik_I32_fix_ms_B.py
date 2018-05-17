@@ -105,10 +105,10 @@ def get_uncorrelated_inverse_covariance(dataframe):
     _cov =dataframe.cov().values
     _cov_diag =np.diag(np.diagonal(_cov)) 
     return np.linalg.cholesky(np.linalg.inv(_cov_diag)).T
+
 def get_covariance(dataframe):
-    array = dataframe.values
-    print(np.sqrt(np.diag(np.cov(array.T))))
     return dataframe.cov().values
+
 def pivot_dataframe(dataframe,obs_name,ordering,bname):
     """Pivot a dataframe from long format for calculation of a covariance matrix
 
@@ -200,13 +200,19 @@ def main():
     # We also need a covariance matrix that gets inverted
     data_for_cov = get_dataframe_fit(unfixed_data,'M_K^2_FSE',
                                    ['beta','L','mu_l','mu_s'],'nboot',priors=priors)
-    print(data_for_cov.sample(n=20))
-    data_for_cov.info()
+    a_cols = [col for col in data_for_cov.columns if col[0] == 2.1]
+    print(a_cols)
+    # Something wron in prior selection, get chosen twice
+    a_data = data_for_cov[a_cols[:-1]].iloc[0]
+    print(data_for_cov.iloc[0])
+    print(a_data)
+    #print(data_for_cov.sample(n=20))
     obs_of_interest = ['M_K^2_FSE']
     result_means = chi.bootstrap_means(unfixed_data,['beta','L','mu_l','mu_s'],obs_of_interest)
-    print(result_means)
-    #chi.print_si_format(result_means)
+    chi.print_si_format(result_means)
     cov = get_covariance(data_for_cov)
+    #leastsquares takes callable function and arguments plus start estimate
+    # One lattice spacing
     #hdfstorer = pd.HDFStore(unfixed_data_path)
     #hdfstorer['raw_data'] = unfixed_data
     #hdfstorer['covariancematrix'] = cov_matrix
