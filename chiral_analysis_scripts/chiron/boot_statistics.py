@@ -5,10 +5,11 @@ def own_std(series,level=None):
     # 0th bootstrapsample poses mean value of measurement.
     #if level is not None:
     mean = series.iloc[0]
-    difference = np.diff(series-mean)
+    difference = series-mean
     variance = np.nansum(np.square(difference))/series.size
     std = np.sqrt(variance)
     return std
+    #return variance
 
 def own_mean(series):
     return series.iloc[0]

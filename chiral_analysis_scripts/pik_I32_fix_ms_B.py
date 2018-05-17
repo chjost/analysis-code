@@ -106,6 +106,8 @@ def get_uncorrelated_inverse_covariance(dataframe):
     _cov_diag =np.diag(np.diagonal(_cov)) 
     return np.linalg.cholesky(np.linalg.inv(_cov_diag)).T
 def get_covariance(dataframe):
+    array = dataframe.values
+    print(np.sqrt(np.diag(np.cov(array.T))))
     return dataframe.cov().values
 def pivot_dataframe(dataframe,obs_name,ordering,bname):
     """Pivot a dataframe from long format for calculation of a covariance matrix
@@ -200,11 +202,11 @@ def main():
                                    ['beta','L','mu_l','mu_s'],'nboot',priors=priors)
     print(data_for_cov.sample(n=20))
     data_for_cov.info()
-    obs_of_interest = ['M_K^2_FSE','r_0','Z_P']
-    result_means = chi.bootstrap_means(unfixed_data,['beta','mu_l','mu_s'],obs_of_interest)
-    chi.print_si_format(result_means)
+    obs_of_interest = ['M_K^2_FSE']
+    result_means = chi.bootstrap_means(unfixed_data,['beta','L','mu_l','mu_s'],obs_of_interest)
+    print(result_means)
+    #chi.print_si_format(result_means)
     cov = get_covariance(data_for_cov)
-    print(np.diag(cov))
     #hdfstorer = pd.HDFStore(unfixed_data_path)
     #hdfstorer['raw_data'] = unfixed_data
     #hdfstorer['covariancematrix'] = cov_matrix
