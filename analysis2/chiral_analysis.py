@@ -1179,7 +1179,7 @@ class ChirAna(object):
   # This should be a general fitfunction just taking the fitfunction as an
   # argument
   def fit(self,err_func,start,plotdir=None,correlated=False,prior=None,
-          xcut=None,pik=False):
+          xcut=None,pik=False,resdir=None):
       """ Fit fitfunc to the data of self
 
       Parameters
@@ -1227,6 +1227,8 @@ class ChirAna(object):
       self.fitres = _fit.chiral_fit(_x,_y,start,parlim=None,
                                     correlated=correlated,cov=_cov,
                                     debug=self.debug)
+      if resdir is not None:
+        self.fitres.save(resdir+'/fitres_'+self.proc_id)
       self.fitres.set_ranges(np.array([[[0,len(_x)]]]),[[1,]])
       # build fit_stats array
       _chi2 = self.fitres.chi2[0][0,0]

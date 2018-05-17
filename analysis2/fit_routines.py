@@ -567,7 +567,7 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
           print("arguments:")
           print(res[0])
         p,cov1,infodict,mesg,ier = leastsq(errfunc, start,
-            args=(x[b],y[b],_cov), full_output=1, maxfev=50000,factor=100)
+            args=(x[b],y[b],_cov), full_output=1,factor=100)
         chisquare[b] = float(sum(infodict['fvec']**2.))
         res[b] = np.array(p)
         if debug > 3:

@@ -170,9 +170,10 @@ def main():
         # have as many values for r and z as lattice spacings
         r = np.r_[[5. for s in space]]
         z = np.r_[[0.5 for s in space]]
-        mu = np.r_[[0. for s in space]]
-        p = np.r_[6.,0.1,1.]
-        start=np.r_[r,z,p,mu]
+        #mu = np.r_[[0. for s in space]]
+        #p = np.r_[1.,0.1,0.1,1.]
+        p = np.r_[1.,0.1,0.1]
+        start=np.r_[r,z,p]
         # Get the prior samples
         external_r0 = [ext_data.get(beta,'r0') for beta in space]
         external_zp = [ext_data.get(beta,'zp') for beta in space]
@@ -182,17 +183,31 @@ def main():
         #                   ext_data.get('B','zp'), ext_data.get('D','zp')))
 
         fixms.fit(ana.global_ms_errfunc,start,plotdir=plotdir,correlated=True,
-                  prior=prior)
+                  prior=prior,resdir=resdir)
         header=[r'$r_0m_l$',r'$(r_0 M_K)^2$',r'Physical $m_s$ from physical $M_K^2$',
                r'$(r_0M_{\pi})_{phys}^{2}$']
         ana.print_summary(fixms,header,amu_l_dict,amu_s_dict)
         label = [r'$a\mu_l$',r'$(aM_K)^2$']
         #pick the correct arguments
         args = fixms.fitres.data[0] 
+        #plot_args = np.asarray([np.hstack((args[:,0+i],args[:,len(space)+i], args[:,2*len(space):,0])) for i in range(len(space))])
+        # order plot args as lattice spacing dependent array Ordering: beta
+        # dependent then global
+        # For A
+        # p[0],p[3],p[6],p[7],p[8],p[9]
+        # For B
+        # p[1],p[4],p[6],p[7],p[8],p[9]
+        # For D
+        # p[2],p[5],p[6],p[7],p[8],p[9]
+
         plot_args = np.asarray([np.hstack((args[:,0+i],args[:,len(space)+i],
             args[:,2*len(space):,0])) for i in range(len(space))])
-        #plotfunc = lambda p,x: p[2]/(p[0]*p[1]) * (x+p[5]) * (1+p[3]*p[0]/p[1]*x+p[4]/p[0]**2)
-        plotfunc = lambda p,x: p[2]/(p[0]*p[1]) * (x+p[5]) *(1+p[6])* (1+p[3]*p[0]/p[1]*x+p[4]/p[0]**2)
+        print(plot_args[0])
+        #plot_args = np.asarray([np.hstack((args[:,0+i],args[:,len(space)+i],
+        #    args[:,2*len(space):2*len(space)+3,0],args[:,2*len(space)+3+i])) for i in range(len(space))])
+        plotfunc = lambda p,x: p[2]/(p[0]*p[1]) * (x+p[5]) * (1+p[3]*p[0]/p[1]*x+p[4]/p[0]**2)
+        #plotfunc = lambda p,x: 1./(p[0]*p[1]) * (p[2]*x+p[5]*p[6]) * (1+p[3]*p[0]/p[1]*x+p[4]/p[0]**2)
+        #plotfunc = lambda p,x: p[2]/(p[0]*p[1]) * (x+p[5]) *(1+p[6])* (1+p[3]*p[0]/p[1]*x+p[4]/p[0]**2)
         filename = plotdir+'/'+ fixms.proc_id+'.pdf'
         chiral_plot = ana.LatticePlot(filename, join = True,debug=4)
         chiral_plot.plot_chiral_fit(fixms,space,label,xlim=[0.0,0.011],func=plotfunc,args=plot_args)

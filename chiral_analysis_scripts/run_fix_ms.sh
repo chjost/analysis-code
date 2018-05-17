@@ -7,7 +7,7 @@ meth=( B )
 # Furthermore there are two values for Z_P around (choose 1, 2)
 zp=( 1 2 )
 # Lastly we employ three methods for extracting E_piK ( E1 E2 E3 )
-epik=( E1 E3 )
+epik=( E1 )
 for m in "${meth[@]}"; do
     for z in "${zp[@]}"; do
         for e_meth in "${epik[@]}"; do
