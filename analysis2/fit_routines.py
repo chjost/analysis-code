@@ -553,7 +553,7 @@ def globalfitting(errfunc,x,y, start, add=None, correlated=False,
     chisquare=np.zeros((samples,))
     res = np.zeros((samples,len(start)))
     dof = float(_cov.shape[0]-len(start))
-    for b in range(samples):
+    for b in range(1):
         # TODO: If clauses in for loop to slow?
         if b == 0 and debug > 0:
           print("Overview over the data used:")

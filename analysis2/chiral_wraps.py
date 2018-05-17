@@ -60,17 +60,22 @@ def calc_x_plot_cont(x):
 def global_ms_errfunc(p,x,y,error):
 
     # define the fitfunction for a single beta
-    _func = lambda r, z, p, x,: p[0]/(r*z) * (x[:,0]+x[:,1]) * (1+p[1]*(r/z)*x[:,0]+p[2]/(r**2))
-    #_func = lambda r, z, p, x,: 1./(r*z) * (p[0]*x[:,0]+p[3]*x[:,1]) * (1+p[1]*(r/z)*x[:,0]+p[2]/(r**2))
-    #_func = lambda r, z, mu, p, x,: p[0]/(r*z) * (x[:,0]+x[:,1]) *(1+mu)* (1+p[1]*(r/z)*x[:,0]+p[2]/(r**2))
+    #_func = lambda r, z, p, x,: p[0]/(r*z) * (x[:,0]+x[:,1]) * (1+p[1]*(r/z)*x[:,0]+p[2]/(r**2))
+    #_func = lambda r, z, p, x,: 1./(r*z) * (p[0]*x[:,0]+p[3]*x[:,1]) *
+    #(1+p[1]*(r/z)*x[:,0]+p[2]/(r**2))+
+    _func = lambda r, z, mu, p, x,: 1./(r*z) * (p[0]*x[:,0]+p[3]*x[:,1]) * (1+p[1]*(r/z)*x[:,0]+p[2]/(r**2)) + mu/r**2
+    #_func = lambda r, z, mu, p, x,: p[0]/(r*z) * (x[:,0]+x[:,1]*(1+mu)) * (1+p[1]*(r/z)*x[:,0]+p[2]/(r**2))
 
     # TODO: Automate the array shapes, otherwise very errorprone
-    chi_a = y.A - _func(p[0],p[3],p[6:9],x.A)
-    chi_b = y.B - _func(p[1],p[4],p[6:9],x.B) 
-    chi_d = y.D - _func(p[2],p[5],p[6:9],x.D)
+    #chi_a = y.A - _func(p[0],p[3],p[6:9],x.A)
+    #chi_b = y.B - _func(p[1],p[4],p[6:9],x.B) 
+    #chi_d = y.D - _func(p[2],p[5],p[6:9],x.D)
     #chi_a = y.A - _func(p[0],p[3],p[6:10],x.A)
     #chi_b = y.B - _func(p[1],p[4],p[6:10],x.B) 
     #chi_d = y.D - _func(p[2],p[5],p[6:10],x.D)
+    chi_a = y.A - _func(p[0],p[3],p[9],p[6:10],x.A)
+    chi_b = y.B - _func(p[1],p[4],p[10],p[6:10],x.B) 
+    chi_d = y.D - _func(p[2],p[5],p[11],p[6:10],x.D)
     #chi_a = y.A - _func(p[0],p[3],p[9],p[6:9],x.A)
     #chi_b = y.B - _func(p[1],p[4],p[10],p[6:9],x.B) 
     #chi_d = y.D - _func(p[2],p[5],p[11],p[6:9],x.D)
