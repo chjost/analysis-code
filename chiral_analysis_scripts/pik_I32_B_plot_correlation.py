@@ -192,8 +192,7 @@ def main():
     data_for_cov.info()
     cov = get_covariance(data_for_cov)
     cov = mute(cov)
-    print(cov)
-    print(np.linalg.eigvals(cov[0:3,0:3]))
+    cov_iu = np.cholesky(np.linalg.inv(cov))
     corrcoef = np.corrcoef(data_for_cov.values.T)
     # plot correlation coefficients in heatmap
     tickmarks = np.r_[xdata_A.values,np.asarray([[0,3],[0,4]])]
@@ -208,6 +207,36 @@ def main():
         plt.colorbar()
         pdf.savefig()
         plt.close()
+    # For every ensemble we want the corresponding matrix of chi^2 contributions
+    # as a stacked 3d plot
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
+
+# setup the figure and axes
+fig = plt.figure(figsize=(8, 3))
+ax1 = fig.add_subplot(121, projection='3d')
+ax2 = fig.add_subplot(122, projection='3d')
+
+# fake data
+_x = np.arange(4)
+_y = np.arange(5)
+_xx, _yy = np.meshgrid(_x, _y)
+x, y = _xx.ravel(), _yy.ravel()
+
+top = x + y
+bottom = np.zeros_like(top)
+width = depth = 1
+
+ax1.bar3d(x, y, bottom, width, depth, top, shade=True)
+ax1.set_title('Shaded')
+
+ax2.bar3d(x, y, bottom, width, depth, top, shade=False)
+ax2.set_title('Not Shaded')
+
+plt.show()
+
 
 if __name__ == "__main__":
     try:
