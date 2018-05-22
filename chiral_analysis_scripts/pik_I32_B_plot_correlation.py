@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 ################################################################################
 #
 # Author: Christopher Helmes (helmes@hiskp.uni-bonn.de)
@@ -35,7 +35,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 import pandas as pd
 
 # Christian's packages
-sys.path.append('/hiskp4/helmes/projects/analysis-code/')
+sys.path.append('/home/christopher/programming/analysis-code')
 import analysis2 as ana
 import chiron as chi
 
