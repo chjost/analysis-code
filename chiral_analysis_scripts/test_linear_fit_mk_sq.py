@@ -2,6 +2,41 @@
 ################################################################################
 #
 # Author: Christopher Helmes (helmes@hiskp.uni-bonn.de)
+# Date:   December 2017
+#
+# Copyright (C) 2017 Christopher Helmes
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+# 
+# Fix the strange quark mass in a chiral lQCD analysis. As a fixing parameter
+# the Difference
+# M_s^2 = r_0^2( M_K^2 - 0.5M_{\pi}^2 ),
+# is introduced and the lattice results are interpolated to the corresponding 
+# continuum value.
+# 
+# The input varies with the choice of a value for Z_P the multiplicative
+# renormalization of quark masses. This is done via inputfiles which in addition
+# state values for necessary random_seeds
+# 
+# The data produced is stored as a binary object. 
+#
+# 
+#!/usr/bin/python
+################################################################################
+#
+# Author: Christopher Helmes (helmes@hiskp.uni-bonn.de)
 # Date:   May 2018
 #
 # Copyright (C) 2018 Christopher Helmes
@@ -156,10 +191,10 @@ def mute(cov):
 def amk_sq(p,x):
     # Parameters are equal for each beta, input data is not
     #return p[0]/(p[4]*p[3])*(x[:,0]+x[:,1])*(1+p[1]*p[3]/p[4]*x[:,0]+p[2]/p[3]**2)
-    return p[0]/(p[4]*p[3])*(x[:,0]+p[2]*x[:,1])*(1+p[1]*p[3]/p[4]*x[:,0])
-def errfunc_ms(p,x,y,cov_iu):
+    return p[0]+p[1]*x
+def errfunc_mk(p,x,y,cov_iu):
     # cov_u is the upper triangular matrix of cov
-    f_vector = np.r_[amk_sq(p,x),p[3:5]]
+    f_vector = np.r_[amk_sq(p,x)]
     return np.dot(cov_iu,y-f_vector)
 def main():
     pd.set_option('display.width',1000)
@@ -185,28 +220,26 @@ def main():
     unfixed_data = pd.read_hdf(unfixed_data_path,key=proc_id)
     unfixed_data.info()
     unfixed_A = unfixed_data.where(unfixed_data['beta']==beta).dropna()
-    unfixed_A = unfixed_A.where((unfixed_A['mu_l']>0.003) & (unfixed_A['mu_l']<0.01)).dropna()
+    unfixed_A = unfixed_A.where((unfixed_A['mu_l']==0.003)).dropna()
     xdata_Ab = unfixed_A[unfixed_A.nboot==0]
-    xdata_A = xdata_Ab.set_index(['L','mu_l','mu_s'],drop=False)[['mu_l','mu_s']].sort_index()
+    xdata_A = xdata_Ab.set_index(['mu_s'],drop=False)['mu_s'].sort_index()
     #xdata_A = xdata_A[xdata_A.index.get_level_values('nboot') == 0]
-    A_priors = get_priors(unfixed_A,['r_0','Z_P'],['beta'],'nboot')
     A_data = get_dataframe_fit(unfixed_A,'M_K^2_FSE',                       
-                            ['L','mu_l','mu_s'],'nboot',priors=A_priors)
+                            ['mu_s'],'nboot')
     A_data.info()
     data_for_cov = get_dataframe_fit(unfixed_A,'M_K^2_FSE',
-                                   ['beta','L','mu_l','mu_s'],'nboot',priors=A_priors)
+                                   ['mu_s'],'nboot')
     data_for_cov.info()
     cov = get_covariance(data_for_cov)
-    cov = mute(cov)
     cov_iu = np.linalg.cholesky(np.linalg.inv(cov))
-    print(cov_iu)
+    print(cov_iu.T)
     # Fitresults dataframe by beta
-    col_names = ['beta','nboot','chi^2','P_0','P_1','P_2','P_r','P_Z']
+    col_names = ['beta','nboot','chi^2','P_0','P_1']
     fitres = pd.DataFrame(columns = col_names)
-    p = np.array((1.,0.1,2.,2.,0.2))
+    p = np.array((1.,0.1))
     for b in np.arange(2000):
-        _tmp_fitres = opt.least_squares(errfunc_ms,p, args=(xdata_A.values,
-                                         A_data.iloc[b], cov_iu))
+        _tmp_fitres = opt.least_squares(errfunc_mk,p, args=(xdata_A.values,
+                                         A_data.iloc[b], cov_iu.T))
         _chisq = 2*_tmp_fitres.cost
         _tmp_pars = dict(zip(col_names[3:],_tmp_fitres.x))
         _res_dict = {'beta':beta,'nboot':b,'chi^2':_chisq}
@@ -216,42 +249,15 @@ def main():
         if b%100 == 0:
             print(_res_dict)
     fitres.info()
-    print(A_data.iloc[0])
-    print(xdata_A)
-    #p = np.array((5.558,0.143,4.845,5.193,0.524))
-    p = np.array((1.,0.1,2.,2.,0.2))
-    chi_vec_A = (errfunc_ms(p,xdata_A.values,A_data.iloc[0],cov_iu))
-    print(np.square(chi_vec_A))
-    print(np.nansum(np.square(chi_vec_A)))
    
     
     # We need a plot of the difference between the data and the fitfunction
     # Calculate difference
     # Errorbar Plot
-    def relative_deviation_data_fit(data_vector,func_vector):
-        return (data_vector-func_vector)/data_vector
-    
-    func_values = amk_sq(fitres[['P_0','P_1','P_2',
-        'P_r','P_Z']].where(fitres['nboot']==0).dropna().values[0],
-            xdata_A.values) 
-    rel_dev = relative_deviation_data_fit(A_data.iloc[0].values[:-A_priors.shape[1]],
-                                          func_values)
-    tickmarks = np.r_[xdata_A.values]
-    print(rel_dev)
-    print(xdata_A.shape[0])	
-    with PdfPages(plotdir+'/rel_deviation_fixms_beta%f.pdf'%beta) as pdf:
-        plt.figure(figsize=(13,12))
-        plt.xticks(np.arange(xdata_A.shape[0]),tickmarks,rotation=90)
-        plt.ylabel(r'$(aM_{K,FSE}^2-aM_K^2(\mu_\ell)/aM_{K,FSE}^2$')
-        plt.xlabel(r'$(a\mu_l\,,a\mu_s)$')
-        plt.errorbar(np.arange(xdata_A.shape[0]),rel_dev,fmt='^r',label='%f-Ensembles'%beta)
-        plt.legend()
-        pdf.savefig()
-        plt.close()
     
     # Can be done by pandas
     print("Fit Result Summary:")
-    means = chi.bootstrap_means(fitres,['beta',],['chi^2','P_0','P_1','P_2','P_r','P_Z']) 
+    means = chi.bootstrap_means(fitres,['beta',],['chi^2','P_0','P_1']) 
     chi.print_si_format(means)
     
     #leastsquares takes callable function and arguments plus start estimate

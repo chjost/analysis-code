@@ -1,5 +1,4 @@
-#!/hadron/knippsch/Enthought/Canopy_64bit/User/bin/python
-
+#!/usr/bin/python
 ################################################################################
 #
 # Author: Christopher Helmes (helmes@hiskp.uni-bonn.de)
@@ -52,9 +51,11 @@ def main():
     # get data from input file
     lat = ens.name()
     quark = ens.get_data("quark")
-    datadir = ens.get_data("datadir") 
+    #datadir = ens.get_data("datadir") 
+    datadir = "/hiskp4/helmes/analysis/scattering/pi_k/I_32_blocked//data/D30.48/"
     plotdir = ens.get_data("plotdir") 
-    strange = ens.get_data("strange")
+    #strange = ens.get_data("strange")
+    strange = ['amu_s_115','amu_s_15','amu_s_18']
     
 
     print(datadir)
