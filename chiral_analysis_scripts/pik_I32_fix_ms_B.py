@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 ################################################################################
 #
 # Author: Christopher Helmes (helmes@hiskp.uni-bonn.de)
@@ -36,7 +36,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 import pandas as pd
 
 # Christian's packages
-sys.path.append('/hiskp4/helmes/projects/analysis-code/')
+sys.path.append('/home/christopher/programming/analysis-code/')
 import analysis2 as ana
 import chiron as chi
 
@@ -239,12 +239,12 @@ def main():
     tickmarks = np.r_[xdata_A.values]
     print(rel_dev)
     print(xdata_A.shape[0])	
-    with PdfPages(plotdir+'/rel_deviation_fixms_beta%f.pdf'%beta) as pdf:
+    with PdfPages(plotdir+'/rel_deviation_fixms_beta%.2f.pdf'%beta) as pdf:
         plt.figure(figsize=(13,12))
         plt.xticks(np.arange(xdata_A.shape[0]),tickmarks,rotation=90)
         plt.ylabel(r'$(aM_{K,FSE}^2-aM_K^2(\mu_\ell)/aM_{K,FSE}^2$')
         plt.xlabel(r'$(a\mu_l\,,a\mu_s)$')
-        plt.errorbar(np.arange(xdata_A.shape[0]),rel_dev,fmt='^r',label='%f-Ensembles'%beta)
+        plt.errorbar(np.arange(xdata_A.shape[0]),rel_dev,fmt='^r',label=r'$\beta=$%.2f'%beta)
         plt.legend()
         pdf.savefig()
         plt.close()
