@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 ################################################################################
 #
 # Author: Christopher Helmes (helmes@hiskp.uni-bonn.de)
@@ -71,7 +71,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 import pandas as pd
 
 # Christian's packages
-sys.path.append('/hiskp4/helmes/projects/analysis-code/')
+sys.path.append('/home/christopher/programming/analysis-code/')
 import analysis2 as ana
 import chiron as chi
 
@@ -191,7 +191,7 @@ def mute(cov):
 def amk_sq(p,x):
     # Parameters are equal for each beta, input data is not
     #return p[0]/(p[4]*p[3])*(x[:,0]+x[:,1])*(1+p[1]*p[3]/p[4]*x[:,0]+p[2]/p[3]**2)
-    return p[0]+p[1]*x
+    return p[0]*(p[1]+x)
 def errfunc_mk(p,x,y,cov_iu):
     # cov_u is the upper triangular matrix of cov
     f_vector = np.r_[amk_sq(p,x)]
@@ -220,7 +220,7 @@ def main():
     unfixed_data = pd.read_hdf(unfixed_data_path,key=proc_id)
     unfixed_data.info()
     unfixed_A = unfixed_data.where(unfixed_data['beta']==beta).dropna()
-    unfixed_A = unfixed_A.where((unfixed_A['mu_l']==0.003)).dropna()
+    unfixed_A = unfixed_A.where((unfixed_A['mu_l']==0.0040)).dropna()
     xdata_Ab = unfixed_A[unfixed_A.nboot==0]
     xdata_A = xdata_Ab.set_index(['mu_s'],drop=False)['mu_s'].sort_index()
     #xdata_A = xdata_A[xdata_A.index.get_level_values('nboot') == 0]
@@ -231,6 +231,8 @@ def main():
                                    ['mu_s'],'nboot')
     data_for_cov.info()
     cov = get_covariance(data_for_cov)
+    #cov = np.diag(np.diagonal(cov))
+    print(np.dot(np.linalg.inv(cov),cov))
     cov_iu = np.linalg.cholesky(np.linalg.inv(cov))
     print(cov_iu.T)
     # Fitresults dataframe by beta
@@ -254,7 +256,9 @@ def main():
     # We need a plot of the difference between the data and the fitfunction
     # Calculate difference
     # Errorbar Plot
-    
+    #with PdfPages(plotdir+'/D30.48_mksq_fit.pdf') as pdf
+    #    plt.xlabel()
+    #    pdf.savefig()
     # Can be done by pandas
     print("Fit Result Summary:")
     means = chi.bootstrap_means(fitres,['beta',],['chi^2','P_0','P_1']) 
