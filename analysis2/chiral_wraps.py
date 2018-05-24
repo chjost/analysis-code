@@ -60,12 +60,18 @@ def calc_x_plot_cont(x):
 def global_ms_errfunc(p,x,y,error):
 
     # define the fitfunction for a single beta
-    _func = lambda r, z, p, x,: p[0]/(r*z) * (x[:,0]+x[:,1]) * (1+p[1]*(r/z)*x[:,0]+p[2]/(r**2))
+    #_func = lambda r, z, p, x,: p[0]/(r*z) * (x[:,0]+x[:,1]) * (1+p[1]*(r/z)*x[:,0]+p[2]/(r**2))
+    _func = lambda r, z, p, mu, x,: p[0]/(r*z) * (x[:,0]+mu*x[:,1])* (1+p[1]*(r/z)*x[:,0]+p[2]/(r**2))
 
     # TODO: Automate the array shapes, otherwise very errorprone
-    chi_a = y.A - _func(p[0],p[3],p[6:9],x.A)
-    chi_b = y.B - _func(p[1],p[4],p[6:9],x.B) 
-    chi_d = y.D - _func(p[2],p[5],p[6:9],x.D)
+    #chi_a = y.A - _func(p[0],p[3],p[6:9],x.A)
+    #chi_b = y.B - _func(p[1],p[4],p[6:9],x.B) 
+    #chi_d = y.D - _func(p[2],p[5],p[6:9],x.D)
+    chi_a = y.A - _func(p[0],p[3],p[6:9],p[9],x.A)
+    chi_b = y.B - _func(p[1],p[4],p[6:9],p[10],x.B) 
+    chi_d = y.D - _func(p[2],p[5],p[6:9],p[11],x.D)
+    # modification for musigma dependent fit parameter
+    #chi_d45 = y.D45 - _func(p[2],p[5],p[6:9],p[12],x.D45)
     #chi_a = y.A - _func(p[0],p[2],p[4:7],x.A)
     #chi_b = y.B - _func(p[1],p[3],p[4:7],x.B) 
     # have several priors here as a list
@@ -75,6 +81,7 @@ def global_ms_errfunc(p,x,y,error):
     # collect residuals as one array
     # chi_p[0] are the r_0 residuals, chi_p[1] are the zp residuals
     _residuals = np.concatenate((np.r_[chi_a,chi_b,chi_d], chi_p))
+    #_residuals = np.concatenate((np.r_[chi_a,chi_b,chi_d,chi_d45], chi_p))
     #_residuals = np.concatenate((np.r_[chi_a,chi_b], chi_p))
 
     # calculate the chi values weighted with inverse covariance matrix

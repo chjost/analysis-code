@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 ################################################################################
 #
 # Author: Christopher Helmes (helmes@hiskp.uni-bonn.de)
@@ -36,7 +36,8 @@ from matplotlib.backends.backend_pdf import PdfPages
 import pandas as pd
 
 # Christian's packages
-sys.path.append('/home/christopher/programming/analysis-code/')
+#sys.path.append('/home/christopher/programming/analysis-code/')
+sys.path.append('/hiskp4/helmes/projects/analysis-code/')
 import analysis2 as ana
 import chiron as chi
 
@@ -185,7 +186,7 @@ def main():
     unfixed_data = pd.read_hdf(unfixed_data_path,key=proc_id)
     unfixed_data.info()
     unfixed_A = unfixed_data.where(unfixed_data['beta']==beta).dropna()
-    unfixed_A = unfixed_A.where((unfixed_A['mu_l']>0.003) & (unfixed_A['mu_l']<0.01)).dropna()
+    #unfixed_A = unfixed_A.where((unfixed_A['mu_l']>0.003) & (unfixed_A['mu_l']<0.01)).dropna()
     xdata_Ab = unfixed_A[unfixed_A.nboot==0]
     xdata_A = xdata_Ab.set_index(['L','mu_l','mu_s'],drop=False)[['mu_l','mu_s']].sort_index()
     #xdata_A = xdata_A[xdata_A.index.get_level_values('nboot') == 0]
@@ -197,7 +198,9 @@ def main():
                                    ['beta','L','mu_l','mu_s'],'nboot',priors=A_priors)
     data_for_cov.info()
     cov = get_covariance(data_for_cov)
-    cov = mute(cov)
+    #cov = mute(cov)
+    cov = np.diag(np.diagonal(cov))
+    print(np.dot(np.linalg.inv(cov),cov))
     cov_iu = np.linalg.cholesky(np.linalg.inv(cov))
     print(cov_iu)
     # Fitresults dataframe by beta

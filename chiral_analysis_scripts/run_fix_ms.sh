@@ -1,7 +1,7 @@
 #!/bin/bash
 # e is one of '', '_fp' or '_div' corresponding to E1, E2 and E3
 # e is '_final'
-e='_final'
+e='_blocked'
 # We have two methods for fixing the strange quark mass, labelled A and B
 meth=( B )
 # Furthermore there are two values for Z_P around (choose 1, 2)
