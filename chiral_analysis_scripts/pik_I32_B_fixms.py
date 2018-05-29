@@ -96,10 +96,6 @@ def main():
     strange_eta_D = ens.get_data("strange_alt_d")
     strange_eta_D45 = ens.get_data("strange_alt_d45")
     zp_meth=ens.get_data("zp_meth")
-    try:
-        epik_meth = ens.get_data("epik_meth")
-    except:
-        epik_meth=""
     external_seeds=ens.get_data("external_seeds_b")
     continuum_seeds=ens.get_data("continuum_seeds_b")
     amulA = ens.get_data("amu_l_a")
@@ -112,44 +108,34 @@ def main():
     amusD = ens.get_data("amu_s_d")
     amusD45 = ens.get_data("amu_s_d45")
     # dictionaries for chiral analysis
-    #lat_dict = ana.make_dict(space,[latA,latB,latD])
     lat_dict = ana.make_dict(space,[latA,latB,latD,latD45])
-    #lat_dict = {'A':latA,'B':latB,'D':latD}
-    #amu_l_dict = ana.make_dict(space,[amulA,amulB,amulD])
     amu_l_dict = ana.make_dict(space,[amulA,amulB,amulD,amulD45])
-    #amu_l_dict = {'A': amulA,'B': amulB, 'D': amulD}
     mu_s_dict = ana.make_dict(space,[strangeA,strangeB,strangeD,strangeD45])
-    #mu_s_dict = {'A': strangeA,'B': strangeB, 'D': strangeD}
     mu_s_eta_dict = ana.make_dict(space,[strange_eta_A,strange_eta_B,strange_eta_D,strange_eta_D45])
-    #mu_s_eta_dict = {'A': strange_eta_A,'B': strange_eta_B, 'D': strange_eta_D}
     amu_s_dict = ana.make_dict(space,[amusA,amusB,amusD,amusD45])
-    #amu_s_dict = {'A': amusA,'B': amusB, 'D': amusD}
     print(amu_s_dict)
-    #quark = ens.get_data("quark")
     datadir = ens.get_data("datadir") 
     plotdir = ens.get_data("plotdir") 
     resdir = ens.get_data("resultdir") 
     nboot = ens.get_data("nboot")
     # Prepare external data
-    ext_data = ana.ExtDat(external_seeds,space,zp_meth,nboot=2000)
-    cont_data = ana.ContDat(continuum_seeds,zp_meth=zp_meth,nboot=2000)
+    ext_data = ana.ExtDat(external_seeds,space,zp_meth,nboot=nboot)
+    cont_data = ana.ContDat(continuum_seeds,zp_meth=zp_meth,nboot=nboot)
     fpi_raw = ana.read_extern("../plots2/data/fpi.dat",(1,2))
     print(fpi_raw)
 
     read_ms_fix = False
     read_ext = False
-    # Physical strange quark mass
-    ms = 0.
 ################### Setup fixation of strange quark mass #############################
     fixms = ana.ChirAna("pi-K_I32_chipt_fixms_M%dB"%zp_meth,correlated=True,gamma=False,
                            match=True, fit_ms = True)
     ens_shape_chirana = (len(latA),len(latB),len(latD),len(latD45))
     print(ens_shape_chirana)
     # have 3 strange quark masses 
-    lyt_xvals = ana.generate_chirana_shape(space,ens_shape_chirana,3,2,2000)
-    lyt_yvals = ana.generate_chirana_shape(space,ens_shape_chirana,3,1,2000) 
-    #lyt_xvals = (3,ens_shape_chirana,3,2,2000)
-    #lyt_yvals = (3,ens_shape_chirana,3,1,2000)
+    lyt_xvals = ana.generate_chirana_shape(space,ens_shape_chirana,3,2,nboot)
+    lyt_yvals = ana.generate_chirana_shape(space,ens_shape_chirana,3,1,nboot) 
+    #lyt_xvals = (3,ens_shape_chirana,3,2,nboot)
+    #lyt_yvals = (3,ens_shape_chirana,3,1,nboot)
     fixms.create_empty(lyt_xvals,lyt_yvals,lat_dict=lat_dict)
     print("\nSetup complete, begin chiral analysis")
     if read_ms_fix is True:
@@ -171,7 +157,7 @@ def main():
                     fixms.add_data(mq_tmp,(i,j,k,1),dim='x')
 ####    ############### read in M_K^FSE ############################################
                 mksq_fse = ana.MatchResult("mksq_fse_M%dB_%s"%(zp_meth,e),save=datadir+'%s/'%e)
-                ana.MatchResult.create_empty(mksq_fse,2000,3)
+                ana.MatchResult.create_empty(mksq_fse,nboot,3)
                 mk_names = [datadir+'%s/' % (e) +s+'/fit_k_%s.npz' % (e) for s in mu_s_dict[a]]
                 mksq_fse_meas = ana.init_fitreslst(mk_names)
                 mksq_fse.load_data(mksq_fse_meas,1,amu_s_dict[a],square=True)
@@ -209,7 +195,7 @@ def main():
             args[:,2*len(space):,0])) for i in range(len(space)-1)])
         # build dataframe for function evaluation
         # Intermezzo: collect fitresults
-        fitres_columns = ['beta','mu_l','mu_s','sample','M_K^2_FSE','P_0','P_1',
+        fitres_columns = ['beta','mu_l','L','mu_s','sample','M_K^2_FSE','P_0','P_1',
                           'P_2','P_r','P_Z','P_mu']
         fitres = pd.DataFrame(columns=fitres_columns)
         # loop over beta, mu_l and mu_s
@@ -217,14 +203,16 @@ def main():
         # reset from D30.48 values
         print("modifying lowest mu_s values")
         for i,a in enumerate(space):
-            sample = np.arange(2000)
-            beta = np.full(2000,beta_list[i])
+            sample = np.arange(nboot)
+            beta = np.full(nboot,beta_list[i])
             for j,e in enumerate(lat_dict[a]):
-                mul = np.full(2000,amu_l_dict[a][j])
+                mul = np.full(nboot,amu_l_dict[a][j])
+                L = np.full(nboot,int(e.split('.')[-1]))
                 for k,s in enumerate(amu_s_dict[a]):
-                    mus = np.full(2000,amu_s_dict[a][k])
+                    mus = np.full(nboot,amu_s_dict[a][k])
                     if i < 3:
                         fitres_dict = {'beta': beta,
+                                        'L': L,
                                         'mu_l': mul,
                                         'mu_s':mus,
                                         'sample':sample,
@@ -240,6 +228,7 @@ def main():
                         fitres = fitres.append(tmp_df)
                     else:
                         fitres_dict = {'beta': beta,
+                                        'L': L,
                                         'mu_l': mul,
                                         'mu_s':mus,
                                         'sample':sample,
@@ -255,10 +244,9 @@ def main():
 
         fitres.info()
         print(fitres.sample(n=20))
-
         fitres['M_K^2_func'] = amk_sq(fitres)
         fitres['rel.dev.'] = (fitres['M_K^2_FSE']-fitres['M_K^2_func'])/fitres['M_K^2_FSE']
-        groups = ['beta','mu_l','mu_s']
+        groups = ['beta','L','mu_l','mu_s']
         #observables=['M_K^2_FSE','P_0','P_1','P_2','P_r','P_Z','P_mu','M_K^2_func']
         observables=['M_K^2_FSE','M_K^2_func','rel.dev.']
         print(chi.bootstrap_means(fitres,groups,observables))

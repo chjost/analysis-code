@@ -38,6 +38,7 @@
 import sys
 from scipy import stats
 from scipy import interpolate as ip
+import pandas as pd
 import numpy as np
 from numpy.polynomial import polynomial as P
 import math
@@ -50,6 +51,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 # Christian's packages
 sys.path.append('/hiskp4/helmes/projects/analysis-code/')
 import analysis2 as ana
+import chiron as chi
 
 def main():
 ################################################################################
@@ -63,6 +65,8 @@ def main():
 
     # get data from input file
     space=ens.get_data("beta")
+    # for interpolation only 3 lattice spacings are needed
+    space = space[:-1]
     latA = ens.get_data("namea")
     latB = ens.get_data("nameb")
     latD = ens.get_data("named")
@@ -113,14 +117,18 @@ def main():
     if read is True:
         print("Nothing to be done")
     else:
-        interpolated_B = pd.DataFrame()
+        interpolated_A = pd.DataFrame()
 ################################################################################
 #                   input data                                                 #
 ################################################################################
         beta_list = [1.90,1.95,2.10]
         for i,a in enumerate(space):
+            sample = np.arange(nboot)
+            beta = np.full(nboot,beta_list[i])
             print("\nWorking at lattice spacing %s" %a)
             for j,e in enumerate(lat_dict[a]):
+                mul = np.full(nboot,amu_l_dict[a][j])
+                L = np.full(nboot,int(e.split('.')[-1]))
                 # if using D30.48 modify lowest amus to 0.0115
                 if e == 'D30.48':
                     print("modifying lowest mu_s values")
@@ -131,7 +139,7 @@ def main():
 ####    ############### read in M_K^FSE ############################################
                 mksq_fse = ana.MatchResult("mksq_fse_M%dA_%s"%(zp_meth, e),
                                            save=datadir+'%s/'%e)
-                ana.MatchResult.create_empty(mksq_fse,1500,3)
+                ana.MatchResult.create_empty(mksq_fse,nboot,3)
                 mk_names = [datadir+'%s/' % (e) +s+'/fit_k_%s.npz' % (e) for s in mu_s_dict[a]]
                 print(mk_names)
                 mksq_fse_meas = ana.init_fitreslst(mk_names)
@@ -144,7 +152,7 @@ def main():
 ####    ############### read in M_pi^FSE ###########################################
                 mpi_fse = ana.MatchResult("mpi_fse_M%dA_%s"%(zp_meth,e),
                                           save=datadir+'%s/'%e)
-                ana.MatchResult.create_empty(mpi_fse,1500,3)
+                ana.MatchResult.create_empty(mpi_fse,nboot,3)
                 mpi_names = [datadir+'%s/' % (e) +'/pi'+'/fit_pi_%s.npz' % (e) for s in mu_s_dict[a]]
                 mpi_fse_meas = ana.init_fitreslst(mpi_names)
                 mpi_fse.load_data(mpi_fse_meas,1,amu_s_dict[a],square=False)
@@ -155,7 +163,7 @@ def main():
 
 ####    ############### build M_s^{2,FSE} ##########################################
                 mssq_fse = ana.MatchResult("mssq_fse_M%dA_%s" % (zp_meth,e),save = datadir+'%s/'%e)
-                ana.MatchResult.create_empty(mssq_fse,1500,3)
+                ana.MatchResult.create_empty(mssq_fse,nboot,3)
                 mssq_fse.set_data(mksq_fse.obs,amu_s_dict[a])
                 mssq_fse.add_data(np.square(mpi_fse.obs),idx=slice(0,3),op='min',
                               fac=0.5)
@@ -164,7 +172,7 @@ def main():
                 
 ####    ############### read in M_eta ##############################################
                 metasq = ana.MatchResult("metasq_M%dA_%s"%(zp_meth,e),save=datadir+'%s/'%e)
-                ana.MatchResult.create_empty(metasq,1500,3)
+                ana.MatchResult.create_empty(metasq,nboot,3)
                 meta_names = ['/hiskp4/hiskp2/jost/eta_data/'+'%s/' % (e) +s+'/fit_eta_rm_TP0.npz' for s in mu_s_eta_dict[a]]
                 meta_meas = ana.init_fitreslst(meta_names)
                 metasq.load_data(meta_meas,1,amu_s_dict[a],square=True)
@@ -174,11 +182,19 @@ def main():
 ########################  read in mu_pik a_3/2 ################################
                 mua32 = ana.MatchResult("mua32_M%dA_%s_%s" %(zp_meth,epik_meth,
                                         e),save=datadir+'%s/'%e)
-                ana.MatchResult.create_empty(mua32,1500,3)
+                ana.MatchResult.create_empty(mua32,nboot,3)
                 mua32_names = [datadir+'%s/' % (e) +s+'/mu_a0_TP0_%s_%s.npz' 
                                % (e,epik_meth) for s in mu_s_dict[a]]
                 mua32_meas=ana.init_fitreslst(mua32_names)
                 mua32.load_data(mua32_meas,0,amu_s_dict[a],square=False)
+#####    ############### read in M_pi^FSE ###########################################
+                mpi_fse = ana.MatchResult("mpi_fse_M%dB_%s"%(zp_meth,e),save=datadir+'%s/'%e)
+                ana.MatchResult.create_empty(mpi_fse,nboot,3)
+                mpi_names = [datadir+'%s/' % (e) +'pi'+'/fit_pi_%s.npz' % (e) for s in mu_s_dict[a]]
+                mpi_fse_meas = ana.init_fitreslst(mpi_names)
+                mpi_fse.load_data(mpi_fse_meas,1,amu_s_dict[a],square=False)
+                mpi_fse.add_extern_data('../plots2/data/k_fse_mpi.dat',e,square=False,
+                                       read='fse_mpi',op='div')
 ####    ############################################################################
 #                       fix strange quark mass                                     #
 ####    ############################################################################
@@ -215,20 +231,25 @@ def main():
 #                       copy to pandas dataframe                                   #
 ####    ############################################################################
                 interp_dict = {'beta':beta,
+                                'L':L,
                                 'mu_l':mul,
                                 'mu_s^fix':evl_x,
                                 'sample':sample,
                                 'M_K^2':mksq_fse.eval_obs[2],
-                                'M_eta':metasq.eval_obs[2],
-                                'mu_piK_a32':mua32.eval_obs[2]
-                                'M_pi':mpifse
+                                'M_eta^2':metasq.eval_obs[2],
+                                'mu_piK_a32':mua32.eval_obs[2],
+                                'M_pi':mpi_fse.obs[1]
                                 }
                 tmp_df = pd.DataFrame(data=interp_dict)
-                interpolated_A = interpoalted_A.append(tmp_df)
+                interpolated_A = interpolated_A.append(tmp_df)
+        groups = ['beta','L','mu_l']
+        #observables=['M_K^2_FSE','P_0','P_1','P_2','P_r','P_Z','P_mu','M_K^2_func']
+        obs = ['M_K^2','mu_piK_a32','M_eta^2','mu_s^fix']
+        print(chi.bootstrap_means(interpolated_A,groups,obs))
         proc_id = 'pi_K_I32_interpolate_M%dA'%(zp_meth)
         hdf_savename = resdir+proc_id+'.h5'
         hdfstorer = pd.HDFStore(hdf_savename)
-        hdfstorer.put('Interpolate_%s'%epik_meth,interpolate_B)
+        hdfstorer.put('Interpolate_%s'%epik_meth,interpolated_A)
         del hdfstorer
 if __name__ == '__main__':
     try:
