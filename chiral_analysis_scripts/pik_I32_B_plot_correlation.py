@@ -157,6 +157,48 @@ def mute(cov):
     for i in range(_cov.shape[0]-2,_cov.shape[0]):
       _cov[i,i]=cov[i,i]
     return _cov
+def get_beta_name(b):
+    if b == 1.90:
+        return 'A'
+    elif b == 1.95:
+        return 'B'
+    elif b == 2.10:
+        return 'D'
+    else:
+        print('bet not known')
+
+def get_mul_name(l):
+    return l*10**4
+def get_mus_name(s):
+    if s in [0.0115,0.013,0.0185,0.016]:
+        return 'lo'
+    elif s in [0.015,0.0186,0.0225]:
+        return 'mi'
+    elif s in [0.018,0.021,0.02464]:
+        return 'hi'
+    else:
+                print('mu_s not known')
+def ensemblenames(ix_values):
+    ensemblelist = []
+    for i,e in enumerate(ix_values):
+        b = get_beta_name(e[0])
+        mul = get_mul_name(e[1])
+        mus = get_mus_name(e[2])
+        string = '%s%d %s'%(b,mul,mus)
+        ensemblelist.append(string)
+    return np.asarray(ensemblelist)
+
+def ensemblenames_light(ix_values):
+    ensemblelist = []
+    for i,e in enumerate(ix_values):
+        b = get_beta_name(e[0])
+        try:
+            mul = get_mul_name(e[2])
+            string = '%s%d'%(b,mul)
+        except:
+            string = '%s'%(b)
+        ensemblelist.append(string)
+    return ensemblelist[:-6][0::3]
 
 def main():
 ################################################################################
@@ -179,63 +221,66 @@ def main():
     unfixed_data_path = resdir+'/'+proc_id+'.h5' 
     unfixed_data = pd.read_hdf(unfixed_data_path,key=proc_id)
     unfixed_data.info()
-    unfixed_A = unfixed_data.where(unfixed_data['beta']==1.90).dropna()
-    unfixed_A.info()
-    A_priors = get_priors(unfixed_A,['r_0','Z_P'],['beta'],'nboot')
-    A_data = get_dataframe_fit(unfixed_A,'M_K^2_FSE',                       
+    #unfixed_A = unfixed_data.where(unfixed_data['beta']==2.10).dropna()
+    A_priors = get_priors(unfixed_data,['r_0','Z_P'],['beta'],'nboot')
+    A_data = get_dataframe_fit(unfixed_data,'M_K^2_FSE',                       
                             ['L','mu_l','mu_s'],'nboot',priors=A_priors)
-    data_for_cov = get_dataframe_fit(unfixed_A,'M_K^2_FSE',
+    data_for_cov = get_dataframe_fit(unfixed_data,'M_K^2_FSE',
                                    ['beta','L','mu_l','mu_s'],'nboot',priors=A_priors)
-    xdata_Ab = unfixed_A[unfixed_A.nboot==0]
+    xdata_Ab = unfixed_data[unfixed_data.nboot==0]
     xdata_A = xdata_Ab.set_index(['L','mu_l','mu_s'],drop=False)[['mu_l','mu_s']].sort_index()
-    print(xdata_A.values)
     data_for_cov.info()
     cov = get_covariance(data_for_cov)
-    cov = mute(cov)
-    cov_iu = np.cholesky(np.linalg.inv(cov))
+    #cov = mute(cov)
+    cov_iu = np.linalg.cholesky(np.linalg.inv(cov))
     corrcoef = np.corrcoef(data_for_cov.values.T)
     # plot correlation coefficients in heatmap
-    tickmarks = np.r_[xdata_A.values,np.asarray([[0,3],[0,4]])]
-    with PdfPages(plotdir+'/correlation_fixms_beta19.pdf') as pdf:
+    #tickmarks = np.r_[xdata_A.values,np.asarray([[0,3],[0,4]])]
+    tickmarks = ensemblenames_light(data_for_cov.columns.values)
+    tickmarks += ['$r_0$','$Z_P$']
+    tickmarks = np.asarray(tickmarks)
+    print("Tickmarks for correlation matrix")
+    print(tickmarks)
+    with PdfPages(plotdir+'/correlation_fixms_beta.pdf') as pdf:
         if corrcoef.shape[0] != corrcoef.shape[1]:
           raise ValueError("data not symmetric")
         plt.figure(figsize=(13,12))
-        plt.xticks(np.arange(0.5,corrcoef.shape[0]+0.5),tickmarks,rotation=90)
-        plt.yticks(np.arange(0.5,corrcoef.shape[0]+0.5),tickmarks)
-        plt.pcolor(np.corrcoef(corrcoef), cmap=matplotlib.cm.bwr,
+        plt.xticks(np.arange(1.5,corrcoef.shape[0]+1.5,3),tickmarks,rotation=90)
+        plt.yticks(np.arange(1.5,corrcoef.shape[0]+1.5,3),tickmarks)
+        plt.pcolor(np.corrcoef(corrcoef), cmap=matplotlib.cm.Paired,
                 vmin=np.amin(corrcoef), vmax=np.amax(corrcoef))
         plt.colorbar()
         pdf.savefig()
         plt.close()
     # For every ensemble we want the corresponding matrix of chi^2 contributions
     # as a stacked 3d plot
-import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-
-
-# setup the figure and axes
-fig = plt.figure(figsize=(8, 3))
-ax1 = fig.add_subplot(121, projection='3d')
-ax2 = fig.add_subplot(122, projection='3d')
-
-# fake data
-_x = np.arange(4)
-_y = np.arange(5)
-_xx, _yy = np.meshgrid(_x, _y)
-x, y = _xx.ravel(), _yy.ravel()
-
-top = x + y
-bottom = np.zeros_like(top)
-width = depth = 1
-
-ax1.bar3d(x, y, bottom, width, depth, top, shade=True)
-ax1.set_title('Shaded')
-
-ax2.bar3d(x, y, bottom, width, depth, top, shade=False)
-ax2.set_title('Not Shaded')
-
-plt.show()
+#import numpy as np
+#import matplotlib.pyplot as plt
+#from mpl_toolkits.mplot3d import Axes3D
+#
+#
+## setup the figure and axes
+#fig = plt.figure(figsize=(8, 3))
+#ax1 = fig.add_subplot(121, projection='3d')
+#ax2 = fig.add_subplot(122, projection='3d')
+#
+## fake data
+#_x = np.arange(4)
+#_y = np.arange(5)
+#_xx, _yy = np.meshgrid(_x, _y)
+#x, y = _xx.ravel(), _yy.ravel()
+#
+#top = x + y
+#bottom = np.zeros_like(top)
+#width = depth = 1
+#
+#ax1.bar3d(x, y, bottom, width, depth, top, shade=True)
+#ax1.set_title('Shaded')
+#
+#ax2.bar3d(x, y, bottom, width, depth, top, shade=False)
+#ax2.set_title('Not Shaded')
+#
+#plt.show()
 
 
 if __name__ == "__main__":

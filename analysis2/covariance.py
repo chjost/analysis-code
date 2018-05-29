@@ -8,6 +8,7 @@ from scipy.optimize import leastsq
 import scipy.stats
 import numpy as np
 def mute(cov):
+    print(cov.shape)
     _cov = np.zeros_like(cov)
     for i in range((_cov.shape[0]-6)/3):
       _cov[3*i:3*i+3,3*i:3*i+3]=cov[3*i:3*i+3,3*i:3*i+3]

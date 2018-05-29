@@ -723,10 +723,13 @@ def concat_data_cov(lst,prior=None,debug=1):
     # at the moment only one y-observable is allowed 
     for n in lst:
         nvar += n.shape[0]*n.shape[1]
+        print(n.shape[0],n.shape[1],nvar)
     if prior is not None:
         nvar += prior.shape[0]
     # initialize data array
     d = np.zeros((nvar,nmeas))
+    print("Covariance matrix has shape:")
+    print(d.shape)
     # fill array
     offset = 0
     for i,l in enumerate(lst):

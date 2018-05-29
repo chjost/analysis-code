@@ -38,7 +38,7 @@ class ExtDat(object):
 
         else:
           raise ValueError("Method for Z_P needs to be 1 or 2! (is: %r)" % zp_meth)
-        self.table={'A':obs_a,'B':obs_b,'D':obs_d}
+        self.table={'A':obs_a,'B':obs_b,'D':obs_d,'D45':obs_d}
 
         # Start with an empty dictionary
         self.data={}
