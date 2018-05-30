@@ -69,13 +69,14 @@ def main():
     space = space[:-1]
     latA = ens.get_data("namea")
     latB = ens.get_data("nameb")
-    latD = ens.get_data("named")
+    # can add lists to get new lists
+    latD = ens.get_data("named45")+ens.get_data("named")
     strangeA = ens.get_data("strangea")
     strangeB = ens.get_data("strangeb")
-    strangeD = ens.get_data("stranged")
+    strangeD = ens.get_data("stranged45")
     strange_eta_A = ens.get_data("strange_alt_a")
     strange_eta_B = ens.get_data("strange_alt_b")
-    strange_eta_D = ens.get_data("strange_alt_d")
+    strange_eta_D = ens.get_data("strange_alt_d45")
 
     # read seeds from input files
     zp_meth=ens.get_data("zp_meth")
@@ -87,15 +88,16 @@ def main():
     continuum_seeds = ens.get_data("continuum_seeds_a")
     amulA = ens.get_data("amu_l_a")
     amulB = ens.get_data("amu_l_b")
-    amulD = ens.get_data("amu_l_d")
-
+    # Arrays get added elementwise
+    amulD = np.r_[ens.get_data("amu_l_d45"),ens.get_data("amu_l_d")]
     #dictionary of strange quark masses
     amusA = ens.get_data("amu_s_a")
     amusB = ens.get_data("amu_s_b")
-    amusD = ens.get_data("amu_s_d")
+    amusD = ens.get_data("amu_s_d45")
     # dictionaries for chiral analysis
     lat_dict = ana.make_dict(space,[latA,latB,latD])
     amu_l_dict = ana.make_dict(space,[amulA,amulB,amulD])
+    print(amu_l_dict)
     mu_s_dict = ana.make_dict(space,[strangeA,strangeB,strangeD])
     mu_s_eta_dict = ana.make_dict(space,[strange_eta_A,strange_eta_B,strange_eta_D])
     amu_s_dict = ana.make_dict(space,[amusA,amusB,amusD])
@@ -111,7 +113,6 @@ def main():
     cont_data = ana.ContDat(continuum_seeds,zp_meth=zp_meth)
     #ana.save_dict(resdir+'/continuum_observables_A%d.json'%zp_meth,cont_data.data)
     fpi_raw = ana.read_extern("../plots2/data/fpi.dat",(1,2))
-    print(fpi_raw)
     read = False
     print("\nSetup complete, begin chiral analysis")
     if read is True:
@@ -196,6 +197,10 @@ def main():
                 mpi_fse.add_extern_data('../plots2/data/k_fse_mpi.dat',e,square=False,
                                        read='fse_mpi',op='div')
 ####    ############################################################################
+#                        pseudo bootstraps of fpi                                    #
+####    ############################################################################
+                dummy, fpi = ana.prepare_fk(fpi_raw,e,nboot)
+####    ############################################################################
 #                       fix strange quark mass                                     #
 ####    ############################################################################
                 
@@ -238,7 +243,8 @@ def main():
                                 'M_K^2':mksq_fse.eval_obs[2],
                                 'M_eta^2':metasq.eval_obs[2],
                                 'mu_piK_a32':mua32.eval_obs[2],
-                                'M_pi':mpi_fse.obs[1]
+                                'M_pi':mpi_fse.obs[1],
+                                'fpi':fpi
                                 }
                 tmp_df = pd.DataFrame(data=interp_dict)
                 interpolated_A = interpolated_A.append(tmp_df)

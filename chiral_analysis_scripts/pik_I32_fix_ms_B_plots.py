@@ -33,26 +33,29 @@ def ensemblenames(ix_values):
     ensemblelist = []
     for i,e in enumerate(ix_values):
         b = get_beta_name(e[0])
-        mul = get_mul_name(e[1])
-        mus = get_mus_name(e[2])
+        l=int(e[1])
+        mul = get_mul_name(e[2])
+        mus = get_mus_name(e[3])
         #string = '%s%d %s'%(b,mul,mus)
-        string = '%s%d'%(b,mul)
+        string = '%s%d.%d'%(b,mul,l)
         ensemblelist.append(string)
     return np.asarray(ensemblelist[0::3])
 
 def plot_deviation(dataframe,label,shift=0.,fmt='ok'):
     dataframe.info()
-    means = chi.bootstrap_means(dataframe,['beta','mu_l','mu_s'],['rel.dev.']) 
+    means = chi.bootstrap_means(dataframe,['beta','L','mu_l','mu_s'],['rel.dev.']) 
     # get xdata as ensemblenames 
     print(means.index.values)
     #x = ensemblenames(means.index.values)
     y = ensemblenames(means.index.values)
-    print(y)
+    print(np.arange(3*y.shape[0]))
     #y = means.values[:,0]
     #yerr = means.values[:,1]
     x = means.values[:,0]
     xerr = means.values[:,1]
     print(x,xerr)
+    for h in np.arange(2.5,3*y.shape[0]-1,3):
+        plt.axhline(y=h,linewidth=0.5,ls='dashed',color='k',alpha=0.65)
     plt.yticks(np.arange(1,y.shape[0]*3+1,3),y)
     plt.xticks(np.arange(-0.006,0.007,0.004))
     #plt.xticks(np.arange(1,y.shape[0]+1,3),y)
@@ -67,16 +70,24 @@ def main():
     resdir = "/hiskp4/helmes/analysis/scattering/pi_k/I_32_blocked/results/"
     proc_id="pi_K_I32_fixms_M1B.h5"
     with PdfPages(plotdir+'/rel_deviation_fixms_M1B_mismatch.pdf') as pdf:
-        plt.figure(figsize=(10,25))
+        plt.figure(figsize=(10,15))
         #plt.xlabel(r'$(aM_{K,FSE}^2-aM_K^2(\mu_\ell))/aM_{K,FSE}^2$')
-        plt.xlabel(r'rel.dev. $M_{K,FSE}^2$')
-        plt.ylabel(r'Ensemble')
+        plt.xlabel(r'rel.dev. $M_K^2$')
+        #plt.ylabel(r'Ensemble')
         plt.axvline(x=0,linewidth=1,color='k')
-        fitres = pd.read_hdf(resdir+proc_id,key='Fitresults')
-        #plot_deviation(fitres,r'$P_{\mu}(\beta)$',fmt='^r')
+        fitres = pd.read_hdf(resdir+proc_id,key='Fitresults_sigma_woA4024')
+        plot_deviation(fitres,r'$P_{\mu}(\beta,\mu_{\sigma})$ wo A40.24',shift=0,fmt='ob')
+        plt.legend(frameon=True)
+        pdf.savefig()
+        plt.clf()
+        plt.xlabel(r'rel.dev. $M_K^2$')
+        #plt.ylabel(r'Ensemble')
+        plt.axvline(x=0,linewidth=1,color='k')
         fitres = pd.read_hdf(resdir+proc_id,key='Fitresults_sigma')
-        plot_deviation(fitres,r'$P_{\mu}(\beta,\mu_{\sigma})$',shift=0,fmt='ob')
-        plt.legend()
+        plot_deviation(fitres,r'$P_{\mu}(\beta,\mu_{\sigma})$',fmt='^r')
+        plt.tick_params(axis='y', which='both', labelleft='off',
+                labelright='on')
+        plt.legend(frameon=True)
         pdf.savefig()
         plt.close()
 if __name__ == '__main__':

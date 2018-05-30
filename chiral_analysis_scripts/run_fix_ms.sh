@@ -12,18 +12,18 @@ epik=( E1 E3 )
 
 # Fix strange quark mass for B
 
-for z in "${zp[@]}"; do
-    infile="../ini/pi_K/I_32${e}/chiral_analysis_mua0_zp${z}.ini"
-    ./pik_I32_B_fixms.py ${infile} > ./logfiles/fixms_${m}_${z}${e}.log
-done
-
-#for m in "${meth[@]}"; do
-#    for z in "${zp[@]}"; do
-#        for e_meth in "${epik[@]}"; do
-#            infile="../ini/pi_K/I_32${e}/chiral_analysis_mua0_zp${z}.ini"
-#            sed  -i "s/.*epik_meth.*/epik_meth=${e_meth}/" ${infile}
-#            ./pik_I32_${m}_interpolate.py ${infile} > ./logfiles/interpolate_${m}_${z}_${e_meth}${e}.log
-#        done
-#    done
+#for z in "${zp[@]}"; do
+#    infile="../ini/pi_K/I_32${e}/chiral_analysis_mua0_zp${z}.ini"
+#    ./pik_I32_B_fixms.py ${infile} > ./logfiles/fixms_B_${z}${e}.log
 #done
+
+for m in "${meth[@]}"; do
+    for z in "${zp[@]}"; do
+        for e_meth in "${epik[@]}"; do
+            infile="../ini/pi_K/I_32${e}/chiral_analysis_mua0_zp${z}.ini"
+            sed  -i "s/.*epik_meth.*/epik_meth=${e_meth}/" ${infile}
+            ./pik_I32_${m}_interpolate.py ${infile} > ./logfiles/interpolate_${m}_${z}_${e_meth}${e}.log
+        done
+    done
+done
            

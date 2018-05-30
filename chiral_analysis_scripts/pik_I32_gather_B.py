@@ -60,6 +60,7 @@ def main():
     #print(ens)
     lat = ens.name()
     space=ens.get_data("beta")
+    space=space[:-1]
     latA = ens.get_data("namea")
     latB = ens.get_data("nameb")
     latD = ens.get_data("named")

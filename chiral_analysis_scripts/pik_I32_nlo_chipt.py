@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 ################################################################################
 #
 # Author: Christopher Helmes (helmes@hiskp.uni-bonn.de)
@@ -19,11 +19,25 @@
 # along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
 #
 ################################################################################
-#
+# Extrapolate the data for $mu_{\pi K} a_0$ to the physical point in terms of
+# $\mu_{\pi K}/f_\pi$ using NLO-ChPT.
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+################################################################################
+
 # system imports
 import sys
 from scipy import stats
 from scipy import interpolate as ip
+from scipy import optimize as opt
 import numpy as np
 from numpy.polynomial import polynomial as P
 import math
@@ -35,13 +49,10 @@ from matplotlib.backends.backend_pdf import PdfPages
 import pandas as pd
 
 # Christian's packages
-sys.path.append('/home/christopher/programming/analysis-code')
+sys.path.append('/home/christopher/programming/analysis-code/')
 import analysis2 as ana
 import chiron as chi
 
-#def mk_global():
-#
-#def errfunc_mk_global():
 def get_dataframe_fit_xy(dataframe,x_obs,y_obs,order,bname,priors=None):
     """Get inverse covariance matrix from sampled data
     
@@ -108,9 +119,6 @@ def get_uncorrelated_inverse_covariance(dataframe):
 
 def get_covariance(dataframe):
     return dataframe.cov().values
-#def get_data_vector_beta(dataframe,ordering,beta,priors=None):
-#def get_function_vector_beta(dataframe,ordering,beta):
-#def get_chi_difference(dataframe,):
 def pivot_dataframe(dataframe,obs_name,ordering,bname):
     """Pivot a dataframe from long format for calculation of a covariance matrix
 
@@ -150,58 +158,35 @@ def get_priors(dataframe,obs,ordering,bname):
         _p = pivot_dataframe(dataframe,o,ordering,bname)
         _priors.append(_p)
     return pd.concat(_priors,axis=1)
-def mute(cov):
-    _cov = np.zeros_like(cov)
-    for i in range((_cov.shape[0]-2)/3):
-      _cov[3*i:3*i+3,3*i:3*i+3]=cov[3*i:3*i+3,3*i:3*i+3]
-    for i in range(_cov.shape[0]-2,_cov.shape[0]):
-      _cov[i,i]=cov[i,i]
-    return _cov
-def get_beta_name(b):
-    if b == 1.90:
-        return 'A'
-    elif b == 1.95:
-        return 'B'
-    elif b == 2.10:
-        return 'D'
-    else:
-        print('bet not known')
 
-def get_mul_name(l):
-    return l*10**4
-def get_mus_name(s):
-    if s in [0.0115,0.013,0.0185,0.016]:
-        return 'lo'
-    elif s in [0.015,0.0186,0.0225]:
-        return 'mi'
-    elif s in [0.018,0.021,0.02464]:
-        return 'hi'
-    else:
-                print('mu_s not known')
-def ensemblenames(ix_values):
-    ensemblelist = []
-    for i,e in enumerate(ix_values):
-        b = get_beta_name(e[0])
-        mul = get_mul_name(e[1])
-        mus = get_mus_name(e[2])
-        string = '%s%d %s'%(b,mul,mus)
-        ensemblelist.append(string)
-    return np.asarray(ensemblelist)
+def amk_sq(p,x):
+    # Parameters are equal for each beta, input data is not
+    #return p[0]/(p[4]*p[3])*(x[:,0]+x[:,1])*(1+p[1]*p[3]/p[4]*x[:,0]+p[2]/p[3]**2)
+    return p[0]*(p[1]+x)
 
-def ensemblenames_light(ix_values):
-    ensemblelist = []
-    for i,e in enumerate(ix_values):
-        b = get_beta_name(e[0])
-        try:
-            l=int(e[1])
-            mul = get_mul_name(e[2])
-            string = '%s%d.%d'%(b,mul,l)
-        except:
-            string = '%s'%(b)
-        ensemblelist.append(string)
-    return ensemblelist[:-6][0::3]
-
+def errfunc_mk(p,x,y,cov_iu):
+    # cov_u is the upper triangular matrix of cov
+    f_vector = np.r_[amk_sq(p,x)]
+    return np.dot(cov_iu,y-f_vector)
+def mu_a32_errfunc(p,x,y,cov):
+    #print("In NLO-Errfunc shape of x-values is:")
+    #print(x.shape)
+    # expect two priors
+    if y.shape[0] > x.shape[0]:
+        #_res = pik_I32_chipt_nlo(x[:,0],x[:,1],x[:,2],x[:,3],p)-y[:-2]
+        _res = ana.pik_I32_chipt_nlo(x[:,0],x[:,1],x[:,2],x[:,3],p,meta=x[:,4])-y[:-1]
+        #_res = np.r_[_res,p[1]-y[-2],p[2]-y[-1]]
+        _res = np.r_[_res,p[1]-y[-1]]
+    else: 
+      _res = ana.pik_I32_chipt_nlo(x[:,0],x[:,1],x[:,2],x[:,3],p,meta=x[:,4])-y
+    # calculate the chi values weighted with inverse covariance matrix
+    _chi = np.dot(cov,_res)
+    return _chi
 def main():
+    pd.set_option('display.width',1000)
+
+
+
 ################################################################################
 #                   set up objects                                             #
 ################################################################################
@@ -212,81 +197,77 @@ def main():
         ens = ana.LatticeEnsemble.parse(sys.argv[1])
 
     # get data from input file
-    #TODO: Could we hide that in a function?
+    ms_fixing = sys.argv[2]
+    epik_meth = ens.get_data("epik_meth") 
     zp_meth=ens.get_data("zp_meth")
     datadir = ens.get_data("datadir") 
     plotdir = ens.get_data("plotdir") 
     resdir = ens.get_data("resultdir") 
-    # Load theata from the resultdir
-    proc_id = 'piK_I32_unfixed_data_B%d'%(zp_meth) 
-    unfixed_data_path = resdir+'/'+proc_id+'.h5' 
-    unfixed_data = pd.read_hdf(unfixed_data_path,key=proc_id)
-    unfixed_data.info()
-    #unfixed_A = unfixed_data.where(unfixed_data['beta']==2.10).dropna()
-    A_priors = get_priors(unfixed_data,['r_0','Z_P'],['beta'],'nboot')
-    A_data = get_dataframe_fit(unfixed_data,'M_K^2_FSE',                       
-                            ['L','mu_l','mu_s'],'nboot',priors=A_priors)
-    data_for_cov = get_dataframe_fit(unfixed_data,'M_K^2_FSE',
-                                   ['beta','L','mu_l','mu_s'],'nboot',priors=A_priors)
-    xdata_Ab = unfixed_data[unfixed_data.nboot==0]
-    xdata_A = xdata_Ab.set_index(['L','mu_l','mu_s'],drop=False)[['mu_l','mu_s']].sort_index()
+    nboot = ens.get_data("nboot")
+    # Load the data from the resultdir
+    proc_id = 'pi_K_I32_interpolate_M%d%s'%(zp_meth,ms_fixing.upper()) 
+    data_path = resdir+'/'+proc_id+'.h5' 
+    interpolated_data = pd.read_hdf(data_path, key='Interpolate_sigma_%s'%epik_meth)
+    interpolated_data.info()
+    print(chi.bootstrap_means(interpolated_data,['beta','L','mu_l'],['mu_piK_a32']))
+    # To fit a function we need x and y data and a covariance matrix
+    # get the xdata without any errors
+    xdata = interpolated_data[['M_pi','M_K^2','M_eta^2','mu_piK_a32']].where(interpolated_data['sample']==0).dropna()
+    print(xdata)
+    # get the ydata
+    ydata = get_dataframe_fit(interpolated_data,'mu_piK_a32',['beta','L','mu_l'],'sample')
+    ydata.info()
+    # get the priors and a covariance matrix
+    l5samples = ana.draw_gauss_distributed(5.41e-3,3e-5,(nboot,),origin=True)
+    idx = np.arange(nboot)
+    L5 = pd.DataFrame(data=l5samples, index=idx,columns=['L_5']) 
+    L5.info()
+    data_for_cov = get_dataframe_fit(interpolated_data,'mu_piK_a32',
+                                   ['beta','L','mu_l'],'sample',priors=L5)
     data_for_cov.info()
     cov = get_covariance(data_for_cov)
-    #cov = mute(cov)
+    # Our fit is uncorrelated
+    cov = np.diag(np.diagonal(cov))
+    #print(np.dot(np.linalg.inv(cov),cov))
     cov_iu = np.linalg.cholesky(np.linalg.inv(cov))
-    corrcoef = np.corrcoef(data_for_cov.values.T)
-    # plot correlation coefficients in heatmap
-    #tickmarks = np.r_[xdata_A.values,np.asarray([[0,3],[0,4]])]
-    tickmarks = ensemblenames_light(data_for_cov.columns.values)
-    tickmarks += ['$r_0$','$Z_P$']
-    tickmarks = np.asarray(tickmarks)
-    print("Tickmarks for correlation matrix")
-    print(tickmarks)
-    with PdfPages(plotdir+'/correlation_fixms_beta.pdf') as pdf:
-        if corrcoef.shape[0] != corrcoef.shape[1]:
-          raise ValueError("data not symmetric")
-        plt.figure(figsize=(13,12))
-        plt.xticks(np.arange(1.5,corrcoef.shape[0]+1.5,3),tickmarks,rotation=90)
-        plt.yticks(np.arange(1.5,corrcoef.shape[0]+1.5,3),tickmarks)
-        plt.pcolor(np.corrcoef(corrcoef), cmap=matplotlib.cm.Paired,
-                vmin=np.amin(corrcoef), vmax=np.amax(corrcoef))
-        plt.colorbar()
-        pdf.savefig()
-        plt.close()
-    # For every ensemble we want the corresponding matrix of chi^2 contributions
-    # as a stacked 3d plot
-#import numpy as np
-#import matplotlib.pyplot as plt
-#from mpl_toolkits.mplot3d import Axes3D
-#
-#
-## setup the figure and axes
-#fig = plt.figure(figsize=(8, 3))
-#ax1 = fig.add_subplot(121, projection='3d')
-#ax2 = fig.add_subplot(122, projection='3d')
-#
-## fake data
-#_x = np.arange(4)
-#_y = np.arange(5)
-#_xx, _yy = np.meshgrid(_x, _y)
-#x, y = _xx.ravel(), _yy.ravel()
-#
-#top = x + y
-#bottom = np.zeros_like(top)
-#width = depth = 1
-#
-#ax1.bar3d(x, y, bottom, width, depth, top, shade=True)
-#ax1.set_title('Shaded')
-#
-#ax2.bar3d(x, y, bottom, width, depth, top, shade=False)
-#ax2.set_title('Not Shaded')
-#
-#plt.show()
-
-
+    print(cov_iu.T)
+    ## Fitresults dataframe by beta
+    col_names = ['nboot','chi^2','L_piK','L_5']
+    fitres = pd.DataFrame(columns = col_names)
+    p = np.array((1.,0.1))
+    for b in np.arange(nboot):
+        _tmp_fitres = opt.least_squares(mu_a32_errfunc, p, args=(xdata.values,
+                                        ydata.iloc[b], cov_iu.T))
+        _chisq = 2*_tmp_fitres.cost
+        _tmp_pars = dict(zip(col_names[3:],_tmp_fitres.x))
+        _res_dict = {'beta':beta,'nboot':b,'chi^2':_chisq}
+        _res_dict.update(_tmp_pars)
+        _tmpdf = pd.DataFrame(data = _res_dict,index=[b])
+        fitres = fitres.append(_tmpdf)
+        if b%100 == 0:
+            print(_res_dict)
+    fitres.info()
+   
+    #
+    ## We need a plot of the difference between the data and the fitfunction
+    ## Calculate difference
+    ## Errorbar Plot
+    ##with PdfPages(plotdir+'/D30.48_mksq_fit.pdf') as pdf
+    ##    plt.xlabel()
+    ##    pdf.savefig()
+    ## Can be done by pandas
+    #print("Fit Result Summary:")
+    #means = chi.bootstrap_means(fitres,['beta',],['chi^2','P_0','P_1']) 
+    #chi.print_si_format(means)
+    
+    #leastsquares takes callable function and arguments plus start estimate
+    # One lattice spacing
+    #hdfstorer = pd.HDFStore(unfixed_data_path)
+    #hdfstorer['raw_data'] = unfixed_data
+    #hdfstorer['covariancematrix'] = cov_matrix
+    #hdfstorer['fitresults']
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
         print("KeyboardInterrupt")
-

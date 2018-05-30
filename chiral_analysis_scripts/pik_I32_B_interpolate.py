@@ -94,13 +94,14 @@ def main():
     space=space[:-1]
     latA = ens.get_data("namea")
     latB = ens.get_data("nameb")
-    latD = ens.get_data("named")
+    # can add lists to get new lists
+    latD = ens.get_data("named45")+ens.get_data("named")
     strangeA = ens.get_data("strangea")
     strangeB = ens.get_data("strangeb")
-    strangeD = ens.get_data("stranged")
+    strangeD = ens.get_data("stranged45")
     strange_eta_A = ens.get_data("strange_alt_a")
     strange_eta_B = ens.get_data("strange_alt_b")
-    strange_eta_D = ens.get_data("strange_alt_d")
+    strange_eta_D = ens.get_data("strange_alt_d45")
     zp_meth=ens.get_data("zp_meth")
     try:
         epik_meth = ens.get_data("epik_meth")
@@ -110,11 +111,12 @@ def main():
     continuum_seeds=ens.get_data("continuum_seeds_b")
     amulA = ens.get_data("amu_l_a")
     amulB = ens.get_data("amu_l_b")
-    amulD = ens.get_data("amu_l_d")
+    # Arrays get added elementwise
+    amulD = np.r_[ens.get_data("amu_l_d45"),ens.get_data("amu_l_d")]
     #dictionary of strange quark masses
     amusA = ens.get_data("amu_s_a")
     amusB = ens.get_data("amu_s_b")
-    amusD = ens.get_data("amu_s_d")
+    amusD = ens.get_data("amu_s_d45")
     # dictionaries for chiral analysis
     lat_dict = ana.make_dict(space,[latA,latB,latD])
     #lat_dict = {'A':latA,'B':latB,'D':latD}
@@ -137,11 +139,12 @@ def main():
     ext_data = ana.ExtDat(external_seeds,space,zp_meth,nboot=nboot)
     cont_data = ana.ContDat(continuum_seeds,zp_meth=zp_meth,nboot=nboot)
 
+    fpi_raw = ana.read_extern("../plots2/data/fpi.dat",(1,2))
     # Read in the fixed Data from a saved hdf5 file
     # need the filename and the key of the dataset for the parameters
     # Have to match filename and key from fix_ms_B script
     hdf_readname = resdir+'pi_K_I32_fixms_M%dB'%zp_meth+'.h5'
-    fixms_B_result = pd.read_hdf(hdf_readname,key='Fitresults_sigma')
+    fixms_B_result = pd.read_hdf(hdf_readname,key='Fitresults_sigma_woA4024')
     interp_cols = ['beta','mu_l','mu_s','sample']
     fixms_B_result['amu_s_ref'] = amu_s_ref(fixms_B_result,cont_data)
     data_to_interpolate = pd.DataFrame()
@@ -202,11 +205,16 @@ def main():
             mua32_meas=ana.init_fitreslst(mua32_names)
             mua32.load_data(mua32_meas,0,amu_s_dict[a],square=False)
 ################################################################################
+#                    pseudo bootstraps of fpi                                  #
+################################################################################
+                dummy, fpi = ana.prepare_fk(fpi_raw,e,nboot)
+################################################################################
 #                   fix strange quark mass                                     #
 ################################################################################
-            evl_x = fixms_B_result['amu_s_ref'].where((fixms_B_result['beta']==beta_list[i]) &
-                    (fixms_B_result['mu_l']==amu_l_dict[a][j]) &
-                    (fixms_B_result['mu_s']==amu_s_dict[a][0])).dropna().values 
+            evl_x = fixms_B_result['amu_s_ref'].where((fixms_B_result['beta']==beta_list[i])
+                                              & (fixms_B_result['L']==L[0]) 
+                                              & (fixms_B_result['mu_l']==amu_l_dict[a][j]) 
+                                              & (fixms_B_result['mu_s']==amu_s_dict[a][0])).dropna().values
 ################### interpolate M_K^FSE ########################################
             #mksq_fse.amu = mssq_fse.obs
             label = [r'$a\mu_s$',r'$(aM_{K})^2$',
@@ -237,7 +245,8 @@ def main():
                             'M_K^2':mksq_fse.eval_obs[2],
                             'M_eta^2':metasq.eval_obs[2],
                             'mu_piK_a32':mua32.eval_obs[2],
-                            'M_pi':mpi_fse.obs[1]
+                            'M_pi':mpi_fse.obs[1],
+                            'fpi':fpi
                             }
             tmp_df = pd.DataFrame(data=interp_dict)
             interpolated_B = interpolated_B.append(tmp_df)
