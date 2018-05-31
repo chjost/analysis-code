@@ -233,8 +233,12 @@ def main():
     nboot = ens.get_data("nboot")
     # Load the data from the resultdir
     proc_id = 'pi_K_I32_interpolate_M%d%s'%(zp_meth,ms_fixing.upper()) 
-    data_path = resdir+'/'+proc_id+'.h5' 
-    interpolated_data = pd.read_hdf(data_path, key='Interpolate_sigma_%s'%epik_meth)
+    data_path = resdir+'/'+proc_id+'.h5'
+    if ms_fixing.upper() == 'B':
+        key = 'Interpolate_sigma_%s'%epik_meth
+    else:
+        key = 'Interpolate_%s'%epik_meth
+    interpolated_data = pd.read_hdf(data_path, key=key)
     interpolated_data.info()
     print(chi.bootstrap_means(interpolated_data,['beta','L','mu_l'],['mu_piK_a32']))
     # A few of the data are squared, we need the unsquared data
@@ -250,7 +254,7 @@ def main():
     means = chi.bootstrap_means(extrapol_df,groups,obs)
     chi.print_si_format(means)
     fit_ranges=[[0.,2.5],[0.,1.41],[0.,1.35]]
-    for fr in fit_ranges:
+    for i,fr in enumerate(fit_ranges):
         fit_df = cut_data(extrapol_df,'mu_piK/fpi',fr)
         # To fit a function we need x and y data and a covariance matrix
         # get the xdata without any errors
@@ -278,7 +282,7 @@ def main():
         chi.print_si_format(means)
         cov_iu = np.linalg.cholesky(np.linalg.inv(cov))
         ## Fitresults dataframe by beta
-        col_names = ['nboot','chi^2','L_piK','L_5']
+        col_names = ['sample','chi^2','L_piK','L_5']
         fitres = pd.DataFrame(columns = col_names)
         p = np.array((1.,0.1))
         for b in np.arange(nboot):
@@ -295,8 +299,17 @@ def main():
             #    print(ydata.iloc[b].values)
             #    print(_res_dict)
         fitres.info()
-        chi.print_si_format(chi.bootstrap_means(fitres,['fr_end'],['L_piK','L_5','chi^2']))
+        fit_df=fit_df.merge(fitres,on='sample')
+        chi.print_si_format(chi.bootstrap_means(fit_df,['beta','L','mu_l'],
+                            ['mu_piK/fpi','mu_piK_a32','L_piK','L_5','chi^2']))
+
         # Store Fit dataframe with parameters and fitrange
+        result_id = 'pi_K_I32_nlo_chpt_M%d%s'%(zp_meth,ms_fixing.upper())
+        hdf_filename = resdir+'/'+result_id+'.h5'
+        hdfstorer = pd.HDFStore(hdf_filename)
+        hdfstorer.put('nlo_chpt/%s/fr_%d'%(epik_meth,i),fit_df)
+        del hdfstorer
+
 if __name__ == "__main__":
     try:
         main()
