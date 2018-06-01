@@ -47,7 +47,7 @@ def pik_I32_chipt_nlo(mpi, mk, fpi, p, lambda_x=None, meta=None, lat=None):
     #    _mua32 += _p[2]*lat
     return _mua32
 # TODO: Ugly code doubling but ok for trying out
-def pik_I32_chipt_nlo_cont(mpi, mk, fpi, r0, p, lambda_x=None, meta=None):
+def pik_I32_chipt_nlo_cont(mpi, mk, fpi, p, lambda_x=None, meta=None):
     """ Calculate mu_{piK} a_3/2 in continuum chipt at NLO plus a lattice
     artifact
 
