@@ -74,6 +74,24 @@ def amu_s_ref(df,cont_data):
     amus_ref = pd.Series(amus_ref_func,index=df.index)
     return amus_ref
 
+def calc_ms_phys(df,cont_data):
+    """Calculate the physical strange quark mass from a global fit to aM_K^2
+    """
+    hbarc = 197.37
+    _r0 = cont_data.get('r0')
+    reps = df.shape[0]/_r0.shape[0]
+    r0 = np.tile(_r0,reps)
+    mk = np.tile(cont_data.get('mk'),reps)
+    ml = np.tile(cont_data.get('m_l'),reps)
+    p0 = df['P_0'].values
+    p1 = df['P_1'].values
+    r0ms_phys = (r0*mk/hbarc)**2/(p0*(1+p1*(r0*ml)/hbarc))-(r0*ml/hbarc)
+    ms_phys = r0ms_phys*hbarc/r0
+    ms_for_df = pd.Series(ms_phys,index = df.index)
+    return ms_for_df
+    
+
+
 def main():
     # need the initializations of fixms again
 
@@ -147,6 +165,7 @@ def main():
     fixms_B_result = pd.read_hdf(hdf_readname,key='Fitresults_sigma_woA4024')
     interp_cols = ['beta','mu_l','mu_s','sample']
     fixms_B_result['amu_s_ref'] = amu_s_ref(fixms_B_result,cont_data)
+    fixms_B_result['ms_phys'] = calc_ms_phys(fixms_B_result,cont_data)
     data_to_interpolate = pd.DataFrame()
     # copy over needed data from fixms result (can take M_K^2_FSE directly)
     for p in interp_cols:
@@ -215,6 +234,10 @@ def main():
                                               & (fixms_B_result['L']==L[0]) 
                                               & (fixms_B_result['mu_l']==amu_l_dict[a][j]) 
                                               & (fixms_B_result['mu_s']==amu_s_dict[a][0])).dropna().values
+            ms_phys = fixms_B_result['ms_phys'].where((fixms_B_result['beta']==beta_list[i])
+                                              & (fixms_B_result['L']==L[0]) 
+                                              & (fixms_B_result['mu_l']==amu_l_dict[a][j]) 
+                                              & (fixms_B_result['mu_s']==amu_s_dict[a][0])).dropna().values
 ################### interpolate M_K^FSE ########################################
             #mksq_fse.amu = mssq_fse.obs
             label = [r'$a\mu_s$',r'$(aM_{K})^2$',
@@ -241,6 +264,7 @@ def main():
                             'L':L,
                             'mu_l':mul,
                             'mu_s^fix':evl_x,
+                            'ms_phys':ms_phys,
                             'sample':sample,
                             'M_K^2':mksq_fse.eval_obs[2],
                             'M_eta^2':metasq.eval_obs[2],
@@ -253,7 +277,7 @@ def main():
     interpolated_B.info()
     print(interpolated_B.sample(n=10))
     groups = ['beta','L','mu_l']
-    obs = ['M_K^2','mu_piK_a32','M_eta^2','mu_s^fix']
+    obs = ['M_K^2','mu_piK_a32','M_eta^2','mu_s^fix','ms_phys']
     print(chi.bootstrap_means(interpolated_B,groups,obs))
     proc_id = 'pi_K_I32_interpolate_M%dB'%(zp_meth)
     hdf_savename = resdir+proc_id+'.h5'

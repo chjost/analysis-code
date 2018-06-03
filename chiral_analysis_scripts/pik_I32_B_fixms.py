@@ -69,6 +69,12 @@ def amk_sq(df):
     mksq = pd.Series(mksq_func,index = df.index)
     return mksq
 
+def ms_phys(df,cont):
+    """ Calculate physical strange quark mass from continuum data and
+    fitresutlts
+    """
+    ms_phys = 
+
 def main():
 ################################################################################
 #                   set up objects                                             #
