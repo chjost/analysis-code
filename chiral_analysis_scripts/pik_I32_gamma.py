@@ -249,7 +249,7 @@ def main():
     obs = ['fpi','M_pi','M_K','M_eta','Gamma','M_K/M_pi']
     means = chi.bootstrap_means(extrapol_df,groups,obs)
     chi.print_si_format(means)
-    fit_ranges=[[0.,2.5],[0.,1.41],[0.,1.35]]
+    fit_ranges=[[0,2.5],[1.4,2.5],[1.5,2.5]]
     for i,fr in enumerate(fit_ranges):
         fit_df = cut_data(extrapol_df,'M_K/M_pi',fr)
         # To fit a function we need x and y data and a covariance matrix
@@ -304,7 +304,7 @@ def main():
         result_id = 'pi_K_I32_gamma_M%d%s'%(zp_meth,ms_fixing.upper())
         hdf_filename = resdir+'/'+result_id+'.h5'
         hdfstorer = pd.HDFStore(hdf_filename)
-        hdfstorer.put('nlo_chpt/%s/fr_%d'%(epik_meth,i),fit_df)
+        hdfstorer.put('gamma/%s/fr_%d'%(epik_meth,i),fit_df)
         del hdfstorer
 
 if __name__ == "__main__":

@@ -222,7 +222,8 @@ def main():
                          r'$a^2(M_K^2-0.5M^2_{\pi}) = (aM_s^{\mathrm{ref}})^2$']
                 metasq.eval_at(evl_x,plotdir=plotdir,
                                ens=e,plot=True,label=label, meth=2,
-                               y_lim = [0.065,0.095])
+                               #y_lim = [0.065,0.095]
+                               )
 
 ####    ############### interpolate mu_piK a_3/2 ###################################
                 mua32.amu = mssq_fse.obs
@@ -230,7 +231,9 @@ def main():
                          r'$a^2(M_K^2-0.5M^2_{\pi}) = (aM_s^{\mathrm{ref}})^2$']
                 mua32.eval_at(evl_x,plotdir=plotdir,
                                ens=e,correlated=False,plot=True,label=label,
-                               meth=2,y_lim = [-0.145,-0.09])
+                               meth=2,
+                               #y_lim = [-0.145,-0.09]
+                               )
 
 ####    ############################################################################
 #                       copy to pandas dataframe                                   #

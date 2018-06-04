@@ -261,7 +261,7 @@ def main():
         proc_id = 'pi_K_I32_fixms_M%dB'%(zp_meth)
         hdf_filename = resdir+proc_id+'.h5'
         hdfstorer = pd.HDFStore(hdf_filename)
-        hdfstorer.put('Fitresults_sigma_woA4024',fitres)
+        hdfstorer.put('Fitresults_sigma',fitres)
         del hdfstorer
         
 if __name__ == '__main__':
