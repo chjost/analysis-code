@@ -84,8 +84,9 @@ def tau_pik(df,cont):
     hbarc = 197.33
     # bootstraps:
     # \alpha
-    delta_K = draw_gauss_distributed(0.04,0.022,ma12.shape,origin=True)
+    delta_K = ana.draw_gauss_distributed(0.04,0.022,mk.shape,origin=True)
     alpha = np.full_like(delta_K,7.29735254e-3)
+    p_star = np.full_like(delta_K,11.8)
     # reduced mass of piK atom
     mu_pik  = mpi*mk/(mpi+mk) 
     # isospin odd scattering length
@@ -96,6 +97,7 @@ def tau_pik(df,cont):
     return _tau
 
 def main():
+    pd.set_option('display.width',1000)
     # keys for the hdf datasets
     chpt = ['nlo_chpt','gamma']
     epik_meth = ['E1','E3']
@@ -107,6 +109,11 @@ def main():
     resultdir = '/hiskp4/helmes/analysis/scattering/pi_k/I_32_blocked/results/'
     # for physical calculations get dictionary of continuum bootstrapsamples
     # seeds for M1A,M1B,M2A and M2B
+    ini_path = '/hiskp4/helmes/projects/analysis-code/ini/pi_K/I_32_blocked'
+    ini1 = ini_path+'/'+'chiral_analysis_mua0_zp1.ini'
+    ini2 = ini_path+'/'+'chiral_analysis_mua0_zp2.ini'
+    ens1 = ana.LatticeEnsemble.parse(ini1)
+    ens2 = ana.LatticeEnsemble.parse(ini2)
     cont={'M1A':ana.ContDat(ens1.get_data('continuum_seeds_a'),zp_meth=1),
           'M2A':ana.ContDat(ens2.get_data('continuum_seeds_a'),zp_meth=2),
           'M1B':ana.ContDat(ens1.get_data('continuum_seeds_b'),zp_meth=1),
@@ -138,8 +145,8 @@ def main():
                                        index = tmp_res_index)
         tmp_fin_res['L_piK'] = pd.Series(data = branch_result['L_piK'].unique(),
                                          index = tmp_res_index)
-        tmp_fin_res['fr_bgn'] = branch_result['fr_bgn'].unique()
-        tmp_fin_res['fr_end'] = branch_result['fr_end'].unique()
+        tmp_fin_res['fr_bgn'] = branch_result['fr_bgn'].unique()[0]
+        tmp_fin_res['fr_end'] = branch_result['fr_end'].unique()[0]
         tmp_fin_res['ChPT'] = tp[0]
         tmp_fin_res['poll'] = tp[1]
         tmp_fin_res['RC'] = tp[2]
@@ -147,18 +154,15 @@ def main():
         tmp_cont=cont['M%d%s'%(tp[2],tp[3])]
         tmp_fin_res['mu_piK_a32_phys'] = mua32_phys(tmp_fin_res,tmp_cont)
         tmp_fin_res['mu_piK_a12_phys'] = mua12_phys(tmp_fin_res,tmp_cont)
-        tmp_fin_res['M_pi_a32_phys'] = tmp_fin_res['mu_piK_a32_phys']
-                                     * (tmp_cont.get('mk')+tmp_cont.get('mpi_0'))
-                                     /tmp_cont.get('mk')
-        tmp_fin_res['M_pi_a12_phys'] = tmp_fin_res['mu_piK_a12_phys']
-                                     * (tmp_cont.get('mk')+tmp_cont.get('mpi_0'))
-                                     /tmp_cont.get('mk')
+        tmp_fin_res['M_pi_a32_phys'] = tmp_fin_res['mu_piK_a32_phys'] * (tmp_cont.get('mk')+tmp_cont.get('mpi_0')) / tmp_cont.get('mk')
+        tmp_fin_res['M_pi_a12_phys'] = tmp_fin_res['mu_piK_a12_phys'] * (tmp_cont.get('mk')+tmp_cont.get('mpi_0')) / tmp_cont.get('mk')
         tmp_fin_res['tau_piK'] = tau_pik(tmp_fin_res,tmp_cont)
-        final_results = pd.DataFrame.concat((final_results,tmp_fin_res))
+        final_results = pd.concat((final_results,tmp_fin_res))
                                                      
 
     df_collect.info()
     final_results.info()
+    print(final_results.sample(n=20))
 
     result_id = 'pi_K_I32_overview'
     hdf_filename = resultdir+'/'+result_id

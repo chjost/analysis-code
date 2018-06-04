@@ -1,8 +1,8 @@
 #!/bin/bash
 # e is one of '', '_fp' or '_div' corresponding to E1, E2 and E3
 e='_blocked'
-meth=( A B )
-zp=( 1 2 )
+meth=( B )
+zp=( 1 )
 epik=( E1 E3 )
 for m in "${meth[@]}"; do
     for z in "${zp[@]}"; do
@@ -11,8 +11,8 @@ for m in "${meth[@]}"; do
             sed  -i "s/.*epik_meth.*/epik_meth=${e_meth}/" ${infile}
             ./pik_I32_nlo_chipt.py ${infile} ${m} \
             > ./logfiles/pik_I32_nlo_chipt_${m}${z}_${e_meth}${e}.log
-            ./pik_I32_gamma.py ${infile} ${m} \
-            > ./logfiles/pik_I32_gamma_${m}${z}_${e_meth}${e}.log
+            #./pik_I32_gamma.py ${infile} ${m} \
+            #> ./logfiles/pik_I32_gamma_${m}${z}_${e_meth}${e}.log
         done
     done
 done
