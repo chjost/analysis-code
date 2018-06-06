@@ -154,6 +154,7 @@ def main():
         tmp_fin_res['ms_fix'] = tp[3]
         tmp_cont=cont['M%d%s'%(tp[2],tp[3])]
         tmp_fin_res['chi^2'] = branch_result.loc[0:nboot,'chi^2']
+        tmp_fin_res['p-val'] = branch_result.loc[0:nboot,'p-val']
         tmp_fin_res['mu_piK_a32_phys'] = mua32_phys(tmp_fin_res,tmp_cont)
         tmp_fin_res['mu_piK_a12_phys'] = mua12_phys(tmp_fin_res,tmp_cont)
         tmp_fin_res['M_pi_a32_phys'] = tmp_fin_res['mu_piK_a32_phys'] * (tmp_cont.get('mk')+tmp_cont.get('mpi_0')) / tmp_cont.get('mk')

@@ -206,6 +206,7 @@ def cut_data(dataframe,obs,interval=None):
 
 def main():
     pd.set_option('display.width',1000)
+    delim = '#' * 80
     # Get parameters from initfile
     if len(sys.argv) < 2:
         ens = ana.LatticeEnsemble.parse("A40.24.ini")
@@ -251,6 +252,9 @@ def main():
     chi.print_si_format(means)
     fit_ranges=[[0,2.5],[1.4,2.5],[1.5,2.5]]
     for i,fr in enumerate(fit_ranges):
+        print("\n\n")
+        print(delim)
+        print("Fitting in range:%r" %fr)
         fit_df = cut_data(extrapol_df,'M_K/M_pi',fr)
         # To fit a function we need x and y data and a covariance matrix
         # get the xdata without any errors
@@ -278,25 +282,33 @@ def main():
         chi.print_si_format(means)
         cov_iu = np.linalg.cholesky(np.linalg.inv(cov))
         ## Fitresults dataframe by beta
-        col_names = ['sample','chi^2','L_piK','L_5']
+        col_names = ['sample','chi^2','p-val','L_piK','L_5']
         fitres = pd.DataFrame(columns = col_names)
         xp = np.arange(xdata.shape[0])
-        p = np.r_[xp,(1.,0.1)]
+        start = (1.,0.1)
+        p = np.r_[xp,start]
+        # we have x uncertainties in play, set degrees of freedom manually, 2
+        # parameters and 1 prior
+        dof_data = fit_df.where(fit_df['sample']==0).dropna().shape[0]
+        dof =  dof_data + L5.shape[1] - len(start)
+        print('degrees of freedom are: %d' %dof)
         for b in np.arange(nboot):
             _tmp_fitres = opt.least_squares(gamma_errfunc, p,
                     args=(xdata.iloc[b].values, ydata.iloc[b].values, cov_iu))
             _chisq = 2*_tmp_fitres.cost
-            _tmp_pars = dict(zip(col_names[2:],_tmp_fitres.x[-2:]))
-            _res_dict = {'fr_bgn':fr[0],'fr_end':fr[1],'sample':b,'chi^2':_chisq}
+            _pval = 1-stats.chi2.cdf(_chisq,dof)
+            # Offset needs to be respected
+            _tmp_pars = dict(zip(col_names[3:],_tmp_fitres.x[-2:]))
+            _res_dict = {'fr_bgn':fr[0],'fr_end':fr[1],'sample':b,
+                         'chi^2':_chisq,'p-val':_pval}
             _res_dict.update(_tmp_pars)
             _tmpdf = pd.DataFrame(data = _res_dict,index=[b])
             fitres = fitres.append(_tmpdf)
-            if b%100 == 0:
-                print(xdata.iloc[b].values)
-                print(ydata.iloc[b].values)
-                print(_res_dict)
+            #if b%100 == 0:
+            #    print(_res_dict)
         fitres.info()
         fit_df=fit_df.merge(fitres,on='sample')
+        print(fitres.sample(n=20))
         chi.print_si_format(chi.bootstrap_means(fit_df,['beta','L','mu_l'],
                             ['M_K/M_pi','Gamma','L_piK','L_5','chi^2']))
 

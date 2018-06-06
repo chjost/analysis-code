@@ -680,14 +680,18 @@ class LatticePlot(object):
         print cov
         if self.title is True:
             plt.title(label[0])
+        plt.figure(figsize=(14,12))
         plt.xlabel(label[1])
         plt.ylabel(label[1])
-        plt.xticks(np.arange(3),(0.0185,0.0225,0.02464))
-        plt.yticks(np.arange(3),(0.0185,0.0225,0.02464))
+        #plt.xticks(np.arange(3),(0.0185,0.0225,0.02464))
+        #plt.yticks(np.arange(3),(0.0185,0.0225,0.02464))
         self.set_env(xlim=[0,cov.shape[0]],ylim = [0,cov.shape[0]])
-        plt.pcolor(cov, cmap=matplotlib.cm.bwr, vmin=np.amin(cov),
-            vmax=np.amax(cov))
+        #plt.pcolor(cov, cmap=matplotlib.cm.bwr, vmin=np.amin(cov),
+        #    vmax=np.amax(cov))
+        plt.pcolor(cov, cmap=matplotlib.cm.bwr, vmin=-1,
+            vmax=1)
         plt.colorbar()
+        #Ensure quadratic plot
         self.save()
         plt.clf()
 

@@ -215,6 +215,7 @@ def cut_data(dataframe,obs,interval=None):
 
 def main():
     pd.set_option('display.width',1000)
+    delim = "#" * 80
     # Get parameters from initfile
     if len(sys.argv) < 2:
         ens = ana.LatticeEnsemble.parse("A40.24.ini")
@@ -255,6 +256,9 @@ def main():
     chi.print_si_format(means)
     fit_ranges=[[0.,2.5],[0.,1.41],[0.,1.35]]
     for i,fr in enumerate(fit_ranges):
+        print("\n\n")
+        print(delim)
+        print("Fitting in range:%r" %fr)
         fit_df = cut_data(extrapol_df,'mu_piK/fpi',fr)
         # To fit a function we need x and y data and a covariance matrix
         # get the xdata without any errors
@@ -284,13 +288,18 @@ def main():
         ## Fitresults dataframe by beta
         col_names = ['sample','chi^2','L_piK','L_5']
         fitres = pd.DataFrame(columns = col_names)
-        p = np.array((1.,0.1))
+        start=(1.,0.1)
+        p = np.array(start)
+        dof_data = fit_df.where(fit_df['sample']==0).dropna().shape[0]
+        dof = dof_data + L5.shape[1] - len(start)
         for b in np.arange(nboot):
             _tmp_fitres = opt.least_squares(mu_a32_errfunc, p, args=(xdata.values,
                                             ydata.iloc[b].values, cov_iu))
             _chisq = 2*_tmp_fitres.cost
+            _pval = 1-stats.chi2.cdf(_chisq,dof)
             _tmp_pars = dict(zip(col_names[2:],_tmp_fitres.x))
-            _res_dict = {'fr_bgn':fr[0],'fr_end':fr[1],'sample':b,'chi^2':_chisq}
+            _res_dict = {'fr_bgn':fr[0],'fr_end':fr[1],'sample':b,
+                         'chi^2':_chisq, 'p-val':_pval}
             _res_dict.update(_tmp_pars)
             _tmpdf = pd.DataFrame(data = _res_dict,index=[b])
             fitres = fitres.append(_tmpdf)

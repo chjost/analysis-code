@@ -14,6 +14,6 @@ def print_si_format(frame):
     for k in frame.columns.levels[0]:
         formatted[k]=si_format(frame[k])
     pd.set_option('display.width',None)
-    print(formatted)
+    #print(formatted)
     return formatted
 

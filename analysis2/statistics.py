@@ -95,13 +95,14 @@ def compute_weight(data, pvals, rel=True):
     Parameters
     ----------
     data : ndarray
-        The data for which the weight is calculated.
+        The data for which the weight is calculated. Shape is
+        (samples,fitranges)
     pvals : ndarray
         The p-value used in the weight function.
 
     Returns
     -------
-    weight : ndarray
+    weight : ndarray, shape (fr)
     """
     # compute std/mean over bootstrap samples for every fit interval
     if rel:
