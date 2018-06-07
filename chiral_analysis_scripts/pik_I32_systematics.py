@@ -71,12 +71,10 @@ def fitrange_averages(df,observables):
       # HEuristic way to slim the dataframe
       averaged_df = tmp_df[['ChPT',
           'poll','RC','ms_fix','sample']].iloc[0:1500]
-      print("Temporary dataframe:")
-      averaged_df.info()
+      averaged_df['RC'] = averaged_df['RC'].apply(lambda x: str(x))
       # create a frame per method for the averaged observables
       for o in observables:
         o_weighted = weighted_average_method(tmp_df,o,fr_col=fr_col)
-        o_weighted.info()
         averaged_df = averaged_df.merge(o_weighted,on='sample')
       weighted_df = weighted_df.append(averaged_df)
     return weighted_df
@@ -102,17 +100,15 @@ def weighted_average_method(df,obs,fr_col='fr_end'):
     # pivot out fitresult with fitranges as column
     data_for_weights = df.pivot(columns=fr_col,
                                           values=obs)
-    data_for_weights.info()
     pvals_for_weights = df.pivot(columns=fr_col,values = 'p-val')
     weights = ana.compute_weight(data_for_weights.values,pvals_for_weights.values)
-    print(weights)
     weight_df = pd.DataFrame(data=np.atleast_2d(weights),columns=data_for_weights.columns)
     # after having calculated the weights we want to replace the fitrange
     # dimension by their weighted average
     weighted_mean = pd.DataFrame()
     # the weighted mean is given by 
     # \bar{x} = \frac{\sum_{i=1}^N w_i*x_i}/\sum_{i}^N w_i
-    weighted_mean[obs+'_wa'] = np.sum(np.asarray([ data_for_weights.values[:,i]*weights[i] for i in
+    weighted_mean[obs] = np.sum(np.asarray([ data_for_weights.values[:,i]*weights[i] for i in
             range(data_for_weights.shape[1])]),axis=0)/np.sum(weights)
     weighted_mean['sample'] = np.arange(weighted_mean.shape[0])
     return weighted_mean 
@@ -129,9 +125,17 @@ def main():
     pd.read_hdf(resultdir+filename,key=keyname)
     observables = ['mu_piK_a32_phys','L_piK','mu_piK_a12_phys','M_pi_a32_phys',
                    'M_pi_a12_phys','tau_piK']
-    fr_means = fitrange_averages(final_results,observables) 
+    groups_fr = ['ChPT','poll','RC','ms_fix','fr_bgn','fr_end']
+    groups_wofr = ['ChPT','poll','RC','ms_fix']
+    fr_means = fitrange_averages(final_results,observables)
+    print(chi.print_si_format(chi.bootstrap_means(final_results,groups_fr,observables)))
+    print(chi.print_si_format(chi.bootstrap_means(fr_means,groups_wofr,observables)))
     #compute_weight_method(final_results,['ChPT','poll','RC'],['mu_piK_a32_phys'])
-    print(fr_means.sample(n=20))
+    sources = ['poll','ms_fix','RC','ChPT']
+    observables = ['L_piK','mu_piK_a32_phys',
+            'M_pi_a32_phys','M_pi_a12_phys','tau_piK']
+    final_result = chi.get_systematics(fr_means,sources,observables)
+    print(final_result)
 
 
 
