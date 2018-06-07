@@ -68,8 +68,17 @@ def fitrange_averages(df,observables):
       if tp[0] == 'gamma':
         fr_col = 'fr_bgn'
       tmp_df = method_df(df,tp)
+      # HEuristic way to slim the dataframe
+      averaged_df = tmp_df[['ChPT',
+          'poll','RC','ms_fix','sample']].iloc[0:1500]
+      print("Temporary dataframe:")
+      averaged_df.info()
+      # create a frame per method for the averaged observables
       for o in observables:
-        weighted_average_method(tmp_df,o,fr_col=fr_col)
+        o_weighted = weighted_average_method(tmp_df,o,fr_col=fr_col)
+        o_weighted.info()
+        averaged_df = averaged_df.merge(o_weighted,on='sample')
+      weighted_df = weighted_df.append(averaged_df)
     return weighted_df
 
 def weighted_average_method(df,obs,fr_col='fr_end'):
@@ -91,23 +100,22 @@ def weighted_average_method(df,obs,fr_col='fr_end'):
     """
     # to use the implemented method need to reshape the results
     # pivot out fitresult with fitranges as column
-    data_for_weights = df.pivot(columns='fr_end',
+    data_for_weights = df.pivot(columns=fr_col,
                                           values=obs)
     data_for_weights.info()
-    pvals_for_weights = df.pivot(columns='fr_end',values = 'p-val')
+    pvals_for_weights = df.pivot(columns=fr_col,values = 'p-val')
     weights = ana.compute_weight(data_for_weights.values,pvals_for_weights.values)
     print(weights)
     weight_df = pd.DataFrame(data=np.atleast_2d(weights),columns=data_for_weights.columns)
+    # after having calculated the weights we want to replace the fitrange
+    # dimension by their weighted average
     weighted_mean = pd.DataFrame()
-    for fw in zip(data_for_weights.columns.values,weights):
-      weighted['weight'].loc[_df['fr_end']==fw[0]] = fw[1]
-
-    # broadcast computed weights to fitranges
-    #_df['weight'] = 1.
-    #print(_df.sample(n=20))
-    #return _df[[obs,'fr_bgn','fr_end']]
-    
-
+    # the weighted mean is given by 
+    # \bar{x} = \frac{\sum_{i=1}^N w_i*x_i}/\sum_{i}^N w_i
+    weighted_mean[obs+'_wa'] = np.sum(np.asarray([ data_for_weights.values[:,i]*weights[i] for i in
+            range(data_for_weights.shape[1])]),axis=0)/np.sum(weights)
+    weighted_mean['sample'] = np.arange(weighted_mean.shape[0])
+    return weighted_mean 
 
 def main():
     pd.set_option('display.width',1000)
@@ -119,9 +127,11 @@ def main():
     final_results = pd.read_hdf(resultdir+filename,key=keyname)
     final_results.info()
     pd.read_hdf(resultdir+filename,key=keyname)
-    fr_means = fitrange_averages(final_results,['mu_piK_a32_phys']) 
+    observables = ['mu_piK_a32_phys','L_piK','mu_piK_a12_phys','M_pi_a32_phys',
+                   'M_pi_a12_phys','tau_piK']
+    fr_means = fitrange_averages(final_results,observables) 
     #compute_weight_method(final_results,['ChPT','poll','RC'],['mu_piK_a32_phys'])
-    print(final_results.sample(n=20))
+    print(fr_means.sample(n=20))
 
 
 
