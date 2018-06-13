@@ -69,11 +69,11 @@ def amk_sq(df):
     mksq = pd.Series(mksq_func,index = df.index)
     return mksq
 
-def ms_phys(df,cont):
-    """ Calculate physical strange quark mass from continuum data and
-    fitresutlts
-    """
-    ms_phys = 
+#def ms_phys(df,cont):
+#    """ Calculate physical strange quark mass from continuum data and
+#    fitresutlts
+#    """
+#    ms_phys = 
 
 def main():
 ################################################################################
@@ -189,7 +189,7 @@ def main():
         #                   ext_data.get('D','r0'), ext_data.get('A','zp'), 
         #                   ext_data.get('B','zp'), ext_data.get('D','zp')))
 
-        fixms.fit(ana.global_ms_errfunc,start,plotdir=plotdir,correlated=True,
+        fixms.fit(ana.global_ms_errfunc,start,plotdir=plotdir,correlated=False,
                   prior=prior)
         header=[r'$r_0m_l$',r'$(r_0 M_K)^2$',r'Physical $m_s$ from physical $M_K^2$',
                r'$(r_0M_{\pi})_{phys}^{2}$']
@@ -202,7 +202,7 @@ def main():
         # build dataframe for function evaluation
         # Intermezzo: collect fitresults
         fitres_columns = ['beta','mu_l','L','mu_s','sample','M_K^2_FSE','P_0','P_1',
-                          'P_2','P_r','P_Z','P_mu','chisq']
+                          'P_2','P_r','P_Z','P_mu','chisq','dof']
         fitres = pd.DataFrame(columns=fitres_columns)
         # loop over beta, mu_l and mu_s
         beta_list = [1.90,1.95,2.10,2.10]
@@ -229,7 +229,8 @@ def main():
                                         'P_r':args[:,0+i,0],
                                         'P_Z':args[:,3+i,0],
                                         'P_mu':args[:,2*(len(space)-1)+3+i,0],
-                                        'chisq':fixms.fitres.chi2[0][:,0]}
+                                        'chisq':fixms.fitres.chi2[0][:,0],
+                                        'dof':fixms.fit_stats[0,0]}
                                         
                         tmp_df = pd.DataFrame(data=fitres_dict)
                         fitres = fitres.append(tmp_df)
@@ -246,7 +247,8 @@ def main():
                                         'P_r':args[:,0+i-1,0],
                                         'P_Z':args[:,3+i-1,0],
                                         'P_mu':args[:,-1,0],
-                                        'chisq':fixms.fitres.chi2[0][:,0]}
+                                        'chisq':fixms.fitres.chi2[0][:,0],
+                                        'dof':fixms.fit_stats[0,0]}
                         tmp_df = pd.DataFrame(data=fitres_dict)
                         fitres = fitres.append(tmp_df)
 
@@ -261,7 +263,8 @@ def main():
         proc_id = 'pi_K_I32_fixms_M%dB'%(zp_meth)
         hdf_filename = resdir+proc_id+'.h5'
         hdfstorer = pd.HDFStore(hdf_filename)
-        hdfstorer.put('Fitresults_sigma',fitres)
+        #hdfstorer.put('Fitresults_sigma',fitres)
+        hdfstorer.put('Fitresults_uncorrelated',fitres)
         del hdfstorer
         
 if __name__ == '__main__':

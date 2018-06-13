@@ -213,14 +213,14 @@ def main():
                 print(mksq_fse.obs[:,0])
                 label = [r'$a^2(M_K^2-0.5M^2_{\pi})$',r'$(aM_{K})^2$',
                          r'$a^2(M_K^2-0.5M^2_{\pi}) = (aM_s^{\mathrm{ref}})^2$']
-                mksq_fse.eval_at(evl_x,plotdir=plotdir,
+                mksq_fse.eval_at(evl_x,plotdir=plotdir,correlated=False,
                                ens=e,plot=True,label=label, meth=2)
 
 ####    ############### interpolate M_eta ##########################################
                 metasq.amu = mssq_fse.obs
                 label = [r'$a^2(M_K^2-0.5M^2_{\pi})$',r'$(aM_{\eta})^2$',
                          r'$a^2(M_K^2-0.5M^2_{\pi}) = (aM_s^{\mathrm{ref}})^2$']
-                metasq.eval_at(evl_x,plotdir=plotdir,
+                metasq.eval_at(evl_x,plotdir=plotdir,correlated=False,
                                ens=e,plot=True,label=label, meth=2,
                                #y_lim = [0.065,0.095]
                                )
@@ -258,7 +258,8 @@ def main():
         proc_id = 'pi_K_I32_interpolate_M%dA'%(zp_meth)
         hdf_savename = resdir+proc_id+'.h5'
         hdfstorer = pd.HDFStore(hdf_savename)
-        hdfstorer.put('Interpolate_%s'%epik_meth,interpolated_A)
+        #hdfstorer.put('Interpolate_%s'%epik_meth,interpolated_A)
+        hdfstorer.put('Interpolate_uncorrelated_%s'%epik_meth,interpolated_A)
         del hdfstorer
 if __name__ == '__main__':
     try:

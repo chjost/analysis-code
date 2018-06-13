@@ -71,6 +71,7 @@ def main():
     strange_eta_B = ens.get_data("strange_alt_b")
     strange_eta_D = ens.get_data("strange_alt_d")
     zp_meth=ens.get_data("zp_meth")
+    epik_meth = ens.get_data("epik_meth") 
     external_seeds=ens.get_data("external_seeds_a")
     continuum_seeds=ens.get_data("continuum_seeds_b")
     amulA = ens.get_data("amu_l_a")
@@ -93,7 +94,8 @@ def main():
     # Prepare external data
     ext_data = ana.ExtDat(external_seeds,space,zp_meth,nboot=nboot)
     # initialize an empty dataframe and get the corresponding data 
-    observables = ['nboot','beta','mu_l','mu_s','L','M_K^2_FSE','r_0','Z_P']
+    observables = ['nboot','beta','mu_l','mu_s','L','M_K^2_FSE','M_eta^2',
+                   'mu_piK_a32','r_0','Z_P']
     unfixed_data = pd.DataFrame(columns=observables)
     beta_vals = [1.90,1.95,2.10]
     samples = np.arange(nboot)
@@ -121,11 +123,27 @@ def main():
             mksq_fse.load_data(mksq_fse_meas,1,amu_s_dict[a],square=True)
             mksq_fse.add_extern_data('../plots2/data/k_fse_mk.dat',e,square=True,
                                    read='fse_mk',op='mult')
+    ################### read in M_eta^2 ############################################
+            metasq = ana.MatchResult("metasq_M%dB_%s"%(zp_meth,e),save=datadir+'%s/'%e)
+            ana.MatchResult.create_empty(metasq,nboot,3)
+            meta_names = ['/hiskp4/hiskp2/jost/eta_data/'+'%s/' % (e) +s+'/fit_eta_rm_TP0.npz' for s in mu_s_eta_dict[a]]
+            meta_meas = ana.init_fitreslst(meta_names)
+            metasq.load_data(meta_meas,1,amu_s_dict[a],square=True)
+########################  read in mu_pik a_3/2 ################################
+            mua32 = ana.MatchResult("mua32_M%dB_%s_%s" %(zp_meth,epik_meth,
+                                    e),save=datadir+'%s/'%e)
+            ana.MatchResult.create_empty(mua32,nboot,3)
+            mua32_names = [datadir+'%s/' % (e) +s+'/mu_a0_TP0_%s_%s.npz' 
+                           % (e,epik_meth) for s in mu_s_dict[a]]
+            mua32_meas=ana.init_fitreslst(mua32_names)
+            mua32.load_data(mua32_meas,0,amu_s_dict[a],square=False)
             # Add data to chirana object
             for k,s in enumerate(amu_s_dict[a]):
                 mu_s = np.full(nboot,s)
                 mksq = mksq_fse.obs[k]
-                value_list = [samples,beta,mu_l,mu_s,length,mksq,r0,zp]
+                meta_sq = metasq.obs[k]
+                mua32_dat = mua32.obs[k]
+                value_list = [samples,beta,mu_l,mu_s,length,mksq,meta_sq,mua32_dat,r0,zp]
                 tmp_frame = pd.DataFrame({key:values for key, values in
                     zip(observables, value_list)})
                 # append subframe to unfixed dataframe

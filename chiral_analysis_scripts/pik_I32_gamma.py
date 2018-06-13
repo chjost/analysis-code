@@ -21,16 +21,6 @@
 ################################################################################
 # Extrapolate the data for $mu_{\pi K} a_0$ to the physical point in terms of
 # linearised NLO ChPT.
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
 ################################################################################
 
 # system imports
@@ -227,9 +217,11 @@ def main():
     proc_id = 'pi_K_I32_interpolate_M%d%s'%(zp_meth,ms_fixing.upper()) 
     data_path = resdir+'/'+proc_id+'.h5'
     if ms_fixing.upper() == 'B':
-        key = 'Interpolate_sigma_%s'%epik_meth
+        #key = 'Interpolate_sigma_%s'%epik_meth
+        key = 'Interpolate_uncorrelated_%s'%epik_meth
     else:
-        key = 'Interpolate_%s'%epik_meth
+        #key = 'Interpolate_%s'%epik_meth
+        key = 'Interpolate_uncorrelated_%s'%epik_meth
     interpolated_data = pd.read_hdf(data_path, key=key)
     interpolated_data.info()
     print(chi.bootstrap_means(interpolated_data,['beta','L','mu_l'],['mu_piK_a32']))
@@ -241,16 +233,21 @@ def main():
     extrapol_df['M_K'] = interpolated_data['M_K^2'].pow(1./2)
     extrapol_df['M_eta'] = interpolated_data['M_eta^2'].pow(1./2)
     extrapol_df['M_K/M_pi'] = extrapol_df['M_K']/extrapol_df['M_pi']
+    #extrapol_df['Gamma'] = ana.gamma_pik(extrapol_df['M_pi'].values,
+    #                                     extrapol_df['M_K'].values,
+    #                                     extrapol_df['mu_piK_a32'].values,
+    #                                     extrapol_df['fpi'].values,
+    #                                     extrapol_df['M_eta'].values)
     extrapol_df['Gamma'] = ana.gamma_pik(extrapol_df['M_pi'].values,
                                          extrapol_df['M_K'].values,
                                          extrapol_df['mu_piK_a32'].values,
-                                         extrapol_df['fpi'].values,
-                                         extrapol_df['M_eta'].values)
+                                         extrapol_df['fpi'].values)
     groups = ['beta','L','mu_l']
     obs = ['fpi','M_pi','M_K','M_eta','Gamma','M_K/M_pi']
     means = chi.bootstrap_means(extrapol_df,groups,obs)
     chi.print_si_format(means)
-    fit_ranges=[[0,2.5],[1.4,2.5],[1.5,2.5]]
+    #fit_ranges=[[0,2.5],[1.4,2.5],[1.5,2.5]]
+    fit_ranges=[[0,2.5]]
     for i,fr in enumerate(fit_ranges):
         print("\n\n")
         print(delim)
@@ -282,7 +279,7 @@ def main():
         chi.print_si_format(means)
         cov_iu = np.linalg.cholesky(np.linalg.inv(cov))
         ## Fitresults dataframe by beta
-        col_names = ['sample','chi^2','p-val','L_piK','L_5']
+        col_names = ['L_piK','L_5']
         fitres = pd.DataFrame(columns = col_names)
         xp = np.arange(xdata.shape[0])
         start = (1.,0.1)
@@ -297,10 +294,9 @@ def main():
                     args=(xdata.iloc[b].values, ydata.iloc[b].values, cov_iu))
             _chisq = 2*_tmp_fitres.cost
             _pval = 1-stats.chi2.cdf(_chisq,dof)
-            # Offset needs to be respected
-            _tmp_pars = dict(zip(col_names[3:],_tmp_fitres.x[-2:]))
+            _tmp_pars = dict(zip(col_names,_tmp_fitres.x[-2:]))
             _res_dict = {'fr_bgn':fr[0],'fr_end':fr[1],'sample':b,
-                         'chi^2':_chisq,'p-val':_pval}
+                    'chi^2':_chisq,'dof':dof,'p-val':_pval}
             _res_dict.update(_tmp_pars)
             _tmpdf = pd.DataFrame(data = _res_dict,index=[b])
             fitres = fitres.append(_tmpdf)
@@ -308,16 +304,17 @@ def main():
             #    print(_res_dict)
         fitres.info()
         fit_df=fit_df.merge(fitres,on='sample')
-        print(fitres.sample(n=20))
-        chi.print_si_format(chi.bootstrap_means(fit_df,['beta','L','mu_l'],
-                            ['M_K/M_pi','Gamma','L_piK','L_5','chi^2']))
+        #print(fitres.sample(n=20))
+        print(chi.print_si_format(chi.bootstrap_means(fit_df,['beta','L','mu_l'],
+                            ['M_K/M_pi','Gamma','L_piK','L_5','chi^2','dof'])))
 
         # Store Fit dataframe with parameters and fitrange
-        result_id = 'pi_K_I32_gamma_M%d%s'%(zp_meth,ms_fixing.upper())
-        hdf_filename = resdir+'/'+result_id+'.h5'
-        hdfstorer = pd.HDFStore(hdf_filename)
-        hdfstorer.put('gamma/%s/fr_%d'%(epik_meth,i),fit_df)
-        del hdfstorer
+        #result_id = 'pi_K_I32_gamma_M%d%s'%(zp_meth,ms_fixing.upper())
+        #hdf_filename = resdir+'/'+result_id+'.h5'
+        #hdfstorer = pd.HDFStore(hdf_filename)
+        ##hdfstorer.put('gamma/%s/fr_%d'%(epik_meth,i),fit_df)
+        #hdfstorer.put('/interp_corr_false/gamma/%s/fr_%d'%(epik_meth,i),fit_df)
+        #del hdfstorer
 
 if __name__ == "__main__":
     try:

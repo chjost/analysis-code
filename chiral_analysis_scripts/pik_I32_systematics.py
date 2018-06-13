@@ -119,12 +119,15 @@ def main():
     resultdir = '/hiskp4/helmes/analysis/scattering/pi_k/I_32_blocked/results/'
     
     filename = 'pi_K_I32_overview.h5'
-    keyname = '/physical_results' 
+    keyname = '/interp_corr_false/physical_results' 
+    #keyname = '/physical_results' 
     final_results = pd.read_hdf(resultdir+filename,key=keyname)
     final_results.info()
     pd.read_hdf(resultdir+filename,key=keyname)
+    final_results['chi^2/dof'] = final_results['chi^2']/final_results['dof']
     observables = ['mu_piK_a32_phys','L_piK','mu_piK_a12_phys','M_pi_a32_phys',
-                   'M_pi_a12_phys','tau_piK']
+                   'M_pi_a12_phys','tau_piK','chi^2/dof']
+    #observables = ['mu_piK_a32_phys','L_piK','chi^2/dof']
     groups_fr = ['ChPT','poll','RC','ms_fix','fr_bgn','fr_end']
     groups_wofr = ['ChPT','poll','RC','ms_fix']
     fr_means = fitrange_averages(final_results,observables)
@@ -133,7 +136,8 @@ def main():
     #compute_weight_method(final_results,['ChPT','poll','RC'],['mu_piK_a32_phys'])
     sources = ['poll','ms_fix','RC','ChPT']
     observables = ['L_piK','mu_piK_a32_phys',
-            'M_pi_a32_phys','M_pi_a12_phys','tau_piK']
+                   'M_pi_a32_phys','M_pi_a12_phys','tau_piK']
+    #observables = ['L_piK','mu_piK_a32_phys']
     final_result = chi.get_systematics(fr_means,sources,observables)
     print(final_result)
 

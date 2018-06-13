@@ -212,6 +212,17 @@ def cut_data(dataframe,obs,interval=None):
     else:
         cut = dataframe
     return cut
+def reverte_fse(df,obs,ens,obs_square=True):
+    """Revert finite size corrections of meson masses
+    
+    The observable from the dataframe gets stripped from the finite size
+    corrections applied earlier. In dependence of the observable we have to
+    multiply or divide the factors.
+
+    """
+    # construct a dataframe from the inputfile that can be applied to the data.
+    fse_path='/hiskp4/helmes/projects/analysis-code/plots2/data'
+
 
 def main():
     pd.set_option('display.width',1000)
@@ -236,9 +247,11 @@ def main():
     proc_id = 'pi_K_I32_interpolate_M%d%s'%(zp_meth,ms_fixing.upper()) 
     data_path = resdir+'/'+proc_id+'.h5'
     if ms_fixing.upper() == 'B':
-        key = 'Interpolate_sigma_%s'%epik_meth
+        #key = 'Interpolate_sigma_%s'%epik_meth
+        key = 'Interpolate_uncorrelated_%s'%epik_meth
     else:
-        key = 'Interpolate_%s'%epik_meth
+        #key = 'Interpolate_%s'%epik_meth
+        key = 'Interpolate_uncorrelated_%s'%epik_meth
     interpolated_data = pd.read_hdf(data_path, key=key)
     interpolated_data.info()
     print(chi.bootstrap_means(interpolated_data,['beta','L','mu_l'],['mu_piK_a32']))
@@ -286,7 +299,8 @@ def main():
         chi.print_si_format(means)
         cov_iu = np.linalg.cholesky(np.linalg.inv(cov))
         ## Fitresults dataframe by beta
-        col_names = ['sample','chi^2','L_piK','L_5']
+        # chisquared is computed from cost value, add that later
+        col_names = ['L_piK','L_5']
         fitres = pd.DataFrame(columns = col_names)
         start=(1.,0.1)
         p = np.array(start)
@@ -297,9 +311,9 @@ def main():
                                             ydata.iloc[b].values, cov_iu))
             _chisq = 2*_tmp_fitres.cost
             _pval = 1-stats.chi2.cdf(_chisq,dof)
-            _tmp_pars = dict(zip(col_names[2:],_tmp_fitres.x))
+            _tmp_pars = dict(zip(col_names,_tmp_fitres.x))
             _res_dict = {'fr_bgn':fr[0],'fr_end':fr[1],'sample':b,
-                         'chi^2':_chisq, 'p-val':_pval}
+                    'chi^2':_chisq,'dof':dof,'p-val':_pval}
             _res_dict.update(_tmp_pars)
             _tmpdf = pd.DataFrame(data = _res_dict,index=[b])
             fitres = fitres.append(_tmpdf)
@@ -309,15 +323,16 @@ def main():
             #    print(_res_dict)
         fitres.info()
         fit_df=fit_df.merge(fitres,on='sample')
-        chi.print_si_format(chi.bootstrap_means(fit_df,['beta','L','mu_l'],
-                            ['mu_piK/fpi','mu_piK_a32','L_piK','L_5','chi^2']))
+        print(chi.print_si_format(chi.bootstrap_means(fit_df,['beta','L','mu_l'],
+                            ['mu_piK/fpi','mu_piK_a32','L_piK','L_5','chi^2','dof'])))
 
         # Store Fit dataframe with parameters and fitrange
-        result_id = 'pi_K_I32_nlo_chpt_M%d%s'%(zp_meth,ms_fixing.upper())
-        hdf_filename = resdir+'/'+result_id+'.h5'
-        hdfstorer = pd.HDFStore(hdf_filename)
-        hdfstorer.put('nlo_chpt/%s/fr_%d'%(epik_meth,i),fit_df)
-        del hdfstorer
+        #result_id = 'pi_K_I32_nlo_chpt_M%d%s'%(zp_meth,ms_fixing.upper())
+        #hdf_filename = resdir+'/'+result_id+'.h5'
+        #hdfstorer = pd.HDFStore(hdf_filename)
+        ##hdfstorer.put('nlo_chpt/%s/fr_%d'%(epik_meth,i),fit_df)
+        #hdfstorer.put('/interp_corr_false/nlo_chpt/%s/fr_%d'%(epik_meth,i),fit_df)
+        #del hdfstorer
 
 if __name__ == "__main__":
     try:

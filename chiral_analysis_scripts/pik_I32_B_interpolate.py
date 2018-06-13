@@ -160,7 +160,8 @@ def main():
     # need the filename and the key of the dataset for the parameters
     # Have to match filename and key from fix_ms_B script
     hdf_readname = resdir+'pi_K_I32_fixms_M%dB'%zp_meth+'.h5'
-    fixms_B_result = pd.read_hdf(hdf_readname,key='Fitresults_sigma')
+    #fixms_B_result = pd.read_hdf(hdf_readname,key='Fitresults_sigma')
+    fixms_B_result = pd.read_hdf(hdf_readname,key='Fitresults_uncorrelated')
     interp_cols = ['beta','mu_l','mu_s','sample']
     fixms_B_result['amu_s_ref'] = amu_s_ref(fixms_B_result,cont_data)
     fixms_B_result['ms_phys'] = calc_ms_phys(fixms_B_result,cont_data)
@@ -240,14 +241,14 @@ def main():
             #mksq_fse.amu = mssq_fse.obs
             label = [r'$a\mu_s$',r'$(aM_{K})^2$',
                      r'$a\mu_s = (a\mu_s^{\mathrm{ref}})^2$']
-            mksq_fse.eval_at(evl_x,plotdir=plotdir,
+            mksq_fse.eval_at(evl_x,plotdir=plotdir,correlated=False,
                            ens=e,plot=True,label=label, meth=2)
 
 ################### interpolate M_eta ##########################################
             #metasq.amu = mssq_fse.obs
             label = [r'$a\mu_s$',r'$(aM_{\eta})^2$',
                      r'$a\mu_s = (a\mu_s^{\mathrm{ref}})^2$']
-            metasq.eval_at(evl_x,plotdir=plotdir,
+            metasq.eval_at(evl_x,plotdir=plotdir,correlated=False,
                            ens=e,plot=True,label=label, meth=2,
                            #y_lim = [0.065,0.095]
                            )
@@ -283,7 +284,8 @@ def main():
     proc_id = 'pi_K_I32_interpolate_M%dB'%(zp_meth)
     hdf_savename = resdir+proc_id+'.h5'
     hdfstorer = pd.HDFStore(hdf_savename)
-    hdfstorer.put('Interpolate_sigma_%s'%epik_meth,interpolated_B)
+    #hdfstorer.put('Interpolate_sigma_%s'%epik_meth,interpolated_B)
+    hdfstorer.put('Interpolate_uncorrelated_%s'%epik_meth,interpolated_B)
     del hdfstorer
 
 if __name__ == '__main__':

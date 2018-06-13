@@ -2,9 +2,9 @@
 ################################################################################
 #
 # Author: Christopher Helmes (helmes@hiskp.uni-bonn.de)
-# Date:   December 2017
+# Date:   May 2018
 #
-# Copyright (C) 2017 Christopher Helmes
+# Copyright (C) 2018 Christopher Helmes
 # 
 # This program is free software: you can redistribute it and/or modify it under 
 # the terms of the GNU General Public License as published by the Free Software 
@@ -124,7 +124,8 @@ def main():
     final_results = pd.DataFrame()
     for tp in it.product(chpt,epik_meth,zp_meth,ms_fixing,fr_labels):
         filename = '%s_%s_M%d%s.h5'%(file_prefix,tp[0],tp[2],tp[3])
-        keyname = '%s/%s/fr_%d'%(tp[0],tp[1],tp[4])
+        #keyname = '%s/%s/fr_%d'%(tp[0],tp[1],tp[4])
+        keyname = 'interp_corr_false/%s/%s/fr_%d'%(tp[0],tp[1],tp[4])
         print(filename,keyname)
         branch_result = pd.read_hdf(resultdir+filename,key=keyname)
         branch_result.info()
@@ -154,6 +155,7 @@ def main():
         tmp_fin_res['ms_fix'] = tp[3]
         tmp_cont=cont['M%d%s'%(tp[2],tp[3])]
         tmp_fin_res['chi^2'] = branch_result.loc[0:nboot,'chi^2']
+        tmp_fin_res['dof'] = branch_result.loc[0:nboot,'dof']
         tmp_fin_res['p-val'] = branch_result.loc[0:nboot,'p-val']
         tmp_fin_res['mu_piK_a32_phys'] = mua32_phys(tmp_fin_res,tmp_cont)
         tmp_fin_res['mu_piK_a12_phys'] = mua12_phys(tmp_fin_res,tmp_cont)
@@ -170,9 +172,11 @@ def main():
     result_id = 'pi_K_I32_overview'
     hdf_filename = resultdir+'/'+result_id+'.h5'
     storer = pd.HDFStore(hdf_filename)
-    keyname = 'data_collection'
+    #keyname = 'data_collection'
+    keyname = 'interp_corr_false/data_collection'
     storer.put(keyname,df_collect)
-    keyname = 'physical_results'
+    #keyname = 'physical_results'
+    keyname = 'interp_corr_false/physical_results'
     storer.put(keyname,final_results)
     del storer
 
