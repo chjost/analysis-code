@@ -11,9 +11,9 @@ for m in "${meth[@]}"; do
             ./pik_I32_nlo_chipt_plots.py --infile ${infile} --msfix ${m}\
               --zp ${z} --epik ${e_meth}\
             > ./logfiles/pik_I32_nlo_chipt_plots_${m}${z}_${e_meth}${e}.log
-            ./pik_I32_gamma_plots.py --infile ${infile} --msfix ${m}\
-              --zp ${z} --epik ${e_meth}\
-            > ./logfiles/pik_I32_gamma_plots_${m}${z}_${e_meth}${e}.log
+            #./pik_I32_gamma_plots.py --infile ${infile} --msfix ${m}\
+            #  --zp ${z} --epik ${e_meth}\
+            #> ./logfiles/pik_I32_gamma_plots_${m}${z}_${e_meth}${e}.log
         done
     done
 done

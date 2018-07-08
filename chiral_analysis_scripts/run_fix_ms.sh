@@ -12,10 +12,10 @@ epik=( E1 E3 )
 
 # Fix strange quark mass for B
 
-#for z in "${zp[@]}"; do
-#    infile="../ini/pi_K/I_32${e}/chiral_analysis_mua0_zp${z}.ini"
-#    ./pik_I32_B_fixms.py ${infile} > ./logfiles/fixms_B_${z}${e}.log
-#done
+for z in "${zp[@]}"; do
+    infile="../ini/pi_K/I_32${e}/chiral_analysis_mua0_zp${z}.ini"
+    ./pik_I32_B_fixms.py ${infile} > ./logfiles/fixms_B_${z}${e}.log
+done
 
 for m in "${meth[@]}"; do
     for z in "${zp[@]}"; do

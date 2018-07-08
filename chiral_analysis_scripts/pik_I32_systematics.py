@@ -119,7 +119,9 @@ def main():
     resultdir = '/hiskp4/helmes/analysis/scattering/pi_k/I_32_blocked/results/'
     
     filename = 'pi_K_I32_overview.h5'
-    keyname = '/interp_corr_false/physical_results' 
+    #keyname = '/interp_corr_false/physical_results' 
+    keyname = '/fse_false/physical_results' 
+    #keyname = '/fse_true/physical_results' 
     #keyname = '/physical_results' 
     final_results = pd.read_hdf(resultdir+filename,key=keyname)
     final_results.info()

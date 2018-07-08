@@ -48,7 +48,7 @@ def ensemblenames(ix_values):
         l=int(e[1])
         mul = get_mul_name(e[2])
         #string = '%s%d %s'%(b,mul,mus)
-        string = '%s%d.%d'%(b,mul,l)
+        string = '%s%s.%d'%(b,mul,l)
         ensemblelist.append(string)
     return np.asarray(ensemblelist)
 
@@ -121,7 +121,8 @@ def main():
     # calculate physical x-value
     x_phys = mu_by_fpi_phys(cont_dat)
     for fr in range(3):
-        key='/nlo_chpt/E%d/fr_%d'%(args.epik,fr)
+        #key='/nlo_chpt/E%d/fr_%d'%(args.epik,fr)
+        key='fse_false/gamma/E%d/fr_%d'%(args.epik,fr)
         fit_df = pd.read_hdf(filename,key=key)
         fit_df.info()
         y_phys = mua32_phys(fit_df,cont_dat)
@@ -141,7 +142,7 @@ def main():
         plot_means = chi.bootstrap_means(plot_df,groups,obs)
         print(plot_means)
         # plot the data beta wise 
-        plotname = plotdir+'/pi_K_I32_gamma_M%d%s_E%d_fr%d.pdf'%(args.zp,
+        plotname = plotdir+'/pi_K_I32_fse_false_gamma_M%d%s_E%d_fr%d.pdf'%(args.zp,
                             args.msfix,args.epik,fr) 
         with PdfPages(plotname) as pdf:
             plt.xlabel(r'$M_K/M_\pi$')

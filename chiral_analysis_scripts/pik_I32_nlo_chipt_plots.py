@@ -31,7 +31,7 @@ def get_beta_name(b):
         print('bet not known')
 
 def get_mul_name(l):
-    return l*10**4
+    return int(l*10**4)
 def get_mus_name(s):
     if s in [0.0115,0.013,0.0185,0.016]:
         return 'lo'
@@ -118,7 +118,8 @@ def main():
     # calculate physical x-value
     x_phys = mu_by_fpi_phys(cont_dat)
     for fr in range(3):
-        key='/nlo_chpt/E%d/fr_%d'%(args.epik,fr)
+        #key='/nlo_chpt/E%d/fr_%d'%(args.epik,fr)
+        key='fse_true/nlo_chpt/E%d/fr_%d'%(args.epik,fr)
         fit_df = pd.read_hdf(filename,key=key)
         fit_df.info()
         y_phys = mua32_phys(fit_df,cont_dat)
@@ -139,11 +140,14 @@ def main():
         plot_means = chi.bootstrap_means(plot_df,groups,obs)
         print(plot_means)
         # plot the data beta wise 
-        plotname = plotdir+'/pi_K_I32_nlo_chpt_M%d%s_E%d_fr%d.pdf'%(args.zp,
+        plotname = plotdir+'/pi_K_I32_fse_true_nlo_chpt_M%d%s_E%d_fr%d.pdf'%(args.zp,
                             args.msfix,args.epik,fr) 
         with PdfPages(plotname) as pdf:
-            plt.xlabel(r'$\mu_{\pi K}/f_{\pi}$')
-            plt.ylabel(r'$\mu_{\pi K}a_0$')
+            if args.epik=='E3':
+                args.epik='E2'
+            plt.xlabel(r'$\mu_{\pi K}/f_{\pi}$',fontsize=matplotlib.rc('axes.labelsize'))
+            plt.ylabel(r'$\mu_{\pi K}a_0$',
+                       fontsize=matplotlib.rc('axes.labelsize'))
             #bfc is for beta,format,colour
             beta = [1.90,1.95,2.1]
             fmt = ['^','v','o']
@@ -176,14 +180,15 @@ def main():
 
             plot_dev_df = fit_df[['beta','L','mu_l','rel.dev.']]
             rel_dev = chi.bootstrap_means(plot_dev_df,['beta','L','mu_l'],['rel.dev.'])
-            plt.xlabel(r'rel.dev. $\mu_{\pi K}a_0$')
+            plt.xlabel(r'rel.dev. $\mu_{\pi K}a_0$',
+                    fontsize=matplotlib.rc('axes.labelsize'))
             y = ensemblenames(rel_dev.index.values)
             x = rel_dev.values[:,0]
             xerr = rel_dev.values[:,1]
             plt.yticks(np.arange(y.shape[0]),y)
             #plt.xticks()
             plt.errorbar(x,np.arange(y.shape[0]),xerr=xerr,fmt='ob',label =
-                    r'M%d%s E%d fr%d'%(args.zp,args.msfix,args.epik,fr))
+                    r'M%d%s E%d'%(args.zp,args.msfix,args.epik))
             plt.axvline(x=0,linewidth=1,color='k')
             plt.legend(frameon=True)
             pdf.savefig()

@@ -194,6 +194,51 @@ def cut_data(dataframe,obs,interval=None):
         cut = dataframe
     return cut
 
+def ensemble_cols(ens):
+    tmp = ens.split('.')
+    if tmp[0] == 'A':
+        beta = 1.90
+    elif tmp[0] == 'B':
+        beta = 1.95
+    elif tmp[0]== 'D':
+        beta = 2.10
+    else:
+        print("beta not knwon")
+    mu_l = str(float(tmp[1])*10**(-4))
+    L = int(tmp[2])
+    print(beta,L,mu_l)
+    return beta,L,mu_l
+
+def dataframe_fse(fse_df,nboot):
+    """Revert finite size corrections of meson masses
+    
+    The observable from the dataframe gets stripped from the finite size
+    corrections applied earlier. In dependence of the observable we have to
+    multiply or divide the factors.
+
+    """
+    #from the table construct a data frame with the same indices as the original
+    df_fse = pd.DataFrame()
+    #index tuple
+    sample = np.arange(nboot)
+    for e in fse_df.index.values:
+        tmp_df=pd.DataFrame(data = sample, columns=['sample'])
+        beta,L,mu_l=ensemble_cols(e)
+        tmp_df['beta']=beta
+        tmp_df['L']=L
+        tmp_df['mu_l']=mu_l
+        tmp_df['k_mpi']=ana.draw_gauss_distributed(fse_df.loc[e,'k_mpi'],
+                                                   fse_df.loc[e,'d_st(k_mpi)'],
+                                                   (nboot,),origin=True)
+        tmp_df['1/k_mk^2']=ana.draw_gauss_distributed(fse_df.loc[e,'1/(k_mk^2)'],
+                                                   fse_df.loc[e,'d_st(1/k_mk^2)'],
+                                                   (nboot,),origin=True)
+        tmp_df['k_fpi']=ana.draw_gauss_distributed(fse_df.loc[e,'k_fpi'],
+                                                   fse_df.loc[e,'d_st(k_fpi)'],
+                                                   (nboot,),origin=True)
+        df_fse = df_fse.append(tmp_df)
+
+    return df_fse
 def main():
     pd.set_option('display.width',1000)
     delim = '#' * 80
@@ -223,31 +268,46 @@ def main():
         #key = 'Interpolate_%s'%epik_meth
         key = 'Interpolate_uncorrelated_%s'%epik_meth
     interpolated_data = pd.read_hdf(data_path, key=key)
+    interpolated_data['mu_l']=interpolated_data['mu_l'].apply(str)
     interpolated_data.info()
     print(chi.bootstrap_means(interpolated_data,['beta','L','mu_l'],['mu_piK_a32']))
+    # get finite size effects dataframe
+    fse_filename='/hiskp4/helmes/projects/analysis-code/plots2/data/k_fse_collect.txt'
+    fse = pd.DataFrame().from_csv(fse_filename,sep='\s+')
+    fse_sample = dataframe_fse(fse,nboot)
+    # merge them into interpolated data
+    interpolated_data = interpolated_data.merge(fse_sample,
+            on=['beta','L','mu_l','sample'])
+    #interpolated_data['mu_l']=pd.to_numeric(interpolated_data['mu_l'])
+    interpolated_data.info()
     # A few of the data are squared, we need the unsquared data
     extrapol_df = pd.DataFrame(index=interpolated_data.index,
                                data= interpolated_data[['beta','L','mu_l','sample',
                                                         'fpi','M_pi',
                                                         'mu_piK_a32']])
+    # Take back finite size corrections on MK and Mpi
+    #extrapol_df['M_K^2']=interpolated_data['M_K^2']/interpolated_data['1/k_mk^2']
+    #extrapol_df['M_pi']=interpolated_data['M_pi']*interpolated_data['k_mpi']
+    # fpi went uncorrected till now
+    extrapol_df['fpi']=interpolated_data['fpi']/interpolated_data['k_fpi']
     extrapol_df['M_K'] = interpolated_data['M_K^2'].pow(1./2)
     extrapol_df['M_eta'] = interpolated_data['M_eta^2'].pow(1./2)
     extrapol_df['M_K/M_pi'] = extrapol_df['M_K']/extrapol_df['M_pi']
-    #extrapol_df['Gamma'] = ana.gamma_pik(extrapol_df['M_pi'].values,
-    #                                     extrapol_df['M_K'].values,
-    #                                     extrapol_df['mu_piK_a32'].values,
-    #                                     extrapol_df['fpi'].values,
-    #                                     extrapol_df['M_eta'].values)
     extrapol_df['Gamma'] = ana.gamma_pik(extrapol_df['M_pi'].values,
                                          extrapol_df['M_K'].values,
                                          extrapol_df['mu_piK_a32'].values,
-                                         extrapol_df['fpi'].values)
+                                         extrapol_df['fpi'].values,
+                                         extrapol_df['M_eta'].values)
+    #extrapol_df['Gamma'] = ana.gamma_pik(extrapol_df['M_pi'].values,
+    #                                     extrapol_df['M_K'].values,
+    #                                     extrapol_df['mu_piK_a32'].values,
+    #                                     extrapol_df['fpi'].values)
     groups = ['beta','L','mu_l']
     obs = ['fpi','M_pi','M_K','M_eta','Gamma','M_K/M_pi']
     means = chi.bootstrap_means(extrapol_df,groups,obs)
-    chi.print_si_format(means)
-    #fit_ranges=[[0,2.5],[1.4,2.5],[1.5,2.5]]
-    fit_ranges=[[0,2.5]]
+    print(chi.print_si_format(means))
+    fit_ranges=[[0,2.5],[1.4,2.5],[1.5,2.5]]
+    #fit_ranges=[[0,2.5]]
     for i,fr in enumerate(fit_ranges):
         print("\n\n")
         print(delim)
@@ -309,12 +369,14 @@ def main():
                             ['M_K/M_pi','Gamma','L_piK','L_5','chi^2','dof'])))
 
         # Store Fit dataframe with parameters and fitrange
-        #result_id = 'pi_K_I32_gamma_M%d%s'%(zp_meth,ms_fixing.upper())
-        #hdf_filename = resdir+'/'+result_id+'.h5'
-        #hdfstorer = pd.HDFStore(hdf_filename)
-        ##hdfstorer.put('gamma/%s/fr_%d'%(epik_meth,i),fit_df)
+        result_id = 'pi_K_I32_gamma_M%d%s'%(zp_meth,ms_fixing.upper())
+        hdf_filename = resdir+'/'+result_id+'.h5'
+        hdfstorer = pd.HDFStore(hdf_filename)
+        #hdfstorer.put('gamma/%s/fr_%d'%(epik_meth,i),fit_df)
         #hdfstorer.put('/interp_corr_false/gamma/%s/fr_%d'%(epik_meth,i),fit_df)
-        #del hdfstorer
+        #hdfstorer.put('/fse_false/gamma/%s/fr_%d'%(epik_meth,i),fit_df)
+        hdfstorer.put('/fse_true/gamma/%s/fr_%d'%(epik_meth,i),fit_df)
+        del hdfstorer
 
 if __name__ == "__main__":
     try:

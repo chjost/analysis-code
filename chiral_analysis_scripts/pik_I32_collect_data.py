@@ -125,7 +125,9 @@ def main():
     for tp in it.product(chpt,epik_meth,zp_meth,ms_fixing,fr_labels):
         filename = '%s_%s_M%d%s.h5'%(file_prefix,tp[0],tp[2],tp[3])
         #keyname = '%s/%s/fr_%d'%(tp[0],tp[1],tp[4])
-        keyname = 'interp_corr_false/%s/%s/fr_%d'%(tp[0],tp[1],tp[4])
+        #keyname = 'interp_corr_false/%s/%s/fr_%d'%(tp[0],tp[1],tp[4])
+        #keyname = 'fse_false/%s/%s/fr_%d'%(tp[0],tp[1],tp[4])
+        keyname = 'fse_true/%s/%s/fr_%d'%(tp[0],tp[1],tp[4])
         print(filename,keyname)
         branch_result = pd.read_hdf(resultdir+filename,key=keyname)
         branch_result.info()
@@ -173,10 +175,14 @@ def main():
     hdf_filename = resultdir+'/'+result_id+'.h5'
     storer = pd.HDFStore(hdf_filename)
     #keyname = 'data_collection'
-    keyname = 'interp_corr_false/data_collection'
+    #keyname = 'interp_corr_false/data_collection'
+    #keyname = 'fse_false/data_collection'
+    keyname = 'fse_true/data_collection'
     storer.put(keyname,df_collect)
     #keyname = 'physical_results'
-    keyname = 'interp_corr_false/physical_results'
+    #keyname = 'interp_corr_false/physical_results'
+    #keyname = 'fse_false/physical_results'
+    keyname = 'fse_true/physical_results'
     storer.put(keyname,final_results)
     del storer
 

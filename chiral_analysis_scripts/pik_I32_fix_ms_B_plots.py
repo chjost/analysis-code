@@ -68,26 +68,28 @@ def main():
     #load data
     plotdir = "/hiskp4/helmes/analysis/scattering/pi_k/I_32_blocked/plots/"
     resdir = "/hiskp4/helmes/analysis/scattering/pi_k/I_32_blocked/results/"
-    proc_id="pi_K_I32_fixms_M1B.h5"
+    key='Fitresults_uncorrelated'
     with PdfPages(plotdir+'/rel_deviation_fixms_M1B_mismatch.pdf') as pdf:
-        plt.figure(figsize=(10,15))
+        plt.figure(figsize=(7,10))
         #plt.xlabel(r'$(aM_{K,FSE}^2-aM_K^2(\mu_\ell))/aM_{K,FSE}^2$')
         plt.xlabel(r'rel.dev. $M_K^2$')
         #plt.ylabel(r'Ensemble')
         plt.axvline(x=0,linewidth=1,color='k')
-        fitres = pd.read_hdf(resdir+proc_id,key='Fitresults_sigma_woA4024')
-        plot_deviation(fitres,r'$P_{\mu}(\beta,\mu_{\sigma})$ wo A40.24',shift=0,fmt='ob')
-        plt.legend(frameon=True)
+        proc_id="pi_K_I32_fixms_M1B.h5"
+        fitres = pd.read_hdf(resdir+proc_id,key=key)
+        plot_deviation(fitres,r'$P_{\mu}(\beta,\mu_{\sigma})$ M1',fmt='ob')
+        plt.legend(frameon=True,loc='upper left')
         pdf.savefig()
         plt.clf()
         plt.xlabel(r'rel.dev. $M_K^2$')
         #plt.ylabel(r'Ensemble')
         plt.axvline(x=0,linewidth=1,color='k')
-        fitres = pd.read_hdf(resdir+proc_id,key='Fitresults_sigma')
-        plot_deviation(fitres,r'$P_{\mu}(\beta,\mu_{\sigma})$',fmt='^r')
+        proc_id="pi_K_I32_fixms_M2B.h5"
+        fitres = pd.read_hdf(resdir+proc_id,key=key)
+        plot_deviation(fitres,r'$P_{\mu}(\beta,\mu_{\sigma})$ M2',fmt='^r')
         plt.tick_params(axis='y', which='both', labelleft='off',
                 labelright='on')
-        plt.legend(frameon=True)
+        plt.legend(frameon=True,loc='upper left')
         pdf.savefig()
         plt.close()
 if __name__ == '__main__':
