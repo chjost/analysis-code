@@ -9,16 +9,20 @@
 
 import argparse
 import matplotlib
-matplotlib.use('Agg') # has to be imported before the next lines
+# plots are side by side reset figuresize and fontsize
+matplotlib.use('pgf') # has to be imported before the next lines
 import matplotlib.pyplot as plt
+plt.style.use('paper_side_by_side')
 import matplotlib.cm as cm
-from matplotlib.backends.backend_pdf import PdfPages
+#import matplotlib.backends.backend_pgf as pgf
 import numpy as np
 import pandas as pd
 import sys
 
 import analysis2 as ana
 import chiron as chi
+
+# set custom style
 
 def get_beta_name(b):
     if b == 1.90:
@@ -139,60 +143,58 @@ def main():
         obs = ['mu_piK/fpi','mu_piK_a32','mu_piK/fpi_phys','mu_piK_a32_phys']
         plot_means = chi.bootstrap_means(plot_df,groups,obs)
         print(plot_means)
-        # plot the data beta wise 
-        plotname = plotdir+'/pi_K_I32_fse_true_nlo_chpt_M%d%s_E%d_fr%d.pdf'%(args.zp,
-                            args.msfix,args.epik,fr) 
-        with PdfPages(plotname) as pdf:
-            if args.epik=='E3':
-                args.epik='E2'
-            plt.xlabel(r'$\mu_{\pi K}/f_{\pi}$',fontsize=matplotlib.rc('axes.labelsize'))
-            plt.ylabel(r'$\mu_{\pi K}a_0$',
-                       fontsize=matplotlib.rc('axes.labelsize'))
-            #bfc is for beta,format,colour
-            beta = [1.90,1.95,2.1]
-            fmt = ['^','v','o']
-            col = ['r','b','g']
-            plt.xlim((0.7,1.7))
-            plt.ylim((-0.25,0))
-            for bfc in zip(beta,fmt,col):
-                # get data
-                x = plot_means.xs(bfc[0]).loc[:,[('mu_piK/fpi','own_mean')]].values[:,0]
-                y = plot_means.xs(bfc[0]).loc[:,[('mu_piK_a32','own_mean')]].values[:,0]
-                yerr = plot_means.xs(bfc[0]).loc[:,[('mu_piK_a32','own_std')]].values[:,0]
-                if x is not None:
-                    plt.errorbar(x,y,yerr=yerr,fmt=bfc[1]+bfc[2],
-                                 label = r'$\beta=$%.2f'%bfc[0])
-            # Leading order chpt
-            lochpt = lambda x: -x**2/(4*np.pi)
-            x = np.linspace(0.7,1.7,num=300)
-            y = lochpt(x)
-            plt.errorbar(x,y,fmt='-k',label=r'LO-$\chi$PT')
-            # physical point
-            x = plot_means.loc[:,[('mu_piK/fpi_phys','own_mean')]].values[0] 
-            xerr = plot_means.loc[:,[('mu_piK/fpi_phys','own_std')]].values[0]
-            y = plot_means.loc[:,[('mu_piK_a32_phys','own_mean')]].values[0]
-            yerr =plot_means.loc[:,[('mu_piK_a32_phys','own_std')]].values[0] 
-            plt.errorbar(x,y,xerr=xerr,yerr=yerr,fmt='d',color='darkgoldenrod',
-                         label=r'physical point')
-            plt.legend()
-            pdf.savefig()
-            plt.clf()
+        # plot the data beta wise
+        plotname = plotdir+'/pi_K_I32_fse_true_nlo_chpt_M%d%s_E%d_fr%d'%(args.zp,
+                            args.msfix,args.epik,fr)
+        plt.xlabel(r'$\mu_{\pi K}/f_{\pi}$',fontsize=11)
+        plt.ylabel(r'$\mu_{\pi K}a_0$', fontsize=11)
+        #bfc is for beta,format,colour
+        beta = [1.90,1.95,2.1]
+        fmt = ['^','v','o']
+        col = ['r','b','g']
+        plt.xlim((0.7,1.7))
+        plt.ylim((-0.25,0))
+        for bfc in zip(beta,fmt,col):
+            # get data
+            x = plot_means.xs(bfc[0]).loc[:,[('mu_piK/fpi','own_mean')]].values[:,0]
+            y = plot_means.xs(bfc[0]).loc[:,[('mu_piK_a32','own_mean')]].values[:,0]
+            yerr = plot_means.xs(bfc[0]).loc[:,[('mu_piK_a32','own_std')]].values[:,0]
+            if x is not None:
+                plt.errorbar(x,y,yerr=yerr,fmt=bfc[1]+bfc[2],
+                             label = r'$\beta=$%.2f'%bfc[0])
+        # Leading order chpt
+        lochpt = lambda x: -x**2/(4*np.pi)
+        x = np.linspace(0.7,1.7,num=300)
+        y = lochpt(x)
+        plt.errorbar(x,y,fmt='-k',label=r'LO-$\chi$PT')
+        # physical point
+        x = plot_means.loc[:,[('mu_piK/fpi_phys','own_mean')]].values[0] 
+        xerr = plot_means.loc[:,[('mu_piK/fpi_phys','own_std')]].values[0]
+        y = plot_means.loc[:,[('mu_piK_a32_phys','own_mean')]].values[0]
+        yerr =plot_means.loc[:,[('mu_piK_a32_phys','own_std')]].values[0] 
+        plt.errorbar(x,y,xerr=xerr,yerr=yerr,fmt='d',color='darkgoldenrod',
+                     label=r'physical point')
+        plt.legend()
+        plt.savefig(plotname+'.pgf')
+        plt.clf()
 
-            plot_dev_df = fit_df[['beta','L','mu_l','rel.dev.']]
-            rel_dev = chi.bootstrap_means(plot_dev_df,['beta','L','mu_l'],['rel.dev.'])
-            plt.xlabel(r'rel.dev. $\mu_{\pi K}a_0$',
-                    fontsize=matplotlib.rc('axes.labelsize'))
-            y = ensemblenames(rel_dev.index.values)
-            x = rel_dev.values[:,0]
-            xerr = rel_dev.values[:,1]
-            plt.yticks(np.arange(y.shape[0]),y)
-            #plt.xticks()
-            plt.errorbar(x,np.arange(y.shape[0]),xerr=xerr,fmt='ob',label =
-                    r'M%d%s E%d'%(args.zp,args.msfix,args.epik))
-            plt.axvline(x=0,linewidth=1,color='k')
-            plt.legend(frameon=True)
-            pdf.savefig()
-            plt.close()
+        plot_dev_df = fit_df[['beta','L','mu_l','rel.dev.']]
+        rel_dev = chi.bootstrap_means(plot_dev_df,['beta','L','mu_l'],['rel.dev.'])
+        plt.xlabel(r'rel.dev. $\mu_{\pi K}a_0$', fontsize=11)
+        y = ensemblenames(rel_dev.index.values)
+        x = rel_dev.values[:,0]
+        xerr = rel_dev.values[:,1]
+        plt.yticks(np.arange(y.shape[0]),y,fontsize=11)
+        #plt.xticks()
+        epik_label=args.epik
+        if args.epik == 3:
+            epik_label = 2
+        plt.errorbar(x,np.arange(y.shape[0]),xerr=xerr,fmt='ob',label =
+                r'M%d%s E%d'%(args.zp,args.msfix,epik_label))
+        plt.axvline(x=0,linewidth=1,color='k')
+        plt.legend(frameon=True)
+        plt.savefig(plotname+'_rel_dev.pgf')
+        plt.close()
 
 
 if __name__ == "__main__":

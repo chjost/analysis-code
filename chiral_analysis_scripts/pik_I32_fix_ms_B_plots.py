@@ -2,10 +2,10 @@
 import numpy as np
 import pandas as pd
 import matplotlib
-matplotlib.use('Agg') # has to be imported before the next lines
+matplotlib.use('pgf') # has to be imported before the next lines
 import matplotlib.pyplot as plt
+plt.style.use('paper_long_neighbour')
 import matplotlib.cm as cm
-from matplotlib.backends.backend_pdf import PdfPages
 import chiron as chi
 
 def get_beta_name(b):
@@ -69,29 +69,28 @@ def main():
     plotdir = "/hiskp4/helmes/analysis/scattering/pi_k/I_32_blocked/plots/"
     resdir = "/hiskp4/helmes/analysis/scattering/pi_k/I_32_blocked/results/"
     key='Fitresults_uncorrelated'
-    with PdfPages(plotdir+'/rel_deviation_fixms_M1B_mismatch.pdf') as pdf:
-        plt.figure(figsize=(7,10))
-        #plt.xlabel(r'$(aM_{K,FSE}^2-aM_K^2(\mu_\ell))/aM_{K,FSE}^2$')
-        plt.xlabel(r'rel.dev. $M_K^2$')
-        #plt.ylabel(r'Ensemble')
-        plt.axvline(x=0,linewidth=1,color='k')
-        proc_id="pi_K_I32_fixms_M1B.h5"
-        fitres = pd.read_hdf(resdir+proc_id,key=key)
-        plot_deviation(fitres,r'$P_{\mu}(\beta,\mu_{\sigma})$ M1',fmt='ob')
-        plt.legend(frameon=True,loc='upper left')
-        pdf.savefig()
-        plt.clf()
-        plt.xlabel(r'rel.dev. $M_K^2$')
-        #plt.ylabel(r'Ensemble')
-        plt.axvline(x=0,linewidth=1,color='k')
-        proc_id="pi_K_I32_fixms_M2B.h5"
-        fitres = pd.read_hdf(resdir+proc_id,key=key)
-        plot_deviation(fitres,r'$P_{\mu}(\beta,\mu_{\sigma})$ M2',fmt='^r')
-        plt.tick_params(axis='y', which='both', labelleft='off',
-                labelright='on')
-        plt.legend(frameon=True,loc='upper left')
-        pdf.savefig()
-        plt.close()
+    plotname=plotdir+'/rel_deviation_fixms_M'
+    #plt.xlabel(r'$(aM_{K,FSE}^2-aM_K^2(\mu_\ell))/aM_{K,FSE}^2$')
+    plt.xlabel(r'rel.dev. $M_K^2$')
+    #plt.ylabel(r'Ensemble')
+    plt.axvline(x=0,linewidth=1,color='k')
+    proc_id="pi_K_I32_fixms_M1B.h5"
+    fitres = pd.read_hdf(resdir+proc_id,key=key)
+    plot_deviation(fitres,r'$P_{\mu}$ M1',fmt='ob')
+    plt.legend(frameon=True,loc='best')
+    plt.savefig(plotname+'1B.pgf')
+    plt.clf()
+    plt.xlabel(r'rel.dev. $M_K^2$')
+    #plt.ylabel(r'Ensemble')
+    plt.axvline(x=0,linewidth=1,color='k')
+    proc_id="pi_K_I32_fixms_M2B.h5"
+    fitres = pd.read_hdf(resdir+proc_id,key=key)
+    plot_deviation(fitres,r'$P_{\mu}$ M2',fmt='^r')
+    plt.tick_params(axis='y', which='both', labelleft='off',
+            labelright='on')
+    plt.legend(frameon=True,loc='best')
+    plt.savefig(plotname+'2B.pgf')
+    plt.close()
 if __name__ == '__main__':
     try:
         main()

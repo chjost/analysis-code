@@ -1,25 +1,44 @@
 #!/usr/bin/python
 
+################################################################################
+#
+# Author: Christopher Helmes (helmes@hiskp.uni-bonn.de)
+# Date:   July 2018
+#
+# Copyright (C) 2018 Christopher Helmes
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+################################################################################
 # Plot the results of a chipt extrapolation
 # 3 x 2 plots are generated:
 # per fitrange
 #   1) mu_piK_a32 vs. mu_piK/fpi with errors and LO ChPT curve
 #   2) relative deviation between the data points for mu_piK_a32 and the fitted
 # function per ensemble
+################################################################################
 
 import argparse
 import itertools as it
 import matplotlib
-matplotlib.use('Agg') # has to be imported before the next lines
+matplotlib.use('pgf') # has to be imported before the next lines
 import matplotlib.pyplot as plt
+plt.style.use('paper_standalone')
 import matplotlib.cm as cm
-from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
 import pandas as pd
 import sys
 from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
 from mpl_toolkits.axes_grid1.inset_locator import mark_inset
-import analysis2 as ana
 import chiron as chi
 
 def main():
@@ -67,51 +86,53 @@ def main():
                        r'$a=0.0619\,\mathrm{fm}$','continuum']
         fmt = ['^','v','o','-']
         col = ['r','b','g','darkgoldenrod']
-        plotname = plotdir+'/pi_K_I32_chpt_fit_%s_%s.pdf'%(m[0],m[1]) 
-        with PdfPages(plotname) as pdf:
-            fig,ax=plt.subplots()
-            plt.xlim((0.75,1.6))
-            plt.xlabel(r'$\mu_{\pi K}/f_{\pi}$')
-            plt.ylabel(r'$\mu_{\pi K}a_0$')
-            axins = zoomed_inset_axes(ax,15,loc=3)
-            x1, x2, y1, y2 = 0.80, 0.82, -0.049, -0.046 # specify the limits
-            axins.set_xlim(x1, x2) # apply the x-limits
-            axins.set_ylim(y1, y2) # apply the y-limits
-            for a,bfc in enumerate(zip(beta,fmt,col)):
-                beta_curve = curve_method.loc[curve_method['latticespacing']==bfc[0]]
-                x = beta_curve['mupikoverfpi']
-                y = beta_curve['mupiktimesa32']
-                yerr = beta_curve['errora32']
-                if bfc[0]=='continuum':
-                    ymin = y - yerr
-                    ymax = y + yerr
-                    ax.errorbar(x,y,color='k',label=beta_labels[a])
-                    ax.fill_between(x,ymin,ymax,color='gray',alpha=0.4)
-                    axins.errorbar(x,y,color='k')
-                    axins.fill_between(x,ymin,ymax,color='gray',alpha=0.4)
-                else:
-                    xd = plot_means.xs(beta_points[a]).loc[:,[('mu_piK/fpi',
-                                                      'own_mean')]].values[:,0]
-                    yd = plot_means.xs(beta_points[a]).loc[:,[('mu_piK_a32',
-                                                      'own_mean')]].values[:,0]
-                    yerrd = plot_means.xs(beta_points[a]).loc[:,[('mu_piK_a32',
-                                                         'own_std')]].values[:,0]
-                    if xd is not None:
-                        ax.errorbar(xd,yd,yerr=yerrd,fmt=bfc[1]+bfc[2])
-                                 #label = beta_labels[a])
-                    ax.errorbar(x,y,color=bfc[2],label=beta_labels[a])
-                    axins.errorbar(x,y,color=bfc[2])
-            axins.axvline(x=0.812,linewidth=1,color='k',linestyle='dashed')
-            ax.axvline(x=0.812,linewidth=1,color='k',linestyle='dashed',label='Physical Point')
-            axins.xaxis.set_visible(False)
-            axins.yaxis.tick_right()
-            #axins.tick_params(axis="y",direction="in", pad=-35)
-            #axins.tick_params(axis="x",direction="in", pad=-25)
-            mark_inset(ax, axins, loc1=2, loc2=1, fc="none", ec="0.5")
-            ax.legend(loc='best')
-            
-            pdf.savefig()
-            plt.clf()
+        plotname = plotdir+'/pi_K_I32_chpt_fit_%s_%s'%(m[0],m[1]) 
+        fig,ax=plt.subplots()
+        plt.xlim((0.75,1.6))
+        plt.xlabel(r'$\mu_{\pi K}/f_{\pi}$',fontsize=11)
+        plt.ylabel(r'$\mu_{\pi K}a_0$',fontsize=11)
+        axins = zoomed_inset_axes(ax,15,loc=3)
+        x1, x2, y1, y2 = 0.80, 0.82, -0.049, -0.046 # specify the limits
+        axins.set_xlim(x1, x2) # apply the x-limits
+        axins.set_ylim(y1, y2) # apply the y-limits
+        for a,bfc in enumerate(zip(beta,fmt,col)):
+            beta_curve = curve_method.loc[curve_method['latticespacing']==bfc[0]]
+            x = beta_curve['mupikoverfpi']
+            y_lochpt  = -x**2/(4.*np.pi)
+            y = beta_curve['mupiktimesa32']
+            yerr = beta_curve['errora32']
+            if bfc[0]=='continuum':
+                ymin = y - yerr
+                ymax = y + yerr
+                ax.errorbar(x,y,color='k',label=beta_labels[a])
+                ax.fill_between(x,ymin,ymax,color='gray',alpha=0.4)
+                axins.errorbar(x,y,color='k')
+                axins.fill_between(x,ymin,ymax,color='gray',alpha=0.4)
+                ax.errorbar(x,y_lochpt,fmt='-.k',label=r'LO-ChPT')
+                axins.errorbar(x,y_lochpt,fmt='-.k')
+            else:
+                xd = plot_means.xs(beta_points[a]).loc[:,[('mu_piK/fpi',
+                                                  'own_mean')]].values[:,0]
+                yd = plot_means.xs(beta_points[a]).loc[:,[('mu_piK_a32',
+                                                  'own_mean')]].values[:,0]
+                yerrd = plot_means.xs(beta_points[a]).loc[:,[('mu_piK_a32',
+                                                     'own_std')]].values[:,0]
+                if xd is not None:
+                    ax.errorbar(xd,yd,yerr=yerrd,fmt=bfc[1]+bfc[2])
+                             #label = beta_labels[a])
+                ax.errorbar(x,y,color=bfc[2],label=beta_labels[a])
+                axins.errorbar(x,y,color=bfc[2])
+        axins.axvline(x=0.812,linewidth=1,color='k',linestyle='dashed')
+        ax.axvline(x=0.812,linewidth=1,color='k',linestyle='dashed',label='Physical Point')
+        axins.xaxis.set_visible(False)
+        axins.yaxis.tick_right()
+        #axins.tick_params(axis="y",direction="in", pad=-35)
+        #axins.tick_params(axis="x",direction="in", pad=-25)
+        mark_inset(ax, axins, loc1=2, loc2=1, fc="none", ec="0.5")
+        ax.legend(loc='best')
+        plt.savefig(plotname+'.pgf')
+        matplotlib.backends.backend_pgf.FigureCanvasPgf(fig).print_pdf(plotname+'.pdf',bbox='standard')
+        plt.clf()
 
 
 if __name__ == "__main__":

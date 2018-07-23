@@ -9,17 +9,20 @@
 
 import argparse
 import matplotlib
+# plots are side by side reset figuresize and fontsize
 matplotlib.use('pgf') # has to be imported before the next lines
 import matplotlib.pyplot as plt
-#plt.style.use('paper_standalone')
-plt.style.use('paper_side_by_side')
+plt.style.use('paper_standalone')
 import matplotlib.cm as cm
+#import matplotlib.backends.backend_pgf as pgf
 import numpy as np
 import pandas as pd
 import sys
 
 import analysis2 as ana
 import chiron as chi
+
+# set custom style
 
 def get_beta_name(b):
     if b == 1.90:
@@ -32,7 +35,7 @@ def get_beta_name(b):
         print('bet not known')
 
 def get_mul_name(l):
-    return l*10**4
+    return int(l*10**4)
 def get_mus_name(s):
     if s in [0.0115,0.013,0.0185,0.016]:
         return 'lo'
@@ -49,7 +52,7 @@ def ensemblenames(ix_values):
         l=int(e[1])
         mul = get_mul_name(e[2])
         #string = '%s%d %s'%(b,mul,mus)
-        string = '%s%s.%d'%(b,mul,l)
+        string = '%s%d.%d'%(b,mul,l)
         ensemblelist.append(string)
     return np.asarray(ensemblelist)
 
@@ -73,19 +76,16 @@ def mua32_phys(df,cont):
     return ana.pik_I32_chipt_nlo_cont(mpi,mk,fpi,p,meta=meta)
 
 #TODO: think about moving that to the extrapolation
-def rel_dev_nlochpt(df):
+def abs_dev_nlochpt(df):
     mua32 = df['mu_piK_a32'].values
     p = df[['L_piK','L_5']].values.T
     mpi = df['M_pi'].values
     mk = df['M_K'].values
     fpi = df['fpi'].values
     meta=df['M_eta'].values
-    reldev=(mua32-ana.pik_I32_chipt_nlo(mpi,mk,fpi,p,meta=meta))/mua32
-    dev_series = pd.Series(reldev,index=df.index)
+    absdev=(mua32-ana.pik_I32_chipt_nlo(mpi,mk,fpi,p,meta=meta))
+    dev_series = pd.Series(absdev,index=df.index)
     return dev_series
-
-def func(p,x):
-    return -2.*p[0]*x+p[1]
 
 def main():
     pd.set_option('display.width',1000)
@@ -118,96 +118,55 @@ def main():
     resdir = ens.get_data("resultdir") 
     # Load the desired dataframe for a given method M,ms_fix,E_piK
     # build key for dataset
-    filename = resdir+'/pi_K_I32_gamma_M%d%s.h5'%(args.zp, args.msfix)
-    # calculate physical x-value
-    x_phys = mu_by_fpi_phys(cont_dat)
+    filename = resdir+'/pi_K_I32_nlo_chpt_M%d%s.h5'%(args.zp, args.msfix)
     for fr in range(3):
         #key='/nlo_chpt/E%d/fr_%d'%(args.epik,fr)
-        key='fse_true/gamma/E%d/fr_%d'%(args.epik,fr)
+        key='fse_true/nlo_chpt/E%d/fr_%d'%(args.epik,fr)
         fit_df = pd.read_hdf(filename,key=key)
         fit_df.info()
-        y_phys = mua32_phys(fit_df,cont_dat)
         #merge values into fit_df
-        #phys_point = {'sample':np.arange(nboot),'mu_piK/fpi_phys':x_phys,'mu_piK_a32_phys':y_phys}
-        #phys_df = pd.DataFrame(phys_point)
-        #phys_df.info()
-        #fit_df = fit_df.merge(phys_df,on='sample')
         # Calculate the relative deviation between the data and the fit
-        #fit_df['rel.dev.'] = rel_dev_nlochpt(fit_df)
+        fit_df['abs.dev.'] = abs_dev_nlochpt(fit_df)
         # for the plots we only need the y-values, the x-values and the function
         # evaluation, carry with us the identifiers beta mu_l and L
         plot_df = fit_df[['beta','L','mu_l','fr_bgn','fr_end',
-                         'M_K/M_pi','Gamma']]
+                         'mu_piK/fpi','mu_piK_a32', 'abs.dev.']]
         groups = ['beta','L','mu_l']
-        obs = ['M_K/M_pi','Gamma']
+        obs = ['mu_piK/fpi','mu_piK_a32','abs.dev.']
         plot_means = chi.bootstrap_means(plot_df,groups,obs)
         print(plot_means)
-        # plot the data beta wise 
-        plotname = plotdir+'/pi_K_I32_fse_true_gamma_M%d%s_E%d_fr%d'%(args.zp,
-                            args.msfix,args.epik,fr) 
-        plt.xlabel(r'$M_K/M_\pi$',fontsize=11)
-        plt.ylabel(r'$\Gamma$',fontsize=11)
+        # plot the data beta wise
+        plotname = plotdir+'/pi_K_I32_fse_true_nlo_chpt_absdev_M%d%s_E%d_fr%d'%(args.zp,
+                            args.msfix,args.epik,fr)
+        fig = plt.figure()
+        plt.xlabel(r'$\mu_{\pi K}/f_{\pi}$',fontsize=11)
+        plt.ylabel(r'$\mu_{\pi K}a_0-(\mu_{\pi K}a_0)_{\mathrm{fit}}$', fontsize=11)
         #bfc is for beta,format,colour
         beta = [1.90,1.95,2.1]
         fmt = ['^','v','o']
         col = ['r','b','g']
-        plt.xlim((0.,2.2))
-        plt.ylim((-0.015,0.010))
+        plt.xlim((0.7,1.7))
+        plt.ylim((-0.05,0.05))
         for bfc in zip(beta,fmt,col):
             # get data
-            try:
-                x = plot_means.xs(bfc[0]).loc[:,[('M_K/M_pi','own_mean')]].values[:,0]
-                xerr = plot_means.xs(bfc[0]).loc[:,[('M_K/M_pi','own_std')]].values[:,0]
-                y = plot_means.xs(bfc[0]).loc[:,[('Gamma','own_mean')]].values[:,0]
-                yerr = plot_means.xs(bfc[0]).loc[:,[('Gamma','own_std')]].values[:,0]
-                if x is not None:
-                    plt.errorbar(x,y,yerr=yerr,xerr=xerr,fmt=bfc[1]+bfc[2],
-                                 label = r'$\beta=$%.2f'%bfc[0])
-            except:
-                pass
-        # an errorband is derived from filling the maximal and minimal
-        # curve
-        p = fit_df[['L_piK','L_5']].values[0:1500].T
-        print(p.shape)
-        x = np.linspace(0,2.2,num=300)
-        #original sample is at 0
-        y = func(p[:,0],x)
-        yext = np.asarray([func(p,m) for m in x])
-        print(yext.shape)
-        ymin = yext.min(axis=1)
-        ymax = yext.max(axis=1)
-        print(x.shape)
-        print(y.shape)
-        print(ymin.shape)
-        print(ymax.shape)
-        plt.errorbar(x,y,fmt='-k',label=r'linear fit')
-        plt.fill_between(x,ymin,ymax,color='gray',alpha=0.4)
-        #plt.errorbar(x,ymin,fmt='-.r')
-        #plt.errorbar(x,ymax,fmt='--r')
+            x = plot_means.xs(bfc[0]).loc[:,[('mu_piK/fpi','own_mean')]].values[:,0]
+            xerr = plot_means.xs(bfc[0]).loc[:,[('mu_piK/fpi','own_std')]].values[:,0]
+            y = plot_means.xs(bfc[0]).loc[:,[('abs.dev.','own_mean')]].values[:,0]
+            yerr = plot_means.xs(bfc[0]).loc[:,[('abs.dev.','own_std')]].values[:,0]
+            if x is not None:
+                plt.errorbar(x,y,yerr=yerr,xerr=xerr,fmt=bfc[1]+bfc[2],
+                             label = r'$\beta=$%.2f'%bfc[0])
         # physical point
         #x = plot_means.loc[:,[('mu_piK/fpi_phys','own_mean')]].values[0] 
         #xerr = plot_means.loc[:,[('mu_piK/fpi_phys','own_std')]].values[0]
-        #y = plot_means.loc[:,[('mu_piK_a32_phys','own_mean')]].values[0]
-        #yerr =plot_means.loc[:,[('mu_piK_a32_phys','own_std')]].values[0] 
         #plt.errorbar(x,y,xerr=xerr,yerr=yerr,fmt='d',color='darkgoldenrod',
         #             label=r'physical point')
+        plt.axhline(y=0.00)
         plt.legend()
         plt.savefig(plotname+'.pgf')
+        matplotlib.backends.backend_pgf.FigureCanvasPgf(fig).print_pdf(plotname+'.pdf',bbox='standard')
         plt.clf()
-
-        #plot_dev_df = fit_df[['beta','L','mu_l','rel.dev.']]
-        #rel_dev = chi.bootstrap_means(plot_dev_df,['beta','L','mu_l'],['rel.dev.'])
-        #plt.xlabel(r'rel.dev. $\mu_{\pi K}a_0$')
-        #y = ensemblenames(rel_dev.index.values)
-        #x = rel_dev.values[:,0]
-        #xerr = rel_dev.values[:,1]
-        #plt.yticks(np.arange(y.shape[0]),y)
-        ##plt.xticks()
-        #plt.errorbar(x,np.arange(y.shape[0]),xerr=xerr,fmt='ob',label =
-        #        r'M%d%s E%d fr%d'%(args.zp,args.msfix,args.epik,fr))
-        #plt.axvline(x=0,linewidth=1,color='k')
-        #plt.legend(frameon=True)
-        #plt.close()
+        plt.close()
 
 
 if __name__ == "__main__":
