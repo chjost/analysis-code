@@ -62,6 +62,10 @@ def global_ms_errfunc(p,x,y,error):
     # define the fitfunction for a single beta
     #_func = lambda r, z, p, x,: p[0]/(r*z) * (x[:,0]+x[:,1]) * (1+p[1]*(r/z)*x[:,0]+p[2]/(r**2))
     _func = lambda r, z, p, mu, x,: p[0]/(r*z) * (x[:,0]+mu*x[:,1])* (1+p[1]*(r/z)*x[:,0]+p[2]/(r**2))
+    #_func = lambda r, z, p, x,: 1./(r*z) * (p[0]*x[:,0]+p[3]*x[:,1]) *
+    #(1+p[1]*(r/z)*x[:,0]+p[2]/(r**2))+
+    #_func = lambda r, z, mu, p, x,: 1./(r*z) * (p[0]*x[:,0]+p[3]*x[:,1]) * (1+p[1]*(r/z)*x[:,0]+p[2]/(r**2)) + mu/r**2
+    #_func = lambda r, z, mu, p, x,: p[0]/(r*z) * (x[:,0]+x[:,1]*(1+mu)) * (1+p[1]*(r/z)*x[:,0]+p[2]/(r**2))
 
     # TODO: Automate the array shapes, otherwise very errorprone
     #chi_a = y.A - _func(p[0],p[3],p[6:9],x.A)

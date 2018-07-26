@@ -948,8 +948,8 @@ class FitResult(object):
                                                     np.std(self.data[i][select]))))
                             print(tmpstring)
         else:
-            print("Print details: data")
-            print(self.data[0])
+            #print("Print details: data")
+            #print(self.data[0])
             # iterate over the correlators
             for i, lab in enumerate(self.label):
                 print("correlator %s" % (str(lab)))

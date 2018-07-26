@@ -1,0 +1,346 @@
+#!/usr/bin/python
+################################################################################
+#
+# Author: Christopher Helmes (helmes@hiskp.uni-bonn.de)
+# Date:   December 2017
+#
+# Copyright (C) 2017 Christopher Helmes
+# 
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with tmLQCD. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# Fix the strange quark mass in a chiral lQCD analysis. As a fixing parameter
+# the strange quark mass from a global fit to the physical kaon mass is taken.
+# The fit reads
+# <M_K formula>
+# and for the strange quark mass
+# <strange quark mass formula>
+# is introduced. The lattice results are interpolated to the corresponding 
+# continuum value.
+# 
+# The input varies with the choice of a value for Z_P the multiplicative
+# renormalization of quark masses. This is done via inputfiles which in addition
+# state values for necessary random_seeds
+# 
+# The data produced is stored as a binary object. 
+#  
+# 
+################################################################################
+
+# system imports
+import sys
+from scipy import stats
+from scipy import interpolate as ip
+import numpy as np
+from numpy.polynomial import polynomial as P
+import math
+import matplotlib
+matplotlib.use('Agg') # has to be imported before the next lines
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+from matplotlib.backends.backend_pdf import PdfPages
+
+# Christian's packages
+sys.path.append('/hiskp4/helmes/projects/analysis-code/')
+import analysis2 as ana
+
+def main():
+################################################################################
+#                   set up objects                                             #
+################################################################################
+    # Get parameters from initfile
+    if len(sys.argv) < 2:
+        ens = ana.LatticeEnsemble.parse("A40.24.ini")
+    else:
+        ens = ana.LatticeEnsemble.parse(sys.argv[1])
+
+    # get data from input file
+    print(ens)
+    lat = ens.name()
+    space=ens.get_data("beta")
+    latA = ens.get_data("namea")
+    latB = ens.get_data("nameb")
+    latD = ens.get_data("named")
+    strangeA = ens.get_data("strangea")
+    strangeB = ens.get_data("strangeb")
+    strangeD = ens.get_data("stranged")
+    strange_eta_A = ens.get_data("strange_alt_a")
+    strange_eta_B = ens.get_data("strange_alt_b")
+    strange_eta_D = ens.get_data("strange_alt_d")
+    zp_meth=ens.get_data("zp_meth")
+    try:
+        epik_meth = ens.get_data("epik_meth")
+    except:
+        epik_meth=""
+    samples = ens.get_data("nboot")
+    external_seeds=ens.get_data("external_seeds_a")
+    continuum_seeds=ens.get_data("continuum_seeds_b")
+    amulA = ens.get_data("amu_l_a")
+    amulB = ens.get_data("amu_l_b")
+    amulD = ens.get_data("amu_l_d")
+    #dictionary of strange quark masses
+    amusA = ens.get_data("amu_s_a")
+    amusB = ens.get_data("amu_s_b")
+    amusD = ens.get_data("amu_s_d")
+    # dictionaries for chiral analysis
+    lat_dict = ana.make_dict(space,[latA,latB,latD])
+    #lat_dict = {'A':latA,'B':latB,'D':latD}
+    amu_l_dict = ana.make_dict(space,[amulA,amulB,amulD])
+    #amu_l_dict = {'A': amulA,'B': amulB, 'D': amulD}
+    mu_s_dict = ana.make_dict(space,[strangeA,strangeB,strangeD])
+    #mu_s_dict = {'A': strangeA,'B': strangeB, 'D': strangeD}
+    mu_s_eta_dict = ana.make_dict(space,[strange_eta_A,strange_eta_B,strange_eta_D])
+    #mu_s_eta_dict = {'A': strange_eta_A,'B': strange_eta_B, 'D': strange_eta_D}
+    amu_s_dict = ana.make_dict(space,[amusA,amusB,amusD])
+    #amu_s_dict = {'A': amusA,'B': amusB, 'D': amusD}
+    print(amu_s_dict)
+    #quark = ens.get_data("quark")
+    datadir = ens.get_data("datadir") 
+    plotdir = ens.get_data("plotdir") 
+    resdir = ens.get_data("resultdir") 
+    nboot = ens.get_data("nboot")
+    # Prepare external data
+    ext_data = ana.ExtDat(external_seeds,space,zp_meth,nboot=samples)
+    cont_data = ana.ContDat(continuum_seeds,zp_meth=zp_meth,nboot=samples)
+    fpi_raw = ana.read_extern("../plots2/data/fpi.dat",(1,2))
+    print(fpi_raw)
+
+    read_ms_fix = False
+    read_ext = False
+    # Physical strange quark mass
+    ms = 0.
+################### Setup fixation of strange quark mass #############################
+    fixms = ana.ChirAna("pi-K_I32_chipt_fixms_M%dB"%zp_meth,correlated=True,gamma=False,
+                           match=True, fit_ms = True,debug=4)
+    ens_shape_chirana = (len(latA),len(latB),len(latD))
+    print(ens_shape_chirana)
+    # have 3 strange quark masses 
+    lyt_xvals = ana.generate_chirana_shape(space,ens_shape_chirana,3,2,samples)
+    lyt_yvals = ana.generate_chirana_shape(space,ens_shape_chirana,3,1,samples) 
+    #lyt_xvals = (3,ens_shape_chirana,3,2,samples)
+    #lyt_yvals = (3,ens_shape_chirana,3,1,samples)
+    fixms.create_empty(lyt_xvals,lyt_yvals,lat_dict=lat_dict)
+    print("\nSetup complete, begin chiral analysis")
+    if read_ms_fix is True:
+        fixms.load(resdir)
+    else:
+
+################################################################################
+#                   input data                                                 #
+################################################################################
+        for i,a in enumerate(space):
+            print("\nWorking at lattice spacing %s" %a)
+            for j,e in enumerate(lat_dict[a]):
+                # if using D30.48 modify lowest amus to 0.0115
+                if e == 'D30.48':
+                    print("modifying lowest mu_s values")
+                    mu_s_dict[a][0] ='amu_s_115' 
+                    amu_s_dict[a][0]=0.0115
+                for k,s in enumerate(amu_s_dict[a]):
+####################### add r0 ml ##################################################
+                    mq_tmp = np.full((nboot,),amu_l_dict[a][j])
+                    fixms.add_data(mq_tmp,(i,j,k,0),dim='x')
+####################### add r0 ms ##################################################
+                    mq_tmp = np.full((nboot,),s)
+                    fixms.add_data(mq_tmp,(i,j,k,1),dim='x')
+####    ############### read in M_K^FSE ############################################
+                mksq_fse = ana.MatchResult("mksq_fse_M%dB_%s"%(zp_meth,e),save=datadir+'%s/'%e)
+                ana.MatchResult.create_empty(mksq_fse,samples,3)
+                mk_names = [datadir+'%s/' % (e) +s+'/fit_k_%s.npz' % (e) for s in mu_s_dict[a]]
+                mksq_fse_meas = ana.init_fitreslst(mk_names)
+                mksq_fse.load_data(mksq_fse_meas,1,amu_s_dict[a],square=True)
+                mksq_fse.add_extern_data('../plots2/data/k_fse_mk.dat',e,square=True,
+                                       read='fse_mk',op='mult')
+                # Add data to chirana object
+                for k,s in enumerate(amu_s_dict[a]):
+                    fixms.add_data(mksq_fse.obs[k],(i,j,k,0),'y')
+        fixms.save(resdir)
+        #fixms.fit_strange_mass(datadir=datadir,ext=ext_data)
+        # have as many values for r and z as lattice spacings
+        r = np.r_[[5. for s in space]]
+        z = np.r_[[0.5 for s in space]]
+        mu = np.r_[[0.01 for s in space]]
+        p = np.r_[1.,0.1,0.1,1.]
+        #p = np.r_[1.,0.1,0.1]
+        start=np.r_[r,z,p,mu]
+        # Get the prior samples
+        external_r0 = [ext_data.get(beta,'r0') for beta in space]
+        external_zp = [ext_data.get(beta,'zp') for beta in space]
+        prior = np.vstack(tuple(external_r0 + external_zp))
+        #prior = np.vstack((ext_data.get('A','r0'), ext_data.get('B','r0'),
+        #                   ext_data.get('D','r0'), ext_data.get('A','zp'), 
+        #                   ext_data.get('B','zp'), ext_data.get('D','zp')))
+
+        fixms.fit(ana.global_ms_errfunc,start,plotdir=plotdir,correlated=True,
+                  prior=prior,resdir=resdir)
+        header=[r'$r_0m_l$',r'$(r_0 M_K)^2$',r'Physical $m_s$ from physical $M_K^2$',
+               r'$(r_0M_{\pi})_{phys}^{2}$']
+        ana.print_summary(fixms,header,amu_l_dict,amu_s_dict)
+        label = [r'$a\mu_l$',r'$(aM_K)^2$']
+        #pick the correct arguments
+        args = fixms.fitres.data[0] 
+        #plot_args = np.asarray([np.hstack((args[:,0+i],args[:,len(space)+i], args[:,2*len(space):,0])) for i in range(len(space))])
+        # order plot args as lattice spacing dependent array Ordering: beta
+        # dependent then global
+        # For A
+        # p[0],p[3],p[6],p[7],p[8],p[9]
+        # For B
+        # p[1],p[4],p[6],p[7],p[8],p[9]
+        # For D
+        # p[2],p[5],p[6],p[7],p[8],p[9]
+
+        plot_args = np.asarray([np.hstack((args[:,0+i],args[:,len(space)+i],
+            args[:,2*len(space):,0])) for i in range(len(space))])
+        print(plot_args[0])
+        #plot_args = np.asarray([np.hstack((args[:,0+i],args[:,len(space)+i],
+        #    args[:,2*len(space):2*len(space)+3,0],args[:,2*len(space)+3+i])) for i in range(len(space))])
+        #plotfunc = lambda p,x: p[2]/(p[0]*p[1]) * (x+p[5]) * (1+p[3]*p[0]/p[1]*x+p[4]/p[0]**2)
+        plotfunc = lambda p,x: 1./(p[0]*p[1]) * (p[2]*x+p[5]*p[6]) * (1+p[3]*p[0]/p[1]*x+p[4]/p[0]**2)
+        #plotfunc = lambda p,x: p[2]/(p[0]*p[1]) * (x+p[6]*(1+p[5])) * (1+p[3]*p[0]/p[1]*x+p[4]/p[0]**2)
+        filename = plotdir+'/'+ fixms.proc_id+'.pdf'
+        chiral_plot = ana.LatticePlot(filename, join = True,debug=4)
+        chiral_plot.plot_chiral_fit(fixms,space,label,xlim=[0.0,0.011],func=plotfunc,args=plot_args)
+        chiral_plot._set_limits(marks=4)
+        chiral_plot.save()
+        del chiral_plot
+        ms = fixms.bare_mu_s(space, lat_dict, cont_data, amu_l_dict, disc_eff=True, debug=1)
+    # reset from D30.48 values
+    print("modifying lowest mu_s values")
+    try:
+        mu_s_dict['D'][0] ='amu_s_13' 
+        amu_s_dict['D'][0]=0.013
+    except:
+        print("no D ensembles in analysis")
+
+#################### Setup chiral analysis ######################################
+#    extrapol = ana.ChirAna("pi-K_I32_chipt_B%d_%s"%(zp_meth,epik_meth),correlated=False,gamma=False,match=True)
+#    # have five x-values: mk,mpi,meta,fpi,r0/a
+#    ens_shape_chirana = (len(latA),len(latB),len(latD))
+#    print(ens_shape_chirana)
+#    lyt_xvals = ana.generate_chirana_shape(space,ens_shape_chirana,1,5,samples)
+#    lyt_yvals = ana.generate_chirana_shape(space,ens_shape_chirana,1,1,samples)
+#    #lyt_xvals = (3,ens_shape_chirana,1,5,samples)
+#    #lyt_yvals = (3,ens_shape_chirana,1,1,samples)
+#    extrapol.create_empty(lyt_xvals,lyt_yvals,lat_dict=lat_dict)
+#    print("\nSetup complete, begin chiral analysis")
+#    if read_ext is True:
+#        extrapol.load(resdir)
+#    else:
+#
+#################################################################################
+##                   input data                                                 #
+#################################################################################
+#        for i,a in enumerate(space):
+#            print("\nWorking at lattice spacing %s" %a)
+#            for j,e in enumerate(lat_dict[a]):
+#                # if using D30.48 modify lowest amus to 0.0115
+#                if e == 'D30.48':
+#                    print("modifying lowest mu_s values")
+#                    mu_s_dict[a][0] ='amu_s_115' 
+#                    amu_s_dict[a][0]=0.0115
+#                    mu_s_eta_dict[a][0]='strange_1150'
+#
+#####    ############### read in M_K^FSE ############################################
+#                mksq_fse = ana.MatchResult("mksq_fse_M%dB_%s"%(zp_meth,e),save=datadir+'%s/'%e)
+#                ana.MatchResult.create_empty(mksq_fse,samples,3)
+#                mk_names = [datadir+'%s/' % (e) +s+'/fit_k_%s.npz' % (e) for s in mu_s_dict[a]]
+#                mksq_fse_meas = ana.init_fitreslst(mk_names)
+#                mksq_fse.load_data(mksq_fse_meas,1,amu_s_dict[a],square=True)
+#                mksq_fse.add_extern_data('../plots2/data/k_fse_mk.dat',e,square=True,
+#                                       read='fse_mk',op='mult')
+#
+#####    ############### read in M_pi^FSE ###########################################
+#                mpi_fse = ana.MatchResult("mpi_fse_M%dB_%s"%(zp_meth,e),save=datadir+'%s/'%e)
+#                ana.MatchResult.create_empty(mpi_fse,samples,3)
+#                mpi_names = [datadir+'%s/' % (e) +'pi'+'/fit_pi_%s.npz' % (e) for s in mu_s_dict[a]]
+#                mpi_fse_meas = ana.init_fitreslst(mpi_names)
+#                mpi_fse.load_data(mpi_fse_meas,1,amu_s_dict[a],square=False)
+#                mpi_fse.add_extern_data('../plots2/data/k_fse_mpi.dat',e,square=False,
+#                                       read='fse_mpi',op='div')
+#
+#####    ############### read in M_eta ##############################################
+#                metasq = ana.MatchResult("metasq_M%dB_%s"%(zp_meth,e),save=datadir+'%s/'%e)
+#                ana.MatchResult.create_empty(metasq,samples,3)
+#                meta_names = ['/hiskp4/hiskp2/jost/eta_data/'+'%s/' % (e) +s+'/fit_eta_rm_TP0.npz' for s in mu_s_eta_dict[a]]
+#                meta_meas = ana.init_fitreslst(meta_names)
+#                metasq.load_data(meta_meas,1,amu_s_dict[a],square=True)
+#
+#########################  read in mu_pik a_3/2 ################################
+#                mua32 = ana.MatchResult("mua32_M%dB_%s_%s" %(zp_meth,epik_meth,
+#                                        e),save=datadir+'%s/'%e)
+#                ana.MatchResult.create_empty(mua32,samples,3)
+#                mua32_names = [datadir+'%s/' % (e) +s+'/mu_a0_TP0_%s_%s.npz' 
+#                               % (e,epik_meth) for s in mu_s_dict[a]]
+#                mua32_meas=ana.init_fitreslst(mua32_names)
+#                mua32.load_data(mua32_meas,0,amu_s_dict[a],square=False)
+#####    ############################################################################
+##                       fix strange quark mass                                     #
+#####    ############################################################################
+#                
+#                evl_x = fixms.eval_at[e]
+#####    ############### interpolate M_K^FSE ########################################
+#                #mksq_fse.amu = mssq_fse.obs
+#                label = [r'$a\mu_s$',r'$(aM_{K})^2$',
+#                         r'$a\mu_s = (a\mu_s^{\mathrm{ref}})^2$']
+#                mksq_fse.eval_at(evl_x,plotdir=plotdir,
+#                               ens=e,plot=True,label=label, meth=2)
+#
+#####    ############### interpolate M_eta ##########################################
+#                #metasq.amu = mssq_fse.obs
+#                label = [r'$a\mu_s$',r'$(aM_{\eta})^2$',
+#                         r'$a\mu_s = (a\mu_s^{\mathrm{ref}})^2$']
+#                metasq.eval_at(evl_x,plotdir=plotdir,
+#                               ens=e,plot=True,label=label, meth=2,
+#                               y_lim = [0.065,0.095])
+#
+#####    ############### interpolate mu_piK a_3/2 ###################################
+#                #mua32_fse.amu = mssq_fse.obs
+#                label = [r'$a\mu_s$',r'$\mu_{\pi K}\, a_{0}$',
+#                         r'$a\mu_s = (a\mu_s^{\mathrm{ref}})^2$']
+#                mua32.eval_at(evl_x,plotdir=plotdir,
+#                               ens=e,correlated=False,plot=True,label=label,
+#                               meth=2,y_lim = [-0.145,-0.09])
+#
+#####    ############################################################################
+##                       copy to chiral analysis                                    #
+#####    ############################################################################
+#                extrapol.add_data(evl_x,(i,j,0,0),dim='mu')
+#                # Add mua32 data
+#                extrapol.add_data(mua32.eval_obs[2],(i,j,0,0),'y')
+#                # Add M_pi data
+#                extrapol.add_data(mpi_fse.obs[1],(i,j,0,0),dim='x')
+#                # Add M_K data  
+#                extrapol.add_data(np.sqrt(mksq_fse.eval_obs[2]),(i,j,0,1),'x')
+#                # Add f_pi data
+#                dummy, fpi = ana.prepare_fk(fpi_raw,e,samples)
+#                print("0th Bootstrapsample for fpi: %f" %fpi[0])
+#                extrapol.x_data[i][j,0,2] = fpi
+#                extrapol.add_extern_data("../plots2/data/k_fse_fpi.dat",(i,j,0,2),e,
+#                                         dim='x',read='k_fse',square=False,
+#                                         op='div')
+#                # add r_0 data
+#                extrapol.x_data[i][j,0,3] = ext_data.get(a,'r0')
+#                # Add M_eta data
+#                extrapol.add_data(np.sqrt(metasq.eval_obs[2]),(i,j,0,4),'x')
+#    header = ["#amu_l", "amu_s", "mpi", "dmpi", "mk", "dmk", "fpi", "dfpi",
+#              "r0/a", "d(r0/a)", "m_eta","dm_eta","mu a0", "d(mu a0)"]
+#    ana.print_summary(extrapol,header,amu_l_dict,amu_s_dict)
+#    print("Done ... Saving to %s" %resdir)
+#    extrapol.save(resdir)
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Keyboard Interrupt")
+

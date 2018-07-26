@@ -202,15 +202,21 @@ class Correlators(object):
         self.data = boot.sym(self.data,blocking=blocking,bl=bl)
         self.shape = self.data.shape
 
-    def bootstrap(self, nsamples, blocking= False, bl = None):
+    def bootstrap(self, nsamples, blocking= False, bl = None, method='naive'):
         """Creates bootstrap samples of the data.
 
         Parameters
         ----------
         nsamples : int
             The number of bootstrap samples to be calculated.
+        blocking : bool
+            Should naive blocking be used?
+        bl : int
+           blocklength for blocking methods
+        method : string 
+           'naive' or 'stationary' for bootstrap method
         """
-        self.data = boot.bootstrap(self.data, nsamples, blocking, bl)
+        self.data = boot.bootstrap(self.data, nsamples, blocking, bl,method)
         self.shape = self.data.shape 
         
     def reflect(self, kind="axis"):
@@ -237,7 +243,7 @@ class Correlators(object):
             print("Reflection type not known")
         self.shape = self.data.shape
 
-    def sym_and_boot(self, nsamples,blocking=False, bl=None ):
+    def sym_and_boot(self, nsamples,blocking=False, bl=None ,method='naive'):
         """Symmetrizes the data around the second axis and then
         create bootstrap samples of the data
 
@@ -250,7 +256,8 @@ class Correlators(object):
         bl : int
             If blocking enabled states length of each block
         """
-        self.data = boot.sym_and_boot(self.data, nsamples,blocking=blocking,bl=bl)
+        self.data = boot.sym_and_boot(self.data,
+                nsamples,blocking=blocking,bl=bl,method=method)
         self.shape = self.data.shape
 
     def shift(self, dt, mass=None, shift=1, d2=0, L=24, irrep="A1",

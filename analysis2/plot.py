@@ -412,7 +412,14 @@ class LatticePlot(object):
             fig.tight_layout()
             print(self.filename)
             self.save()
-            
+
+    def bs_hist(self,data,label,nb_bins):
+        plt.hist(data,nb_bins,normed=True,alpha=0.55,label=label[0])
+        plt.title(self.title)
+        plt.xlabel(label[1])
+        plt.ylabel('Frequency')
+        plt.legend()
+
 
     def histogram(self, fitresult, label, nb_bins=20, par=None):
         """Plot the histograms.
