@@ -13,7 +13,7 @@ def plot_pik_meff_e3(ensemble_list, datapath,strange_dict=None,
     for i,e in enumerate(ensemble_list):
         pion_fitresult_name = 'fit_pi_%s.npz' %e 
         kaon_fitresult_name = 'fit_k_%s.npz' %e
-        pik_corr_name =  'pik_charged_A1_TP0_00.dat'
+        pik_corr_name =  'corr_pik_%s.npz'%e
         if e == "D30.48":
             strange_dict[e[0]] = ["amu_s_115","amu_s_15","amu_s_18"]
     # read in pion and kaon fitresults
@@ -29,10 +29,8 @@ def plot_pik_meff_e3(ensemble_list, datapath,strange_dict=None,
             mk.print_data(1)
 
             # Read Pik
-            files=['%s/%s/%s/%s' %(datapath,e,s,pik_corr_name)]
-            pik_corr = ana.Correlators(files, matrix=False,conf_col=3)
-    # sy    mmetrize and bootstrap
-            pik_corr.sym_and_boot(nboot)
+            files='%s/%s/%s/%s' %(datapath,e,s,pik_corr_name)
+            pik_corr = ana.Correlators.read(files)
             # calculate C_pik with E3
             pik_corr_e3 = ana.Correlators.create(pik_corr.data,T=T)
             pik_corr_e3.divide_out_pollution(mpi,mk)
@@ -56,7 +54,7 @@ def plot_pik_meff_e3(ensemble_list, datapath,strange_dict=None,
             plotter.set_env(ylog=False,grid=False, title=True, ylim=ylim,
                     xlim=xlim)
             plotter.plot(e3_corr_ws,label)
-
+    plotter.save()    
     del plotter 
 
 def plot_pik_meff_e1(ensemble_list, datapath,strange_dict=None,
@@ -68,7 +66,7 @@ def plot_pik_meff_e1(ensemble_list, datapath,strange_dict=None,
     for i,e in enumerate(ensemble_list):
         pion_fitresult_name = 'fit_pi_%s.npz' %e 
         kaon_fitresult_name = 'fit_k_%s.npz' %e
-        pik_corr_name =  'pik_charged_A1_TP0_00.dat'
+        pik_corr_name =  'corr_pik_%s.npz'%e
         if e == "D30.48":
             strange_dict[e[0]] = ["amu_s_115","amu_s_15","amu_s_18"]
     # read in pion and kaon fitresults
@@ -90,10 +88,8 @@ def plot_pik_meff_e1(ensemble_list, datapath,strange_dict=None,
             diff_pi_k.print_details()
             diff_pi_k.print_data()
             # Read Pik
-            files=['%s/%s/%s/%s' %(datapath,e,s,pik_corr_name)]
-            pik_corr = ana.Correlators(files, matrix=False,conf_col=3)
-    # sy    mmetrize and bootstrap
-            pik_corr.sym_and_boot(nboot)
+            files='%s/%s/%s/%s' %(datapath,e,s,pik_corr_name)
+            pik_corr = ana.Correlators.read(files)
             # calculate C_pik with e1
             pik_corr_e1 = ana.Correlators.create(pik_corr.data,T=T)
             e1_corr_shift = ana.Correlators.create(pik_corr_e1.data)
@@ -115,7 +111,7 @@ def plot_pik_meff_e1(ensemble_list, datapath,strange_dict=None,
             plotter.set_env(ylog=False,grid=False, title=True, ylim=ylim,
                     xlim=xlim)
             plotter.plot(e1_corr_ws,label)
-
+    plotter.save()
     del plotter
 
 def main():
@@ -135,7 +131,8 @@ def main():
     mass_eta_fld = {"A":mus_eta_a_fld,"B":mus_eta_b_fld,"D":mus_eta_d_fld}
     datapath = '/hiskp4/helmes/analysis/scattering/pi_k/I_32_blocked/data/'
     plot = '/hiskp4/helmes/analysis/scattering/pi_k/I_32_blocked/plots/'
-    plot_pik_meff_e3(ens,datapath,strange_dict=mass_fld,plotfile=plot+"Meff_pik_e3_D30.48.pdf")
+    plot_pik_meff_e3(ens,datapath,strange_dict=mass_fld,plotfile=plot+"Meff_pik_e3.pdf")
+    plot_pik_meff_e1(ens,datapath,strange_dict=mass_fld,plotfile=plot+"Meff_pik_e1.pdf")
 
 if __name__ == '__main__':
     try:
