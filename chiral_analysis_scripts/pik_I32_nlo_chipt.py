@@ -276,6 +276,7 @@ def main():
     else:
         #key = 'Interpolate_%s'%epik_meth
         key = 'Interpolate_uncorrelated_%s'%epik_meth
+        #key = 'Interpolate_scale_fpi_%s'%epik_meth
     interpolated_data = pd.read_hdf(data_path, key=key)
     interpolated_data['mu_l']=interpolated_data['mu_l'].apply(str)
     interpolated_data.info()
@@ -304,7 +305,7 @@ def main():
     groups = ['beta','L','mu_l']
     obs = ['fpi','M_pi','M_K','M_eta','mu_piK_a32','mu_piK/fpi']
     means = chi.bootstrap_means(extrapol_df,groups,obs)
-    chi.print_si_format(means)
+    print(chi.print_si_format(means))
     fit_ranges=[[0.,2.5],[0.,1.41],[0.,1.35]]
     for i,fr in enumerate(fit_ranges):
         print("\n\n")
@@ -372,6 +373,7 @@ def main():
         #hdfstorer.put('/interp_corr_false/nlo_chpt/%s/fr_%d'%(epik_meth,i),fit_df)
         #hdfstorer.put('/fse_false/nlo_chpt/%s/fr_%d'%(epik_meth,i),fit_df)
         hdfstorer.put('/fse_true/nlo_chpt/%s/fr_%d'%(epik_meth,i),fit_df)
+        #hdfstorer.put('/fse_true_scale_fpi/nlo_chpt/%s/fr_%d'%(epik_meth,i),fit_df)
         del hdfstorer
 
 if __name__ == "__main__":

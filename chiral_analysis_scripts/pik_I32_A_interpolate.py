@@ -205,6 +205,7 @@ def main():
 ####    ############################################################################
                 
                 evl_x = ana.mk_mpi_diff_phys(a, nboot, cont_data, ext_data)
+                #evl_x = ana.mk_mpi_diff_fpi_phys(fpi, nboot, cont_data, ext_data)
                 print("\n(M^2_k-0.5*M^2_pi):")
                 print(ana.compute_error(evl_x))
 ####    ############### interpolate M_K^FSE ########################################
@@ -259,6 +260,7 @@ def main():
         hdf_savename = resdir+proc_id+'.h5'
         hdfstorer = pd.HDFStore(hdf_savename)
         #hdfstorer.put('Interpolate_%s'%epik_meth,interpolated_A)
+        #hdfstorer.put('Interpolate_scale_fpi_%s'%epik_meth,interpolated_A)
         hdfstorer.put('Interpolate_uncorrelated_%s'%epik_meth,interpolated_A)
         del hdfstorer
 if __name__ == '__main__':

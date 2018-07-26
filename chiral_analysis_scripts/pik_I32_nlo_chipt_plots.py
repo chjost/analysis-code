@@ -87,6 +87,18 @@ def rel_dev_nlochpt(df):
     dev_series = pd.Series(reldev,index=df.index)
     return dev_series
 
+def set_format(df):
+    fmt = ['^','v','o']
+    col = ['r','b','g']
+    fmt_list = []
+    for r in df['name']:
+        if r[0] =='A':
+            fmt_list.append(fmt[0]+col[0])
+        if r[0] == 'B':
+            fmt_list.append(fmt[1]+col[1])
+        if r[0] =='D':
+            fmt_list.append(fmt[2]+col[2])
+    return fmt_list
 def main():
     pd.set_option('display.width',1000)
 ################################################################################
@@ -123,6 +135,7 @@ def main():
     x_phys = mu_by_fpi_phys(cont_dat)
     for fr in range(3):
         #key='/nlo_chpt/E%d/fr_%d'%(args.epik,fr)
+        #key='fse_true_scale_fpi/nlo_chpt/E%d/fr_%d'%(args.epik,fr)
         key='fse_true/nlo_chpt/E%d/fr_%d'%(args.epik,fr)
         fit_df = pd.read_hdf(filename,key=key)
         fit_df.info()
@@ -138,14 +151,18 @@ def main():
         # evaluation, carry with us the identifiers beta mu_l and L
         plot_df = fit_df[['beta','L','mu_l','fr_bgn','fr_end',
                          'mu_piK/fpi','mu_piK_a32','mu_piK/fpi_phys',
-                         'mu_piK_a32_phys','rel.dev.']]
+                         'mu_piK_a32_phys','rel.dev.','L_piK','chi^2','dof']]
         groups = ['beta','L','mu_l']
-        obs = ['mu_piK/fpi','mu_piK_a32','mu_piK/fpi_phys','mu_piK_a32_phys']
+        obs = ['mu_piK/fpi','mu_piK_a32','mu_piK/fpi_phys','mu_piK_a32_phys',
+                'L_piK','chi^2','dof']
         plot_means = chi.bootstrap_means(plot_df,groups,obs)
         print(plot_means)
         # plot the data beta wise
         plotname = plotdir+'/pi_K_I32_fse_true_nlo_chpt_M%d%s_E%d_fr%d'%(args.zp,
                             args.msfix,args.epik,fr)
+        #plotname = plotdir+'/pi_K_I32_fse_true_scale_fpi_nlo_chpt_M%d%s_E%d_fr%d'%(args.zp,
+        #                    args.msfix,args.epik,fr)
+        fig = plt.figure()
         plt.xlabel(r'$\mu_{\pi K}/f_{\pi}$',fontsize=11)
         plt.ylabel(r'$\mu_{\pi K}a_0$', fontsize=11)
         #bfc is for beta,format,colour
@@ -156,9 +173,12 @@ def main():
         plt.ylim((-0.25,0))
         for bfc in zip(beta,fmt,col):
             # get data
-            x = plot_means.xs(bfc[0]).loc[:,[('mu_piK/fpi','own_mean')]].values[:,0]
-            y = plot_means.xs(bfc[0]).loc[:,[('mu_piK_a32','own_mean')]].values[:,0]
-            yerr = plot_means.xs(bfc[0]).loc[:,[('mu_piK_a32','own_std')]].values[:,0]
+            try:
+                x = plot_means.xs(bfc[0]).loc[:,[('mu_piK/fpi','own_mean')]].values[:,0]
+                y = plot_means.xs(bfc[0]).loc[:,[('mu_piK_a32','own_mean')]].values[:,0]
+                yerr = plot_means.xs(bfc[0]).loc[:,[('mu_piK_a32','own_std')]].values[:,0]
+            except:
+                x,y,yerr = None,None,None
             if x is not None:
                 plt.errorbar(x,y,yerr=yerr,fmt=bfc[1]+bfc[2],
                              label = r'$\beta=$%.2f'%bfc[0])
@@ -175,24 +195,24 @@ def main():
         plt.errorbar(x,y,xerr=xerr,yerr=yerr,fmt='d',color='darkgoldenrod',
                      label=r'physical point')
         plt.legend()
+        matplotlib.backends.backend_pgf.FigureCanvasPgf(fig).print_pdf(plotname+'.pdf')
         plt.savefig(plotname+'.pgf')
         plt.clf()
 
+        fig = plt.figure()
         plot_dev_df = fit_df[['beta','L','mu_l','rel.dev.']]
         rel_dev = chi.bootstrap_means(plot_dev_df,['beta','L','mu_l'],['rel.dev.'])
-        plt.xlabel(r'rel.dev. $\mu_{\pi K}a_0$', fontsize=11)
-        y = ensemblenames(rel_dev.index.values)
-        x = rel_dev.values[:,0]
-        xerr = rel_dev.values[:,1]
-        plt.yticks(np.arange(y.shape[0]),y,fontsize=11)
-        #plt.xticks()
-        epik_label=args.epik
-        if args.epik == 3:
-            epik_label = 2
-        plt.errorbar(x,np.arange(y.shape[0]),xerr=xerr,fmt='ob',label =
-                r'M%d%s E%d'%(args.zp,args.msfix,epik_label))
+        rel_dev['name'] = ensemblenames(rel_dev.index.values)
+        rel_dev['ypos'] = np.arange(rel_dev.shape[0])
+        rel_dev['fmt'] = set_format(rel_dev)
+        for index, row in rel_dev.iterrows():
+            plt.errorbar(row['rel.dev.']['own_mean'],row['ypos'],
+                         xerr=row['rel.dev.','own_std'],
+                         fmt=row['fmt'].values[0])
+        plt.yticks(rel_dev['ypos'],rel_dev['name'],fontsize=11)
+        plt.xlabel(r'$\delta_r(\mu_{\pi K}\,a_0)$', fontsize=11)
         plt.axvline(x=0,linewidth=1,color='k')
-        plt.legend(frameon=True)
+        matplotlib.backends.backend_pgf.FigureCanvasPgf(fig).print_pdf(plotname+'_rel_dev.pdf')
         plt.savefig(plotname+'_rel_dev.pgf')
         plt.close()
 

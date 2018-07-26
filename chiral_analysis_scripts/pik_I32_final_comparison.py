@@ -12,7 +12,7 @@ import itertools as it
 import matplotlib
 matplotlib.use('pgf') # has to be imported before the next lines
 import matplotlib.pyplot as plt
-plt.style.use('pub_long_comp')
+plt.style.use('paper_side_by_side')
 import matplotlib.cm as cm
 import numpy as np
 import pandas as pd
@@ -29,7 +29,7 @@ def plot_comparison(data,shift=0.,fmt='ok'):
     xerr = data['dmpia0_32']
     xsysdn = data['sys_dn(mpia0_32)']
     xsysup = data['sys_up(mpia0_32)']
-    plt.yticks(np.arange(0,y.shape[0]),y,rotation = 90,
+    plt.yticks(np.arange(0,y.shape[0]),y,
                verticalalignment='center')
     plt.errorbar(x,np.arange(len(y)),xerr=[xerr+xsysdn,xerr+xsysup],
                  fmt = '.', color='deepskyblue')
@@ -43,7 +43,7 @@ def main():
     outname = plotdir+'/final_comparison'
     datapoints = pd.read_csv(filename, sep='\s+')
     datapoints=datapoints.fillna(0)
-    #datapoints = datapoints[datapoints['Collab']!='ETMC_I']
+    datapoints = datapoints[datapoints['Collab']!='ETMC_I']
     fig=plt.figure()
     plot_comparison(datapoints)
     plt.xlabel(r'$(M_{\pi}a_0)^{\mathrm{phys}}$')

@@ -549,6 +549,15 @@ def mk_mpi_diff_phys(a, nboot, cont, ext):
   
   return _r0**2*(_mk**2-0.5*_mpi**2)/(197.37**2*_r0a**2)
 
+def mk_mpi_diff_fpi_phys(afpi, nboot, cont, ext):
+  """ Function to calculate a^2(M_K^2-0.5M_pi^2) from continuum data, using fpi"""
+  
+  _fpi = cont.get('fpi')
+  _mk = cont.get('mk')
+  _mpi = cont.get('mpi_0')
+  
+  return afpi**2*(_mk**2-0.5*_mpi**2)/(_fpi**2)
+
 # Idea: Move that to cont_data class
 def r0mk_mpi_diff_phys(cont):
   """ Function to calculate r_0^2(M_K^2-0.5M_pi^2) from continuum data"""
