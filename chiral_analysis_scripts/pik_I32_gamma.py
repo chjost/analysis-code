@@ -270,7 +270,7 @@ def main():
     interpolated_data = pd.read_hdf(data_path, key=key)
     interpolated_data['mu_l']=interpolated_data['mu_l'].apply(str)
     interpolated_data.info()
-    print(chi.bootstrap_means(interpolated_data,['beta','L','mu_l'],['mu_piK_a32']))
+    print(chi.bootstrap_means(interpolated_data,['beta','L','mu_l'],['mu_piK_a32_scaled']))
     # get finite size effects dataframe
     fse_filename='/hiskp4/helmes/projects/analysis-code/plots2/data/k_fse_collect.txt'
     fse = pd.DataFrame().from_csv(fse_filename,sep='\s+')
@@ -284,7 +284,7 @@ def main():
     extrapol_df = pd.DataFrame(index=interpolated_data.index,
                                data= interpolated_data[['beta','L','mu_l','sample',
                                                         'fpi','M_pi',
-                                                        'mu_piK_a32']])
+                                                        'mu_piK_a32_scaled']])
     # Take back finite size corrections on MK and Mpi
     #extrapol_df['M_K^2']=interpolated_data['M_K^2']/interpolated_data['1/k_mk^2']
     #extrapol_df['M_pi']=interpolated_data['M_pi']*interpolated_data['k_mpi']
@@ -295,12 +295,12 @@ def main():
     extrapol_df['M_K/M_pi'] = extrapol_df['M_K']/extrapol_df['M_pi']
     extrapol_df['Gamma'] = ana.gamma_pik(extrapol_df['M_pi'].values,
                                          extrapol_df['M_K'].values,
-                                         extrapol_df['mu_piK_a32'].values,
+                                         extrapol_df['mu_piK_a32_scaled'].values,
                                          extrapol_df['fpi'].values,
                                          extrapol_df['M_eta'].values)
     #extrapol_df['Gamma'] = ana.gamma_pik(extrapol_df['M_pi'].values,
     #                                     extrapol_df['M_K'].values,
-    #                                     extrapol_df['mu_piK_a32'].values,
+    #                                     extrapol_df['mu_piK_a32_scaled'].values,
     #                                     extrapol_df['fpi'].values)
     groups = ['beta','L','mu_l']
     obs = ['fpi','M_pi','M_K','M_eta','Gamma','M_K/M_pi']

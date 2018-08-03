@@ -77,7 +77,7 @@ def mua32_phys(df,cont):
 
 #TODO: think about moving that to the extrapolation
 def rel_dev_nlochpt(df):
-    mua32 = df['mu_piK_a32'].values
+    mua32 = df['mu_piK_a32_scaled'].values
     p = df[['L_piK','L_5']].values.T
     mpi = df['M_pi'].values
     mk = df['M_K'].values
@@ -150,10 +150,10 @@ def main():
         # for the plots we only need the y-values, the x-values and the function
         # evaluation, carry with us the identifiers beta mu_l and L
         plot_df = fit_df[['beta','L','mu_l','fr_bgn','fr_end',
-                         'mu_piK/fpi','mu_piK_a32','mu_piK/fpi_phys',
+                         'mu_piK/fpi','mu_piK_a32_scaled','mu_piK/fpi_phys',
                          'mu_piK_a32_phys','rel.dev.','L_piK','chi^2','dof']]
         groups = ['beta','L','mu_l']
-        obs = ['mu_piK/fpi','mu_piK_a32','mu_piK/fpi_phys','mu_piK_a32_phys',
+        obs = ['mu_piK/fpi','mu_piK_a32_scaled','mu_piK/fpi_phys','mu_piK_a32_phys',
                 'L_piK','chi^2','dof']
         plot_means = chi.bootstrap_means(plot_df,groups,obs)
         print(plot_means)
@@ -175,8 +175,8 @@ def main():
             # get data
             try:
                 x = plot_means.xs(bfc[0]).loc[:,[('mu_piK/fpi','own_mean')]].values[:,0]
-                y = plot_means.xs(bfc[0]).loc[:,[('mu_piK_a32','own_mean')]].values[:,0]
-                yerr = plot_means.xs(bfc[0]).loc[:,[('mu_piK_a32','own_std')]].values[:,0]
+                y = plot_means.xs(bfc[0]).loc[:,[('mu_piK_a32_scaled','own_mean')]].values[:,0]
+                yerr = plot_means.xs(bfc[0]).loc[:,[('mu_piK_a32_scaled','own_std')]].values[:,0]
             except:
                 x,y,yerr = None,None,None
             if x is not None:

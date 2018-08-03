@@ -99,9 +99,9 @@ def chol_inv(mat):
     l = np.linalg.cholesky(mat)
     lt = l.T
     mat_inv = np.dot(np.linalg.inv(lt),np.linalg.inv(l))
-    print("Inverse from Cholesky decomposition:")
-    print(mat_inv)
-    print(np.dot(mat_inv,mat))
+    #print("Inverse from Cholesky decomposition:")
+    #print(mat_inv)
+    #print(np.dot(mat_inv,mat))
     return mat_inv
 
 

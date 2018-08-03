@@ -31,14 +31,15 @@ def plot_comparison(data,shift=0.,fmt='ok'):
     xsysup = data['sys_up(mpia0_32)']
     plt.yticks(np.arange(0,y.shape[0]),y,
                verticalalignment='center')
-    plt.errorbar(x,np.arange(len(y)),xerr=[xerr+xsysdn,xerr+xsysup],
+    x_err = np.asarray([np.sqrt(xerr**2+xsysdn**2),np.sqrt(xerr**2+xsysup**2)])
+    plt.errorbar(x,np.arange(len(y)),xerr=x_err,
                  fmt = '.', color='deepskyblue')
     plt.errorbar(x,np.arange(len(y)),xerr=xerr,fmt='o',color='darkblue',
             label=None)
 def main():
     #load data
-    path = '/hiskp4/helmes/analysis/scattering/pi_k/I_32_blocked/results/'
-    plotdir= '/hiskp4/helmes/analysis/scattering/pi_k/I_32_blocked/plots/'
+    path = '/hiskp4/helmes/analysis/scattering/pi_k/I_32_publish/results/'
+    plotdir= '/hiskp4/helmes/analysis/scattering/pi_k/I_32_publish/plots/'
     filename = path+'/final_comparison.txt'
     outname = plotdir+'/final_comparison'
     datapoints = pd.read_csv(filename, sep='\s+')

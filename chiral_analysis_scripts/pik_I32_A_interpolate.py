@@ -53,6 +53,37 @@ sys.path.append('/hiskp4/helmes/projects/analysis-code/')
 import analysis2 as ana
 import chiron as chi
 
+def scale_obs_std(array,fac):   
+    """Scale the array such that the standard variation increases by fac
+
+    The deviations of the array get scaled by the factor fac. Afterwards the
+    mean gets added again and the 0th bootstrapsample gets set to its correct
+    value
+
+    Parameters
+    ----------
+    array: ndarray holding the bootstrap samples of interest
+    fac: float, the factor by which the standard deviation is scaled
+
+    """
+    mean = array[0]
+    n = array.shape[0]
+    tmp=fac*(array-mean)
+    tmp+=mean
+    tmp[0] = mean
+    return tmp
+
+def get_factor_error_scaling(names,eval_obs):
+    fr = ana.init_fitreslst(names)
+    sys_avg = 0
+    for r in fr:
+        r.calc_error()
+        #TODO: ATM this is specific to mu_piK a0
+        sys_avg+=np.sum(r.error[0][2][0])/2. 
+    sys_avg/=len(fr)
+    foo, sd = ana.compute_error(eval_obs)
+    fac = np.sqrt(sd**2+sys_avg**2)/sd
+    return fac
 def main():
 ################################################################################
 #                   set up objects                                             #
@@ -236,6 +267,8 @@ def main():
                                #y_lim = [-0.145,-0.09]
                                )
 
+                factor = get_factor_error_scaling(mua32_names,mua32.eval_obs[2])            
+                mua32_scaled = scale_obs_std(mua32.eval_obs[2],factor) 
 ####    ############################################################################
 #                       copy to pandas dataframe                                   #
 ####    ############################################################################
@@ -247,6 +280,7 @@ def main():
                                 'M_K^2':mksq_fse.eval_obs[2],
                                 'M_eta^2':metasq.eval_obs[2],
                                 'mu_piK_a32':mua32.eval_obs[2],
+                                'mu_piK_a32_scaled':mua32_scaled,
                                 'M_pi':mpi_fse.obs[1],
                                 'fpi':fpi
                                 }
@@ -254,7 +288,7 @@ def main():
                 interpolated_A = interpolated_A.append(tmp_df)
         groups = ['beta','L','mu_l']
         #observables=['M_K^2_FSE','P_0','P_1','P_2','P_r','P_Z','P_mu','M_K^2_func']
-        obs = ['M_K^2','mu_piK_a32','M_eta^2','mu_s^fix']
+        obs = ['M_K^2','mu_piK_a32','mu_piK_a32_scaled','M_eta^2','mu_s^fix']
         print(chi.bootstrap_means(interpolated_A,groups,obs))
         proc_id = 'pi_K_I32_interpolate_M%dA'%(zp_meth)
         hdf_savename = resdir+proc_id+'.h5'

@@ -13,7 +13,7 @@ from interpol import match_lin, match_quad, evaluate_lin
 from functions import (func_single_corr,func_single_corr_bare, func_ratio, func_const, func_two_corr,
     func_two_corr_shifted, func_single_corr2, func_sinh, compute_eff_mass,
     func_two_corr_therm, func_corr_shift_therm, func_two_corr_dws,
-    func_corr_shift_therm_subtract)
+    func_corr_shift_therm_subtract,func_corr_shift_poll_removal)
 from statistics import (compute_error, sys_error, sys_error_der, draw_weighted,
     freq_count, draw_gauss_distributed)
 from energies import calc_q2, calc_Ecm
@@ -75,7 +75,8 @@ class LatticeFit(object):
                 3: func_two_corr, 4: func_single_corr2, 5: func_sinh,
                 6: func_two_corr_shifted, 7: func_two_corr_therm,
                 8: func_corr_shift_therm, 9: func_single_corr_bare,
-                10: func_two_corr_dws, 11: func_corr_shift_therm_subtract}
+                10: func_two_corr_dws, 11: func_corr_shift_therm_subtract,
+                12: func_corr_shift_poll_removal}
             self.fitfunc = functions.get(fitfunc)
         else:
             self.npar = npar
@@ -204,76 +205,6 @@ class LatticeFit(object):
         # get the configuration numbers from the correlator object
         fitres.conf = corr.conf
         return fitres
-    # TODO: Marked for deletion
-    #def chiral_fit(self, X, Y, corrid="", start=None, xcut=None, ncorr=None,debug=0):
-    #    """Fit function to data.
-    #    
-    #    Parameters
-    #    ----------
-    #    X, Y : ndarrays
-    #        The data arrays for X and Y. Assumes ensemble as first axis
-    #        and bootstrap samples as second axis.
-    #    corrid : str
-    #        Identifier for the fit result.
-    #    start : list or tuple or ndarray
-    #        Start value for the fit.
-    #    xcut : float
-    #        A maximal value for the X values. Everything above will not
-    #        be used in the fit.
-    #    debug : int
-    #        The amount of information printed to screen.
-    #    """
-    #    # if no start value given, take an arbitrary value
-    #    if start is None:
-    #        _start = [3.0]
-    #    # make sure start is a tuple, list, or ndarray for leastsq to work
-    #    elif not isinstance(start, (np.ndarray, tuple, list)):
-    #        _start = list(start)
-    #    else:
-    #        _start = start
-    #    # implement a cut on the data if given, negative means everything above
-    #    # that x-value
-    #    if xcut is not None:
-    #        print("xcut is: %f" %xcut)
-    #        if xcut >= 0.:
-    #            tmp = X[:,0] < xcut
-    #        else:
-    #            tmp = X[:,0] > xcut
-    #        _X = X[tmp].T
-    #        _Y = Y[tmp].T
-    #    else:
-    #        _X = X.T
-    #        _Y = Y.T
-
-    #    # create FitResults
-    #    fitres = FitResult("chiral_fit")
-    #    #shape1 = (_X.shape[0], 1, _X.shape[0])
-    #    #shape1 = (_X.shape[0], len(start), _Y.shape[0])
-    #    #shape2 = (_X.shape[0], _Y.shape[0])
-    #    shape1 = (_Y.shape[0], len(start), _X.shape[0])
-    #    shape2 = (_Y.shape[0], _X.shape[0])
-    #    if ncorr is None:
-    #      fitres.create_empty(shape1, shape2, 1)
-    #    elif isinstance(ncorr, int):
-    #      fitres.create_empty(shape1, shape2,ncorr)
-    #    else:
-    #      raise ValueError("ncorr needs to be integer")
-
-    #    # fit the data
-    #    dof = _X.shape[-1] - len(_start)
-    #    # fit every bootstrap sample
-    #    timing = []
-    #    for i, x in enumerate(_X):
-    #        timing.append(time.clock())
-    #        tmpres, tmpchi2, tmppval = fitting(self.fitfunc, x, _Y, _start, debug=debug)
-    #        fitres.add_data((0,i), tmpres, tmpchi2, tmppval)
-    #        #if i % 100:
-    #        #    print("%d of %d finished" % (i+1, _X.shape[0]))
-    #    t1 = np.asarray(timing)
-    #    print("total fit time %fs" % (t1[-1] - t1[0]))
-    #    t2 = t1[1:] - t1[:-1]
-    #    print("time per fit %f +- %fs" % (np.mean(t2), np.std(t2)))
-    #    return fitres
 
 class FitResult(object):
     """Class to hold the results of a fit.
@@ -395,12 +326,18 @@ class FitResult(object):
         range_r, r_r_shape = self.get_ranges()
         # get indices for fitranges of interval
         ranges=[]
+        # exactly one fitrange
         for s,i in enumerate(range_r[0]):
-          if i[0] >= t_min and i[1] <= t_max:
-            if i[1]-i[0] >= min_dat:
+          if i[0] == t_min and i[1] == t_max:
               ranges.append(s)
-            else:
+          else:
               continue
+        #for s,i in enumerate(range_r[0]):
+        #  if i[0] >= t_min and i[1] <= t_max:
+        #    if i[1]-i[0] >= min_dat:
+        #      ranges.append(s)
+        #    else:
+        #      continue
 
         # shape for 1 Correlator, data and pvalues
         shape_dE = (self.data[0].shape[0], self.data[0].shape[1], len(ranges))

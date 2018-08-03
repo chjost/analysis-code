@@ -29,7 +29,28 @@ def own_weight(table):
     length = len(table.index)
     print("Table has %d rows" %length)
     table['weight'] = pd.Series(np.ones((length,)), index=table.index)
-    
+def scale_std(series,fac):   
+    """Scale the series such that the standard variation increases by fac
+
+    The deviations of the series get scaled by the factor fac. Afterwards the
+    mean gets added again and the 0th bootstrapsample gets set to its correct
+    value
+
+    Parameters
+    ----------
+    series: pd.Series holding the bootstrap samples of interest
+    fac: float, the factor by which the standard deviation is scaled
+
+    Returns
+    -------
+    pd.Series: the scaled series of bootstrapsamples
+    """
+    mean = series.iloc[0]
+    n = series.shape[0]
+    tmp=fac*(series-mean)
+    tmp+=mean
+    tmp.iloc[0] = mean
+    return tmp
 
 def systematics_by_methods(results,keys,column):
     system_list=[]

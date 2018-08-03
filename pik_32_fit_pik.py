@@ -23,11 +23,11 @@ import itertools
 import analysis2 as ana
 
 def main():
-    read_data = False
+    read_data = True 
     read_fit = False
     do_e1 = True
-    do_e2 = True
-    do_e3 = True
+    do_e2 = False
+    do_e3 = True 
     # parse infile
     if len(sys.argv) < 2:
         ens = ana.LatticeEnsemble.parse("kk_I1_TP0_A40.24.ini")
@@ -103,11 +103,15 @@ def main():
         e1_corr_ws.shape = e1_corr_ws.data.shape
         # fit e1
         print("\nFitting Branch E1")
-        fit_pi_k_e1 = ana.LatticeFit(8, dt_f=1, dt_i=1, dt=min_size_etot,
-                                  correlated=True,debug=3)
+        #fit_pi_k_e1 = ana.LatticeFit(8, dt_f=1, dt_i=1, dt=min_size_etot,
+        #                          correlated=True,debug=3)
+        fit_pi_k_e1 = ana.LatticeFit(8, dt_f=1, dt_i=1, dt=4,
+                                  correlated=False,debug=3)
         if read_fit==False:
             start = [5.,0.5,10.]
-            pi_k_fitresult_e1 = fit_pi_k_e1.fit(start,e1_corr_ws,fit_e_tot,add=addT,
+            #pi_k_fitresult_e1 = fit_pi_k_e1.fit(start,e1_corr_ws,fit_e_tot,add=addT,
+            #        oldfit=masses, oldfitpar=slice(0,2))
+            pi_k_fitresult_e1 = fit_pi_k_e1.fit(start,e1_corr_ws,[[12,19]],add=addT,
                     oldfit=masses, oldfitpar=slice(0,2))
             pi_k_fitresult_e1.save("%s/%s_%s_E1.npz" % (datadir,fit_pik_out,lat))
         else:
@@ -169,11 +173,14 @@ def main():
         # Calculate effective mass
         e3_corr_ws.mass(function=5,add=[epi,ek])
         print("\nFitting Branch E3")
-        fit_pi_k_e3 = ana.LatticeFit(2, dt_f=1, dt_i=1, dt=min_size_etot,
+        #fit_pi_k_e3 = ana.LatticeFit(2, dt_f=1, dt_i=1, dt=min_size_etot,
+        #                          correlated=True)
+        fit_pi_k_e3 = ana.LatticeFit(2, dt_f=-1, dt_i=-1, dt=2,
                                   correlated=True)
         if read_fit==False:
             start = [0.5]
-            pi_k_fitresult_e3 = fit_pi_k_e3.fit(start,e3_corr_ws,fit_e_tot,add=addT)
+            #pi_k_fitresult_e3 = fit_pi_k_e3.fit(start,e3_corr_ws,fit_e_tot,add=addT)
+            pi_k_fitresult_e3 = fit_pi_k_e3.fit(start,e3_corr_ws,[[14,18]],add=addT)
             pi_k_fitresult_e3.save("%s/%s_%s_E3.npz" % (datadir,fit_pik_out,lat))
         else:
             pi_k_fitresult_e3.read("%s/%s_%s_E3.npz" % (datadir,fit_pik_out,lat))
@@ -199,19 +206,19 @@ def main():
     #plotter.save()
     #del plotter
     # Compare effective masses
-    e2_corr_sub.mass()
+    #e2_corr_sub.mass()
 
-    m = e2_corr_sub.data[0,T/4,0] 
-    ylim = [m-0.2*m,m+0.2*m]
+    #m = e2_corr_sub.data[0,T/4,0] 
+    #ylim = [m-0.2*m,m+0.2*m]
 
-    plotter=ana.LatticePlot("%s/%s_%s_mass.pdf" %(plotdir,corr_pik_out,lat),join=True)
-    plotter.set_env(ylog=False,grid=False,ylim = ylim,title=True)
-    label=[r'$\pi K$ effective mass','$t$',r'$M_{eff}$',r'E2']
-    plotter.plot(e2_corr_sub,label)
+    #plotter=ana.LatticePlot("%s/%s_%s_mass.pdf" %(plotdir,corr_pik_out,lat),join=True)
+    #plotter.set_env(ylog=False,grid=False,ylim = ylim,title=True)
+    #label=[r'$\pi K$ effective mass','$t$',r'$M_{eff}$',r'E2']
+    #plotter.plot(e2_corr_sub,label)
     #label=[r'$\pi K$ effective mass','$t$',r'$M_{eff}$',r'E3']
     #plotter.plot(e3_corr_ws,label)
-    plotter.save()
-    del plotter
+    #plotter.save()
+    #del plotter
 
     #pi_k_fitresult_e1.print_data(1)
     #pi_k_fitresult_e3.print_data(0)

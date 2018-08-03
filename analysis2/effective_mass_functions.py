@@ -1,5 +1,9 @@
 from scipy.optimize import fsolve
 import numpy as np
+# dictionary for call to compute_eff_mass
+#{0: corr_arcosh, 1: corr_exp, 
+#2: corr_exp_asym, 3: corr_log, 4:corr_shift_weight,
+#5: corr_shift_weight_div}
 
 def corr_arcosh(data,T,add=None):
     mass = np.zeros_like(data[:,:-2])

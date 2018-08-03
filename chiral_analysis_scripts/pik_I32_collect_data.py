@@ -106,10 +106,10 @@ def main():
     fr_labels = [0,1,2]
     # construct filenames
     file_prefix='pi_K_I32'
-    resultdir = '/hiskp4/helmes/analysis/scattering/pi_k/I_32_blocked/results/'
+    resultdir = '/hiskp4/helmes/analysis/scattering/pi_k/I_32_publish/results/'
     # for physical calculations get dictionary of continuum bootstrapsamples
     # seeds for M1A,M1B,M2A and M2B
-    ini_path = '/hiskp4/helmes/projects/analysis-code/ini/pi_K/I_32_blocked'
+    ini_path = '/hiskp4/helmes/projects/analysis-code/ini/pi_K/I_32_publish'
     ini1 = ini_path+'/'+'chiral_analysis_mua0_zp1.ini'
     ini2 = ini_path+'/'+'chiral_analysis_mua0_zp2.ini'
     ens1 = ana.LatticeEnsemble.parse(ini1)
@@ -136,6 +136,9 @@ def main():
         branch_result['poll'] = tp[1]
         branch_result['RC'] = tp[2]
         branch_result['ms_fix'] = tp[3]
+        groups=['beta','L','mu_l']
+        obs = ['mu_piK_a32_scaled','L_piK']
+        print(chi.print_si_format(chi.bootstrap_means(branch_result,groups,obs)))
         df_collect = pd.concat((df_collect,branch_result))
     # append what we want to calculate to an endresults dataframe
     # We would like to know L_5, L_piK, mu_pik_a32_phys, mu_pik_a12_phys,

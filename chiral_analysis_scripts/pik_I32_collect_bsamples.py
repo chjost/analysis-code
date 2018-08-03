@@ -46,6 +46,15 @@ from matplotlib.backends.backend_pdf import PdfPages
 sys.path.append('/hiskp4/helmes/projects/analysis-code/')
 import analysis2 as ana
 import chiron as chi
+def get_sys_error(frlst,q='low'):
+    quant = []
+    ud=0
+    if q=='high':
+        ud=1
+    for r in frlst:
+        r.calc_error()
+        quant.append(r.error[0][2][0][ud])
+    return quant
 def matchresult_to_df(match_obs,mu_s,samples,obs_name):
     """Convert data from a MatchResult to a dataframe for merging
     """
@@ -60,6 +69,19 @@ def matchresult_to_df(match_obs,mu_s,samples,obs_name):
         df=pd.concat((df,tmp_df))
     return df
 
+def qlst_to_df(qlst,mu_s,samples,obs_name):
+    """Convert list of quantiles to a dataframe for merging
+    """
+    df = pd.DataFrame()
+    #match observables are stored as a list
+    for om in zip(qlst,mu_s):
+        tmp_df = pd.DataFrame()
+        _mu_s = np.full(samples.shape,om[1])
+        tmp_df['sample'] = samples
+        tmp_df[obs_name] = om[0]
+        tmp_df['mu_s']= _mu_s
+        df=pd.concat((df,tmp_df))
+    return df
 def main():
     pd.set_option('display.width',1000)
     # Get parameters from initfile
@@ -108,7 +130,7 @@ def main():
     fpi_raw = ana.read_extern("../plots2/data/fpi.dat",(1,2))
     print(amu_s_dict)
     #quark = ens.get_data("quark")
-    datadir = ens.get_data("datadir") 
+    datadir = '/hiskp4/helmes/analysis/scattering/pi_k/I_32_blocked/data/' 
     plotdir = ens.get_data("plotdir") 
     resdir = ens.get_data("resultdir") 
     nboot = ens.get_data("nboot")
@@ -119,7 +141,7 @@ def main():
     file_prefix='pi_K_I32'
     # for physical calculations get dictionary of continuum bootstrapsamples
     # seeds for M1A,M1B,M2A and M2B
-    ini_path = '/hiskp4/helmes/projects/analysis-code/ini/pi_K/I_32_blocked'
+    ini_path = '/hiskp4/helmes/projects/analysis-code/ini/pi_K/I_32_publish'
     ini1 = ini_path+'/'+'chiral_analysis_mua0_zp1.ini'
     ini2 = ini_path+'/'+'chiral_analysis_mua0_zp2.ini'
     ens1 = ana.LatticeEnsemble.parse(ini1)
@@ -137,6 +159,7 @@ def main():
 ################################################################################
         beta_list = [1.90,1.95,2.10]
         for i,a in enumerate(space):
+            ext = ana.ExtDat(ens1.get_data('external_seeds_a'),a,zp_meth=1)
             sample = np.arange(nboot)
             beta = np.full(nboot,beta_list[i])
             print("\nWorking at lattice spacing %s" %a)
@@ -213,6 +236,8 @@ def main():
                 mua32_names = [datadir+'%s/' % (e) +s+'/mu_a0_TP0_%s_%s.npz' 
                                % (e,tp) for s in mu_s_dict[a]]
                 mua32_meas=ana.init_fitreslst(mua32_names)
+                mua32_q16 = get_sys_error(mua32_meas) 
+                mua32_q84 = get_sys_error(mua32_meas,q='high')
                 mua32.load_data(mua32_meas,0,amu_s_dict[a],square=False)
 #####    ############### read in M_pi^FSE ###########################################
                 mpi_fse = ana.MatchResult("mpi_fse_%s"%(e),save=datadir+'%s/'%e)
@@ -234,7 +259,11 @@ def main():
                 branch_result['L']=np.tile(L,3)
                 branch_result['mu_l']=np.tile(mul,3)
                 branch_result['mu_s']=np.repeat(amu_s_dict[a],nboot)
-                branch_result['sample']=np.tile(sample,3)
+                branch_result['sample']=np.tile(sample,3)\
+                # since nothing is specified by now we take the M1A for the
+                # external data
+                branch_result['r_0']=np.tile(ext.get(a,'r0'),3)
+                branch_result['Z_P']=np.tile(ext.get(a,'zp'),3)
                 branch_result=branch_result.merge(matchresult_to_df(mpi_fse.obs,
                         amu_s_dict[a],sample,'M_pi_FSE'),on=['mu_s','sample'])
                 branch_result=branch_result.merge(matchresult_to_df(np.sqrt(mksq_fse.obs),
@@ -246,6 +275,10 @@ def main():
                         amu_s_dict[a],sample,'f_pi'),on=['mu_s','sample'])
                 branch_result=branch_result.merge(matchresult_to_df(mua32.obs,
                         amu_s_dict[a],sample,'mu_piK_a32'),on=['mu_s','sample'])
+                branch_result=branch_result.merge(qlst_to_df(mua32_q16,
+                        amu_s_dict[a],sample,'mu_piK_a32_q16') ,on=['mu_s','sample'])
+                branch_result=branch_result.merge(qlst_to_df(mua32_q84,
+                        amu_s_dict[a],sample,'mu_piK_a32_q84') ,on=['mu_s','sample'])
                 branch_result=branch_result.merge(matchresult_to_df(dE.obs,
                         amu_s_dict[a],sample,'deltaE'),on=['mu_s','sample'])
                 branch_result['poll'] = tp

@@ -721,4 +721,25 @@ class MatchResult(object):
       pmatch.savefig()
       pmatch.close()
       plt.clf()
+    
+    def scale_obs_std(self,ix,fac):   
+        """Scale the array such that the standard variation increases by fac
 
+        The deviations of the array get scaled by the factor fac. Afterwards the
+        mean gets added again and the 0th bootstrapsample gets set to its correct
+        value
+
+        Parameters
+        ----------
+        array: ndarray holding the bootstrap samples of interest
+        fac: float, the factor by which the standard deviation is scaled
+
+        """
+        array=self.eval_obs[ix]
+        mean = array[0]
+        n = array.shape[0]
+        tmp=fac*(array-mean)
+        tmp+=mean
+        tmp[0] = mean
+        self.eval_obs[ix]=tmp
+    

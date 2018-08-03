@@ -65,107 +65,6 @@ def compute_eff_mass(data,T,function=0,add=None):
 
     return mass
 
-#TODO: Clean up this mess of a mass function
-#def compute_eff_mass(data, usecosh=True, exp=False, weight=None, shift=None, T=None):
-#    """Computes the effective mass of a correlation function.
-#
-#    The effective mass is calculated along the second axis. The extend
-#    along the axis is reduced, depending on the effective mass formula
-#    used. The standard formula is based on the cosh function, the
-#    alternative is based on the log function.
-#
-#    Parameters
-#    ----------
-#    data : ndarray
-#        The data.
-#    usecosh : bool
-#        Toggle between the two implemented methods.
-#
-#    Returns
-#    -------
-#    ndarray
-#        The effective mass of the data.
-#    """
-#    if exp is True:
-#       # Write a numerical solve for the effective mass per timeslice
-#       # args are (t,T2)
-#       if T is not None: 
-#            _T = T 
-#       else:
-#            _T = data.shape[1]
-#       mass = np.zeros_like(data[:,:-1])
-#       print("Exponential solve for symmetric correlator")
-#       print(mass.shape)
-#       for b, row in enumerate(data):
-#           for t in range(len(row)-1):
-#                mass[b, t] = fsolve(corr_exp,0.5,args=(row[t],row[t+1],t,_T))
-#                #mass[b, t] = fsolve(corr_exp_mod,0.5,args=(row[t],weight[b],t,T2))
-#      
-#    elif (usecosh == True and weight is None):
-#        # creating mass array from data array
-#        mass = np.zeros_like(data[:,:-2])
-#        for b, row in enumerate(data):
-#            for t in range(1, len(row)-1):
-#                mass[b,t-1] = (row[t-1] + row[t+1])/(2.*row[t])
-#        mass = np.arccosh(mass)
-#    elif (usecosh is False and exp is True and shift is not None):
-#       if T is not None: 
-#            _T = T 
-#       else:
-#            _T = data.shape[1]
-#       mass = np.zeros_like(data[:,:-1])
-#       print("Exponential solve for symmetric correlator")
-#       print(mass.shape)
-#       for b, row in enumerate(data):
-#           for t in range(len(row)-1):
-#                mass[b, t] = fsolve(corr_asym_exp,0.5,args=(row[t],row[t+1],t,_T))
-#    #elif (usecosh == False and weight is None):
-#    #   # Write a numerical solve for the effective mass per timeslice
-#    #   # args are (t,T2)
-#    #   T2=data.shape[1]
-#    #   mass = np.zeros_like(data[:,:-1])
-#    #   print(mass.shape)
-#    #   for b, row in enumerate(data):
-#    #       for t in range(len(row)-1):
-#    #            #print(fsolve(corr_shift_ratio,0.5,args=(row[t],row[t+1],t,T2)))
-#    #            mass[b, t] = fsolve(corr_shift_ratio,0.5,args=(row[t],row[t+1],t,T2),maxfev=10000)
-#    
-#    elif(weight is not None and shift is not None):
-#       print("Using shifted weighted")
-#       if T is not None:
-#           _T=T
-#       mass = np.zeros_like(data[:,:-1])
-#       print(mass.shape)
-#       for b, row in enumerate(data):
-#            for t in range(len(row)-1):
-#                 mass[b, t] = fsolve(corr_shift_weight,0.5,
-#                                     args=(row[t],row[t+1],t,_T,weight[b],
-#                                     shift),maxfev=1000)
-#    elif(usecosh is False and exp is False):
-#        # creating mass array from data array
-#        mass = np.zeros_like(data[:,:-1])
-#        for b, row in enumerate(data):
-#            for t in range(len(row)-2):
-#               mass[b, t] = np.log(row[t]/row[t+1])
-#    return mass
-
-#def corr_shift_weight(m,r0,r1,t,T,weight,shift=1.):
-#    _num = np.exp(-m*t) + np.exp(-m*(T-t))-np.exp(weight*shift) * ( np.exp(-m*(t+shift)) + np.exp(-m*(T-t-shift)) )
-#    _den = np.exp(-m*(t+1)) + np.exp(-m*(T-t-1))-np.exp(weight*shift) * ( np.exp(-m*(t+1+shift)) + np.exp(-m*(T-t-1-shift)) )
-#    _diff = r0/r1 - _num/_den
-#    return _diff
-
-#def corr_exp(m,r0,r1,t,T):
-#    """
-#    Parameters
-#    ----------
-#    p: tuple
-#    """
-#    _den = np.exp(-m*t) + np.exp(-m*(T-t))
-#    _num = np.exp(-m*(t+1)) + np.exp(-m*(T-(t+1))) 
-#    _diff = r0/r1 - _den/_num 
-#    return _diff
-
 def corr_asym_exp(m,r0,r1,t,T):
     """
     Parameters
@@ -510,6 +409,40 @@ def compute_square(data):
         The square of the data.
     """
     return np.square(data)
+
+def func_corr_shift_poll_removal(p,t,add):
+    """A function that describes a shifted four point correlation function with
+    thermal states divided out.
+    
+    The function is given by p0^2*(exp(-p1*t)+exp(-p1*(T-t)) -
+    p(t)/p(t+1)(exp(-p1*(t+1))+exp(-p1*(T-(t+1)))))
+    ,
+    where
+    * p0 is the amplitude,
+    * p1 is the energy of the correlation function,
+    * p(t) is the pollution at point t defined by:
+        p(t) = exp(-E_lo*t-E_hi*(T-t))+exp(-E_hi*t-E_lo*(T-t)) 
+    * t is the time, and
+    * T is the lattice time extend.
+
+    Parameters
+    ----------
+    p : sequence of float
+        The parameters of the function.
+    t : float
+        The variable of the function.
+    add : lower meson mass, higher meson mass,T
+    Returns
+    -------
+    float
+        The result.
+    """
+    s=1
+    pt = np.exp(-add[0]*t-add[1]*(add[2]-t))+np.exp(-add[1]*t-add[0]*(add[2]-t))
+    pt1 = np.exp(-add[0]*t-add[1]*(add[2]-(t+s)))+np.exp(-add[1]*t-add[0]*(add[2]-(t+s)))
+    gs = np.exp(-p[1]*t)+np.exp(-p[1]*(add[2]-t))
+    ts = pt/pt1*(np.exp(-p[1]*(t+s)+np.exp(-p[1]*(add[2]-(t+s)))))
+    return p[0]**2*(gs-ts)
 
 def func_corr_shift_therm(p, t, add):
     """A function that describes a shifted four point correlation function.

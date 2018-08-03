@@ -293,7 +293,7 @@ def main():
     extrapol_df = pd.DataFrame(index=interpolated_data.index,
                                data= interpolated_data[['beta','L','mu_l','sample',
                                                         'fpi','M_pi',
-                                                        'mu_piK_a32']])
+                                                        'mu_piK_a32_scaled']])
     # Take back finite size corrections on MK and Mpi
     #extrapol_df['M_K^2']=interpolated_data['M_K^2']/interpolated_data['1/k_mk^2']
     #extrapol_df['M_pi']=interpolated_data['M_pi']*interpolated_data['k_mpi']
@@ -303,7 +303,7 @@ def main():
     extrapol_df['M_eta']=interpolated_data['M_eta^2'].pow(1./2)
     extrapol_df['mu_piK/fpi']=extrapol_df['M_K']*extrapol_df['M_pi']/(extrapol_df['M_pi']+extrapol_df['M_K'])/extrapol_df['fpi']
     groups = ['beta','L','mu_l']
-    obs = ['fpi','M_pi','M_K','M_eta','mu_piK_a32','mu_piK/fpi']
+    obs = ['fpi','M_pi','M_K','M_eta','mu_piK_a32_scaled','mu_piK/fpi']
     means = chi.bootstrap_means(extrapol_df,groups,obs)
     print(chi.print_si_format(means))
     fit_ranges=[[0.,2.5],[0.,1.41],[0.,1.35]]
@@ -323,13 +323,13 @@ def main():
         L5 = pd.DataFrame(data=l5samples, index=idx,columns=['L_5']) 
         L5.info()
         # get the ydata
-        ydata = get_dataframe_fit(fit_df,'mu_piK_a32',['beta','L','mu_l'],
+        ydata = get_dataframe_fit(fit_df,'mu_piK_a32_scaled',['beta','L','mu_l'],
                                   'sample',priors=L5)
         ydata.info()
         print(xdata)
         print(ydata.sample(n=20))
         chi.print_si_format(means)
-        data_for_cov = get_dataframe_fit(fit_df,'mu_piK_a32',
+        data_for_cov = get_dataframe_fit(fit_df,'mu_piK_a32_scaled',
                                        ['beta','L','mu_l'],'sample',priors=L5)
         data_for_cov.info()
         cov = get_covariance(data_for_cov)
@@ -363,7 +363,7 @@ def main():
         fitres.info()
         fit_df=fit_df.merge(fitres,on='sample')
         print(chi.print_si_format(chi.bootstrap_means(fit_df,['beta','L','mu_l'],
-                            ['mu_piK/fpi','mu_piK_a32','L_piK','L_5','chi^2','dof'])))
+                            ['mu_piK/fpi','mu_piK_a32_scaled','L_piK','L_5','chi^2','dof'])))
 
         # Store Fit dataframe with parameters and fitrange
         result_id = 'pi_K_I32_nlo_chpt_M%d%s'%(zp_meth,ms_fixing.upper())

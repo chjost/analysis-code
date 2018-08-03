@@ -61,6 +61,8 @@ class LatticePlot(object):
         self.plotfile = PdfPages(filename)
 
     def save(self):
+        if self.title is not None:
+            plt.title(self.title)
         if plt.get_fignums():
             for i in plt.get_fignums():
                 self.plotfile.savefig(plt.figure(i))
@@ -147,6 +149,45 @@ class LatticePlot(object):
         _head = label[1]+"\t"+label[2]+"\td"+label[2]
         _dat = np.column_stack((x,y,dy))
         np.savetxt(self.filename+".dat",_dat,delimiter='\t', header=_head)
+    
+    def _genplot_ratio_single(self, corr, label, fitresult=None, fitfunc=None,
+            add=None, xshift=0., ploterror=False, rel=False, debug=0,
+            join=False):
+        """ Plot ratio of correlator and evaluated fit function
+        """
+        # iterate over fit intervals, calculate ratio per fitrange
+        label_save = label[0]
+        X = np.linspace(0., float(corr.shape[1]), corr.shape[1], endpoint=False) + xshift
+        T = corr.shape[1]
+        ranges = fitresult.fit_ranges
+        shape = fitresult.fit_ranges_shape
+        label[0] = "%s, pc %d" % (label_save, 0)
+        for r in range(shape[1][0]):
+            if debug > 1:
+                print("plotting fit ranges %s" % str(r))
+            fi = ranges[0][r]
+            _datlabel = label[3]
+            # TODO data used here stem from combined fit
+            par = fitresult.data[0][0,:,0,r]
+            # set up labels
+            self.set_title(label[0], label[1:3])
+            rangelabel = "fit [%d, %d]" % (fi[0], fi[1])
+
+            # plot
+            self._set_env_normal()
+            # This should give a T/2 array
+            corr_fit = fitfunc.fitfunc(par,X,add)
+            label_save = label[0]
+            ratio = corr.data[...,0]/corr_fit
+            mdata, ddata = compute_error(ratio)
+            plot_data(X+xshift, ratio[0,:], ddata, rangelabel,
+                    plotrange=[1,T],col=self.cycol())
+            plt.legend(loc='best')
+            plt.ylim([0.85,1.25])
+            plt.axhline(y=1,color='k')
+            if self.join is False:
+              self.save()
+        label[0] = label_save
 
     def _genplot_single(self, corr, label, fitresult=None, fitfunc=None,
             add=None, xshift=0., ploterror=False, rel=False, debug=0,
@@ -223,6 +264,8 @@ class LatticePlot(object):
                     plot_data(X+xshift, corr.data[0,:,n], ddata, _datlabel,
                         plotrange=[0,T],col=self.cycol(),fmt=self.cyfmt())
                 plt.legend(loc='best')
+                if self.title is not None:
+                    self.set_title(label[0], label[1:3])
                 if self.join is False:
                   self.save()
             else:
@@ -382,6 +425,39 @@ class LatticePlot(object):
             self._genplot_comb(corr, label, fitresult, fitfunc, oldfit, add,
                     oldfitpar, ploterror, xshift, debug)
 
+    def plot_ratio(self, corr, label, fitresult=None, fitfunc=None, oldfit=None,
+            add=None, oldfitpar=None, ploterror=False, rel=False, xshift=0., debug=0):
+        """Plot the ratio of a Correlators object and a FitResult object.
+
+        Parameters
+        ----------
+        corr : Correlators
+            The correlation function data.
+        label : list of strs
+            The title of the plot, the x- and y-axis titles, and the data label.
+        fitresult : FitResult, optional
+            The fit data.
+        fitfunc : LatticeFit, optional
+            The fit function.
+        oldfit : FitResult, optional
+            Reuse the fit results of an old fit for the new fit.
+        add : ndarray, optional
+            Additional arguments to the fit function. This is stacked along
+            the third dimenstion to the oldfit data.
+        oldfitpar : None, int or sequence of int, optional
+            Which parameter of the old fit to use, if there is more than one.
+        ploterror : bool, optional
+            Plot the error of the fit function.
+        xshift : float
+            optional shift of xrange
+        debug : int, optional
+            The amount of info printed.
+        """
+        self._genplot_ratio_single(corr, label, fitresult, fitfunc, add=add,
+                 ploterror=ploterror, xshift=xshift, rel=rel, debug=debug)
+        #else:
+        #    self._genplot_comb(corr, label, fitresult, fitfunc, oldfit, add,
+        #            oldfitpar, ploterror, xshift, debug)
     def plot_matrix( self, corr, label, fitresult=None, fitfunc=None, oldfit=None,
             add=None, oldfitpar=None, ploterror=False, rel=False, xshift=0., debug=0):
         """Plot a correlation function matrix

@@ -267,7 +267,7 @@ def plot_function(func, X, args, label, add=None, plotrange=None, ploterror=Fals
         _x1  = calc_x(x1)
     else: 
         _x1 = x1
-    plt.plot(_x1, y1, fmt, label=label)
+    plt.plot(_x1, y1, '-',color=col, label=label)
     if ymax and ymin:
         plt.fill_between(_x1, ymin, ymax, facecolor=col, edgecolor=col,
             alpha=0.2)
@@ -340,7 +340,7 @@ def plot_data(X, Y, dY, label, plotrange=None, dX=None, fmt="x", col='b',
     col : string, optional
         The color of the points and errors.
     """
-    # check boundaries for the plot
+   # check boundaries for the plot
     if isinstance(plotrange, (np.ndarray, list, tuple)):
         plotrange = np.asarray(plotrange).flatten()
         if plotrange.size < 2:
