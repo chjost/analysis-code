@@ -181,7 +181,8 @@ def plot_pik_meff(ensemble_list, datapath,strange_dict=None,
             fit_pi_k_e2 = ana.LatticeFit(2, dt_f=1, dt_i=1, dt=5,
                                   correlated=True)
             plotter.set_env(xlim=xlim,ylim=ylim,grid=False,title=label[0])
-            plotter.plot(e1_corr_ws,label,fitresult = pik_median_e1,fitfunc=fit_pi_k_e2,oldfitpar=1,ploterror=True)
+            plotter.plot(e1_corr_ws,label,fitresult = pik_median_e1,
+                         fitfunc=fit_pi_k_e2,oldfitpar=1,ploterror=True,debug=4)
             # calculate C_pik with E3
             pi_k_fitresult_e3 = ana.FitResult.read("%s/%s/%s/%s_%s_E3.npz" % (datapath,e,s,fit_pik_out,e))
             pik_median_e3 = pi_k_fitresult_e3.singularize()
@@ -201,7 +202,8 @@ def plot_pik_meff(ensemble_list, datapath,strange_dict=None,
             # plot effective mass
             label=[r'$C_{\pi K} M_{eff}$ on %s %s' %(e,s), r'$t$', r'$M_{eff}(t)$',
                      r'E2']
-            plotter.plot(e3_corr_ws,label,fitresult = pik_median_e3,fitfunc=fit_pi_k_e2,oldfitpar=0,ploterror=True)
+            plotter.plot(e3_corr_ws,label,fitresult = pik_median_e3,
+                         fitfunc=fit_pi_k_e2,oldfitpar=0,ploterror=True,debug=4)
             plotter.save()
     del plotter
 
@@ -210,10 +212,12 @@ def main():
     #ens =["A30.32", "A40.24", "A40.32", "A60.24", "A80.24", "A100.24",
     #     "B35.32","B55.32","B85.24", 
     #     "D45.32","D30.48"]
-    ens =["A40.24", "A60.24", "A80.24", "A100.24",
-         "B85.24"]
+    ens =["A40.24"]
+    #"A60.24", "A80.24", "A100.24",
+    #     "B85.24"]
          
-    mus_a_fld = ["amu_s_185","amu_s_225","amu_s_2464"]
+    #mus_a_fld = ["amu_s_185","amu_s_225","amu_s_2464"]
+    mus_a_fld = ["amu_s_185"]
     mus_b_fld = ["amu_s_16","amu_s_186","amu_s_21"]
     mus_d_fld = ["amu_s_13","amu_s_15","amu_s_18"]
     mus_d_fld_var = ["amu_s_115","amu_s_15","amu_s_18"]

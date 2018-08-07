@@ -13,6 +13,7 @@ import gevp
 import functions as func
 from ratio import simple_ratio, ratio_shift, simple_ratio_subtract, twopoint_ratio
 from energies import WfromMass_lat, WfromMass
+import pandas as pd
 
 class Correlators(object):
     """Correlation function class.
@@ -187,7 +188,12 @@ class Correlators(object):
                 in_out.write_data(self.data, filename, self.conf, verbose)
             else:
                 in_out.write_data(self.data, filename, verbose)
-    
+
+    def save_h5(self,filename,keyname):
+        """Save a correlator object as pandas dataframe in a hdf file"""
+        df = in_out.corr_to_pandas(self.data,keyname)
+        pd.DataFrame.to_hdf(df,filename,keyname)
+
     def block(self,bl=1):
         """Block data into blocks of length bl
 

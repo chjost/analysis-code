@@ -428,7 +428,7 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, mute=None, debug=0)
                 #  print("arguments:")
                 #  print(res[b-1])
                 p,cov1,infodict,mesg,ier = leastsq(errfunc, start, args=(X[:,b], Y[b],
-                    cov), full_output=1, factor=100)
+                    cov), full_output=1,factor=100.)
                 chisquare[b] = float(sum(infodict['fvec']**2.))
                 res[b] = np.array(p)
         else:
@@ -445,7 +445,7 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, mute=None, debug=0)
                 #  print("arguments:")
                 #  print(res[b-1])
                 p,cov1,infodict,mesg,ier = leastsq(errfunc, start, args=(X, Y[b],
-                    cov), full_output=1, factor=100)
+                    cov), full_output=1,factor=100.)
                 chisquare[b] = float(sum(infodict['fvec']**2.))
                 res[b] = np.array(p)
                 # check the results with original data
@@ -469,7 +469,7 @@ def fitting(fitfunc, X, Y, start, add=None, correlated=True, mute=None, debug=0)
             #  print("arguments:")
             #  print(res[b-1])
             p,cov1,infodict,mesg,ier = leastsq(errfunc, start, args=(X, Y[b],
-                add[b], cov), full_output=1,factor=100)
+                add[b], cov), full_output=1,factor=100.)
             chisquare[b] = float(sum(infodict['fvec']**2.))
             res[b] = np.array(p)
             if debug > 0 and b ==0:

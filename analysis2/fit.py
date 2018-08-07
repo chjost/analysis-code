@@ -5,10 +5,11 @@ The class for fitting.
 import time
 import itertools
 import numpy as np
+import pandas as pd
 
 from fit_routines import (fit_comb, fit_single, calculate_ranges, compute_dE,
     get_start_values, get_start_values_comb, fitting)
-from in_out import read_fitresults, write_fitresults
+from in_out import read_fitresults, write_fitresults, fitres_to_pandas
 from interpol import match_lin, match_quad, evaluate_lin
 from functions import (func_single_corr,func_single_corr_bare, func_ratio, func_const, func_two_corr,
     func_two_corr_shifted, func_single_corr2, func_sinh, compute_eff_mass,
@@ -276,6 +277,10 @@ class FitResult(object):
         tmp[3] = self.derived
         write_fitresults(filename, tmp, self.fit_ranges, self.data, self.chi2,
             self.pval, self.label, self.conf,False)
+
+    def save_h5(self, filename, keyname):
+        df = fitres_to_pandas(self,keyname)
+        pd.DataFrame.to_hdf(df,filename,keyname)
 
     def get_data(self, index):
         """Returns the data at the index.
@@ -901,7 +906,7 @@ class FitResult(object):
                         #rel_err = np.std(self.data[i][:,p,j])/self.data[i][select][0] 
                         tmpstring = " ".join(("%d: range %2d:%2d" % (j, r[0],r[1]),
                                               "chi^2/dof %e" %
-                                              (self.chi2[i][0,j]/(r[1]-r[0]-self.data[i].shape[1])),
+                                              (self.chi2[i][0,j]/(r[1]-r[0]+1-self.data[i].shape[1])),
                                               "pval %5f" % (self.pval[i][0,j]),
                                               #"rel. err: %e" % rel_err,
                                               #"p-val*rel.err: %e" 
@@ -927,7 +932,7 @@ class FitResult(object):
                             tmpstring = " ".join(("%d: range %2d:%2d" % (j, r[0],r[1]),
                                                   "add ranges %s" % str(item),
                                                   "chi^2/dof %e" % 
-                                                  (self.chi2[i][select]/(r[1]-r[0]-self.data[i].shape[1])),
+                                                  (self.chi2[i][select]/(r[1]-r[0]+1-self.data[i].shape[1])),
                                                   "pval %5f" % (self.pval[i][select]),
                                                   "rel. err: %e" % rel_err,
                                                   "p-val*rel.err: %e" 

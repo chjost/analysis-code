@@ -292,11 +292,11 @@ def main():
         print(chi.bootstrap_means(interpolated_A,groups,obs))
         proc_id = 'pi_K_I32_interpolate_M%dA'%(zp_meth)
         hdf_savename = resdir+proc_id+'.h5'
-        hdfstorer = pd.HDFStore(hdf_savename)
+        #hdfstorer = pd.HDFStore(hdf_savename)
         #hdfstorer.put('Interpolate_%s'%epik_meth,interpolated_A)
         #hdfstorer.put('Interpolate_scale_fpi_%s'%epik_meth,interpolated_A)
-        hdfstorer.put('Interpolate_uncorrelated_%s'%epik_meth,interpolated_A)
-        del hdfstorer
+        #hdfstorer.put('Interpolate_uncorrelated_%s'%epik_meth,interpolated_A)
+        #del hdfstorer
 if __name__ == '__main__':
     try:
         main()

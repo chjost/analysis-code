@@ -415,7 +415,7 @@ def func_corr_shift_poll_removal(p,t,add):
     thermal states divided out.
     
     The function is given by p0^2*(exp(-p1*t)+exp(-p1*(T-t)) -
-    p(t)/p(t+1)(exp(-p1*(t+1))+exp(-p1*(T-(t+1)))))
+    p(t)/p(t+1)*(exp(-p1*(t+1))+exp(-p1*(T-(t+1)))))
     ,
     where
     * p0 is the amplitude,
@@ -438,11 +438,15 @@ def func_corr_shift_poll_removal(p,t,add):
         The result.
     """
     s=1
-    pt = np.exp(-add[0]*t-add[1]*(add[2]-t))+np.exp(-add[1]*t-add[0]*(add[2]-t))
-    pt1 = np.exp(-add[0]*t-add[1]*(add[2]-(t+s)))+np.exp(-add[1]*t-add[0]*(add[2]-(t+s)))
-    gs = np.exp(-p[1]*t)+np.exp(-p[1]*(add[2]-t))
-    ts = pt/pt1*(np.exp(-p[1]*(t+s)+np.exp(-p[1]*(add[2]-(t+s)))))
-    return p[0]**2*(gs-ts)
+    #pt = np.exp(-add[0]*t-add[1]*(add[2]-t))+np.exp(-add[1]*t-add[0]*(add[2]-t))
+    #pt1 = np.exp(-add[0]*(t+s)-add[1]*(add[2]-(t+s)))+np.exp(-add[1]*(t+s)-add[0]*(add[2]-(t+s)))
+    #gs = np.exp(-p[1]*t)+np.exp(-p[1]*(add[2]-t))
+    #ts = pt/pt1*(np.exp(-p[1]*(t+s))+np.exp(-p[1]*(add[2]-(t+s))))
+    pt = np.exp(-add[0]*add[2])*np.exp((add[0]-add[1])*t)+np.exp(-add[1]*add[2])*np.exp((add[1]-add[0])*t) 
+    pt1 =np.exp(-add[0]*add[2])*np.exp((add[0]-add[1])*(t+s))+np.exp(-add[1]*add[2])*np.exp((add[1]-add[0])*(t+s))  
+    gs = np.cosh(p[1]*(add[2]/2-t)) 
+    ts = pt/pt1*np.cosh(p[1]*(add[2]/2-(t+s)))
+    return 2*p[0]*p[0]*(gs-ts)
 
 def func_corr_shift_therm(p, t, add):
     """A function that describes a shifted four point correlation function.
@@ -474,8 +478,11 @@ def func_corr_shift_therm(p, t, add):
         The result.
     """
     s=1.
-    gs = p[0] * p[0] * (np.exp(-p[1]*t) + np.exp(-p[1]*(add[2]-t)) - np.exp(s*(add[1]-add[0]))*(np.exp(-p[1]*(t+s)) + np.exp(-p[1]*(add[2]-(t+s)))))
-    ts = p[2] * np.exp(-add[1]*add[2]) * (1-np.exp(2*s*(add[1]-add[0]))) * np.exp((add[1]-add[0])*t) 
+    #gs = p[0] * p[0] * (np.exp(-p[1]*t) + np.exp(-p[1]*(add[2]-t)) - np.exp(s*(add[1]-add[0]))*(np.exp(-p[1]*(t+s)) + np.exp(-p[1]*(add[2]-(t+s)))))
+    #ts = p[2] * np.exp(-add[1]*add[2]) * (1-np.exp(2*s*(add[1]-add[0]))) * np.exp((add[1]-add[0])*t) 
+    gs = p[0] * p[0] * (np.cosh(p[1]*(add[2]/2-t)) -
+            np.exp(s*(add[1]-add[0]))*(np.cosh(p[1]*(add[2]/2-(t+s)))))
+    ts = p[2]  * np.exp((add[1]-add[0])*t) 
     return gs+ts
 
 def func_corr_shift_therm_subtract(p, t, add):
