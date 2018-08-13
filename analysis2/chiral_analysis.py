@@ -1203,7 +1203,9 @@ class ChirAna(object):
           #if xcut is not None:
           #self.x_shape, self.y_shape = chut.update_shapes(_x_data,_y_data)
       _x = chut.concat_data_fit(_x_data,self.lat_dict.keys())
+      print(_x)
       _y = chut.concat_data_fit(_y_data,self.lat_dict.keys(),prior)
+      print(_y)
 
       _fit = ChiralFit("fit",err_func)
       # determine covariance matrix, including prior

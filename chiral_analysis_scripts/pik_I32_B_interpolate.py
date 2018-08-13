@@ -80,6 +80,31 @@ def get_factor_error_scaling(names,eval_obs):
     fac = np.sqrt(sd**2+sys_avg**2)/sd
     return fac
 
+def amu_s_ref_wopmu(df,cont_data):
+    """calculate the reference bare strange mass 
+    The formula is given by 
+       a\mu_s^{\text{ref}} =
+       \frac{(r_0M_K^{\text{phys}})^2}{(\mu_\sigma)P_0P_r\left[1+P_1r_0m_l^{\text{phys}}+P_2P_r^{-2}\right]}
+                             -\frac{P_Z}{(\mu_\sigma)P_r}r_0m_l^{\text{phys}}\,.
+
+    """
+    p0 = df['P_0'].values
+    p1 = df['P_1'].values
+    p2 = df['P_2'].values
+    pr = df['P_r'].values
+    pz = df['P_Z'].values
+    mul = df['mu_l'].values
+    # need to reshape the continuum data
+    r0 = cont_data.get('r0')
+    reps = p0.shape[0]/r0.shape[0]
+    r0 = np.tile(r0,reps)
+    mk = np.tile(cont_data.get('mk'),reps)
+    ml = np.tile(cont_data.get('m_l'),reps)
+    hbarc = 197.37
+    amus_ref_func = pz*(r0*mk/hbarc)**2/(p0*pr*(1+p1*r0*ml/hbarc+p2/pr**2))-pz/pr*r0*ml/hbarc
+    amus_ref = pd.Series(amus_ref_func,index=df.index)
+    return amus_ref
+
 def amu_s_ref(df,cont_data):
     """calculate the reference bare strange mass 
     The formula is given by 
@@ -193,9 +218,10 @@ def main():
     # Have to match filename and key from fix_ms_B script
     hdf_readname = resdir+'pi_K_I32_fixms_M%dB'%zp_meth+'.h5'
     #fixms_B_result = pd.read_hdf(hdf_readname,key='Fitresults_sigma')
-    fixms_B_result = pd.read_hdf(hdf_readname,key='Fitresults_uncorrelated')
+    #fixms_B_result = pd.read_hdf(hdf_readname,key='Fitresults_uncorrelated')
+    fixms_B_result = pd.read_hdf(hdf_readname,key='Fitresults_uncorrelated_wosimga')
     interp_cols = ['beta','mu_l','mu_s','sample']
-    fixms_B_result['amu_s_ref'] = amu_s_ref(fixms_B_result,cont_data)
+    fixms_B_result['amu_s_ref'] = amu_s_ref_wopmu(fixms_B_result,cont_data)
     fixms_B_result['ms_phys'] = calc_ms_phys(fixms_B_result,cont_data)
     data_to_interpolate = pd.DataFrame()
     # copy over needed data from fixms result (can take M_K^2_FSE directly)
@@ -321,7 +347,9 @@ def main():
     hdf_savename = resdir+proc_id+'.h5'
     hdfstorer = pd.HDFStore(hdf_savename)
     #hdfstorer.put('Interpolate_sigma_%s'%epik_meth,interpolated_B)
-    hdfstorer.put('Interpolate_uncorrelated_%s'%epik_meth,interpolated_B)
+    #hdfstorer.put('Interpolate_uncorrelated_%s'%epik_meth,interpolated_B)
+    # try out interpolation without fit parameter P_mu
+    hdfstorer.put('Interpolate_uncorrelated_wopmu_%s'%epik_meth,interpolated_B)
     del hdfstorer
 
 if __name__ == '__main__':

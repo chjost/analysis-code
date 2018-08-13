@@ -68,8 +68,9 @@ def main():
     #load data
     plotdir = "/hiskp4/helmes/analysis/scattering/pi_k/I_32_blocked/plots/"
     resdir = "/hiskp4/helmes/analysis/scattering/pi_k/I_32_blocked/results/"
-    key='Fitresults_uncorrelated'
-    plotname=plotdir+'/rel_deviation_fixms_M'
+    #key='Fitresults_uncorrelated'
+    key='Fitresults_uncorrelatedi_wosigma'
+    plotname=plotdir+'/rel_deviation_fixms_wopmu_M'
     #plt.xlabel(r'$(aM_{K,FSE}^2-aM_K^2(\mu_\ell))/aM_{K,FSE}^2$')
     plt.xlabel(r'rel.dev. $M_K^2$')
     #plt.ylabel(r'Ensemble')

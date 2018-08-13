@@ -68,13 +68,13 @@ def print_line_latex(lat, d, prec1=1e4, prec2=1e3, prec3=1e5, prec4=1e2, syserro
   #if dx.shape[0] == 2:
   if syserror:
     print(("%9s & %.4f &"
-           " $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
-           " $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
-           " $%.5f(%1.0f)(^{+%1.0f}_{-%1.0f})$ \\\\")% 
+           #" $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
+           #" $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
+           #" $%.5f(%1.0f)(^{+%1.0f}_{-%1.0f})$ \\\\")% 
            ## Next 3 lines are for E_piK
            #" $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
-           #" $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
-           #" $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$  \\\\") %
+           " $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
+           " $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$  \\\\") %
            ## Next 3 lines are for delta E x 10^3
            #" $%.2f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
            #" $%.5f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
@@ -89,16 +89,16 @@ def print_line_latex(lat, d, prec1=1e4, prec2=1e3, prec3=1e5, prec4=1e2, syserro
            #" $%.3f(%1.0f)(^{+%1.0f}_{-%1.0f})$ \\\\") % 
                 (lat,
                   d[0],
-                  d[1][0], d[1][1]*prec1, d[1][2]*prec1, d[1][3]*prec1,
-                  d[2][0], d[2][1]*prec1, d[2][2]*prec1, d[2][3]*prec1,
+                  #d[1][0], d[1][1]*prec1, d[1][2]*prec1, d[1][3]*prec1,
+                  #d[2][0], d[2][1]*prec1, d[2][2]*prec1, d[2][3]*prec1,
                   # For negative valued observables the sign for the systematics
                   # needs to be changed, implemented by changing position of up
                   # and down boundaries
-                  d[3][0], d[3][1]*prec3, d[3][3]*prec3, d[3][2]*prec3)
+                  #d[3][0], d[3][1]*prec3, d[3][3]*prec3, d[3][2]*prec3)
                   # Next 3 lines are for E_piK
-                  #d[4][0], d[4][1]*prec1, d[4][3]*prec1, d[4][2]*prec1,
+                  d[4][0], d[4][1]*prec1, d[4][3]*prec1, d[4][2]*prec1,
                   #d[5][0], d[5][1]*prec1, d[5][3]*prec1, d[5][2]*prec1,
-                  #d[6][0], d[6][1]*prec1, d[6][3]*prec1, d[6][2]*prec1)
+                  d[6][0], d[6][1]*prec1, d[6][3]*prec1, d[6][2]*prec1)
                   ## Next 3 lines are for delta E
                   #d[7][0]*10**3, d[7][1]*prec3, d[7][3]*prec3, d[7][2]*prec3,
                   #d[8][0], d[8][1]*prec3, d[8][3]*prec3, d[8][2]*prec3,
@@ -131,7 +131,7 @@ def print_line_latex(lat, d, prec1=1e4, prec2=1e3, prec3=1e5, prec4=1e2, syserro
   #              (lat, dx[0][0], dx[0][1]*prec, dx[0][2]*prec, dx[0][3]*prec,
   #                dy[0], dy[1]*prec, dy[2]*prec, dy[3]*prec))
 def print_line_plain(lat, d, prec1=1e4, prec2=1e3, prec3=1e5):
-    print("%9s\t%.4f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f" %(lat,d[0],d[1][0],d[1][1],d[1][2],d[1][3],d[3][0],d[3][1],d[3][2],d[3][3],d[3][2]))     
+    print("%9s\t%.4f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f" %(lat,d[0],d[4][0],d[4][1],d[4][2],d[4][3],d[6][0],d[6][1],d[6][2],d[6][3],d[6][2]))     
 def print_summary(ens_names,datafolder,match=False,strange_dict=None,
                   strange_eta_dict=None,syserror=True):
   """ pi-K summary print. In contrast to pipi summary one degree of freedom more
@@ -159,10 +159,10 @@ def print_summary(ens_names,datafolder,match=False,strange_dict=None,
     head = ['Ensemble',
             '$a\mu_{s}$',
             #'$aM_{K}$','$aM_{\pi}$',
-             #'$E^{E1}_{\pi K}$','$E^{E2}_{\pi K}$','$E^{E3}_{\pi K}$']
+             '$E^{E1}_{\pi K}$','$E^{E2}_{\pi K}$']
              #'$a\delta E^{E1}$','$a\delta E^{E3}$'] 
-             '$a_{3/2}^{E1}/a$','$a_{3/2}^{E3}/a$', 
-             '$\mu_{\pi K} a_{3/2}^{E1}$','$\mu_{\pi K} a_{3/2}^{E3}$'] 
+             #'$a_{3/2}^{E1}/a$','$a_{3/2}^{E3}/a$', 
+             #'$\mu_{\pi K} a_{3/2}^{E1}$','$\mu_{\pi K} a_{3/2}^{E3}$'] 
     #head = ['Ensemble','$a\mu_{s}$',
     #         '$aM_{\eta}$'] 
     # summ is a #Ens,#Obs,4 numpy array
@@ -190,7 +190,10 @@ def print_summary(ens_names,datafolder,match=False,strange_dict=None,
         path_to_eta = "%s/%s/%s/fit_eta_rm_TP0.npz" % (datafolder,e,s)
         path_to_mupik = "%s/%s/%s/mu_pi_k_TP0_%s.npz" % (datafolder,e,s,e)
         list_path_to_dE = ["%s/%s/%s/dE_TP0_%s_E%d.npz" % (datafolder,e,s,e,i) for i in np.arange(1,4)]
-        list_path_to_E = ["%s/%s/%s/fit_pik_%s_E%d.npz" % (datafolder,e,s,e,i) for i in np.arange(1,4)]
+        #list_path_to_E = ["%s/%s/%s/fit_pik_%s_E%d.npz" % (datafolder,e,s,e,i) for i in np.arange(1,4)]
+        list_path_to_E = ["%s/%s/%s/fit_pik_%s_E%d_corr_false.npz" % (datafolder,e,s,e,i) for i in np.arange(1,4)]
+        # only relevant for 'publish' data
+        list_path_to_E3 = ["%s/%s/%s/fit_pik_%s_allfr_E2.npz" % (datafolder,e,s,e)]
         list_path_to_a0 = ["%s/%s/%s/scat_len_TP0_%s_E%d.npz" % (datafolder,e,s,e,i)for i in np.arange(1,4)]
         list_path_to_mua0 = ["%s/%s/%s/mu_a0_TP0_%s_E%d.npz" % (datafolder,e,s,e,i) for i in np.arange(1,4)]
 
@@ -201,9 +204,10 @@ def print_summary(ens_names,datafolder,match=False,strange_dict=None,
         summ_E1.append(fitres_stats(list_path_to_E[0],1))
         summ_E2.append(fitres_stats(list_path_to_E[1],0))
         summ_E3.append(fitres_stats(list_path_to_E[2],0))
+        #summ_E3.append(fitres_stats(list_path_to_E3[0],1))
         summ_dE1.append(fitres_stats(list_path_to_dE[0],0))
         summ_dE2.append(fitres_stats(list_path_to_dE[1],0))
-        summ_dE3.append(fitres_stats(list_path_to_dE[2],0))
+        #summ_dE3.append(fitres_stats(list_path_to_dE[2],0))
         summ_a01.append(fitres_stats(list_path_to_a0[0],0))
         summ_a02.append(fitres_stats(list_path_to_a0[1],0))
         summ_a03.append(fitres_stats(list_path_to_a0[2],0))
@@ -225,8 +229,8 @@ def print_summary(ens_names,datafolder,match=False,strange_dict=None,
                              summ_dE1, summ_dE2, summ_dE3,
                              summ_a01, summ_a02, summ_a03,
                              summ_mua01, summ_mua02, summ_mua03)):
-        #print_line_latex(e_print[i],d,syserror=syserror)
-        print_line_plain(e_print[i],d)
+        print_line_latex(e_print[i],d,syserror=syserror)
+        #print_line_plain(e_print[i],d)
         if (i+1)%3 == 0:
             print("\\midrule")
     #for i,d in enumerate(zip(summ_ms,summ_meta)):
