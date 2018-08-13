@@ -115,8 +115,6 @@ def compute_weight(data, pvals, rel=True):
     #print("the errors inside compute weight are:")
     #print(errors)
     min_err = np.amin(errors)
-    print("\n\nMinimal error over fit intervals:")
-    print(min_err)
     # prepare storage
     weights = np.zeros((data.shape[1:]))
     # Warning playing with the exponent of the weight
@@ -127,14 +125,8 @@ def compute_weight(data, pvals, rel=True):
     else:
         ranges = [[n for n in range(x)] for x in weights.shape]
         for riter in itertools.product(*ranges):
-            print("abs pval-0.5 for range %d:%d"%(riter[0],riter[1]))
-            print(np.abs(pvals[(0,)+riter]-0.5))
-            print("error for fitrange:")
-            print(errors[riter])
             weights[riter] = ((1. - 2.*np.abs(pvals[(0,)+riter]-0.5)) *
                 min_err/errors[riter])**exp
-            print("Weight is")
-            print(weights[riter])
     return weights
 
 def sys_error(data, pvals, par=0, rel=True):
