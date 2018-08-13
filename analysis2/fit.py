@@ -929,14 +929,13 @@ class FitResult(object):
                             select = (slice(None),) + item + (j,)
                             tmppar = " ".join(tmppar)
                             select = (0,) + item + (j,)
+                            frcoord = item+(j,)
                             tmpstring = " ".join(("%d: range %2d:%2d" % (j, r[0],r[1]),
                                                   "add ranges %s" % str(item),
                                                   "chi^2/dof %e" % 
                                                   (self.chi2[i][select]/(r[1]-r[0]+1-self.data[i].shape[1])),
                                                   "pval %5f" % (self.pval[i][select]),
-                                                  "rel. err: %e" % rel_err,
-                                                  "p-val*rel.err: %e" 
-                                                  %(rel_err*self.pval[i][select]),
+                                                  "weight %5e" % (self.weight[1][0][frcoord]),
                                                   tmppar))
                             print(tmpstring)
     def reduced_chi2(self):

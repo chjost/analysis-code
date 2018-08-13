@@ -115,19 +115,26 @@ def compute_weight(data, pvals, rel=True):
     #print("the errors inside compute weight are:")
     #print(errors)
     min_err = np.amin(errors)
+    print("\n\nMinimal error over fit intervals:")
+    print(min_err)
     # prepare storage
     weights = np.zeros((data.shape[1:]))
     # Warning playing with the exponent of the weight
     exp=2
     if weights.ndim == 1:
         for i in range(weights.shape[0]):
-            weights[i] = ((1. - 2.*np.abs(pvals[0,i]-0.5)) *
-                min_err/errors[i])**exp
+            weights[i] = ((1. - 2.*np.abs(pvals[0,i]-0.5)) * min_err/errors[i])**exp
     else:
         ranges = [[n for n in range(x)] for x in weights.shape]
         for riter in itertools.product(*ranges):
+            print("abs pval-0.5 for range %d:%d"%(riter[0],riter[1]))
+            print(np.abs(pvals[(0,)+riter]-0.5))
+            print("error for fitrange:")
+            print(errors[riter])
             weights[riter] = ((1. - 2.*np.abs(pvals[(0,)+riter]-0.5)) *
                 min_err/errors[riter])**exp
+            print("Weight is")
+            print(weights[riter])
     return weights
 
 def sys_error(data, pvals, par=0, rel=True):
@@ -180,6 +187,7 @@ def sys_error(data, pvals, par=0, rel=True):
         #print("The data inside sys_error are")
         #print(d[:,par])
         data_weight.append(compute_weight(d[:,par], pvals[i], rel=rel))
+        #print(data_weight)
         # using the weights, calculate the median over all fit intervals
         # for every bootstrap sample.
         for b in range(d.shape[0]):
@@ -197,6 +205,8 @@ def sys_error(data, pvals, par=0, rel=True):
                 0.84) - res[i][0]
         # keep only the median of the original data
         #res[i] = res[i][0]
+        #print("Median inside sys_error:")
+        #print(res[i][0])
     return res, res_std, res_sys, data_weight
 
 def sys_error_der(data, weights):

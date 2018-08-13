@@ -41,24 +41,45 @@ def get_weights_ens_all(df,obs):
     return df_weights                                                          
     
 # define a function that calculates the weights from fitresults
-def get_weights(df,obs):
-    # weights are calculated per fitrange on one ensemble
+def get_weights(df,obs,rel=False):
+    # weights are calculated per fitrange
     # prepare dataframe for queries
-    wcolname = 'weight'+'_'+obs
+    df['fr'] = df['t_i'].astype(str)+','+df['t_f'].astype(str)
     df['boot'] = df['sample'].astype(str)
-    # get statistical errors errors
-    errors = df.groupby(['fr'])[obs].agg([chi.bstats.own_std])
-    errors=errors.reset_index()
-    min_err=errors['own_std'].min()
+    wcolname = 'weight_'+obs
+    # get statistics of obs with fitranges as index, collect all data for weights there
+    stats = chi.bootstrap_means(df,['fr'],obs)
+    stats.reset_index(inplace=True)
+    #print('\nStatistics for observable:%s over fitranges' %obs)
+    #print(stats)
+    # Reset index also resets column multilevel
+    if rel is True:
+        stats['error'] = stats['own_std']/stats['own_mean']
+    else:
+        # this option uses the distribution mean for calculating the statistical error.
+        # I think that this is implemented in the analysis as well
+        # TODO: implement that as an option?
+        #stats['error'] = df.groupby('fr').std().reset_index()[obs]
+        stats['error'] = stats['own_std']
+    print('\nStatistics for observable:%s over fitranges' %obs)
+    print(stats)
+    min_err = stats['error'].min()
+    #print("\nMinimal (relative) error over fitranges")
+    #print(min_err)
     # get pvalues of original data
-    pvals = df['p-val'].loc[df['boot']=='0.0']
+    pvals = df[['fr','p-val']].loc[df['boot']=='0.0']
+    #print("\nP-values of the fits")
+    #print(pvals)
+    stats = stats.set_index('fr').join(pvals.set_index('fr')).reset_index()
     # calculate weights
-    errors[wcolname]=((1.-2.*np.abs(pvals.values-0.5))*min_err/errors['own_std'])**2
-    df = df.merge(errors[['fr',wcolname]],on='fr',how='outer')
+    stats[wcolname]=((1.-2.*np.abs(stats['p-val']-0.5))*min_err/stats['error'])**2
+    #print("\nreturned dataframe with weights")
+    #print(stats)
+    df = df.merge(stats[['fr',wcolname]],left_on='fr',right_on='fr')
     return df
 
 def main():
-    collect_data = False 
+    collect_data = True 
     datadir ='/hiskp4/helmes/analysis/scattering/pi_k/I_32_publish/data' 
     if collect_data is True:
         fit_e1 = pd.read_hdf('%s/%s'%(datadir,'fit_pik_collect.h5'),
