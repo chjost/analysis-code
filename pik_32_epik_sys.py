@@ -91,20 +91,20 @@ def main():
     #mus_d_fld = ["amu_s_18"]
     #mus_d_fld_var = ["amu_s_18"]
     mass_fld = {"A":mus_a_fld,"B":mus_b_fld,"D":mus_d_fld}
-    data = '/hiskp4/helmes/analysis/scattering/pi_k/I_32_publish/data'
+    data = '/hiskp4/helmes/analysis/scattering/pi_k/I_32_cov_false/data'
     res_array = []
     for e in ens:
         ms=mass_fld[e[0]]
         if e == "D30.48":
             ms = mus_d_fld_var
         for s in ms:
-            filename = '%s/%s/%s/fit_pik_%s_E1.npz'%(data,e,s,e)
+            filename = '%s/%s/%s/fit_pik_%s_E1_corr_false.npz'%(data,e,s,e)
             print(filename)
             tmp = [e,s]
             tmp+=fitres_stats(filename,1)
             res_array.append(tmp)
     res_df = pd.DataFrame(res_array,columns = ['ensemble','mu_s','epik','d(epik)','sdn(epik)','sup(epik)'])
-    storename = "%s/%s"%(data,'epik_overview.txt')
+    storename = "%s/%s"%(data,'epik_e1_overview.txt')
     res_df.to_csv(storename,sep='\t')
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':

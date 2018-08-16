@@ -91,21 +91,22 @@ def main():
     #mus_d_fld = ["amu_s_18"]
     #mus_d_fld_var = ["amu_s_18"]
     mass_fld = {"A":mus_a_fld,"B":mus_b_fld,"D":mus_d_fld}
-    data = '/hiskp4/helmes/analysis/scattering/pi_k/I_32_publish/data'
+    data = '/hiskp4/helmes/analysis/scattering/pi_k/I_32_cov_false/data'
     res_array = []
     for e in ens:
         ms=mass_fld[e[0]]
         if e == "D30.48":
             ms = mus_d_fld_var
-        #for s in ms:
-        for s in ['pi']:
-            #filename = '%s/%s/%s/fit_k_%s.npz'%(data,e,s,e)
-            filename = '%s/%s/%s/fit_pi_%s.npz'%(data,e,s,e)
+        for s in ms:
+        #for s in ['pi']:
+            filename = '%s/%s/%s/fit_k_%s.npz'%(data,e,s,e)
+            #filename = '%s/%s/%s/fit_pi_%s.npz'%(data,e,s,e)
             print(filename)
             tmp = [e,s]
             tmp+=fitres_stats(filename,1)
             res_array.append(tmp)
-    res_df = pd.DataFrame(res_array,columns = ['ensemble','mu_s','epi','d(epi)','sdn(epi)','sup(epi)'])
+    #res_df = pd.DataFrame(res_array,columns = ['ensemble','mu_s','epi','d(epi)','sdn(epi)','sup(epi)'])
+    res_df = pd.DataFrame(res_array,columns = ['ensemble','mu_s','ek','d(ek)','sdn(ek)','sup(ek)'])
     print(res_df)
     storename = "%s/%s"%(data,'epi_overview.txt')
     res_df.to_csv(storename,sep='\t')

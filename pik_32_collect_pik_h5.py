@@ -49,14 +49,14 @@ def main():
     mus_d_fld = ["amu_s_13","amu_s_15","amu_s_18"]
     mus_d_fld_var = ["amu_s_115","amu_s_15","amu_s_18"]
 #--------------- Define filenames
-    path='/hiskp4/helmes/analysis/scattering/pi_k/I_32_publish'
+    path='/hiskp4/helmes/analysis/scattering/pi_k/I_32_cov_false'
     datadir = '%s/%s'%(path,'data')
+    e='A40.24'
+    s='amu_s_185'
     fit_pik_out = "fit_pik.h5"
     collect_out = 'fit_pik_collect.h5'
     # E1/2
     keyname = 'fit_corr_e2_corr_false'
-    e='A40.24'
-    s='amu_s_185'
     fname = "%s/%s/%s/%s"%(datadir,e,s,fit_pik_out)
     fitres = pd.read_hdf(fname,key=keyname)
     collect_colnames = np.append(fitres.columns.values,['beta','L','mu_l','mu_s'])

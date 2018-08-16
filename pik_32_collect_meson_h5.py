@@ -49,18 +49,19 @@ def main():
     mus_d_fld = ["amu_s_13","amu_s_15","amu_s_18"]
     mus_d_fld_var = ["amu_s_115","amu_s_15","amu_s_18"]
 #--------------- Define filenames
-    path='/hiskp4/helmes/analysis/scattering/pi_k/I_32_publish'
+    path='/hiskp4/helmes/analysis/scattering/pi_k/I_32_cov_false'
     datadir = '%s/%s'%(path,'data')
-    #collect_out = 'fit_k_collect.h5'
-    collect_out = 'fit_pi_collect.h5'
-    #keyname = 'fit_k'
-    keyname = 'fit_pi'
+    collect_out = 'fit_k_collect.h5'
+    #collect_out = 'fit_pi_collect.h5'
+    keyname = 'fit_k'
+    #keyname = 'fit_pi'
     # E1/2
     e='A40.24'
     s='amu_s_185'
-    fit_out = "fit_pi_%s.h5"%e
-    #fname = "%s/%s/%s/%s"%(datadir,e,s,fit_out)
-    fname = "%s/%s/pi/%s"%(datadir,e,fit_out)
+    #fit_out = "fit_pi_%s.h5"%e
+    fit_out = "fit_k_%s.h5"%e
+    fname = "%s/%s/%s/%s"%(datadir,e,s,fit_out)
+    #fname = "%s/%s/pi/%s"%(datadir,e,fit_out)
     fitres = pd.read_hdf(fname,key=keyname)
     collect_colnames = np.append(fitres.columns.values,['beta','L','mu_l'])
     collect = pd.DataFrame(columns=collect_colnames)
@@ -75,18 +76,19 @@ def main():
 
     for i,a in enumerate(space):
         for j,e in enumerate(ensemble[a]):
-            fit_out = 'fit_pi_%s.h5'%e
-#            for k,s in enumerate(strange[a]):
-            #fname = "%s/%s/%s/%s"%(datadir,e,s,fit_out)
-            fname = "%s/%s/pi/%s"%(datadir,e,fit_out)
-            ix = ensemblevalues([e,])
-            #ix_s = get_mu_s_value(s)
-            tmp = pd.read_hdf(fname,key=keyname)
-            tmp['beta'] = ix[0][0]
-            tmp['L'] = ix[0][1]
-            tmp['mu_l'] = ix[0][2]
-            #tmp['mu_s'] = ix_s
-            collect=collect.append(tmp)
+            #fit_out = 'fit_pi_%s.h5'%e
+            fit_out = 'fit_k_%s.h5'%e
+            for k,s in enumerate(strange[a]):
+                fname = "%s/%s/%s/%s"%(datadir,e,s,fit_out)
+                #fname = "%s/%s/pi/%s"%(datadir,e,fit_out)
+                ix = ensemblevalues([e,])
+                ix_s = get_mu_s_value(s)
+                tmp = pd.read_hdf(fname,key=keyname)
+                tmp['beta'] = ix[0][0]
+                tmp['L'] = ix[0][1]
+                tmp['mu_l'] = ix[0][2]
+                tmp['mu_s'] = ix_s
+                collect=collect.append(tmp)
     print(collect.sample(n=10))
     outname = "%s/%s"%(datadir,collect_out)
     collect.to_hdf(outname,key=keyname)

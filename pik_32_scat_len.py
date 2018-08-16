@@ -56,14 +56,14 @@ def main():
     mus_dir = datadir.split('/')[-3]
 # --------------- Load total energy fitresult
     #E1
-    pi_k_fitresult_e1 = ana.FitResult.read("%s/%s_%s_E1.npz" % (datadir,fit_pik_out,lat))
+    pi_k_fitresult_e1 = ana.FitResult.read("%s/%s_%s_E1_corr_false.npz" % (datadir,fit_pik_out,lat))
     #pi_k_fitresult_e1.print_data(1)
     #E2
-    pi_k_fitresult_e2 = ana.FitResult.read("%s/%s_%s_allfr_E2.npz" % (datadir,fit_pik_out,lat))
+    pi_k_fitresult_e2 = ana.FitResult.read("%s/%s_%s_E2_corr_false.npz" % (datadir,fit_pik_out,lat))
     #pi_k_fitresult_e2.print_data(1)
-    cut=False
+    cut=True
     if cut is True:
-        range_cut = pd.read_csv('/hiskp4/helmes/analysis/scattering/pi_k/I_32_publish/runs/range_cuts_pik.txt',
+        range_cut = pd.read_csv('/hiskp4/helmes/analysis/scattering/pi_k/I_32_cov_false/runs/range_cuts_pik.txt',
                 sep='\s+')
         E1t_i = range_cut.where((range_cut['Ensemble']==lat) &
                 (range_cut['mu_s_dir']==mus_dir)).dropna()['E1_init'].values
@@ -75,8 +75,10 @@ def main():
                 (range_cut['mu_s_dir']==mus_dir)).dropna()['E2_final'].values
         print(E1t_i,E1t_f)
         print(E2t_i,E2t_f)
-        pi_k_fitresult_e1 = pi_k_fitresult_e1.cut_data(E1t_i,E1t_f,par=1) 
+        pi_k_fitresult_e1 = pi_k_fitresult_e1.cut_data(E1t_i,E1t_f,par=1)
+        pi_k_fitresult_e1.save("%s/%s_%s_E1_corr_false_cut.npz" % (datadir,fit_pik_out,lat))
         pi_k_fitresult_e2 = pi_k_fitresult_e2.cut_data(E2t_i,E2t_f,par=1)
+        pi_k_fitresult_e2.save("%s/%s_%s_E2_corr_false_cut.npz" % (datadir,fit_pik_out,lat))
         pi_k_fitresult_e1.print_data(par=1)
         pi_k_fitresult_e2.print_data(par=1)
 

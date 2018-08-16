@@ -35,20 +35,20 @@ def main():
     parser.add_argument("--mus",help="bare strange mass",type=str,required=True)
     args=parser.parse_args()
     # Define filenames
-    path = '/hiskp4/helmes/analysis/scattering/pi_k/I_32_publish/'
+    path = '/hiskp4/helmes/analysis/scattering/pi_k/I_32_cov_false'
     datadir = "%s/data/%s/amu_s_%s/" %(path,args.ens,args.mus)
     plotdir = "%s/plots/%s/amu_s_%s/" %(path,args.ens,args.mus)
-    fname_corr = 'corr_pik.h5'
+    fname_corr = 'corr_pik_%s.h5'%args.ens
     fname_fitres = 'fit_pik.h5'
     # Load necessary data
     corr_e1 = pd.read_hdf('%s/%s'%(datadir,fname_corr),key='ws_e1')
     corr_e2 = pd.read_hdf('%s/%s'%(datadir,fname_corr),key='ws_e2')
-    fitres_e1 = pd.read_hdf('%s/%s'%(datadir,fname_fitres),key='fit_corr_e1')
-    fitres_e2 = pd.read_hdf('%s/%s'%(datadir,fname_fitres),key='fit_corr_e2')
-    #fitres_e1 = pd.read_hdf('%s/%s'%(datadir,fname_fitres),
-    #                        key='fit_corr_e1_corr_false')
-    #fitres_e2 = pd.read_hdf('%s/%s'%(datadir,fname_fitres),
-    #                        key='fit_corr_e2_corr_false')
+    #fitres_e1 = pd.read_hdf('%s/%s'%(datadir,fname_fitres),key='fit_corr_e1')
+    #fitres_e2 = pd.read_hdf('%s/%s'%(datadir,fname_fitres),key='fit_corr_e2')
+    fitres_e1 = pd.read_hdf('%s/%s'%(datadir,fname_fitres),
+                            key='fit_corr_e1_corr_false')
+    fitres_e2 = pd.read_hdf('%s/%s'%(datadir,fname_fitres),
+                            key='fit_corr_e2_corr_false')
     fit_input = pd.read_hdf('%s/%s'%(datadir,'pik_fit_input.h5'),key='additional_input')
     # Massage data for E1
     fit_input = fit_input.reset_index().rename(index=str,columns={'index':'sample'})
@@ -58,8 +58,8 @@ def main():
     corr_e1['boot']=corr_e1['sample'].astype(str)
     # duplicate original data
     orig_corr_e1 = corr_e1.loc[corr_e1['boot']=='0.0']
-    # Hard code sample number
-    nboot=10000
+    # get sample number
+    nboot=int(corr_e1['sample'].max())
     corr_e1 = pd.DataFrame()
     for bs in np.arange(nboot):
         orig_corr_e1['sample']=bs
@@ -98,10 +98,10 @@ def main():
     result_e2.sample(n=20)
     plot_data_e2 = chi.bootstrap_means(result_e2,['fr','t'],['r','par1','chi^2/dof'])
     plot_data_e2.reset_index(inplace=True)
-    #fr = plot_data_e1['fr'].unique()
+    fr = plot_data_e1['fr'].unique()
     # Open pdfpages
-    with PdfPages(plotdir+'ratio.pdf') as pdf:
-    #with PdfPages(plotdir+'ratio_corr_false.pdf') as pdf:
+    #with PdfPages(plotdir+'ratio.pdf') as pdf:
+    with PdfPages(plotdir+'ratio_corr_false.pdf') as pdf:
 	# TODO: use iterrows for that
         for i,r in enumerate(fr):
             print("plotting fitrange %s"% r)
@@ -120,13 +120,13 @@ def main():
             chi2_e2 = tmp_data_e2.values[0,6]
             epik_e1 = (tmp_data_e1.values[0,4],tmp_data_e1.values[0,5])
             epik_e2 = (tmp_data_e2.values[0,4],tmp_data_e2.values[0,5])
-            #lbl_e1=r'E1 $E_{\pi K} = %.3f \pm %.3f$'%(epik_e1[0],epik_e1[1])
-            #lbl_e2=r'E2 $E_{\pi K} = %.3f \pm %.3f$'%(epik_e2[0],epik_e2[1])
-            lbl_e1 = r'E1'
-            lbl_e2 = r'E2'
+            lbl_e1=r'E1 $E_{\pi K} = %.3f \pm %.3f$'%(epik_e1[0],epik_e1[1])
+            lbl_e2=r'E2 $E_{\pi K} = %.3f \pm %.3f$'%(epik_e2[0],epik_e2[1])
+            #lbl_e1 = r'E1'
+            #lbl_e2 = r'E2'
             plt.errorbar(x,r_e1,dr_e1,fmt='o',capsize=1.,fillstyle='none',color='darkblue',label=lbl_e1,lw=0.5)
             plt.errorbar(x,r_e2,dr_e2,fmt='+',capsize=1.,color='firebrick',lw=0.5,label=lbl_e2)
-            plt.ylim((0.9,1.10))
+            plt.ylim((0.95,1.05))
             plt.xlim((5,tmp_data_e1.values.shape[0]))
             plt.xlabel(r'$t/a$',size=11)
             plt.ylabel(r'$C(t)/f(t)$',size=11)
