@@ -19,16 +19,16 @@ def main():
         ens = ana.LatticeEnsemble.parse("kk_I1_TP0_A40.24.ini")
     else:
         ens = ana.LatticeEnsemble.parse(sys.argv[1])
-    readdata = False 
+    readdata = True 
     read_pifit = False
     corr_pi_in ="pi_charged_p0"
-    corr_pi_out = "corr_pi"
+    corr_pi_out = "corr_pi_bs10000"
     fit_pi_out="fit_pi"
     # get data from input file
     prefix = ens.get_data("path")
     print prefix
     lat = ens.name()
-    nboot = ens.get_data("nboot")
+    nboot = 10000
     bs_bl = ens.get_data("boot_bl")
     datadir = ens.get_data("datadir_pi")
     plotdir = ens.get_data("plotdir_pi")
@@ -54,9 +54,10 @@ def main():
         pi_corr.sym_and_boot(nboot,bl=bs_bl,method='stationary')
         print(pi_corr.shape)
         pi_corr.save("%s/%s_%s.npy" % (datadir,corr_pi_out , lat))
-        pi_corr.save_h5("%s/%s_%s.h5" % (datadir,corr_pi_out , lat),'sym_sb')
     else:
         pi_corr = ana.Correlators.read("%s/%s_%s.npz" % (datadir,corr_pi_out,lat))
+    pi_corr.T = T
+    print(pi_corr.data.shape)
     # fit pion correlation function for multiple fitranges
     fit_pi = ana.LatticeFit(9,dt_f=-1, dt_i=1,
                                   dt=min_size_mass_pi, correlated=True)
@@ -66,7 +67,6 @@ def main():
         pi_fitresult = fit_pi.fit(start, pi_corr, [t_mass_pi],
             add=addT)
         pi_fitresult.save("%s/%s_%s.npz" % (datadir,fit_pi_out, lat))
-        pi_fitresult.save_h5("%s/%s_%s.h5" % (datadir,fit_pi_out, lat),'fit_pi')
     else:
         pi_fitresult = ana.FitResult.read("%s/%s_%s.npz" % (datadir,fit_pi_out,lat))
 

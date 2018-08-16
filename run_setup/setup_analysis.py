@@ -11,7 +11,7 @@ def create_flds(beta,ens_dict,mus_dict,folders,exec_dir):
                 foldername = exec_dir+'/'+f+'/'+e+'/'+s
                 os.makedirs(foldername)
 def main():
-    exec_dir = "/hiskp4/helmes/analysis/scattering/pi_k/I_32_final"
+    exec_dir = "/hiskp4/helmes/analysis/scattering/pi_k/I_32_cov_false"
     
     folders = ["data","plots","results","runs"]
 
@@ -26,15 +26,18 @@ def main():
                'D_var': ["amu_s_115","amu_s_15","amu_s_18","pi"]}
 # Set up all that is needed for an analysis project
 # Create folder structure
-    #create_flds('A',ens,mus_fld,folders,exec_dir)
-    #create_flds('B',ens,mus_fld,folders,exec_dir)
-    #create_flds('D',ens,mus_fld,folders,exec_dir)
+    create_flds('A',ens,mus_fld,folders,exec_dir)
+    create_flds('B',ens,mus_fld,folders,exec_dir)
+    create_flds('D',ens,mus_fld,folders,exec_dir)
     create_flds('D_var',ens,mus_fld,folders,exec_dir)
 # Copy templates to run folders
     src = "/hiskp4/helmes/projects/analysis-code/run_setup/templates"
     dst = exec_dir+"/runs/"
     sub.call(["rsync", "-av", src, dst])
-# Copy  to run folders
+# Copy init scripts content to run folder
+    src = "/hiskp4/helmes/projects/analysis-code/run_setup/init_scripts/"
+    dst = exec_dir+"/runs/"
+    sub.call(["rsync", "-av", src, dst])
     
 # make this script importable, according to the Google Python Style Guide
 if __name__ == '__main__':

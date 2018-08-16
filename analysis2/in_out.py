@@ -37,13 +37,20 @@ def fitres_to_pandas(fitres,identifier):
     for r,i in enumerate(fitres.fit_ranges[0]):
         # fitranges are inclusive
         dof = i[1]-i[0]+1-len(parlist)
-        par_bs = fitres.data[0][:,:,0,r]
+        try:
+            par_bs = fitres.data[0][:,:,0,r]
+        except:
+            par_bs = fitres.data[0][:,:,r]
         tmp = pd.DataFrame(par_bs,columns=parlist)
         tmp['sample'] = bsamples
         tmp['t_i'] = i[0]
         tmp['t_f'] = i[1]
-        tmp['p-val'] = fitres.pval[0][:,0,r]
-        tmp['chi^2/dof'] = fitres.chi2[0][:,0,r]/dof
+        try:
+            tmp['p-val'] = fitres.pval[0][:,0,r]
+            tmp['chi^2/dof'] = fitres.chi2[0][:,0,r]/dof
+        except:
+            tmp['p-val'] = fitres.pval[0][:,r]
+            tmp['chi^2/dof'] = fitres.chi2[0][:,r]/dof
         df = df.append(tmp)
     df['id'] = identifier
     return df

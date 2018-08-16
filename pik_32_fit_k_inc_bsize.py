@@ -19,16 +19,16 @@ def main():
         ens = ana.LatticeEnsemble.parse("kk_I1_TP0_A40.24.ini")
     else:
         ens = ana.LatticeEnsemble.parse(sys.argv[1])
-    readdata = False 
+    readdata = True 
     read_kfit = False
     corr_k_in ="k_charged_p0"
-    corr_k_out = "corr_k"
+    corr_k_out = "corr_k_bs10000"
     fit_k_out="fit_k"
     # get data from input file
     prefix = ens.get_data("path")
     print prefix
     lat = ens.name()
-    nboot = ens.get_data("nboot")
+    nboot = 10000 
     bs_bl = ens.get_data("boot_bl")
     datadir = ens.get_data("datadir")
     plotdir = ens.get_data("plotdir")
@@ -54,9 +54,9 @@ def main():
         k_corr.sym_and_boot(nboot,bl=bs_bl,method='stationary')
         print(k_corr.shape)
         k_corr.save("%s/%s_%s.npy" % (datadir,corr_k_out , lat))
-        k_corr.save_h5("%s/%s_%s.h5" % (datadir,corr_k_out , lat),'sym_sb')
     else:
         k_corr = ana.Correlators.read("%s/%s_%s.npz" % (datadir,corr_k_out,lat))
+    k_corr.T = T
     # fit kaon correlation function for multiple fitranges
     fit_k = ana.LatticeFit(9,dt_f=-1, dt_i=1,
                                   dt=min_size_mass_k, correlated=True)
@@ -66,7 +66,6 @@ def main():
         k_fitresult = fit_k.fit(start, k_corr, [t_mass_k],
             add=addT)
         k_fitresult.save("%s/%s_%s.npz" % (datadir,fit_k_out, lat))
-        k_fitresult.save_h5("%s/%s_%s.h5" % (datadir,fit_k_out, lat),'fit_k')
     else:
         k_fitresult = ana.FitResult.read("%s/%s_%s.npz" % (datadir,fit_k_out,lat))
     k_fitresult.calc_error()

@@ -935,7 +935,7 @@ class FitResult(object):
                                                   "chi^2/dof %e" % 
                                                   (self.chi2[i][select]/(r[1]-r[0]+1-self.data[i].shape[1])),
                                                   "pval %5f" % (self.pval[i][select]),
-                                                  "weight %5e" % (self.weight[1][0][frcoord]),
+                                                  #"weight %5e" % (self.weight[1][0][frcoord]),
                                                   tmppar))
                             print(tmpstring)
     def reduced_chi2(self):
