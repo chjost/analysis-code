@@ -15,8 +15,7 @@ from functions import (func_single_corr,func_single_corr_bare, func_ratio, func_
     func_two_corr_shifted, func_single_corr2, func_sinh, compute_eff_mass,
     func_two_corr_therm, func_corr_shift_therm, func_two_corr_dws,
     func_corr_shift_therm_subtract,func_corr_shift_poll_removal)
-from statistics import (compute_error, sys_error, sys_error_der, draw_weighted,
-    freq_count, draw_gauss_distributed)
+from statistics import (compute_error, sys_error, sys_error_der,sys_error_cons, sys_error_der_cons, draw_weighted, freq_count, draw_gauss_distributed)
 from energies import calc_q2, calc_Ecm
 from zeta_wrapper import Z
 from scattering_length import calculate_scat_len, calculate_parametrised_scat_len
@@ -309,6 +308,23 @@ class FitResult(object):
             rindex = [slice(None), slice(None)] + [x for x in index[len(self.corr_num):]]
             return self.data[lindex][rindex]
 
+    def get_fr_int(self,range_r,t_min,t_max):
+        # get indices for fitranges of interval
+        ranges=[]
+        # exactly one fitrange
+        for s,i in enumerate(range_r[0]):
+            if i[0] == t_min and i[1] == t_max:
+                ranges.append(s)
+            else:
+                continue
+        #for s,i in enumerate(range_r[0]):
+        #  if i[0] >= t_min and i[1] <= t_max:
+        #    if i[1]-i[0] >= min_dat:
+        #      ranges.append(s)
+        #    else:
+        #      continue
+        return ranges
+
     def cut_data(self, t_min, t_max, min_dat=7, par=1):
         """ Function to cut data in FitResult object to certain fit ranges
     
@@ -329,21 +345,7 @@ class FitResult(object):
         fitres_cut = FitResult('delta E', derived = False)
         # get fitranges from ratiofit
         range_r, r_r_shape = self.get_ranges()
-        # get indices for fitranges of interval
-        ranges=[]
-        # exactly one fitrange
-        for s,i in enumerate(range_r[0]):
-          if i[0] == t_min and i[1] == t_max:
-              ranges.append(s)
-          else:
-              continue
-        #for s,i in enumerate(range_r[0]):
-        #  if i[0] >= t_min and i[1] <= t_max:
-        #    if i[1]-i[0] >= min_dat:
-        #      ranges.append(s)
-        #    else:
-        #      continue
-
+        ranges=get_fr_int(range_r[0],t_i,t_min)
         # shape for 1 Correlator, data and pvalues
         shape_dE = (self.data[0].shape[0], self.data[0].shape[1], len(ranges))
         shape_pval = (self.pval[0].shape[0], len(ranges))
@@ -799,33 +801,42 @@ class FitResult(object):
         """Returns the fit ranges."""
         return self.fit_ranges, self.fit_ranges_shape
 
-    def calc_error(self, rel=False):
+    def calc_error(self, rel=False, conservative=False,fr_disc=None):
         """Calculates the error and weight of data.
         Parameters:
         -----------
           rel : Boolean to control whether the relative error is used
+          weight: Boolean, if false a conservative estimate over the fit
+                            intervals is made
         """
         if self.error is None:
             self.error = []
             self.weight = []
             if self.derived:
                 nfits = [d[0].size for d in self.data]
-                r, r_std, r_syst, w = sys_error_der(self.data, self.pval)
-                self.error.append((r, r_std, r_syst, nfits))
-                #print(w[0].shape)
-                self.weight.append(w)
+                #TODO: get rid of this if clause, bad style
+                if conservative is False:
+                    r, r_std, r_syst, w = sys_error_der(self.data, self.pval)
+                    self.error.append((r, r_std, r_syst, nfits))
+                    #print(w[0].shape)
+                    self.weight.append(w)
+                else:
+                    r, r_std, r_syst = sys_error_der_cons(self.data,fr_disc)
+                    self.error.append((r, r_std, r_syst, nfits))
             else:
                 #print(self.data)
                 nfits = [d[0,0].size for d in self.data]
                 npar = self.data[0].shape[1]
-                #print("In calc_error: Data")
-                #print(self.data)
-                print(npar)
                 for i in range(npar):
-                    r, r_std, r_syst, w = sys_error(self.data, self.pval,
-                        i,rel=rel)
-                    self.error.append((r, r_std, r_syst, nfits))
-                    self.weight.append(w)
+                    if conservative is False:
+                        r, r_std, r_syst, w = sys_error(self.data, self.pval,
+                            i,rel=rel)
+                        self.error.append((r, r_std, r_syst, nfits))
+                        self.weight.append(w)
+                    else:
+                        r, r_std, r_syst = sys_error_cons(self.data,
+                            i,fr_disc=fr_disc)
+                        self.error.append((r, r_std, r_syst, nfits))
 
     def print_data(self, par=0,tex=False):
         #TODO: Latex output not working properly

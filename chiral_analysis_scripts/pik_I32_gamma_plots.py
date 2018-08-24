@@ -145,6 +145,7 @@ def main():
         # plot the data beta wise 
         plotname = plotdir+'/pi_K_I32_fse_true_gamma_M%d%s_E%d_fr%d'%(args.zp,
                             args.msfix,args.epik,fr) 
+        fig = plt.figure()
         plt.xlabel(r'$M_K/M_\pi$',fontsize=11)
         plt.ylabel(r'$\Gamma$',fontsize=11)
         #bfc is for beta,format,colour
@@ -152,7 +153,7 @@ def main():
         fmt = ['^','v','o']
         col = ['r','b','g']
         plt.xlim((0.,2.2))
-        plt.ylim((-0.015,0.010))
+        plt.ylim((-0.018,0.008))
         for bfc in zip(beta,fmt,col):
             # get data
             try:
@@ -192,6 +193,7 @@ def main():
         #plt.errorbar(x,y,xerr=xerr,yerr=yerr,fmt='d',color='darkgoldenrod',
         #             label=r'physical point')
         plt.legend()
+        matplotlib.backends.backend_pgf.FigureCanvasPgf(fig).print_pdf(plotname+'.pdf')
         plt.savefig(plotname+'.pgf')
         plt.clf()
 

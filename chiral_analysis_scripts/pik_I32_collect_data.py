@@ -100,42 +100,44 @@ def main():
     pd.set_option('display.width',1000)
     # keys for the hdf datasets
     chpt = ['nlo_chpt','gamma']
-    epik_meth = ['E1','E3']
-    zp_meth = [1, 2]
-    ms_fixing = ['A', 'B']
+    epik_meth = ['E1','E2']
+    #zp_meth = [1, 2]
+    #ms_fixing = ['A', 'B']
     fr_labels = [0,1,2]
     # construct filenames
     file_prefix='pi_K_I32'
-    resultdir = '/hiskp4/helmes/analysis/scattering/pi_k/I_32_publish/results/'
+    resultdir = '/hiskp4/helmes/analysis/scattering/pi_k/I_32_cov_false/results/'
     # for physical calculations get dictionary of continuum bootstrapsamples
     # seeds for M1A,M1B,M2A and M2B
-    ini_path = '/hiskp4/helmes/projects/analysis-code/ini/pi_K/I_32_publish'
-    ini1 = ini_path+'/'+'chiral_analysis_mua0_zp1.ini'
-    ini2 = ini_path+'/'+'chiral_analysis_mua0_zp2.ini'
+    ini_path = '/hiskp4/helmes/projects/analysis-code/ini/pi_K/I_32_cov_false'
+    ini1 = ini_path+'/'+'chiral_analysis_mua0.ini'
+    #ini1 = ini_path+'/'+'chiral_analysis_mua0_zp1.ini'
+    #ini2 = ini_path+'/'+'chiral_analysis_mua0_zp2.ini'
     ens1 = ana.LatticeEnsemble.parse(ini1)
-    ens2 = ana.LatticeEnsemble.parse(ini2)
-    nboot = ens2.get_data('nboot')
-    cont={'M1A':ana.ContDat(ens1.get_data('continuum_seeds_a'),zp_meth=1),
-          'M2A':ana.ContDat(ens2.get_data('continuum_seeds_a'),zp_meth=2),
-          'M1B':ana.ContDat(ens1.get_data('continuum_seeds_b'),zp_meth=1),
-          'M2B':ana.ContDat(ens2.get_data('continuum_seeds_b'),zp_meth=2)}
+    nboot = ens1.get_data('nboot')
+    #cont={'M1A':ana.ContDat(ens1.get_data('continuum_seeds_a'),zp_meth=1),
+    #      'M2A':ana.ContDat(ens2.get_data('continuum_seeds_a'),zp_meth=2),
+    #      'M1B':ana.ContDat(ens1.get_data('continuum_seeds_b'),zp_meth=1),
+    #      'M2B':ana.ContDat(ens2.get_data('continuum_seeds_b'),zp_meth=2)}
+    cont={'M1A':ana.ContDat(ens1.get_data('continuum_seeds_a'),zp_meth=1)}
     # construct
     df_collect = pd.DataFrame()
     final_results = pd.DataFrame()
-    for tp in it.product(chpt,epik_meth,zp_meth,ms_fixing,fr_labels):
-        filename = '%s_%s_M%d%s.h5'%(file_prefix,tp[0],tp[2],tp[3])
+    #for tp in it.product(chpt,epik_meth,zp_meth,ms_fixing,fr_labels):
+    for tp in it.product(chpt,epik_meth,fr_labels):
+        filename = '%s_%s_M1A.h5'%(file_prefix,tp[0])
         #keyname = '%s/%s/fr_%d'%(tp[0],tp[1],tp[4])
         #keyname = 'interp_corr_false/%s/%s/fr_%d'%(tp[0],tp[1],tp[4])
         #keyname = 'fse_false/%s/%s/fr_%d'%(tp[0],tp[1],tp[4])
-        keyname = 'fse_true/%s/%s/fr_%d'%(tp[0],tp[1],tp[4])
+        keyname = 'fse_true/%s/%s/fr_%d'%(tp[0],tp[1],tp[2])
         print(filename,keyname)
         branch_result = pd.read_hdf(resultdir+filename,key=keyname)
         branch_result.info()
         # extend dataframe for description
         branch_result['ChPT'] = tp[0]
         branch_result['poll'] = tp[1]
-        branch_result['RC'] = tp[2]
-        branch_result['ms_fix'] = tp[3]
+        #branch_result['RC'] = tp[2]
+        #branch_result['ms_fix'] = tp[3]
         groups=['beta','L','mu_l']
         obs = ['mu_piK_a32_scaled','L_piK']
         print(chi.print_si_format(chi.bootstrap_means(branch_result,groups,obs)))
@@ -156,9 +158,10 @@ def main():
         tmp_fin_res['fr_end'] = branch_result['fr_end'].unique()[0]
         tmp_fin_res['ChPT'] = tp[0]
         tmp_fin_res['poll'] = tp[1]
-        tmp_fin_res['RC'] = tp[2]
-        tmp_fin_res['ms_fix'] = tp[3]
-        tmp_cont=cont['M%d%s'%(tp[2],tp[3])]
+        #tmp_fin_res['RC'] = tp[2]
+        #tmp_fin_res['ms_fix'] = tp[3]
+        #tmp_cont=cont['M%d%s'%(tp[2],tp[3])]
+        tmp_cont=cont['M1A']
         tmp_fin_res['chi^2'] = branch_result.loc[0:nboot,'chi^2']
         tmp_fin_res['dof'] = branch_result.loc[0:nboot,'dof']
         tmp_fin_res['p-val'] = branch_result.loc[0:nboot,'p-val']

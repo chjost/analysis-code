@@ -201,6 +201,32 @@ def sys_error(data, pvals, par=0, rel=True):
         #print(res[i][0])
     return res, res_std, res_sys, data_weight
 
+
+#TODO: Not finished yet, needs thinking about fitrange selection
+def sys_error_cons(data,par,fr_disc):
+    # loop over principal correlators
+    res, res_std, res_sys = [], [], []
+    for i, d in enumerate(data):
+        res.append(np.zeros(d.shape[0]))
+        res_std.append(np.zeros((1,)))
+        res_sys.append(np.zeros((2,)))
+        print(d.shape) 
+        for b in range(d.shape[0]):
+            tp = (b,par)+fr_disc
+            res[i][b] = d[tp]
+                    
+        # the statistical error is the standard deviation of the medians
+        # over the bootstrap samples.
+        _, s = mean_std(res[i])
+        res_std[i] = s
+        # A conservative estimate is the distance of the outer values of the
+        # parameter to the assumed mean.
+        # get means sorted
+        means = d[0,par].ravel()[np.argsort(d[0,par].ravel())]
+        # that will be the upper error
+        res_sys[i][0]=means[-1]-res[i][0] 
+        res_sys[i][1]=res[i][0]-means[0]
+    return res, res_std, res_sys
 def sys_error_der(data, weights):
     """Calculates the statistical and systematic error of a data set
     that already has the weights calculated.
@@ -248,6 +274,29 @@ def sys_error_der(data, weights):
         res_sys[i][1] = weighted_quantile(d[0].ravel(), weights[i][0].ravel(),
                 0.84)-res[i][0]
     return res, res_std, res_sys, data_weight
+def sys_error_der_cons(data,fr_disc,par=0):
+    res, res_std, res_sys = [], [], []
+    # loop over principal correlators
+    for i, d in enumerate(data):
+        res.append(np.zeros(d.shape[0]))
+        res_std.append(np.zeros((1,)))
+        res_sys.append(np.zeros((2,)))
+        for b in range(d.shape[0]):
+            tp=(b,par)+fr_disc
+            res[i][b] = d[tp]
+                    
+        # the statistical error is the standard deviation of the medians
+        # over the bootstrap samples.
+        _, s = mean_std(res[i])
+        res_std[i] = s
+        # A conservative estimate is the distance of the outer values of the
+        # parameter to the assumed mean.
+        # get means sorted
+        means = d[0,par][np.argsort(d[0,par])]
+        # that will be the upper error
+        res_sys[i][0]=means[-1]-res[i][0] 
+        res_sys[i][1]=res[i][0]-means[0]
+    return res, res_std, res_sys
 
 def estimated_autocorrelation(x):
       """

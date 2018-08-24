@@ -61,7 +61,7 @@ def main():
     #E2
     pi_k_fitresult_e2 = ana.FitResult.read("%s/%s_%s_E2_corr_false.npz" % (datadir,fit_pik_out,lat))
     #pi_k_fitresult_e2.print_data(1)
-    cut=True
+    cut=False
     if cut is True:
         range_cut = pd.read_csv('/hiskp4/helmes/analysis/scattering/pi_k/I_32_cov_false/runs/range_cuts_pik.txt',
                 sep='\s+')

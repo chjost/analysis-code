@@ -77,7 +77,12 @@ def mua32_phys(df,cont):
 
 #TODO: think about moving that to the extrapolation
 def rel_dev_nlochpt(df):
-    mua32 = df['mu_piK_a32_scaled'].values
+    df = df.set_index(keys=['beta','L','mu_l'])
+    means = df.loc[df['sample']==0][['beta','L','mu_l','mu_piK_a32_scaled']]
+    df = df.join(means.set_index(keys=['beta','L','mu_l']),rsuffix='_orig')
+    df = df.reset_index()
+    #mua32 = df['mu_piK_a32_scaled'].values
+    mua32 = df['mu_piK_a32_scaled_orig'].values
     p = df[['L_piK','L_5']].values.T
     mpi = df['M_pi'].values
     mk = df['M_K'].values
@@ -146,7 +151,23 @@ def main():
         phys_df.info()
         fit_df = fit_df.merge(phys_df,on='sample')
         # Calculate the relative deviation between the data and the fit
-        fit_df['rel.dev.'] = rel_dev_nlochpt(fit_df)
+        means = fit_df.loc[fit_df['sample']==0][['beta','L','mu_l','mu_piK_a32_scaled']]
+        # TODO: Wrap that in an enchilata function
+        fit_df = fit_df.set_index(keys=['beta','L','mu_l']).join(means.set_index(keys=['beta','L','mu_l']),rsuffix='_orig')
+        fit_df = fit_df.reset_index()
+        mua32 = fit_df['mu_piK_a32_scaled_orig'].values
+        p = fit_df[['L_piK','L_5']].values.T
+        mpi = fit_df['M_pi'].values
+        mk = fit_df['M_K'].values
+        fpi = fit_df['fpi'].values
+        meta=fit_df['M_eta'].values
+        fit_df['abs.dev.']=pd.Series(mua32-ana.pik_I32_chipt_nlo(mpi,mk,fpi,p,meta=meta),index=fit_df.index)
+        fit_df['fit.eval']=pd.Series(ana.pik_I32_chipt_nlo(mpi,mk,fpi,p,meta=meta),index=fit_df.index)
+        reldev=(mua32-ana.pik_I32_chipt_nlo(mpi,mk,fpi,p,meta=meta))/mua32
+        dev_series = pd.Series(reldev,index=fit_df.index)
+        #return dev_series
+        fit_df['rel.dev.']=dev_series
+        #fit_df['rel.dev.'] = rel_dev_nlochpt(fit_df)
         # for the plots we only need the y-values, the x-values and the function
         # evaluation, carry with us the identifiers beta mu_l and L
         plot_df = fit_df[['beta','L','mu_l','fr_bgn','fr_end',
@@ -205,6 +226,7 @@ def main():
         rel_dev['name'] = ensemblenames(rel_dev.index.values)
         rel_dev['ypos'] = np.arange(rel_dev.shape[0])
         rel_dev['fmt'] = set_format(rel_dev)
+        plt.xlim(-0.5,0.5)
         for index, row in rel_dev.iterrows():
             plt.errorbar(row['rel.dev.']['own_mean'],row['ypos'],
                          xerr=row['rel.dev.','own_std'],
@@ -215,6 +237,7 @@ def main():
         matplotlib.backends.backend_pgf.FigureCanvasPgf(fig).print_pdf(plotname+'_rel_dev.pdf')
         plt.savefig(plotname+'_rel_dev.pgf')
         plt.close()
+        fit_df.to_hdf(filename,key=key+'_dev')
 
 
 if __name__ == "__main__":
