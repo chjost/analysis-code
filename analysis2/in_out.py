@@ -8,12 +8,52 @@ import h5py
 import json
 import os
 import numpy as np
+import pandas as pd
 import ConfigParser as cp
 
 from build_io_names import inputnames
 #import configparser as cp
 
+def corr_to_pandas(data,identifier):
+    """Convert correlator data object to a pandas dataframe"""
+    column_names = ['sample','t','C(t)']
+    t = np.arange(data.shape[1])
+    df = pd.DataFrame(columns=column_names)
+    for b,d in enumerate(data):
+        tmp = pd.DataFrame(d[:,0],columns=['C(t)'])
+        tmp['sample'] = b
+        tmp['t'] = t
+        df = df.append(tmp)
+    df['id'] = identifier
+    return df
 
+def fitres_to_pandas(fitres,identifier):
+    """Convert correlator data object to a pandas dataframe"""
+    # List of parameter names
+    parlist = ['par%d'%n for n in np.arange(fitres.data[0].shape[1])]
+    column_names = ['sample','t_i','t_f','p-val','chi^2/dof']+parlist
+    df = pd.DataFrame(columns=column_names)
+    bsamples = np.arange(fitres.data[0].shape[0])
+    for r,i in enumerate(fitres.fit_ranges[0]):
+        # fitranges are inclusive
+        dof = i[1]-i[0]+1-len(parlist)
+        try:
+            par_bs = fitres.data[0][:,:,0,r]
+        except:
+            par_bs = fitres.data[0][:,:,r]
+        tmp = pd.DataFrame(par_bs,columns=parlist)
+        tmp['sample'] = bsamples
+        tmp['t_i'] = i[0]
+        tmp['t_f'] = i[1]
+        try:
+            tmp['p-val'] = fitres.pval[0][:,0,r]
+            tmp['chi^2/dof'] = fitres.chi2[0][:,0,r]/dof
+        except:
+            tmp['p-val'] = fitres.pval[0][:,r]
+            tmp['chi^2/dof'] = fitres.chi2[0][:,r]/dof
+        df = df.append(tmp)
+    df['id'] = identifier
+    return df
 
 def read_single(fname, column, skip, debug=0):
     """Read a single correlation function from file.

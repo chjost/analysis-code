@@ -73,11 +73,27 @@ def scale_obs_std(array,fac):
     tmp[0] = mean
     return tmp
 
-def get_factor_error_scaling(names,eval_obs):
+def get_fr_disc(names,fr_cuts,ens,emeth):
+    """Get indices of fitrange based on four point fit"""
+    t_i = fr_cuts.loc[fr_cuts['Ensemble']==ens]['%s_init'%emeth].values
+    t_f = fr_cuts.loc[fr_cuts['Ensemble']==ens]['%s_final'%emeth].values
+    fr = ana.init_fitreslst(names)
+    fr_disc=[]
+    for e,r in enumerate(fr):
+        print(r.fit_ranges[0])
+        print(t_i,t_f)
+        fr_disc.append(r.get_fr_int(r.fit_ranges,t_i[e],t_f[e])[0])
+    print("\nList of indices is:")
+    print(fr_disc)
+    return fr_disc 
+
+def get_factor_error_scaling(names,eval_obs,fr_disc):
     fr = ana.init_fitreslst(names)
     sys_avg = 0
-    for r in fr:
-        r.calc_error()
+    for i,r in enumerate(fr):
+        #TODO: much to complicated conversion
+        fr_tp = tuple([fr_disc[i]])
+        r.calc_error(conservative=True,fr_disc=fr_tp)
         #TODO: ATM this is specific to mu_piK a0
         sys_avg+=np.sum(r.error[0][2][0])/2. 
     sys_avg/=len(fr)
@@ -141,11 +157,14 @@ def main():
     # Prepare external data, saving it is at the moment not feasible
     ext_data = ana.ExtDat(external_seeds,space,zp_meth)
     #ana.save_dict(resdir+'/external_observables_A%d.json'%zp_meth,ext_data.data)
-    cont_data = ana.ContDat(continuum_seeds,zp_meth=zp_meth)
+    #only use one r0 value
+    cont_data = ana.ContDat(continuum_seeds,zp_meth="phys")
     #ana.save_dict(resdir+'/continuum_observables_A%d.json'%zp_meth,cont_data.data)
     fpi_raw = ana.read_extern("../plots2/data/fpi.dat",(1,2))
     read = False
     print("\nSetup complete, begin chiral analysis")
+    range_cut = pd.read_csv('/hiskp4/helmes/analysis/scattering/pi_k/I_32_cov_false/runs/range_cuts_pik.txt',
+                sep='\s+')
     if read is True:
         print("Nothing to be done")
     else:
@@ -212,13 +231,15 @@ def main():
                 print(metasq.obs[:,0])
 
 ########################  read in mu_pik a_3/2 ################################
+                epik_names = [datadir+'%s/' % (e) +s+'/fit_pik_%s_%s_corr_false.npz' % (e,epik_meth) for s in mu_s_dict[a]]
+                fr_disc = get_fr_disc(epik_names,range_cut,e,epik_meth)
                 mua32 = ana.MatchResult("mua32_M%dA_%s_%s" %(zp_meth,epik_meth,
                                         e),save=datadir+'%s/'%e)
                 ana.MatchResult.create_empty(mua32,nboot,3)
                 mua32_names = [datadir+'%s/' % (e) +s+'/mu_a0_TP0_%s_%s.npz' 
                                % (e,epik_meth) for s in mu_s_dict[a]]
                 mua32_meas=ana.init_fitreslst(mua32_names)
-                mua32.load_data(mua32_meas,0,amu_s_dict[a],square=False)
+                mua32.load_data(mua32_meas,0,amu_s_dict[a],square=False,ti=fr_disc)
 #####    ############### read in M_pi^FSE ###########################################
                 mpi_fse = ana.MatchResult("mpi_fse_M%dB_%s"%(zp_meth,e),save=datadir+'%s/'%e)
                 ana.MatchResult.create_empty(mpi_fse,nboot,3)
@@ -264,10 +285,9 @@ def main():
                 mua32.eval_at(evl_x,plotdir=plotdir,
                                ens=e,correlated=False,plot=True,label=label,
                                meth=2,
-                               #y_lim = [-0.145,-0.09]
+                               y_lim = [-0.16,-0.10]
                                )
-
-                factor = get_factor_error_scaling(mua32_names,mua32.eval_obs[2])            
+                factor = get_factor_error_scaling(mua32_names,mua32.eval_obs[2],fr_disc)            
                 mua32_scaled = scale_obs_std(mua32.eval_obs[2],factor) 
 ####    ############################################################################
 #                       copy to pandas dataframe                                   #
@@ -290,13 +310,14 @@ def main():
         #observables=['M_K^2_FSE','P_0','P_1','P_2','P_r','P_Z','P_mu','M_K^2_func']
         obs = ['M_K^2','mu_piK_a32','mu_piK_a32_scaled','M_eta^2','mu_s^fix']
         print(chi.bootstrap_means(interpolated_A,groups,obs))
-        proc_id = 'pi_K_I32_interpolate_M%dA'%(zp_meth)
-        hdf_savename = resdir+proc_id+'.h5'
-        hdfstorer = pd.HDFStore(hdf_savename)
+        proc_id = 'pi_K_I32_interpolate_M1A'
+        #hdf_savename = resdir+proc_id+'.h5'
+        #hdfstorer = pd.HDFStore(hdf_savename)
         #hdfstorer.put('Interpolate_%s'%epik_meth,interpolated_A)
         #hdfstorer.put('Interpolate_scale_fpi_%s'%epik_meth,interpolated_A)
-        hdfstorer.put('Interpolate_uncorrelated_%s'%epik_meth,interpolated_A)
-        del hdfstorer
+        #hdfstorer.put('Interpolate_uncorrelated_%s'%epik_meth,interpolated_A)
+        #hdfstorer.put('Interpolate_uncorrelated_%s'%epik_meth,interpolated_A)
+        #del hdfstorer
 if __name__ == '__main__':
     try:
         main()

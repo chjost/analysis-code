@@ -54,6 +54,7 @@ def main():
         k_corr.sym_and_boot(nboot,bl=bs_bl,method='stationary')
         print(k_corr.shape)
         k_corr.save("%s/%s_%s.npy" % (datadir,corr_k_out , lat))
+        k_corr.save_h5("%s/%s_%s.h5" % (datadir,corr_k_out , lat),'sym_sb')
     else:
         k_corr = ana.Correlators.read("%s/%s_%s.npz" % (datadir,corr_k_out,lat))
     # fit kaon correlation function for multiple fitranges
@@ -65,6 +66,7 @@ def main():
         k_fitresult = fit_k.fit(start, k_corr, [t_mass_k],
             add=addT)
         k_fitresult.save("%s/%s_%s.npz" % (datadir,fit_k_out, lat))
+        k_fitresult.save_h5("%s/%s_%s.h5" % (datadir,fit_k_out, lat),'fit_k')
     else:
         k_fitresult = ana.FitResult.read("%s/%s_%s.npz" % (datadir,fit_k_out,lat))
     k_fitresult.calc_error()

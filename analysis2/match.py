@@ -7,7 +7,7 @@ matplotlib.use('Agg') # has to be imported before the next lines
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from matplotlib.backends.backend_pdf import PdfPages
-matplotlib.rcParams['font.size'] = 14
+#matplotlib.rcParams['font.size'] = 14
 import numpy as np
 
 import chiral_utils as chut
@@ -187,7 +187,7 @@ class MatchResult(object):
         self.obs_id = obs_id
 
     # get data from collection of fitresults
-    def load_data(self,fitreslst,par,amu,square=False,mult=None,debug=0):
+    def load_data(self,fitreslst,par,amu,square=False,mult=None,ti=None,debug=0):
       """load a list of fitresults and a list of amu values into an existing instance of
       MatchResult
 
@@ -207,7 +207,11 @@ class MatchResult(object):
         raise ValueError("Fitresults and amu have different length")
       # from a list of fitresults, check if singular, singularize, if needed,
       for i,r in enumerate(fitreslst):
-        r = r.singularize()
+          # Either take the weighted median
+        if ti is None:
+            r = r.singularize()
+        else:
+            r = r.fr_select(ti[i])
         self.obs[i] = r.data[0][:,par,0]
         #print(r.data[0][:,0,0])
         if debug > 0:
@@ -711,13 +715,18 @@ class MatchResult(object):
       xlo = np.amin(self.amu)-0.05*np.amin(self.amu)
       xhi = np.amax(self.amu)+0.05*np.amax(self.amu)
       if y_lim is not None:
+        print("Plot match: Using ylim:")
+        print(y_lim)
         plt.ylim(y_lim[0],y_lim[1])
+        plt.yticks(np.linspace(y_lim[0],y_lim[1],4))
+      else:
+        plt.locator_params(axis='y',nbins=4, min_n_ticks=4)
       plt.xlim(xlo,xhi)
-      plt.locator_params(axis='y',nbins=4, min_n_ticks=2)
       plt.locator_params(axis='x',nbins=5, min_n_ticks=2)
+      plt.tick_params(axis='both',labelsize=20)
       plt.xlabel(label[0],fontsize=24)
       plt.ylabel(label[1],fontsize=24)
-      plt.legend(loc='best',numpoints=1,ncol=1)
+      plt.legend(loc='upper right',numpoints=1,ncol=1,fontsize=18)
       pmatch.savefig()
       pmatch.close()
       plt.clf()

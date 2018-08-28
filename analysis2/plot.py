@@ -256,13 +256,13 @@ class LatticePlot(object):
                     #    plotrange=[0,T],col=self.cycol(),fmt=self.cyfmt())
                     plot_data(X+xshift, ddata,
                         np.zeros_like(ddata), label=_datlabel,
-                        plotrange=[0,T],col=self.cycol(),fmt=self.cyfmt())
+                        plotrange=[0,T],col=self.cycol(),fmt=self.cyfmt(),debug=debug)
                 else:
                     # print data to screen
                     if debug > 3:
                       self._save_data_ascii(X, corr.data[0,:,n], ddata, label)
                     plot_data(X+xshift, corr.data[0,:,n], ddata, _datlabel,
-                        plotrange=[0,T],col=self.cycol(),fmt=self.cyfmt())
+                        plotrange=[0,T],col=self.cycol(),fmt=self.cyfmt(),debug=debug)
                 plt.legend(loc='best')
                 if self.title is not None:
                     self.set_title(label[0], label[1:3])
@@ -285,7 +285,7 @@ class LatticePlot(object):
                     # plot
                     self._set_env_normal()
                     plot_data(X+xshift, corr.data[0,:,n], ddata, _datlabel,
-                            plotrange=[1,T],col=self.cycol())
+                            plotrange=[1,T],col=self.cycol(),debug=debug)
                     # The argument X has changed
                     #_X = [X[0],X[-1]]
                     plot_function(fitfunc.fitfunc, fi, mpar, label[4],

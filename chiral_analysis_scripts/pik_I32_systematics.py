@@ -47,8 +47,9 @@ sys.path.append('/hiskp4/helmes/projects/analysis-code/')
 import analysis2 as ana
 import chiron as chi
 def method_df(df,tp):
-    _df = df.loc[(df['ChPT']==tp[0]) & (df['poll']==tp[1]) 
-           & (df['RC']==tp[2]) &(df['ms_fix']==tp[3])]
+    #_df = df.loc[(df['ChPT']==tp[0]) & (df['poll']==tp[1]) 
+    #       & (df['RC']==tp[2]) &(df['ms_fix']==tp[3])]
+    _df = df.loc[(df['ChPT']==tp[0]) & (df['poll']==tp[1]) ]
     return _df
 
 def fitrange_averages(df,observables):
@@ -57,26 +58,31 @@ def fitrange_averages(df,observables):
     
     """
     chpt = ['nlo_chpt','gamma']
-    epik_meth = ['E1','E3']
-    zp_meth = [1, 2]
-    ms_fixing = ['A', 'B']
+    epik_meth = ['E1','E2']
+    #zp_meth = [1, 2]
+    zp_meth = [1,]
+    #ms_fixing = ['A', 'B']
+    ms_fixing = ['A',]
     weighted_df = pd.DataFrame()
     # loop over all methods for weight computation
-    for tp in it.product(chpt,epik_meth,zp_meth,ms_fixing):
-      # choose method
-      fr_col = 'fr_end'
-      if tp[0] == 'gamma':
-        fr_col = 'fr_bgn'
-      tmp_df = method_df(df,tp)
-      # HEuristic way to slim the dataframe
-      averaged_df = tmp_df[['ChPT',
-          'poll','RC','ms_fix','sample']].iloc[0:1500]
-      averaged_df['RC'] = averaged_df['RC'].apply(lambda x: str(x))
-      # create a frame per method for the averaged observables
-      for o in observables:
-        o_weighted = weighted_average_method(tmp_df,o,fr_col=fr_col)
-        averaged_df = averaged_df.merge(o_weighted,on='sample')
-      weighted_df = weighted_df.append(averaged_df)
+    #for tp in it.product(chpt,epik_meth,zp_meth,ms_fixing):
+    for tp in it.product(chpt,epik_meth):
+        # choose method
+        fr_col = 'fr_end'
+        if tp[0] == 'gamma':
+          fr_col = 'fr_bgn'
+        tmp_df = method_df(df,tp)
+        # HEuristic way to slim the dataframe
+        #averaged_df = tmp_df[['ChPT',
+        #    'poll','RC','ms_fix','sample']].iloc[0:1500]
+        #averaged_df['RC'] = averaged_df['RC'].apply(lambda x: str(x))
+        averaged_df = tmp_df[['ChPT', 'poll','sample']].iloc[0:1500]
+        # create a frame per method for the averaged observables
+        for o in observables:
+            #print("\ncalculate weighted average for observable %s"%o)
+            o_weighted = weighted_average_method(tmp_df,o,fr_col=fr_col)
+            averaged_df = averaged_df.merge(o_weighted,on='sample')
+        weighted_df = weighted_df.append(averaged_df)
     return weighted_df
 
 def weighted_average_method(df,obs,fr_col='fr_end'):
@@ -116,7 +122,7 @@ def weighted_average_method(df,obs,fr_col='fr_end'):
 def main():
     pd.set_option('display.width',1000)
     # keys for the hdf datasets
-    resultdir = '/hiskp4/helmes/analysis/scattering/pi_k/I_32_publish/results/'
+    resultdir = '/hiskp4/helmes/analysis/scattering/pi_k/I_32_cov_false/results/'
     
     filename = 'pi_K_I32_overview.h5'
     #keyname = '/interp_corr_false/physical_results' 
@@ -127,16 +133,23 @@ def main():
     final_results.info()
     pd.read_hdf(resultdir+filename,key=keyname)
     final_results['chi^2/dof'] = final_results['chi^2']/final_results['dof']
+    #observables = ['mu_piK_a32_phys','L_piK','mu_piK_a12_phys','M_pi_a32_phys',
+    #               'M_pi_a12_phys','tau_piK','chi^2/dof']
     observables = ['mu_piK_a32_phys','L_piK','mu_piK_a12_phys','M_pi_a32_phys',
                    'M_pi_a12_phys','tau_piK','chi^2/dof']
     #observables = ['mu_piK_a32_phys','L_piK','chi^2/dof']
-    groups_fr = ['ChPT','poll','RC','ms_fix','fr_bgn','fr_end']
-    groups_wofr = ['ChPT','poll','RC','ms_fix']
+    #groups_fr = ['ChPT','poll','RC','ms_fix','fr_bgn','fr_end']
+    #groups_wofr = ['ChPT','poll','RC','ms_fix']
+    groups_fr = ['ChPT','poll','fr_bgn','fr_end']
+    groups_wofr = ['ChPT','poll']
     fr_means = fitrange_averages(final_results,observables)
+    print("Sample of final results")
+    print(final_results.sample(n=20))
     print(chi.print_si_format(chi.bootstrap_means(final_results,groups_fr,observables)))
     print(chi.print_si_format(chi.bootstrap_means(fr_means,groups_wofr,observables)))
+    print(chi.bootstrap_means(final_results,groups_fr,observables).reset_index())
     #compute_weight_method(final_results,['ChPT','poll','RC'],['mu_piK_a32_phys'])
-    sources = ['poll','ms_fix','RC','ChPT']
+    sources = ['poll','ChPT']
     observables = ['L_piK','mu_piK_a32_phys',
                    'M_pi_a32_phys','M_pi_a12_phys','tau_piK']
     #observables = ['L_piK','mu_piK_a32_phys']

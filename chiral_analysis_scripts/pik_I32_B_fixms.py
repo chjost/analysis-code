@@ -68,6 +68,17 @@ def amk_sq(df):
     mksq_func = p0/(pr*pz)*(mul+pmu*mus)*(1+p1*pr*mul/pz+p2/pr**2)
     mksq = pd.Series(mksq_func,index = df.index)
     return mksq
+def amk_sq_wopmu(df):
+    p0 = df['P_0'].values
+    p1 = df['P_1'].values
+    p2 = df['P_2'].values
+    pr = df['P_r'].values
+    pz = df['P_Z'].values
+    mul = df['mu_l'].values
+    mus = df['mu_s'].values
+    mksq_func = p0/(pr*pz)*(mul+mus)*(1+p1*pr*mul/pz+p2/pr**2)
+    mksq = pd.Series(mksq_func,index = df.index)
+    return mksq
 
 #def ms_phys(df,cont):
 #    """ Calculate physical strange quark mass from continuum data and
@@ -261,11 +272,11 @@ def main():
         #observables=['M_K^2_FSE','M_K^2_func','rel.dev.']
         print(chi.bootstrap_means(fitres,groups,observables))
         proc_id = 'pi_K_I32_fixms_M%dB'%(zp_meth)
-        hdf_filename = resdir+proc_id+'.h5'
-        hdfstorer = pd.HDFStore(hdf_filename)
-        #hdfstorer.put('Fitresults_sigma',fitres)
-        hdfstorer.put('Fitresults_uncorrelated',fitres)
-        del hdfstorer
+        #hdf_filename = resdir+proc_id+'.h5'
+        #hdfstorer = pd.HDFStore(hdf_filename)
+        ##hdfstorer.put('Fitresults_sigma',fitres)
+        #hdfstorer.put('Fitresults_uncorrelated',fitres)
+        #del hdfstorer
         
 if __name__ == '__main__':
     try:

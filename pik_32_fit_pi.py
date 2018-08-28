@@ -54,6 +54,7 @@ def main():
         pi_corr.sym_and_boot(nboot,bl=bs_bl,method='stationary')
         print(pi_corr.shape)
         pi_corr.save("%s/%s_%s.npy" % (datadir,corr_pi_out , lat))
+        pi_corr.save_h5("%s/%s_%s.h5" % (datadir,corr_pi_out , lat),'sym_sb')
     else:
         pi_corr = ana.Correlators.read("%s/%s_%s.npz" % (datadir,corr_pi_out,lat))
     # fit pion correlation function for multiple fitranges
@@ -65,6 +66,7 @@ def main():
         pi_fitresult = fit_pi.fit(start, pi_corr, [t_mass_pi],
             add=addT)
         pi_fitresult.save("%s/%s_%s.npz" % (datadir,fit_pi_out, lat))
+        pi_fitresult.save_h5("%s/%s_%s.h5" % (datadir,fit_pi_out, lat),'fit_pi')
     else:
         pi_fitresult = ana.FitResult.read("%s/%s_%s.npz" % (datadir,fit_pi_out,lat))
 

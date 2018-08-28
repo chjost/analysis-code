@@ -31,6 +31,7 @@
 import sys
 import numpy as np
 import matplotlib
+import pandas as pd
 matplotlib.use('Agg') # has to be imported before the next lines
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
@@ -44,14 +45,22 @@ def print_table_header(col_names):
   print(' & '.join(col_names)+'\\\\')
   print('\midrule')
 
-def fitres_stats(filename,par):
+def fitres_stats(filename,par,frind=None,der=False):
     # load fitresult and calculate error
     fitresult = ana.FitResult.read(filename)
-    fitresult.calc_error()
+    print(fitresult.data[0].shape)
+    if frind is not None:
+        if der is not False:
+            tpfr=(0,frind[0])
+        else:
+            tpfr = tuple(frind)
+        fitresult.calc_error(conservative=True,fr_disc=tpfr)
+    else:
+        fitresult.calc_error()
     res_mean = fitresult.error[par][0][0][0]
     res_std = fitresult.error[par][1][0]
-    res_sys_dn = fitresult.error[par][2][0][0]
-    res_sys_up = fitresult.error[par][2][0][1]
+    res_sys_up = fitresult.error[par][2][0][0]
+    res_sys_dn = fitresult.error[par][2][0][1]
     stats_list = [res_mean,res_std,res_sys_dn,res_sys_up]
     return stats_list
 
@@ -68,70 +77,79 @@ def print_line_latex(lat, d, prec1=1e4, prec2=1e3, prec3=1e5, prec4=1e2, syserro
   #if dx.shape[0] == 2:
   if syserror:
     print(("%9s & %.4f &"
-           " $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
-           " $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
-           " $%.5f(%1.0f)(^{+%1.0f}_{-%1.0f})$ \\\\")% 
+           #" $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
+           #" $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
+           #" $%.5f(%1.0f)(^{+%1.0f}_{-%1.0f})$ \\\\")% 
            ## Next 3 lines are for E_piK
            #" $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
            #" $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
-           #" $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$  \\\\") %
            ## Next 3 lines are for delta E x 10^3
            #" $%.2f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
-           #" $%.5f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
            # " $%.2f(%1.0f)(^{+%1.0f}_{-%1.0f})$ \\\\") % 
            ## Next 3 lines are for delta a0
-           #" $%.2f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
-           #" $%.2f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
-           #" $%.2f(%1.0f)(^{+%1.0f}_{-%1.0f})$ \\\\")% 
+           " $%.2f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
+           " $%.2f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
            ## Next 3 lines are for delta mu a0
-           #" $%.3f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
-           #" $%.3f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
-           #" $%.3f(%1.0f)(^{+%1.0f}_{-%1.0f})$ \\\\") % 
+           " $%.3f(%1.0f)(^{+%1.0f}_{-%1.0f})$ &"
+           " $%.3f(%1.0f)(^{+%1.0f}_{-%1.0f})$ \\\\") % 
                 (lat,
                   d[0],
-                  d[1][0], d[1][1]*prec1, d[1][2]*prec1, d[1][3]*prec1,
-                  d[2][0], d[2][1]*prec1, d[2][2]*prec1, d[2][3]*prec1,
+                  #d[1][0], d[1][1]*prec1, d[1][2]*prec1, d[1][3]*prec1,
+                  #d[2][0], d[2][1]*prec1, d[2][2]*prec1, d[2][3]*prec1,
                   # For negative valued observables the sign for the systematics
                   # needs to be changed, implemented by changing position of up
                   # and down boundaries
-                  d[3][0], d[3][1]*prec3, d[3][3]*prec3, d[3][2]*prec3)
+                  #d[3][0], d[3][1]*prec3, d[3][3]*prec3, d[3][2]*prec3)
                   # Next 3 lines are for E_piK
                   #d[4][0], d[4][1]*prec1, d[4][3]*prec1, d[4][2]*prec1,
-                  #d[5][0], d[5][1]*prec1, d[5][3]*prec1, d[5][2]*prec1,
-                  #d[6][0], d[6][1]*prec1, d[6][3]*prec1, d[6][2]*prec1)
+                  #d[5][0], d[5][1]*prec1, d[5][3]*prec1, d[5][2]*prec1)
                   ## Next 3 lines are for delta E
-                  #d[7][0]*10**3, d[7][1]*prec3, d[7][3]*prec3, d[7][2]*prec3,
-                  #d[8][0], d[8][1]*prec3, d[8][3]*prec3, d[8][2]*prec3,
-                  #d[9][0]*10**3, d[9][1]*prec3, d[9][3]*prec3, d[9][2]*prec3)
+                  #d[6][0]*10**3, d[6][1]*prec3, d[6][3]*prec3, d[6][2]*prec3,
+                  #d[7][0]*10**3, d[7][1]*prec3, d[7][3]*prec3, d[7][2]*prec3)
                   ## Next 3 lines are for a0
-                  #d[10][0], d[10][1]*prec4, d[10][3]*prec4, d[10][2]*prec4,
-                  #d[11][0], d[11][1]*prec4, d[11][3]*prec4, d[11][2]*prec4,
+                  d[8][0], d[8][1]*prec4, d[8][3]*prec4, d[8][2]*prec4,
+                  d[9][0], d[9][1]*prec4, d[9][3]*prec4, d[9][2]*prec4,
                   #d[12][0], d[12][1]*prec4, d[12][3]*prec4, d[12][2]*prec4,
                   ## Next 3 lines are for mua0
-                  #d[13][0], d[13][1]*prec2, d[13][3]*prec2, d[13][2]*prec2,
-                  #d[14][0], d[14][1]*prec2, d[14][3]*prec2, d[14][2]*prec2)
-                  #d[15][0], d[15][1]*prec2, d[15][3]*prec2, d[15][2]*prec2)
+                  d[10][0], d[10][1]*prec2, d[10][3]*prec2, d[10][2]*prec2,
+                  d[11][0], d[11][1]*prec2, d[11][3]*prec2, d[11][2]*prec2)
    ) 
   else:
-    print("%25s & %.4f & $%.4f(%1.0f)$ & $%.4f(%1.0f)$ & $%.4f(%1.0f)$ & $%.4f(%1.0f)$ & $%.4f(%1.0f)$ & $%.2f(%1.0f)$ & $%.3f(%1.0f)$\\\\" % 
-                (lat,
-                  d[0],
-                  d[1][0], d[1][1]*prec1,
-                  d[2][0], d[2][1]*prec1,
-                  # For negative valued observables the sign for the systematics
-                  # needs to be changed, implemented by changing position of up
-                  # and down boundaries
-                  d[3][0], d[3][1]*prec1,
-                  d[4][0], d[4][1]*prec1,
-                  d[5][0], d[5][1]*prec1,
-                  d[6][0], d[6][1]*prec4,
-                  d[7][0], d[7][1]*prec2)
+    print(("%9s & %.4f &"
+           #"$%.4f(%1.0f)$ & $%.4f(%1.0f)$ &"
+           #"$%.4f(%1.0f)$ & \\\\")%
+           ## Next line is for E_piK
+           #" $%.4f(%1.0f)$ & $%.4f(%1.0f)$  \\\\") %
+           ## Next 3 lines are for delta E x 10^3
+           #" $%.2f(%1.0f)$ & $%.2f(%1.0f)$ \\\\") % 
+           # Next 3 lines are for delta a0
+           " $%.2f(%1.0f)$ & $%.2f(%1.0f)$ &" 
+           ## Next 3 lines are for delta mu a0
+           " $%.3f(%1.0f)$ & $%.3f(%1.0f)$ \\\\") % 
+           (lat,d[0],
+                  #d[1][0], d[1][1]*prec1, d[2][0], d[2][1]*prec1,
+                  #d[3][0], d[3][1]*prec1,
+                  #E_piK
+                  #d[4][0], d[4][1]*prec1, d[5][0], d[5][1]*prec1)
+                  #delta E x 10^3
+                  #d[6][0]*10**3, d[6][1]*prec3, d[7][0]*10**3, d[7][1]*prec3)
+                  d[8][0], d[8][1]*prec4, d[9][0], d[9][1]*prec4,
+                  d[10][0], d[10][1]*prec2, d[11][0], d[11][1]*prec2)
        )
   #  print("%9s & NA & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$  & $%.4f(%1.0f)(^{+%1.0f}_{-%1.0f})$ \\\\" % 
   #              (lat, dx[0][0], dx[0][1]*prec, dx[0][2]*prec, dx[0][3]*prec,
   #                dy[0], dy[1]*prec, dy[2]*prec, dy[3]*prec))
 def print_line_plain(lat, d, prec1=1e4, prec2=1e3, prec3=1e5):
-    print("%9s\t%.4f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f" %(lat,d[0],d[1][0],d[1][1],d[1][2],d[1][3],d[3][0],d[3][1],d[3][2],d[3][3],d[3][2]))     
+    print("%9s\t%.4f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f" %(lat,d[0],d[4][0],d[4][1],d[4][2],d[4][3],d[6][0],d[6][1],d[6][2],d[6][3],d[6][2]))     
+
+def get_fr_disc_epik(ens,mu_s,fr_cuts,resname,emeth='E1'):
+    """Get indices of fitrange based on four point fit"""
+    t_i = fr_cuts.loc[(fr_cuts['Ensemble']==ens)&(fr_cuts['mu_s_dir']==mu_s)]['%s_init'%emeth].values
+    t_f = fr_cuts.loc[(fr_cuts['Ensemble']==ens)&(fr_cuts['mu_s_dir']==mu_s)]['%s_final'%emeth].values
+    fr = ana.FitResult.read(resname)
+    fr_disc = fr.get_fr_int(fr.fit_ranges,t_i,t_f)
+    return fr_disc
+
 def print_summary(ens_names,datafolder,match=False,strange_dict=None,
                   strange_eta_dict=None,syserror=True):
   """ pi-K summary print. In contrast to pipi summary one degree of freedom more
@@ -159,9 +177,9 @@ def print_summary(ens_names,datafolder,match=False,strange_dict=None,
     head = ['Ensemble',
             '$a\mu_{s}$',
             #'$aM_{K}$','$aM_{\pi}$',
-             #'$E^{E1}_{\pi K}$','$E^{E2}_{\pi K}$','$E^{E3}_{\pi K}$']
-             #'$a\delta E^{E1}$','$a\delta E^{E3}$'] 
-             '$a_{3/2}^{E1}/a$','$a_{3/2}^{E3}/a$', 
+             #'$E^{E1}_{\pi K}$','$E^{E2}_{\pi K}$']
+             #'$a\delta E^{E1}\times 10^3$','$a\delta E^{E2}\times 10^3$'] 
+             '$a_{3/2}^{E1}/a$','$a_{3/2}^{E2}/a$', 
              '$\mu_{\pi K} a_{3/2}^{E1}$','$\mu_{\pi K} a_{3/2}^{E3}$'] 
     #head = ['Ensemble','$a\mu_{s}$',
     #         '$aM_{\eta}$'] 
@@ -174,10 +192,12 @@ def print_summary(ens_names,datafolder,match=False,strange_dict=None,
     e_print = []
     summ_ms, summ_mpi, summ_mk = [], [], [] 
     summ_meta, summ_mupik = [], [] 
-    summ_E1, summ_E2, summ_E3 = [], [], []
-    summ_a01, summ_a02, summ_a03 = [], [], []
-    summ_mua01, summ_mua02, summ_mua03 = [], [], []
-    summ_dE1, summ_dE2, summ_dE3 = [], [], []
+    summ_E1, summ_E2 =  [], []
+    summ_a01, summ_a02 = [], []
+    summ_mua01, summ_mua02 = [], []
+    summ_dE1, summ_dE2 =  [], []
+    fr_cuts = pd.read_csv('/hiskp4/helmes/analysis/scattering/pi_k/I_32_cov_false/runs/range_cuts_pik.txt',
+            sep='\s+')
     print("Collect data for summary in unmatched case")
     for i,e in enumerate(ens_names):
       if e == "D30.48":
@@ -189,28 +209,28 @@ def print_summary(ens_names,datafolder,match=False,strange_dict=None,
         path_to_mpi = "%s/%s/pi/fit_pi_%s.npz" % (datafolder,e,e)
         path_to_eta = "%s/%s/%s/fit_eta_rm_TP0.npz" % (datafolder,e,s)
         path_to_mupik = "%s/%s/%s/mu_pi_k_TP0_%s.npz" % (datafolder,e,s,e)
-        list_path_to_dE = ["%s/%s/%s/dE_TP0_%s_E%d.npz" % (datafolder,e,s,e,i) for i in np.arange(1,4)]
-        list_path_to_E = ["%s/%s/%s/fit_pik_%s_E%d.npz" % (datafolder,e,s,e,i) for i in np.arange(1,4)]
-        list_path_to_a0 = ["%s/%s/%s/scat_len_TP0_%s_E%d.npz" % (datafolder,e,s,e,i)for i in np.arange(1,4)]
-        list_path_to_mua0 = ["%s/%s/%s/mu_a0_TP0_%s_E%d.npz" % (datafolder,e,s,e,i) for i in np.arange(1,4)]
-
-        
+        list_path_to_dE = ["%s/%s/%s/dE_TP0_%s_E%d.npz" % (datafolder,e,s,e,i) for i in np.arange(1,3)]
+        list_path_to_E = ["%s/%s/%s/fit_pik_%s_E%d_corr_false.npz" % (datafolder,e,s,e,i) for i in np.arange(1,3)]
+        # only relevant for 'publish' data
+        #list_path_to_E3 = ["%s/%s/%s/fit_pik_%s_allfr_E2.npz" % (datafolder,e,s,e)]
+        list_path_to_a0 = ["%s/%s/%s/scat_len_TP0_%s_E%d.npz" % (datafolder,e,s,e,i)for i in np.arange(1,3)]
+        list_path_to_mua0 = ["%s/%s/%s/mu_a0_TP0_%s_E%d.npz" % (datafolder,e,s,e,i) for i in np.arange(1,3)]
+        frind = None
+        if syserror is True:
+            print(list_path_to_E)
+            frind=get_fr_disc_epik(e,s,fr_cuts,list_path_to_E[0])
         summ_mpi.append(fitres_stats(path_to_mpi,1))
         summ_mk.append(fitres_stats(path_to_mk,1))
         summ_mupik.append(fitres_stats(path_to_mupik,0))
-        summ_E1.append(fitres_stats(list_path_to_E[0],1))
-        summ_E2.append(fitres_stats(list_path_to_E[1],0))
-        summ_E3.append(fitres_stats(list_path_to_E[2],0))
-        summ_dE1.append(fitres_stats(list_path_to_dE[0],0))
-        summ_dE2.append(fitres_stats(list_path_to_dE[1],0))
-        summ_dE3.append(fitres_stats(list_path_to_dE[2],0))
-        summ_a01.append(fitres_stats(list_path_to_a0[0],0))
-        summ_a02.append(fitres_stats(list_path_to_a0[1],0))
-        summ_a03.append(fitres_stats(list_path_to_a0[2],0))
-        summ_mua01.append(fitres_stats(list_path_to_mua0[0],0))
+        summ_E1.append(fitres_stats(list_path_to_E[0],1,frind=frind,der=True))
+        summ_E2.append(fitres_stats(list_path_to_E[1],1,frind=frind,der=True))
+        summ_dE1.append(fitres_stats(list_path_to_dE[0],0,frind=frind))
+        summ_dE2.append(fitres_stats(list_path_to_dE[1],0,frind=frind))
+        summ_a01.append(fitres_stats(list_path_to_a0[0],0,frind=frind))
+        summ_a02.append(fitres_stats(list_path_to_a0[1],0,frind=frind))
+        summ_mua01.append(fitres_stats(list_path_to_mua0[0],0,frind=frind))
         #print(fitres_stats(list_path_to_mua0[0],0))
-        summ_mua02.append(fitres_stats(list_path_to_mua0[1],0))
-        summ_mua03.append(fitres_stats(list_path_to_mua0[2],0))
+        summ_mua02.append(fitres_stats(list_path_to_mua0[1],0,frind=frind))
         if j == 0:
           e_print.append("\\multirow{3}{*}{%s}"%e)
         else:
@@ -221,12 +241,12 @@ def print_summary(ens_names,datafolder,match=False,strange_dict=None,
     print_table_header(head) 
     for i,d in enumerate(zip(summ_ms, summ_mk, summ_mpi,
                              summ_mupik,
-                             summ_E1, summ_E2, summ_E3,
-                             summ_dE1, summ_dE2, summ_dE3,
-                             summ_a01, summ_a02, summ_a03,
-                             summ_mua01, summ_mua02, summ_mua03)):
-        #print_line_latex(e_print[i],d,syserror=syserror)
-        print_line_plain(e_print[i],d)
+                             summ_E1, summ_E2,
+                             summ_dE1, summ_dE2,
+                             summ_a01, summ_a02,
+                             summ_mua01, summ_mua02 )):
+        print_line_latex(e_print[i],d,syserror=syserror)
+        #print_line_plain(e_print[i],d)
         if (i+1)%3 == 0:
             print("\\midrule")
     #for i,d in enumerate(zip(summ_ms,summ_meta)):
@@ -266,7 +286,7 @@ def main():
   #mus_d_fld_var = ["amu_s_18"]
   mass_fld = {"A":mus_a_fld,"B":mus_b_fld,"D":mus_d_fld}
   mass_eta_fld = {"A":mus_eta_a_fld,"B":mus_eta_b_fld,"D":mus_eta_d_fld}
-  data = '/hiskp4/helmes/analysis/scattering/pi_k/I_32_publish/data/'
+  data = '/hiskp4/helmes/analysis/scattering/pi_k/I_32_cov_false/data/'
   print_summary(ens,data,match=False,strange_dict = mass_fld,
                 strange_eta_dict=mass_eta_fld,syserror=True)
 # make this script importable, according to the Google Python Style Guide

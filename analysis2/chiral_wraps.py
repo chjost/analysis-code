@@ -56,6 +56,27 @@ def calc_x_plot_cont(x):
 #    # calculate the chi values weighted with inverse covariance matrix
 #    #return np.dot(error,np.r_[chi_a,chi_b,chi_d,chi_p])
 #    return np.dot(error,np.r_[chi_a,chi_b,chi_p])
+def amk_sq_wopmu(r,z,p,x):
+    mk_sq = p[0]/(r*z) * (x[:,0]+x[:,1])* (1+p[1]*(r/z)*x[:,0]+p[2]/(r**2))
+    return mk_sq
+
+def global_ms_errfunc_wopmu(p,x,y,error):
+
+    # define the fitfunction for a single beta
+    #_func = lambda r, z, p, x,: p[0]/(r*z) * (x[:,0]+x[:,1])* (1+p[1]*(r/z)*x[:,0]+p[2]/(r**2))
+
+    # TODO: Automate the array shapes, otherwise very errorprone
+    chi_a = y.A - amk_sq_wopmu(p[0],p[3],p[6:9],x.A)
+    chi_b = y.B - amk_sq_wopmu(p[1],p[4],p[6:9],x.B) 
+    chi_d = y.D - amk_sq_wopmu(p[2],p[5],p[6:9],x.D)
+    chi_d45 = y.D45 - amk_sq_wopmu(p[2],p[5],p[6:9],x.D45)
+    # have several priors here as a list
+    # y.p is list of 6 priors
+    chi_p = np.asarray(y.p) - np.asarray(p[0:6])  
+    _residuals = np.concatenate((np.r_[chi_a,chi_b,chi_d,chi_d45], chi_p))
+    # calculate the chi values weighted with inverse covariance matrix
+    _chi = np.dot(error,_residuals)
+    return _chi
 
 def global_ms_errfunc(p,x,y,error):
 

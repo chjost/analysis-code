@@ -11,7 +11,7 @@ from .fit_routines import fitting
 from .match import MatchResult
 from .plot import LatticePlot
 from .plot_functions import plot_function
-from .functions import func_const, func_ratio, func_single_corr
+from .functions import func_const, func_ratio, func_single_corr,func_corr_shift_poll_removal,func_corr_shift_therm
 from .statistics import draw_weighted, compute_error, sys_error, draw_gauss_distributed, acf, compute_weight 
 from .interpol import interp_fk
 from .utils import mean_std, physical_mass, r0_mass
