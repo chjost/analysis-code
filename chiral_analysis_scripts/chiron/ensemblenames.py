@@ -5,7 +5,7 @@ def get_beta_name(b):
         return 'A'
     elif b == 1.95:
         return 'B'
-    elif b == 2.10:
+    elif b == 2.1:
         return 'D'
     else:
         print('bet not known')
