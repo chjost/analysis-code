@@ -55,7 +55,7 @@ def ensemblevalues(ensemblelist):
     ix_values = []
     for i,e in enumerate(ensemblelist):
         b = get_beta_value(e[0])
-        l = int(e.split('.'[-1]))
+        l = int(e.split('.')[-1])
         mul = get_mul_value(e[1:3])
         ix_values.append((b,l,mul))
     return(np.asarray(ix_values))

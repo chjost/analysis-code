@@ -23,6 +23,6 @@ def para_strap(data,params):
     # for random samples from N(\mu, \sigma^2) use
     # sigma * random(shape) + mu
     res = data[1] * np.random.randn(*params['size']) + data[0]
-    res[0] = data[1]
+    res[0] = data[0]
     return np.asarray(res)
 
