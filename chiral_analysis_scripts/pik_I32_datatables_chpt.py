@@ -76,21 +76,21 @@ def ensemblenames_light(ix_values):
     return ensemblelist
 
 def main():
-    resdir = "/hiskp4/helmes/analysis/scattering/pi_k/I_32_publish/results"
+    resdir = "/hiskp4/helmes/analysis/scattering/pi_k/I_32_cov_false/results"
     filename = resdir+'/pi_K_I32_overview.h5'
     keyname = 'fse_true/data_collection'
     data = pd.read_hdf(filename,key=keyname)
     print(data.sample(n=20))
     chptdata = data.loc[data['ChPT']=='nlo_chpt']
-    for tp in it.product((1,2),('A','B')):
-        for poll in ('E1', 'E3'):
-            subdata = chptdata.loc[(chptdata['RC'] == tp[0]) & (chptdata['ms_fix']==tp[1]) &
-                    (chptdata['poll']==poll)]
+    #for tp in it.product((1,2),('A','B')):
+    for tp in it.product((1,),('A',)):
+        for poll in ('E1', 'E2'):
+            subdata = chptdata.loc[chptdata['poll']==poll]
             print("\n\nInput for Branch M%d%s %s" %(tp[0],tp[1],poll))
             # print a datatable for every branch
             groups = ['beta','L','mu_l']
             obs = ['mu_piK/fpi','mu_piK_a32_scaled','M_K','M_eta','M_pi']
-            subdata['M_K'] = subdata['M_K'].apply(lambda x: x**2)
+            #subdata['M_K'] = subdata['M_K'].apply(lambda x: x**2)
             si_data = chi.print_si_format(chi.bootstrap_means(subdata,groups,obs))
             tex_table = si_data.reset_index()
             for conv in ['beta']:
@@ -102,10 +102,10 @@ def main():
 
             
     chptdata = data.loc[data['ChPT']=='gamma']
-    for tp in it.product((1,2),('A','B')):
-        for poll in ('E1', 'E3'):
-            subdata = chptdata.loc[(chptdata['RC'] == tp[0]) & (chptdata['ms_fix']==tp[1]) &
-                    (chptdata['poll']==poll)]
+    #for tp in it.product((1,2),('A','B')):
+    for tp in it.product((1,),('A',)):
+        for poll in ('E1', 'E2'):
+            subdata = chptdata.loc[chptdata['poll']==poll]
             print("\n\nInput for Branch M%d%s %s" %(tp[0],tp[1],poll))
             # print a datatable for every branch
             groups = ['beta','L','mu_l']

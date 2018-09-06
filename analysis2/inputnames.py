@@ -13,9 +13,11 @@ def build_operators_dict(config):
             if 'g' in o:
                 gammas = o[1:].split(',')
             elif 'd' in o:
-                disps = o[1:].replace('0','000').replace('|','').split(',')
+                #disps = o[1:].replace('0','000').replace('|','').split(',')
+                disps = o[1:].replace('|','').split(',')
             elif 'p' in o:
-                momenta = o[1:].replace('0','000').split(',')
+                #momenta = o[1:].replace('0','000').split(',')
+                momenta = o[1:].split(',')
             else:
                 print("Quantumnumber id not known, has to be one of 'g','d','p'")
         op_dict[op_entry] = [gammas,disps,momenta]

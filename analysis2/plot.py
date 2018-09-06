@@ -648,7 +648,8 @@ class LatticePlot(object):
         X = np.linspace(interval[0], interval[1], 1000)
         plot_function(func, X, args, label, ploterror=True, fmt=fmt, col=col)
 
-    def history(self, data, label, ts=0, boot=False, par=None, fr=None, subplot=True):
+    def history(self, data, label, ts=0, boot=False, par=None, fr=None,
+            subplot=True, iqr=False):
         """Plots the history of the input data either with bootstrapsamples or
         configuration number
 
@@ -661,10 +662,14 @@ class LatticePlot(object):
         ts : int, timeslice to take for configuration history
         par : int, parameter from a fitresult
         fr : int, fit range index
+        subplot: bool, make subplots, default true
+        iqr: bool, if true plot the interquartile range from the data at the
+                    given timeslice
         """
         self._set_env_normal()
         self.set_title(label[0],label[1:3])
         print data.data[0].shape
+        print("Plot IQR: %s" %iqr)
         if boot is False:
           _data = data.data[:,ts,0]
           #if data.conf is not None:
@@ -695,7 +700,17 @@ class LatticePlot(object):
             _data = data.data[0][:,fr]
             print(_data.shape)
             plot_data(_x,_data,np.zeros_like(_data),label[-1])
-
+        if iqr is not False:
+            # get the 25% and 75% percentiles from the real part of 
+            # the first timeslice of all configurations
+            q25, q75 = np.percentile(data.data[:,ts],(25,75))
+            print("IQR is:")
+            print(q25,q75)
+            iqr_dn = q25-1.5*np.abs(q75-q25)
+            iqr_up = q75+1.5*np.abs(q75-q25)
+            plt.axhline(iqr_up,color='red',label='IQR')
+            plt.axhline(iqr_dn,color='red')
+        plt.legend()
         self.save()
 
     def set_env(self, xlog=False, ylog=False, xlim=None, ylim=None,

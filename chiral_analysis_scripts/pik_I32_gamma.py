@@ -319,7 +319,9 @@ def main():
         #xdata = xdata.set_index(['beta','L','mu_l'],drop=True).sort_index()
         xdata = get_dataframe_fit(fit_df,'M_K/M_pi',['beta','L','mu_l'],'sample')
         # get the priors needed for y vector and  covariance matrix
-        l5samples = ana.draw_gauss_distributed(5.41e-3,3e-5,(nboot,),origin=True)
+        #WRONG, do not use!
+        #l5samples = ana.draw_gauss_distributed(5.41e-3,3e-5,(nboot,),origin=True)
+        l5samples = ana.draw_gauss_distributed(5.41e-3,3e-4,(nboot,),origin=True)
         idx = np.arange(nboot)
         L5 = pd.DataFrame(data=l5samples, index=idx,columns=['L_5']) 
         L5.info()

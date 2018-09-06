@@ -8,7 +8,7 @@ meth=( A )
 zp=( 1 )
 # Lastly we employ three methods for extracting E_piK ( E1 E2 E3 )
 # only needed in interpolation
-epik=( E2 )
+epik=( E1 E2 )
 
 # Fix strange quark mass for B
 

@@ -12,13 +12,24 @@ import analysis2 as ana
 ###############################################################################
 
 def miss_confs(path,rng):
-  misslist = []
-  for c in range(rng[0],rng[1]+1,rng[2]):
-    tmp_path = path+"cnfg%d" %c 
-    if os.path.exists(tmp_path) is False:
-      print(tmp_path)
-      misslist.append(c)
-  return misslist
+    """Get a list of configs that is in range but not at path
+
+    Parameters
+    ----------
+    path : string, parent directory of cnfg subfolders
+    rng : 3-list, start, end and distance of the configs wanted
+
+    Returns
+    -------
+    misslist : list of configuration numbers not found at path
+    """
+    misslist = []
+    for c in range(rng[0],rng[1]+1,rng[2]):
+      tmp_path = path+"cnfg%d" %c 
+      if os.path.exists(tmp_path) is False:
+        print(tmp_path)
+        misslist.append(c)
+    return misslist
 
 def main():
     c2_pi = True 

@@ -126,7 +126,7 @@ def main():
             #lbl_e2 = r'E2'
             plt.errorbar(x,r_e1,dr_e1,fmt='o',capsize=1.,fillstyle='none',color='darkblue',label=lbl_e1,lw=0.5)
             plt.errorbar(x,r_e2,dr_e2,fmt='+',capsize=1.,color='firebrick',lw=0.5,label=lbl_e2)
-            plt.ylim((0.95,1.05))
+            plt.ylim((0.98,1.02))
             plt.xlim((5,tmp_data_e1.values.shape[0]))
             plt.xlabel(r'$t/a$',size=11)
             plt.ylabel(r'$C(t)/f(t)$',size=11)

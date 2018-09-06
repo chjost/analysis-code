@@ -13,9 +13,11 @@ def build_operators_dict(config):
             if 'g' in o:
                 gammas = o[1:].split(',')
             elif 'd' in o:
-                disps = o[1:].replace('0','000').replace('|','').split(',')
+                #disps = o[1:].replace('0','000').replace('|','').split(',')
+                disps = o[1:].replace('|','').split(',')
             elif 'p' in o:
-                momenta = o[1:].replace('0','000').split(',')
+                #momenta = o[1:].replace('0','000').split(',')
+                momenta = o[1:].split(',')
             else:
                 print("Quantumnumber id not known, has to be one of 'g','d','p'")
         op_dict[op_entry] = [gammas,disps,momenta]
@@ -69,18 +71,28 @@ def build_dataset_names(operators,corr_dict_entry,h5=False):
     momenta_expanded = expand_momenta(momenta)
     g_iter, d_iter, mom_iter = get_op_iterators(gammas,displacements,
                                              momenta_expanded)
-    if h5 is False:
+    if h5 is not False:
         ds_name = "%s_%s" %(corr_dict_entry[0],('').join(corr_dict_entry[1]))
     else: 
         ds_name = "%s/%s_%s" %(corr_dict_entry[0],corr_dict_entry[0],
                                 ('').join(corr_dict_entry[1])) 
     for op in it.product(mom_iter,d_iter,g_iter):
         #print(op)
-        # TODO: This just builds 2 point correlator names at the moment
-        dataset_names.append("%s_p%s.d%s.g%s_p%s.d%s.g%s"%(ds_name,op[0][0],
+        # TODO: Dirty Hack make functions out of that 
+        if '2' in ds_name:
+            dataset_names.append("%s_p%s.d%s.g%s_p%s.d%s.g%s"%(ds_name,op[0][0],
                                                            op[1][0],op[2][0],
                                                            op[0][1],op[1][1],
                                                            op[2][1]))
+        elif '4' in ds_name:
+            print(op)
+            dataset_names.append("%s_p%s.d%s.g%s_p%s.d%s.g%s_p%s.d%s.g%s_p%s.d%s.g%s"
+                                %(ds_name,
+                                op[0][0], op[1][0], op[2][0],
+                                op[0][1], op[1][1], op[2][1],
+                                op[0][2], op[1][2], op[2][2],
+                                op[0][3], op[1][3], op[2][3]))
+
     return dataset_names
 # Example dataset name: C2+_uu_p000.d<x<x.g5_p000.d<y<y<y.g5
 

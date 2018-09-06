@@ -318,7 +318,11 @@ def main():
                              'fpi','M_eta']].where(fit_df['sample']==0).dropna()
         xdata = xdata.set_index(['beta','L','mu_l'],drop=True).sort_index()
         # get the priors needed for y vector and  covariance matrix
-        l5samples = ana.draw_gauss_distributed(5.41e-3,3e-5,(nboot,),origin=True)
+        # WRONG, do not use
+        #l5samples = ana.draw_gauss_distributed(5.41e-3,3e-5,(nboot,),origin=True)
+        l5samples = ana.draw_gauss_distributed(5.41e-3,3e-4,(nboot,),origin=True)
+        # vary l5 by 15% to see what changes
+        #l5samples = ana.draw_gauss_distributed(6.6e-3,2e-4,(nboot,),origin=True)
         idx = np.arange(nboot)
         L5 = pd.DataFrame(data=l5samples, index=idx,columns=['L_5']) 
         L5.info()
@@ -373,7 +377,7 @@ def main():
         #hdfstorer.put('/interp_corr_false/nlo_chpt/%s/fr_%d'%(epik_meth,i),fit_df)
         #hdfstorer.put('/fse_false/nlo_chpt/%s/fr_%d'%(epik_meth,i),fit_df)
         hdfstorer.put('/fse_true/nlo_chpt/%s/fr_%d'%(epik_meth,i),fit_df)
-        #hdfstorer.put('/fse_true_scale_fpi/nlo_chpt/%s/fr_%d'%(epik_meth,i),fit_df)
+        #hdfstorer.put('/fse_true/nlo_chpt/inc_l5/%s/fr_%d'%(epik_meth,i),fit_df)
         del hdfstorer
 
 if __name__ == "__main__":

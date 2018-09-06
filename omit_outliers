@@ -54,9 +54,9 @@ def main():
         plotter = ana.LatticePlot("%s/%s/outlier_corr_hist_ts%d.pdf" % (plotdir,s,ts))
         print("Plotting to file %s/%s/outlier_corr_hist_ts%d.pdf" % (plotdir,s,ts))
         label=['2pt Configuration History', 'cnfg', r'$C(%d)$' % ts,r'$C_2$']
-        plotter.history(two_pt_corr,label,ts,boot=False)
+        plotter.history(two_pt_corr,label,ts,boot=False,iqr=True)
         label=['4pt Configuration History', 'cnfg', r'$C(%d)$' % ts,r'$C_4$']
-        plotter.history(four_pt_corr,label,ts,boot=False)
+        plotter.history(four_pt_corr,label,ts,boot=False,iqr=True)
         del plotter
 
         four_pt_cut, left_out_four = four_pt_corr.omit_iqr(ts=ts)
@@ -81,7 +81,7 @@ def main():
         plotter = ana.LatticePlot("%s/pi/outlier_corr_hist_ts%d.pdf" % (plotdir,ts))
         print("Plotting to file %s/pi/outlier_corr_hist_ts%d.pdf" % (plotdir,ts))
         label=['2pt Configuration History', 'cnfg', r'$C(%d)$' % ts,r'$C_2$']
-        plotter.history(two_pt_corr,label,ts,boot=False)
+        plotter.history(two_pt_corr,label,ts,boot=False,iqr=True)
         del plotter
 
         two_pt_cut, left_out_two = two_pt_corr.omit_iqr(ts=ts)
@@ -106,7 +106,7 @@ def main():
         plotter.history(two_pt_corr,label,ts,boot=False)
 
         # plot history after omission
-        ts=0
+        ts=3
         label=['2pt Configuration History', 'cnfg', r'$C(%d)$' % ts,r'$C_2$']
         plotter.history(two_pt_corr,label,ts,boot=False)
         label=['4pt Configuration History', 'cnfg', r'$C(%d)$' % ts,r'$C_4$']
@@ -132,7 +132,7 @@ def main():
         plotter.history(two_pt_corr,label,ts,boot=False)
 
         # plot history after omission
-        ts=0
+        ts=3
         label=['2pt Configuration History', 'cnfg', r'$C(%d)$' % ts,r'$C_2$']
         plotter.history(two_pt_corr,label,ts,boot=False)
 
