@@ -143,13 +143,13 @@ def systematics_per_method(obs,col,vals,dataframe,glob_mean,asym=False):
             sys_dn = glob_mean - partial_avg[obs].iloc[0]
         elif glob_mean < partial_avg[obs].iloc[0]: 
             sys_up = partial_avg[obs].iloc[0] - glob_mean
-    dst = (sys_dn,sys_up)
+    dst = {'sys_dn':sys_dn,'sys_up':sys_up}
     print(dst)
     print(sys_dn,sys_up)
     if asym is not False:
         mean = dst 
     else:
-        mean = (np.mean(dst))
+        mean = (np.mean(dst.values()))
     return mean
 
 def weighted_systematic(frame,obs,asym=False):
@@ -183,7 +183,7 @@ def weighted_systematic(frame,obs,asym=False):
         #print(df.sample(n=20))
         weight_df = weight_df.append(chi.get_weights(df,obs,
                                                     rel=True))
-    #print(weight_df.loc[weight_df['sample']==0])
+    print(weight_df.loc[weight_df['sample']==0])
     glob_avg_df = weight_df[[obs,'fr','sample','ChPT',
                           'poll','weights']]
     glob_avg = glob_avg_df.groupby(['sample']).agg(chi.weighted_mean_sample,
@@ -191,20 +191,39 @@ def weighted_systematic(frame,obs,asym=False):
     print("Global Average of %s" %obs)
     #print(chi.bootstrap_means(glob_avg,None,obs))
     #fitrange spread
-    fr_means = np.sort(weight_df.loc[weight_df['sample']==0][obs].values)
+    fr_means = np.sort(weight_df.loc[weight_df['sample']==0][obs].values)[(0,-1),]
     global_mean=chi.bootstrap_means(glob_avg,None,obs).values[0,0]
     global_err=chi.bootstrap_means(glob_avg,None,obs).values[0,1]
-    fr_systematic = np.asarray((global_mean-fr_means[-1],
-                    global_mean-fr_means[0]))
+
+    dst = {}
+    fr_dn,fr_up = 0.,0.
+    #fill dst dictionary with systematic errors
+    for frm in fr_means:
+        if frm < global_mean:
+            fr_dn = np.abs(global_mean - frm)
+        elif global_mean < frm:
+            fr_up = np.abs(frm-global_mean)
     #print("Fit range systematic of %s" %obs)
     #print(fr_systematic)
-    fr_val = np.mean(np.abs(fr_systematic))
+    dst = {'sys_dn':fr_dn,'sys_up':fr_up}
+    if asym is not False:
+       fr_val = dst
+    else:
+        fr_val = np.mean(dst.values())
+
+   # fr_val = 
     chpt_val = systematics_per_method(obs,'ChPT',['gamma','nlo_chpt'],
                            weight_df,global_mean,asym)
     poll_val = systematics_per_method(obs,'poll',['E1','E2'],
                                       weight_df,global_mean,asym) 
-    result = {"obs":[obs],"weighted_mean":[global_mean],"std":[global_err],
-            "fr":[fr_val],"chpt":[chpt_val],"poll":[poll_val]}
+    if asym is not False:
+        result = {"obs":[obs],"weighted_mean":[global_mean],"std":[global_err],
+                "fr_dn":fr_val['sys_dn'],"fr_up":fr_val['sys_up'],
+                "chpt_dn":chpt_val['sys_dn'],"chpt_up":chpt_val['sys_up'],
+                "poll_dn":poll_val['sys_dn'],"poll_up":poll_val['sys_up']}
+    else:
+        result = {"obs":[obs],"weighted_mean":[global_mean],"std":[global_err],
+                "fr":[fr_val],"chpt":[chpt_val],"poll":[poll_val]}
     return result
 def main():
     pd.set_option('display.width',1000)
@@ -232,7 +251,13 @@ def main():
             tmp = pd.DataFrame(data=weighted_systematic(final_results,o,asym=True))
             print(tmp)
             systematics=systematics.append(tmp)
-    final_systematics = systematics[['obs','weighted_mean','std','fr','chpt','poll']]
+    try:
+        final_systematics = systematics[['obs','weighted_mean','std','fr',
+                                         'chpt','poll']]
+    except:
+        final_systematics = systematics[['obs','weighted_mean','std',
+                                         'fr_dn','fr_up', 'chpt_dn','chpt_up',
+                                         'poll_dn','poll_up']]
     print(final_systematics)
 if __name__ == '__main__':
     try:
