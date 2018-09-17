@@ -66,9 +66,9 @@ def main():
     plt.ylabel(r'$\mu_{\pi K}\,a_0^{3/2}$')
     xmin=-1
     xmax=15
-    v = -4.653712e-02
-    sd = 9e-04  
-    sup = np.sqrt(5e-4**2+9e-5**2)
+    v = -4.632e-2
+    sd = 8.16e-04  
+    sup = np.sqrt(4.7e-4**2+7.9e-5**2+1.24e-3**2)
     sdn = sup
     plt.fill_between(np.array((xmin,xmax)),v+np.sqrt(sd**2+sup**2),v-np.sqrt(sd**2+sdn**2),alpha=0.2,color='deepskyblue')
     plt.fill_between(np.array((xmin,xmax)),v+sd,v-sd,alpha=0.2,color='darkblue')

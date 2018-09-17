@@ -1,9 +1,13 @@
 import pandas as pd
+import numpy as np
 import syseffos_io as io
 import syseffos_info as info
 import boot_statistics as bstats
 
 def bootstrap_means(frame,names,observables):
+    if names is None:
+        frame['dummy_key'] = observables
+        names='dummy_key'
     bstrap_frame=frame.groupby(names)[observables].agg([bstats.own_mean,
                                                    bstats.own_std])
     #info.print_si_format(bstrap_frame)
@@ -100,6 +104,50 @@ def method_average(filtered,agg,agg_keys=None):
     result = pd.concat((mean,std),keys=['mean','std'],axis=1)
     return result
 
+def get_weights(df,obs,err_meth='abs',rel=True):
+    """ Get weights for a dataframe comprising only one set of observations
+    """
+    # weights are calculated per fitrange
+    # prepare dataframe for queries
+    df['fr'] = df['fr_bgn'].astype(str)+','+df['fr_end'].astype(str)
+    df['boot'] = df['sample'].astype(str)
+    # get statistics of obs with fitranges as index, collect all data for weights there
+    stats = bootstrap_means(df,['fr'],obs)
+    stats.reset_index(inplace=True)
+    # Reset index also resets column multilevel
+    if rel is True:
+        stats['error'] = stats['own_std']/stats['own_mean']
+    else:
+        # this option uses the distribution mean for calculating the statistical error.
+        # I think that this is implemented in the analysis as well
+        # TODO: implement that as an option?
+        #stats['error'] = df.groupby('fr').std().reset_index()[obs]
+        stats['error'] = stats['own_std']
+    min_err = stats['error'].abs().min()
+    # get pvalues of original data
+    pvals = df[['fr','p-val']].loc[df['boot']=='0']
+    stats = stats.set_index('fr').join(pvals.set_index('fr')).reset_index()
+    # calculate weights
+    stats['weights']=((1.-2.*np.abs(stats['p-val']-0.5))*min_err/stats['error'])**2
+    df = df.merge(stats[['fr','weights']],left_on='fr',right_on='fr')
+    return df
+
+def weighted_mean_sample(df,obs):
+    # \bar{x} = \frac{\sum_{i=1}^N w_i*x_i}/\sum_{i}^N w_i
+    wm=pd.DataFrame()
+    wm[obs] = df[obs]*df['weights']/df['weights'].sum()
+    return wm.sum()
+#def weighted_average(df,obs,groups):
+#    """Compute a weighted average of observables over groups
+#    """
+#    weight_avg = pd.DataFrame()
+#    # Observables are columns
+#    for o in obs:
+#	obs_avg=pd.DataFrame()
+#	obs_avg = df.groupby(groups)[[o,'sample','fr_bgn','fr_end','ChPT','poll']].agg(get_weights)
+#	weight_avg = weight_avg.merge(obs_avg)
+#    return weight_avg
+
 def whole_average(frame,obs_keys=None):
     if obs_keys is None:
         method_means = frame.groupby('sample')['L_piK','mu_a32_phys',
@@ -111,7 +159,6 @@ def whole_average(frame,obs_keys=None):
     result = pd.concat((mean,std),keys=['mean','std'],axis=1)
     return result
     
-
 def partial_average(frame,fixed,obs_keys=None):
     """Take average over all but one method
 

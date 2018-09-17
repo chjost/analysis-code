@@ -43,12 +43,13 @@ def main():
     filename = path+'/final_comparison.txt'
     outname = plotdir+'/final_comparison'
     datapoints = pd.read_csv(filename, sep='\s+')
+    datapoints = datapoints.replace('ETMC',value='This work')
     datapoints=datapoints.fillna(0)
     print(datapoints)
     datapoints = datapoints[datapoints['Collab']!='ETMC_I']
     fig=plt.figure()
     plot_comparison(datapoints)
-    plt.xlabel(r'$(M_{\pi}a_0^{3/2})^{\mathrm{phys}}$')
+    plt.xlabel(r'$(M_{\pi}a_0^{3/2})^{\mathrm{phys}}$',fontsize=11)
     plt.xlim([-0.075,-0.045])
     plt.legend()
     plt.savefig(outname+'.pgf')
