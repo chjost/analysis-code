@@ -114,7 +114,7 @@ def weighted_average_method(df,obs,fr_col='fr_end'):
     weighted_mean['sample'] = np.arange(weighted_mean.shape[0])
     return weighted_mean 
 
-def systematics_per_method(obs,col,vals,dataframe,glob_mean):
+def systematics_per_method(obs,col,vals,dataframe,glob_mean,asym=False):
     """For a given source get the mean of the deviations from the weighted
     median
     
@@ -132,17 +132,27 @@ def systematics_per_method(obs,col,vals,dataframe,glob_mean):
     """
 
     dst=[]
+    sys_dn,sys_up=0.,0.
     for v in vals:
         partial = dataframe.loc[dataframe[col]==v]
         partial_avg_df = partial[[obs,'fr','sample','poll','weights']]
         partial_avg = partial_avg_df.groupby(['sample']).agg(chi.weighted_mean_sample,
             (obs)).reset_index()
-        dst.append(np.abs(partial_avg[obs].iloc[0]-glob_mean))
-
-    mean = (np.mean(dst))
+        #dst.append(np.abs(partial_avg[obs].iloc[0]-glob_mean))
+        if partial_avg[obs].iloc[0] < glob_mean:
+            sys_dn = glob_mean - partial_avg[obs].iloc[0]
+        elif glob_mean < partial_avg[obs].iloc[0]: 
+            sys_up = partial_avg[obs].iloc[0] - glob_mean
+    dst = (sys_dn,sys_up)
+    print(dst)
+    print(sys_dn,sys_up)
+    if asym is not False:
+        mean = dst 
+    else:
+        mean = (np.mean(dst))
     return mean
 
-def weighted_systematic(frame,obs):
+def weighted_systematic(frame,obs,asym=False):
     """Fill a dictionary of observables with a weighted average and estimates of
     systematic uncertainties
 
@@ -153,6 +163,7 @@ def weighted_systematic(frame,obs):
             'ChPT','poll', 'fr_bgn','fr_end','sample','p-val
     obs:    string, observable for which to calculate the systematic
             uncertainties
+    asym:   Bool, if False the mean over the systematic error is taken
 
     Returns
     -------
@@ -188,8 +199,10 @@ def weighted_systematic(frame,obs):
     #print("Fit range systematic of %s" %obs)
     #print(fr_systematic)
     fr_val = np.mean(np.abs(fr_systematic))
-    chpt_val = systematics_per_method(obs,'ChPT',['gamma','nlo_chpt'],weight_df,global_mean)
-    poll_val = systematics_per_method(obs,'poll',['E1','E2'],weight_df,global_mean) 
+    chpt_val = systematics_per_method(obs,'ChPT',['gamma','nlo_chpt'],
+                           weight_df,global_mean,asym)
+    poll_val = systematics_per_method(obs,'poll',['E1','E2'],
+                                      weight_df,global_mean,asym) 
     result = {"obs":[obs],"weighted_mean":[global_mean],"std":[global_err],
             "fr":[fr_val],"chpt":[chpt_val],"poll":[poll_val]}
     return result
@@ -216,7 +229,8 @@ def main():
     # Improvise an acceptance test for refactoring systematic_spaghetti
     systematics = pd.DataFrame()
     for o in observables:
-            tmp = pd.DataFrame(data=weighted_systematic(final_results,o))
+            tmp = pd.DataFrame(data=weighted_systematic(final_results,o,asym=True))
+            print(tmp)
             systematics=systematics.append(tmp)
     final_systematics = systematics[['obs','weighted_mean','std','fr','chpt','poll']]
     print(final_systematics)
