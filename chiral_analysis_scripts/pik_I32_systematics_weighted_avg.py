@@ -113,7 +113,36 @@ def weighted_average_method(df,obs,fr_col='fr_end'):
     #        range(data_for_weights.shape[1])]),axis=0)/np.sum(weights)
     weighted_mean['sample'] = np.arange(weighted_mean.shape[0])
     return weighted_mean 
-def systematic_spaghetti(frame,obs):
+
+def systematics_per_method(obs,col,vals,dataframe,glob_mean):
+    """For a given source get the mean of the deviations from the weighted
+    median
+    
+    Parameters
+    ----------
+    dataframe:  Dataframe of the observable including weights
+    glob_mean:  Global mean for distance calculation
+    obs:        string, observable under investigation
+    col:        string, Source of systematic uncertainty
+    vals:       list of strings, Values of Source
+
+    Returns
+    -------
+    mean:       numerical mean over the distances to the weighted average
+    """
+
+    dst=[]
+    for v in vals:
+        partial = dataframe.loc[dataframe[col]==v]
+        partial_avg_df = partial[[obs,'fr','sample','poll','weights']]
+        partial_avg = partial_avg_df.groupby(['sample']).agg(chi.weighted_mean_sample,
+            (obs)).reset_index()
+        dst.append(np.abs(partial_avg[obs].iloc[0]-glob_mean))
+
+    mean = (np.mean(dst))
+    return mean
+
+def weighted_systematic(frame,obs):
     """Fill a dictionary of observables with a weighted average and estimates of
     systematic uncertainties
 
@@ -122,7 +151,7 @@ def systematic_spaghetti(frame,obs):
     frame:  Dataframe holdng the bootstrapsamples of the observables. Besides the
             observables the following columns are obligatory:
             'ChPT','poll', 'fr_bgn','fr_end','sample','p-val
-    obs:    list of strings, observables for which to calculate the systematic
+    obs:    string, observable for which to calculate the systematic
             uncertainties
 
     Returns
@@ -143,60 +172,27 @@ def systematic_spaghetti(frame,obs):
         #print(df.sample(n=20))
         weight_df = weight_df.append(chi.get_weights(df,obs,
                                                     rel=True))
-    print(weight_df.loc[weight_df['sample']==0])
+    #print(weight_df.loc[weight_df['sample']==0])
     glob_avg_df = weight_df[[obs,'fr','sample','ChPT',
                           'poll','weights']]
     glob_avg = glob_avg_df.groupby(['sample']).agg(chi.weighted_mean_sample,
             (obs)).reset_index()
     print("Global Average of %s" %obs)
-    print(chi.bootstrap_means(glob_avg,None,obs))
+    #print(chi.bootstrap_means(glob_avg,None,obs))
     #fitrange spread
     fr_means = np.sort(weight_df.loc[weight_df['sample']==0][obs].values)
     global_mean=chi.bootstrap_means(glob_avg,None,obs).values[0,0]
     global_err=chi.bootstrap_means(glob_avg,None,obs).values[0,1]
     fr_systematic = np.asarray((global_mean-fr_means[-1],
                     global_mean-fr_means[0]))
-    print("Fit range systematic of %s" %obs)
-    print(fr_systematic)
+    #print("Fit range systematic of %s" %obs)
+    #print(fr_systematic)
     fr_val = np.mean(np.abs(fr_systematic))
-
-    partial = weight_df.loc[weight_df['ChPT']=='gamma']
-    partial_avg_df = partial[[obs,'fr','sample','poll','weights']]
-    partial_avg = partial_avg_df.groupby(['sample']).agg(chi.weighted_mean_sample,
-            (obs)).reset_index()
-    print("Fixing ChPT to gamma for %s" %obs)
-    print(chi.bootstrap_means(partial_avg,None,obs))
-    dst_chpt_gamma = np.abs(partial_avg[obs].iloc[0]-global_mean) 
-
-    partial = weight_df.loc[weight_df['ChPT']=='nlo_chpt']
-    partial_avg_df = partial[[obs,'fr','sample','poll','weights']]
-    partial_avg = partial_avg_df.groupby(['sample']).agg(chi.weighted_mean_sample,
-            (obs)).reset_index()
-    print("Fixing ChPT to nlo_chpt for %s" %obs)
-    print(chi.bootstrap_means(partial_avg,None,obs))
-    dst_chpt_nlo = np.abs(partial_avg[obs].iloc[0]-global_mean) 
-    chpt_val = (np.mean((dst_chpt_gamma,dst_chpt_nlo)))
-
-    partial = weight_df.loc[weight_df['poll']=='E1']
-    partial_avg_df = partial[[obs,'fr','sample','ChPT','weights']]
-    partial_avg = partial_avg_df.groupby(['sample']).agg(chi.weighted_mean_sample,
-            (obs)).reset_index()
-    print("Fixing poll to E1 for %s" %obs)
-    print(chi.bootstrap_means(partial_avg,None,obs))
-    dst_poll_e1 = np.abs(partial_avg[obs].iloc[0]-global_mean)
-    partial = weight_df.loc[weight_df['poll']=='E2']
-    partial_avg_df = partial[[obs,'fr','sample','ChPT','weights']]
-    partial_avg = partial_avg_df.groupby(['sample']).agg(chi.weighted_mean_sample,
-            (obs)).reset_index()
-    print("Fixing poll to E2 for %s" %obs)
-    print(chi.bootstrap_means(partial_avg,None,obs))
-    dst_poll_e2 = np.abs(partial_avg[obs].iloc[0]-global_mean)
-    poll_val = (np.mean((dst_poll_e1,dst_poll_e2)))
-    
+    chpt_val = systematics_per_method(obs,'ChPT',['gamma','nlo_chpt'],weight_df,global_mean)
+    poll_val = systematics_per_method(obs,'poll',['E1','E2'],weight_df,global_mean) 
     result = {"obs":[obs],"weighted_mean":[global_mean],"std":[global_err],
             "fr":[fr_val],"chpt":[chpt_val],"poll":[poll_val]}
     return result
-
 def main():
     pd.set_option('display.width',1000)
     # keys for the hdf datasets
@@ -213,11 +209,14 @@ def main():
     final_results['chi^2/dof'] = final_results['chi^2']/final_results['dof']
     #observables = ['mu_piK_a32_phys','L_piK','mu_piK_a12_phys','M_pi_a32_phys',
     #               'M_pi_a12_phys','tau_piK','chi^2/dof']
-    observables = ['mu_piK_a32_phys','L_piK','mu_piK_a12_phys','M_pi_a32_phys',
-                   'M_pi_a12_phys','tau_piK']
+    #observables = ['mu_piK_a32_phys','L_piK','mu_piK_a12_phys','M_pi_a32_phys',
+    #               'M_pi_a12_phys','tau_piK']
+    # Acceptance test needs less observables
+    observables = ['mu_piK_a32_phys','L_piK']
+    # Improvise an acceptance test for refactoring systematic_spaghetti
     systematics = pd.DataFrame()
     for o in observables:
-            tmp = pd.DataFrame(data=systematic_spaghetti(final_results,o))
+            tmp = pd.DataFrame(data=weighted_systematic(final_results,o))
             systematics=systematics.append(tmp)
     final_systematics = systematics[['obs','weighted_mean','std','fr','chpt','poll']]
     print(final_systematics)
