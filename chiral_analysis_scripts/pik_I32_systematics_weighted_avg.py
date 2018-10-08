@@ -183,12 +183,12 @@ def weighted_systematic(frame,obs,asym=False):
         #print(df.sample(n=20))
         weight_df = weight_df.append(chi.get_weights(df,obs,
                                                     rel=True))
-    print(weight_df.loc[weight_df['sample']==0])
+    #print(weight_df.loc[weight_df['sample']==0])
     glob_avg_df = weight_df[[obs,'fr','sample','ChPT',
                           'poll','weights']]
     glob_avg = glob_avg_df.groupby(['sample']).agg(chi.weighted_mean_sample,
             (obs)).reset_index()
-    print("Global Average of %s" %obs)
+    #print("Global Average of %s" %obs)
     #print(chi.bootstrap_means(glob_avg,None,obs))
     #fitrange spread
     fr_means = np.sort(weight_df.loc[weight_df['sample']==0][obs].values)[(0,-1),]
@@ -225,6 +225,18 @@ def weighted_systematic(frame,obs,asym=False):
         result = {"obs":[obs],"weighted_mean":[global_mean],"std":[global_err],
                 "fr":[fr_val],"chpt":[chpt_val],"poll":[poll_val]}
     return result
+
+def squared_sum(dataframe,asym=False):
+    """for each row in the dataframe calculate the squared sum of systematic
+    errors
+    """
+    systematics = dataframe.drop(['weighted_mean','std'],axis='columns')
+    #if asym is not False:
+    # 
+    #else:
+
+    print(systematics)
+
 def main():
     pd.set_option('display.width',1000)
     # keys for the hdf datasets
@@ -239,16 +251,16 @@ def main():
     final_results.info()
     pd.read_hdf(resultdir+filename,key=keyname)
     final_results['chi^2/dof'] = final_results['chi^2']/final_results['dof']
-    #observables = ['mu_piK_a32_phys','L_piK','mu_piK_a12_phys','M_pi_a32_phys',
-    #               'M_pi_a12_phys','tau_piK','chi^2/dof']
-    #observables = ['mu_piK_a32_phys','L_piK','mu_piK_a12_phys','M_pi_a32_phys',
-    #               'M_pi_a12_phys','tau_piK']
+    #observables = ['M_pi_a32_phys']
+    observables = ['mu_piK_a32_phys','L_piK','mu_piK_a12_phys','M_pi_a32_phys',
+                   'M_pi_a12_phys','tau_piK']
     # Acceptance test needs less observables
-    observables = ['mu_piK_a32_phys','L_piK']
+    #observables = ['mu_piK_a32_phys','L_piK']
     # Improvise an acceptance test for refactoring systematic_spaghetti
     systematics = pd.DataFrame()
     for o in observables:
-            tmp = pd.DataFrame(data=weighted_systematic(final_results,o,asym=True))
+            tmp = pd.DataFrame(data=weighted_systematic(final_results,o,
+                               asym=True))
             print(tmp)
             systematics=systematics.append(tmp)
     try:
@@ -259,6 +271,8 @@ def main():
                                          'fr_dn','fr_up', 'chpt_dn','chpt_up',
                                          'poll_dn','poll_up']]
     print(final_systematics)
+    # Get squared syum of errors
+    squared_sum(final_systematics)
 if __name__ == '__main__':
     try:
         main()

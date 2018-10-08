@@ -20,6 +20,16 @@ def miss_confs(path,rng):
       misslist.append(c)
   return misslist
 
+def get_conf_numbers(corrpaths):
+    print(corrpaths)
+    conf_numbers = []
+    for cp in corrpaths:
+        hdf_files = list(filter(lambda x:'.h5' in x,os.listdir(cp)))
+        print(hdf_files)
+        configs = [map(int,re.findall(r'\d{4}',hf))[0] for hf in hdf_files]
+        conf_numbers.append(set(configs))
+    return conf_numbers
+
 def main():
     c2_pi = True 
     c2_ss = False
@@ -58,8 +68,10 @@ def main():
     # TODO: Filter out everything not starting with 'conf'
     configs_coll = [os.listdir(cp) for cp in corrpaths]
     # find all 4digit occurences in each filename and convert them to a list
-    conf_feed = [set([map(int,re.findall(r'\d{4}', c))[0] for c in
-                 os.listdir(strange_path)]) for strange_path in corrpaths ] 
+    conf_feed = get_conf_numbers(corrpaths)
+    print(conf_feed)
+    #conf_feed = [set([map(int,re.findall(r'\d{4}.h5', c))[0] for c in
+    #             os.listdir(strange_path)]) for strange_path in corrpaths ] 
     # get intersections of config sets
     #conf_feed = conf_feed[0] & conf_feed[1] & conf_feed[2]
     conf_feed = conf_feed[0] 

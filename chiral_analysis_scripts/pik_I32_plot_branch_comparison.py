@@ -68,7 +68,9 @@ def main():
     xmax=15
     v = -4.632e-2
     sd = 8.16e-04  
-    sup = np.sqrt(4.7e-4**2+7.9e-5**2+1.24e-3**2)
+    # Averages over systematics
+    #sup = np.sqrt(4.7e-4**2+7.9e-5**2+1.24e-3**2)
+    sup = np.sqrt(1.4e-3**2+8.7e-5**2+6.4e-4**2)
     sdn = sup
     plt.fill_between(np.array((xmin,xmax)),v+np.sqrt(sd**2+sup**2),v-np.sqrt(sd**2+sdn**2),alpha=0.2,color='deepskyblue')
     plt.fill_between(np.array((xmin,xmax)),v+sd,v-sd,alpha=0.2,color='darkblue')

@@ -29,13 +29,16 @@ def plot_comparison(data,shift=0.,fmt='ok'):
     xerr = data['dmpia0_32']
     xsysdn = data['sys_dn(mpia0_32)']
     xsysup = data['sys_up(mpia0_32)']
-    plt.yticks(np.arange(0,y.shape[0]),y,
-               verticalalignment='center')
+    plt.errorbar(-0.06,0,xerr=0.008,fmt='o',fillstyle='none',color='darkblue')
     x_err = np.asarray([np.sqrt(xerr**2+xsysdn**2),np.sqrt(xerr**2+xsysup**2)])
-    plt.errorbar(x,np.arange(len(y)),xerr=x_err,
+    plt.errorbar(x,np.arange(len(y))+1,xerr=x_err,
                  fmt = '.', color='deepskyblue')
-    plt.errorbar(x,np.arange(len(y)),xerr=xerr,fmt='o',color='darkblue',
+    plt.errorbar(x,np.arange(len(y))+1,xerr=xerr,fmt='o',color='darkblue',
             label=None)
+    ticks=np.append(['Lang et al.',],y.values)
+    print(ticks)
+    plt.yticks(np.arange(0,ticks.shape[0]),ticks,
+               verticalalignment='center')
 def main():
     #load data
     path = '/hiskp4/helmes/analysis/scattering/pi_k/I_32_cov_false/results/'
@@ -49,6 +52,7 @@ def main():
     datapoints = datapoints[datapoints['Collab']!='ETMC_I']
     fig=plt.figure()
     plot_comparison(datapoints)
+    # plot point of lang et al. with different style
     plt.xlabel(r'$(M_{\pi}a_0^{3/2})^{\mathrm{phys}}$',fontsize=11)
     plt.xlim([-0.075,-0.045])
     plt.legend()
